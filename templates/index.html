@@ -103,6 +103,9 @@
             stopThemeButton.style.display = this.value ? 'inline-block' : 'none';
         });
 
+        // Initialize stop theme button visibility
+        stopThemeButton.style.display = themeSelect.value ? 'inline-block' : 'none';
+
         stopThemeButton.addEventListener('click', function() {
             fetch('{{ url_for('stop_theme') }}', {
                 method: 'POST',
