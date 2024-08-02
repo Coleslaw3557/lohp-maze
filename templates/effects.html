@@ -14,6 +14,7 @@
             <th>Actions</th>
         </tr>
         {% for room, effect in effects.items() %}
+        {% for effect_name, effect in effects.items() %}
         <tr>
             <td>{{ effect_name }}</td>
             <td>{{ effect.duration }} seconds</td>
@@ -24,6 +25,7 @@
                 </form>
             </td>
         </tr>
+        {% endfor %}
         {% endfor %}
     </table>
     <a href="{{ url_for('add_effect') }}">Add New Effect</a>

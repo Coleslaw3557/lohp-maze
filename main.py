@@ -216,6 +216,8 @@ def edit_effect(effect_name):
         effects_manager.update_effect(effect_name, effect_data)
         return redirect(url_for('effects'))
     effect = effects_manager.get_effect(effect_name)
+    if effect is None:
+        abort(404)  # Return a 404 error if the effect is not found
     return render_template('edit_effect.html', effect_name=effect_name, effect=effect)
 
 @app.route('/remove_effect/<effect_name>', methods=['POST'])
