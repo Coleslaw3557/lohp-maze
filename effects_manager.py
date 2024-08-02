@@ -16,6 +16,12 @@ class EffectsManager:
         self.theme_thread = None
         self.stop_theme = threading.Event()
         self.light_config_manager = light_config_manager
+        self.frequency = 24  # Default frequency
+
+    def update_frequency(self, new_frequency):
+        self.frequency = new_frequency
+        if self.current_theme:
+            self.set_current_theme(self.current_theme)  # Restart the current theme with new frequency
 
     def load_config(self):
         try:
