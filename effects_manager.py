@@ -81,17 +81,17 @@ class EffectsManager:
         cop_dodge_effect = {
             "duration": 5.0,
             "steps": [
-                {"time": 0, "channels": {"r_dimming": 255, "b_dimming": 0}},
-                {"time": 0.5, "channels": {"r_dimming": 0, "b_dimming": 255}},
-                {"time": 1, "channels": {"r_dimming": 255, "b_dimming": 0}},
-                {"time": 1.5, "channels": {"r_dimming": 0, "b_dimming": 255}},
-                {"time": 2, "channels": {"r_dimming": 255, "b_dimming": 0}},
-                {"time": 2.5, "channels": {"r_dimming": 0, "b_dimming": 255}},
-                {"time": 3, "channels": {"r_dimming": 255, "b_dimming": 0}},
-                {"time": 3.5, "channels": {"r_dimming": 0, "b_dimming": 255}},
-                {"time": 4, "channels": {"r_dimming": 255, "b_dimming": 0}},
-                {"time": 4.5, "channels": {"r_dimming": 0, "b_dimming": 255}},
-                {"time": 5, "channels": {"r_dimming": 0, "b_dimming": 0}}
+                {"time": 0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 1.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 2, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 2.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 3, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 3.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 4, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 4.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 5, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}}
             ]
         }
         self.add_effect("Cop Dodge", cop_dodge_effect)
