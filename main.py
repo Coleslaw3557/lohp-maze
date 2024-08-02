@@ -137,12 +137,22 @@ def index():
 @app.route('/update_hz', methods=['POST'])
 def update_hz():
     global global_hz
-    new_hz = int(request.form['hz'])
-    global_hz = new_hz
-    dmx.set_frequency(new_hz)
-    effects_manager.update_frequency(new_hz)
-    flash('Global Hz updated successfully', 'success')
-    return jsonify({'status': 'success', 'message': 'Global Hz updated successfully'})
+    try:
+        new_hz = int(request.form['hz'])
+        if new_hz <= 0 or new_hz > 100:
+            raise ValueError("Hz value must be between 1 and 100")
+        global_hz = new_hz
+        dmx.set_frequency(new_hz)
+        effects_manager.update_frequency(new_hz)
+        logger.info(f"Global Hz updated to {new_hz}")
+        flash('Global Hz updated successfully', 'success')
+        return jsonify({'status': 'success', 'message': f'Global Hz updated successfully to {new_hz}'})
+    except ValueError as e:
+        logger.error(f"Invalid Hz value: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error updating Hz: {str(e)}", exc_info=True)
+        return jsonify({'status': 'error', 'message': 'An error occurred while updating Hz'}), 500
 
 @app.route('/test_mode')
 def test_mode():

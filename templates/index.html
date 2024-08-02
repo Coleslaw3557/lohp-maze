@@ -137,12 +137,12 @@
             },
             body: `hz=${hz}`
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert(data.message);
+        .then(response => response.json().then(data => ({status: response.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 && body.status === 'success') {
+                alert(body.message);
             } else {
-                alert('Failed to update Hz');
+                alert(body.message || 'Failed to update Hz');
             }
         })
         .catch((error) => {
