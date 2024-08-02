@@ -206,17 +206,17 @@ def add_effect():
     rooms = light_config.get_room_layout().keys()
     return render_template('add_effect.html', rooms=rooms)
 
-@app.route('/edit_effect/<room>', methods=['GET', 'POST'])
-def edit_effect(room):
+@app.route('/edit_effect/<effect_name>', methods=['GET', 'POST'])
+def edit_effect(effect_name):
     if request.method == 'POST':
         effect_data = {
             'duration': float(request.form['duration']),
             'steps': json.loads(request.form['steps'])
         }
-        effects_manager.update_effect(room, effect_data)
+        effects_manager.update_effect(effect_name, effect_data)
         return redirect(url_for('effects'))
-    effect = effects_manager.get_effect(room)
-    return render_template('edit_effect.html', room=room, effect=effect)
+    effect = effects_manager.get_effect(effect_name)
+    return render_template('edit_effect.html', effect_name=effect_name, effect=effect)
 
 @app.route('/remove_effect/<effect_name>', methods=['POST'])
 def remove_effect(effect_name):
