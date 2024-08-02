@@ -36,7 +36,10 @@
         <select name="theme_name" id="themeSelect">
             <option value="">None</option>
             {% for theme_name in themes %}
-            <option value="{{ theme_name }}" {% if theme_name == current_theme %}selected{% endif %}>{{ theme_name }}</option>
+            <option value="{{ theme_name }}"
+                    {% if theme_name == current_theme %}selected{% endif %}>
+                {{ theme_name }}
+            </option>
             {% endfor %}
         </select>
         <input type="submit" value="Set Theme">
