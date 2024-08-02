@@ -25,6 +25,7 @@ app.secret_key = SECRET_KEY
 dmx = DMXInterface()
 light_config = LightConfigManager()
 effects_manager = EffectsManager()
+effects_manager.create_cop_dodge_effect()
 
 def dmx_update_loop():
     last_status_check = time.time()
