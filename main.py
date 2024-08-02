@@ -264,7 +264,7 @@ def edit_theme(theme_name):
             flash('Theme updated successfully', 'success')
         except Exception as e:
             flash(f'Error updating theme: {str(e)}', 'error')
-        return redirect(url_for('themes'))
+        return jsonify({'status': 'success', 'message': 'Theme updated successfully'})
     theme = effects_manager.get_theme(theme_name)
     return render_template('edit_theme.html', theme_name=theme_name, theme=theme)
 

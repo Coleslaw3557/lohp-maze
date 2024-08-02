@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>Edit Theme: {{ theme_name }}</h1>
-    <form method="POST">
+    <form id="editThemeForm">
         <label for="duration">Duration (seconds): <span id="duration-value">{{ theme.duration }}</span></label>
         <input type="range" id="duration" name="duration" min="1" max="3600" step="1" value="{{ theme.duration }}" oninput="updateSliderValue('duration')"><br><br>
         
@@ -28,16 +28,38 @@
         
         <input type="hidden" id="frequency" name="frequency" value="40">
 
-        <script>
-        function updateSliderValue(id) {
-            var slider = document.getElementById(id);
-            var output = document.getElementById(id + "-value");
-            output.innerHTML = slider.value;
-        }
-        </script>
-        
         <input type="submit" value="Update Theme">
     </form>
+
+    <script>
+    function updateSliderValue(id) {
+        var slider = document.getElementById(id);
+        var output = document.getElementById(id + "-value");
+        output.innerHTML = slider.value;
+    }
+
+    document.getElementById('editThemeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        fetch('{{ url_for('edit_theme', theme_name=theme_name) }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.href = '{{ url_for('themes') }}';
+            } else {
+                alert('Error updating theme: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the theme');
+        });
+    });
+    </script>
     
     <a href="{{ url_for('themes') }}">Back to Themes</a>
 </body>

@@ -256,6 +256,8 @@ class EffectsManager:
                 for channel_name, channel_offset in light_model['channels'].items():
                     self.light_config_manager.dmx_interface.set_channel(start_address + channel_offset, 0)
         self.light_config_manager.dmx_interface.send_dmx()
+        # Ensure the DMX interface sends the reset values
+        self.light_config_manager.dmx_interface.send_dmx()
 
     def create_cop_dodge_effect(self):
         cop_dodge_effect = {
