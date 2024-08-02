@@ -113,10 +113,12 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    alert('Theme stopped successfully');
+                    alert('Theme stopped successfully and all lights reset to 0');
                     themeSelect.value = '';
                     brightnessSlider.style.display = 'none';
                     stopThemeButton.style.display = 'none';
+                    brightnessInput.value = 1;
+                    brightnessValue.textContent = '100%';
                 } else {
                     alert('Failed to stop theme: ' + data.message);
                 }
