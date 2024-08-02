@@ -97,6 +97,24 @@ class EffectsManager:
             self.themes[theme_name] = theme_data
             self.save_config()
             logger.info(f"Theme updated: {theme_name}")
+            if self.current_theme == theme_name:
+                self.stop_theme.set()
+                if self.theme_thread:
+                    self.theme_thread.join()
+                self.stop_theme.clear()
+                self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
+                self.theme_thread.start()
+        else:
+            logger.warning(f"No theme found: {theme_name}")
+
+    def set_theme_brightness(self, theme_name, brightness):
+        if theme_name in self.themes:
+            self.themes[theme_name]['overall_brightness'] = brightness
+            self.save_config()
+            logger.info(f"Theme brightness updated: {theme_name}, brightness: {brightness}")
+            if self.current_theme == theme_name:
+                # Restart the theme to apply the new brightness
+                self.set_current_theme(theme_name)
         else:
             logger.warning(f"No theme found: {theme_name}")
 

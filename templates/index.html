@@ -32,8 +32,8 @@
     
     <h2>System Settings</h2>
     <h3>Current Theme</h3>
-    <form action="{{ url_for('set_theme') }}" method="post">
-        <select name="theme_name">
+    <form action="{{ url_for('set_theme') }}" method="post" id="themeForm">
+        <select name="theme_name" id="themeSelect">
             <option value="">None</option>
             {% for theme_name in themes %}
             <option value="{{ theme_name }}" {% if theme_name == current_theme %}selected{% endif %}>{{ theme_name }}</option>
@@ -41,6 +41,10 @@
         </select>
         <input type="submit" value="Set Theme">
     </form>
+    <div id="brightnessSlider" style="display: none;">
+        <label for="brightness">Brightness: <span id="brightnessValue">100%</span></label>
+        <input type="range" id="brightness" name="brightness" min="0" max="1" step="0.01" value="1">
+    </div>
     <div>
         <label class="toggle-switch">
             <input type="checkbox" id="verbose_logging" name="verbose_logging" {% if verbose_logging %}checked{% endif %} onchange="toggleVerboseLogging(this)">
@@ -74,6 +78,42 @@
             checkbox.checked = !checkbox.checked;
         });
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const themeSelect = document.getElementById('themeSelect');
+        const brightnessSlider = document.getElementById('brightnessSlider');
+        const brightnessInput = document.getElementById('brightness');
+        const brightnessValue = document.getElementById('brightnessValue');
+
+        themeSelect.addEventListener('change', function() {
+            brightnessSlider.style.display = this.value ? 'block' : 'none';
+        });
+
+        brightnessInput.addEventListener('input', function() {
+            const brightness = this.value;
+            brightnessValue.textContent = `${Math.round(brightness * 100)}%`;
+            
+            fetch('{{ url_for('set_theme_brightness') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `theme_name=${themeSelect.value}&brightness=${brightness}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    console.error('Error setting brightness:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        // Initialize brightness slider visibility
+        brightnessSlider.style.display = themeSelect.value ? 'block' : 'none';
+    });
     </script>
 </body>
 </html>

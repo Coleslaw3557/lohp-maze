@@ -231,10 +231,26 @@ def edit_theme(theme_name):
             'green_blue_balance': float(request.form['green_blue_balance']),
             'frequency': int(request.form['frequency'])
         }
-        effects_manager.update_theme(theme_name, theme_data)
+        try:
+            effects_manager.update_theme(theme_name, theme_data)
+            flash('Theme updated successfully', 'success')
+        except Exception as e:
+            flash(f'Error updating theme: {str(e)}', 'error')
         return redirect(url_for('themes'))
     theme = effects_manager.get_theme(theme_name)
     return render_template('edit_theme.html', theme_name=theme_name, theme=theme)
+
+@app.route('/set_theme_brightness', methods=['POST'])
+def set_theme_brightness():
+    theme_name = request.form.get('theme_name')
+    brightness = float(request.form.get('brightness'))
+    if theme_name and brightness is not None:
+        try:
+            effects_manager.set_theme_brightness(theme_name, brightness)
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)})
+    return jsonify({'status': 'error', 'message': 'Invalid input'})
 
 @app.route('/rooms')
 def rooms():
