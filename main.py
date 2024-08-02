@@ -81,7 +81,15 @@ def create_jungle_theme():
             }
         smoothed_steps.append(interpolated_step)
     
-    return {"duration": duration, "steps": smoothed_steps}
+    return {
+        "duration": duration,
+        "steps": smoothed_steps,
+        "transition_speed": 0.5,
+        "color_variation": 0.5,
+        "intensity_fluctuation": 0.5,
+        "overall_brightness": 0.5,
+        "green_blue_balance": 0.5
+    }
 
 # Create and add the jungle theme
 jungle_theme = create_jungle_theme()

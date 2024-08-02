@@ -154,16 +154,38 @@ class EffectsManager:
     def _generate_room_channels(self, theme_data):
         base_hue = random.random()
         channels = {}
-        brightness = theme_data.get('brightness', 1.0)  # Default brightness to 1.0 if not present
-        color_shift = theme_data.get('color_shift', 0.0)  # Default color_shift to 0.0 if not present
-        randomness = theme_data.get('randomness', 0.0)  # Default randomness to 0.0 if not present
+        overall_brightness = theme_data.get('overall_brightness', 0.5)
+        green_blue_balance = theme_data.get('green_blue_balance', 0.5)
+        color_variation = theme_data.get('color_variation', 0.5)
+        intensity_fluctuation = theme_data.get('intensity_fluctuation', 0.5)
+
+        # Adjust base colors based on green-blue balance
+        base_green = int(180 * (1 + (green_blue_balance - 0.5) * 0.4))  # 20% variation
+        base_blue = int(20 * (1 + (0.5 - green_blue_balance) * 0.4))  # 20% variation
+        base_red = 30  # Keep red constant for jungle theme
+
         for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming']:
-            value = int(brightness * 255)
+            if channel == 'total_dimming':
+                value = int(overall_brightness * 255)
+            elif channel == 'r_dimming':
+                value = base_red
+            elif channel == 'g_dimming':
+                value = base_green
+            elif channel == 'b_dimming':
+                value = base_blue
+
+            # Apply color variation
             if channel != 'total_dimming':
-                hue_offset = (base_hue + color_shift * random.random()) % 1
-                rgb_values = self._hue_to_rgb(hue_offset)
-                value = int(rgb_values[channel] * value)
-            channels[channel] = max(0, min(255, int(value + randomness * random.uniform(-value, 255-value))))
+                value += int(random.uniform(-40, 40) * color_variation)
+
+            # Apply intensity fluctuation
+            value += int(random.uniform(-50, 50) * intensity_fluctuation)
+
+            # Ensure values are within valid range
+            value = max(0, min(255, value))
+
+            channels[channel] = value
+
         return channels
 
     def _hue_to_rgb(self, hue):

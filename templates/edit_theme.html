@@ -11,20 +11,20 @@
         <label for="duration">Duration (seconds): <span id="duration-value">{{ theme.duration }}</span></label>
         <input type="range" id="duration" name="duration" min="1" max="3600" step="1" value="{{ theme.duration }}" oninput="updateSliderValue('duration')"><br><br>
         
-        <label for="speed">Speed: <span id="speed-value">{{ theme.speed }}</span></label>
-        <input type="range" id="speed" name="speed" min="0" max="1" step="0.01" value="{{ theme.speed }}" oninput="updateSliderValue('speed')"><br><br>
+        <label for="transition_speed">Transition Speed: <span id="transition_speed-value">{{ theme.transition_speed }}</span></label>
+        <input type="range" id="transition_speed" name="transition_speed" min="0" max="1" step="0.01" value="{{ theme.transition_speed }}" oninput="updateSliderValue('transition_speed')"><br><br>
         
-        <label for="flow">Flow: <span id="flow-value">{{ theme.flow }}</span></label>
-        <input type="range" id="flow" name="flow" min="0" max="1" step="0.01" value="{{ theme.flow }}" oninput="updateSliderValue('flow')"><br><br>
+        <label for="color_variation">Color Variation: <span id="color_variation-value">{{ theme.color_variation }}</span></label>
+        <input type="range" id="color_variation" name="color_variation" min="0" max="1" step="0.01" value="{{ theme.color_variation }}" oninput="updateSliderValue('color_variation')"><br><br>
         
-        <label for="randomness">Randomness: <span id="randomness-value">{{ theme.randomness }}</span></label>
-        <input type="range" id="randomness" name="randomness" min="0" max="1" step="0.01" value="{{ theme.randomness }}" oninput="updateSliderValue('randomness')"><br><br>
+        <label for="intensity_fluctuation">Intensity Fluctuation: <span id="intensity_fluctuation-value">{{ theme.intensity_fluctuation }}</span></label>
+        <input type="range" id="intensity_fluctuation" name="intensity_fluctuation" min="0" max="1" step="0.01" value="{{ theme.intensity_fluctuation }}" oninput="updateSliderValue('intensity_fluctuation')"><br><br>
         
-        <label for="brightness">Brightness: <span id="brightness-value">{{ theme.brightness }}</span></label>
-        <input type="range" id="brightness" name="brightness" min="0" max="1" step="0.01" value="{{ theme.brightness }}" oninput="updateSliderValue('brightness')"><br><br>
+        <label for="overall_brightness">Overall Brightness: <span id="overall_brightness-value">{{ theme.overall_brightness }}</span></label>
+        <input type="range" id="overall_brightness" name="overall_brightness" min="0" max="1" step="0.01" value="{{ theme.overall_brightness }}" oninput="updateSliderValue('overall_brightness')"><br><br>
         
-        <label for="color_shift">Color Shift: <span id="color_shift-value">{{ theme.color_shift }}</span></label>
-        <input type="range" id="color_shift" name="color_shift" min="0" max="1" step="0.01" value="{{ theme.color_shift }}" oninput="updateSliderValue('color_shift')"><br><br>
+        <label for="green_blue_balance">Green-Blue Balance: <span id="green_blue_balance-value">{{ theme.green_blue_balance }}</span></label>
+        <input type="range" id="green_blue_balance" name="green_blue_balance" min="0" max="1" step="0.01" value="{{ theme.green_blue_balance }}" oninput="updateSliderValue('green_blue_balance')"><br><br>
 
         <script>
         function updateSliderValue(id) {
