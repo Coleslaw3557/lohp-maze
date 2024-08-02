@@ -135,8 +135,9 @@ class EffectsManager:
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
-        step_duration = 1.0 / theme_data['speed']
-        for _ in range(int(theme_data['duration'] * theme_data['speed'])):
+        speed = theme_data.get('speed', 1.0)  # Default to 1.0 if 'speed' is not present
+        step_duration = 1.0 / speed
+        for _ in range(int(theme_data['duration'] * speed)):
             if self.stop_theme.is_set():
                 break
             step = self._generate_theme_step(theme_data, room_layout)
