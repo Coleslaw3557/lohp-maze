@@ -20,9 +20,10 @@ class DMXInterface:
         self.data[0] = self.START_CODE
         self.lock = Lock()
         self.last_send_time = 0
-        self.changed_channels = set()
         self.set_frequency(frequency)
         self._initialize_port()
+        self.dmx_thread = threading.Thread(target=self._dmx_send_loop, daemon=True)
+        self.dmx_thread.start()
 
     def set_frequency(self, frequency):
         self.frequency = frequency
@@ -43,9 +44,7 @@ class DMXInterface:
     def set_channel(self, channel, value):
         if 1 <= channel <= self.DMX_CHANNELS:
             with self.lock:
-                if self.data[channel] != value:
-                    self.data[channel] = value
-                    self.changed_channels.add(channel)
+                self.data[channel] = value
             logger.debug(f"Set DMX channel {channel} to value {value}")
         else:
             logger.warning(f"Invalid DMX channel {channel}. Must be between 1 and {self.DMX_CHANNELS}.")
@@ -54,40 +53,36 @@ class DMXInterface:
         with self.lock:
             for channel, value in channel_values.items():
                 if 1 <= channel <= self.DMX_CHANNELS:
-                    if self.data[channel] != value:
-                        self.data[channel] = value
-                        self.changed_channels.add(channel)
+                    self.data[channel] = value
                 else:
                     logger.warning(f"Invalid DMX channel {channel}. Must be between 1 and {self.DMX_CHANNELS}.")
 
-    def send_dmx(self):
-        current_time = time.time()
-        time_since_last_send = current_time - self.last_send_time
-        
-        if time_since_last_send < self.FRAME_TIME:
-            time.sleep(self.FRAME_TIME - time_since_last_send)
-        
+    def _dmx_send_loop(self):
+        while True:
+            self._send_dmx_frame()
+            time.sleep(self.FRAME_TIME)
+
+    def _send_dmx_frame(self):
         try:
             with self.lock:
-                if self.changed_channels:
-                    self.port.set_break(True)
-                    time.sleep(self.BREAK_TIME)
-                    self.port.set_break(False)
-                    time.sleep(self.MAB_TIME)
-                    self.port.write_data(self.data)
-                    time.sleep(self.FRAME_DELAY)
-                    self.changed_channels.clear()
-                    logger.debug("DMX frame sent")
-                else:
-                    logger.debug("No changes, skipping DMX frame")
+                self.port.set_break(True)
+                time.sleep(self.BREAK_TIME)
+                self.port.set_break(False)
+                time.sleep(self.MAB_TIME)
+                self.port.write_data(self.data)
+                time.sleep(self.FRAME_DELAY)
+            logger.debug("DMX frame sent")
         except Exception as e:
             logger.error(f"Error sending DMX frame: {str(e)}", exc_info=True)
             self._handle_port_error()
-        
-        self.last_send_time = time.time()
+
+    def send_dmx(self):
+        # This method is now a no-op as sending is handled by the _dmx_send_loop
+        pass
 
     def send_dmx_with_timing(self):
-        self.send_dmx()
+        # This method is now a no-op as sending is handled by the _dmx_send_loop
+        pass
 
     def _handle_port_error(self):
         if not self.port.is_open:

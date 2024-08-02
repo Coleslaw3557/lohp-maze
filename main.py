@@ -143,7 +143,6 @@ def update_hz():
             raise ValueError("Hz value must be between 1 and 100")
         global_hz = new_hz
         dmx.set_frequency(new_hz)
-        effects_manager.update_frequency(new_hz)
         logger.info(f"Global Hz updated to {new_hz}")
         flash('Global Hz updated successfully', 'success')
         return jsonify({'status': 'success', 'message': f'Global Hz updated successfully to {new_hz}'})
