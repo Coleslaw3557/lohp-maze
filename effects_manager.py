@@ -244,7 +244,18 @@ class EffectsManager:
         if self.theme_thread:
             self.theme_thread.join()
         self.current_theme = None
-        logger.info("Current theme stopped")
+        self._reset_all_lights()
+        logger.info("Current theme stopped and all lights reset")
+
+    def _reset_all_lights(self):
+        room_layout = self.light_config_manager.get_room_layout()
+        for room, lights in room_layout.items():
+            for light in lights:
+                start_address = light['start_address']
+                light_model = self.light_config_manager.get_light_config(light['model'])
+                for channel in light_model['channels'].values():
+                    self.light_config_manager.dmx_interface.set_channel(start_address + channel, 0)
+        self.light_config_manager.dmx_interface.send_dmx()
 
     def create_cop_dodge_effect(self):
         cop_dodge_effect = {

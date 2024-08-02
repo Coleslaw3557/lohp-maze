@@ -29,7 +29,7 @@ effects_manager = EffectsManager(light_config_manager=light_config)
 effects_manager.create_cop_dodge_effect()
 
 # Global Hz setting
-global_hz = 24
+global_hz = 40
 
 import random
 
