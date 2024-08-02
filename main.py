@@ -4,6 +4,7 @@ import logging
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify
 from dmx_interface import DMXInterface
 from light_config_manager import LightConfigManager
+from effects_manager import EffectsManager
 import threading
 
 # Configuration
@@ -23,6 +24,7 @@ app.secret_key = SECRET_KEY
 # Initialize components
 dmx = DMXInterface()
 light_config = LightConfigManager()
+effects_manager = EffectsManager()
 
 def dmx_update_loop():
     last_status_check = time.time()
@@ -184,6 +186,50 @@ def edit_light_model(model):
 def remove_light_model(model):
     light_config.remove_light_model(model)
     return redirect(url_for('light_models'))
+
+@app.route('/effects')
+def effects():
+    return render_template('effects.html', effects=effects_manager.get_all_effects())
+
+@app.route('/add_effect', methods=['GET', 'POST'])
+def add_effect():
+    if request.method == 'POST':
+        room = request.form['room']
+        effect_data = {
+            'duration': float(request.form['duration']),
+            'steps': json.loads(request.form['steps'])
+        }
+        effects_manager.add_effect(room, effect_data)
+        return redirect(url_for('effects'))
+    rooms = light_config.get_room_layout().keys()
+    return render_template('add_effect.html', rooms=rooms)
+
+@app.route('/edit_effect/<room>', methods=['GET', 'POST'])
+def edit_effect(room):
+    if request.method == 'POST':
+        effect_data = {
+            'duration': float(request.form['duration']),
+            'steps': json.loads(request.form['steps'])
+        }
+        effects_manager.update_effect(room, effect_data)
+        return redirect(url_for('effects'))
+    effect = effects_manager.get_effect(room)
+    return render_template('edit_effect.html', room=room, effect=effect)
+
+@app.route('/remove_effect/<room>', methods=['POST'])
+def remove_effect(room):
+    effects_manager.remove_effect(room)
+    return redirect(url_for('effects'))
+
+@app.route('/execute_effect/<room>', methods=['POST'])
+def execute_effect(room):
+    effect = effects_manager.get_effect(room)
+    if effect:
+        # Here you would implement the logic to execute the effect
+        # This might involve sending DMX commands based on the effect data
+        return jsonify({"message": f"Effect for room {room} executed successfully"}), 200
+    else:
+        return jsonify({"error": f"No effect found for room {room}"}), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=DEBUG, threaded=True)
