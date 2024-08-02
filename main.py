@@ -74,7 +74,9 @@ def before_request():
 @app.route('/')
 def index():
     return render_template('index.html', 
-                           verbose_logging=session.get('verbose_logging', False))
+                           verbose_logging=session.get('verbose_logging', False),
+                           themes=effects_manager.get_all_themes(),
+                           current_theme=effects_manager.current_theme)
 
 @app.route('/test_mode')
 def test_mode():
@@ -148,6 +150,11 @@ def themes():
 def remove_theme(theme_name):
     effects_manager.remove_theme(theme_name)
     return redirect(url_for('themes'))
+
+@app.route('/add_theme', methods=['GET', 'POST'])
+def add_theme():
+    # Placeholder for add_theme functionality
+    return "Add theme functionality not implemented yet", 501
 
 @app.route('/rooms')
 def rooms():
