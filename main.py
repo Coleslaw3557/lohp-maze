@@ -28,19 +28,35 @@ light_config = LightConfigManager(dmx_interface=dmx)
 effects_manager = EffectsManager(light_config_manager=light_config)
 effects_manager.create_cop_dodge_effect()
 
-# Create a jungle theme
-jungle_theme = {
-    "duration": 30.0,
-    "steps": [
-        {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 0}},
-        {"time": 5.0, "channels": {"total_dimming": 200, "r_dimming": 50, "g_dimming": 200, "b_dimming": 0}},
-        {"time": 10.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 50}},
-        {"time": 15.0, "channels": {"total_dimming": 180, "r_dimming": 30, "g_dimming": 180, "b_dimming": 30}},
-        {"time": 20.0, "channels": {"total_dimming": 220, "r_dimming": 20, "g_dimming": 220, "b_dimming": 0}},
-        {"time": 25.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 20}},
-        {"time": 30.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 0}}
-    ]
-}
+import random
+
+def create_jungle_theme():
+    duration = 120.0  # 2 minutes
+    steps = []
+    rooms = ["Entrance", "Cop Dodge", "Gate", "Guy Line Climb", "Sparkle Pony Room", "Porto Room", 
+             "Cuddle Cross", "Exit", "Photo Bomb Room", "Deep Playa Handshake", "No Friends Monday", 
+             "Template Room", "Monkey Room", "Bike Lock Room", "Vertical Moop March"]
+    
+    for t in range(0, int(duration) + 1):
+        step = {"time": float(t), "rooms": {}}
+        for room in rooms:
+            if random.random() < 0.1:  # 10% chance of change per room per second
+                green = random.randint(100, 255)
+                red = random.randint(0, 50)
+                blue = random.randint(0, 30)
+                total_dim = random.randint(150, 255)
+                step["rooms"][room] = {
+                    "total_dimming": total_dim,
+                    "r_dimming": red,
+                    "g_dimming": green,
+                    "b_dimming": blue
+                }
+        steps.append(step)
+    
+    return {"duration": duration, "steps": steps}
+
+# Create and add the jungle theme
+jungle_theme = create_jungle_theme()
 effects_manager.add_theme("Jungle", jungle_theme)
 
 def dmx_update_loop():

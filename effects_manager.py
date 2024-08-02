@@ -129,10 +129,11 @@ class EffectsManager:
         room_layout = self.light_config_manager.get_room_layout()
         for room, lights in room_layout.items():
             if room not in self.room_effects:
+                room_channels = step['rooms'].get(room, {})
                 for light in lights:
                     start_address = light['start_address']
                     light_model = self.light_config_manager.get_light_config(light['model'])
-                    for channel, value in step['channels'].items():
+                    for channel, value in room_channels.items():
                         if channel in light_model['channels']:
                             channel_offset = light_model['channels'][channel]
                             self.light_config_manager.dmx_interface.set_channel(start_address + channel_offset, value)
