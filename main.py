@@ -241,11 +241,17 @@ def remove_room_effect(room):
 def test_effect(room):
     effect = effects_manager.get_room_effect(room)
     if effect:
-        success = light_config.test_effect(room, effect)
+        success, log_messages = light_config.test_effect(room, effect)
         if success:
-            return jsonify({"message": f"Effect for room {room} tested successfully"}), 200
+            return jsonify({
+                "message": f"Effect for room {room} tested successfully",
+                "log_messages": log_messages
+            }), 200
         else:
-            return jsonify({"error": f"Failed to test effect for room {room}"}), 500
+            return jsonify({
+                "error": f"Failed to test effect for room {room}",
+                "log_messages": log_messages
+            }), 500
     else:
         return jsonify({"error": f"No effect found for room {room}"}), 404
 

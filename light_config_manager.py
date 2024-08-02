@@ -108,23 +108,36 @@ class LightConfigManager:
 
     def test_effect(self, room, effect_data):
         room_layout = self.get_room_layout()
+        log_messages = []
+
         if room not in room_layout:
-            logger.warning(f"Room not found: {room}")
-            return False
+            log_messages.append(f"Room not found: {room}")
+            return False, log_messages
 
         lights = room_layout[room]
-        for step in effect_data['steps']:
+        log_messages.append(f"Testing effect in room: {room}")
+        log_messages.append(f"Number of lights: {len(lights)}")
+
+        for step_index, step in enumerate(effect_data['steps']):
+            log_messages.append(f"Step {step_index + 1}:")
             for light in lights:
                 start_address = light['start_address']
                 light_model = self.get_light_config(light['model'])
+                log_messages.append(f"  Light: {light['model']} (Start Address: {start_address})")
                 for channel, value in step['channels'].items():
                     if channel in light_model['channels']:
                         channel_offset = light_model['channels'][channel]
-                        self.dmx_interface.set_channel(start_address + channel_offset, value)
+                        dmx_address = start_address + channel_offset
+                        self.dmx_interface.set_channel(dmx_address, value)
+                        log_messages.append(f"    Channel: {channel}, DMX Address: {dmx_address}, Value: {value}")
+                    else:
+                        log_messages.append(f"    Warning: Channel {channel} not found in light model")
             self.dmx_interface.send_dmx()
+            log_messages.append(f"  Waiting for {step['time']} seconds")
             time.sleep(step['time'])
 
         # Reset channels after effect
+        log_messages.append("Resetting channels after effect")
         for light in lights:
             start_address = light['start_address']
             light_model = self.get_light_config(light['model'])
@@ -132,4 +145,4 @@ class LightConfigManager:
                 self.dmx_interface.set_channel(start_address + channel, 0)
         self.dmx_interface.send_dmx()
 
-        return True
+        return True, log_messages

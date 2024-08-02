@@ -56,8 +56,9 @@
                     <input type="submit" value="Remove Effect">
                 </form>
                 <form action="{{ url_for('test_effect', room=room) }}" method="post" style="display: inline;">
-                    <input type="submit" value="Test Effect">
+                    <input type="submit" value="Test Effect" onclick="testEffect(event, '{{ room }}')">
                 </form>
+                <div id="testEffectResult_{{ room }}" style="display: none;"></div>
                 {% endif %}
             </td>
         </tr>
@@ -66,5 +67,32 @@
     <a href="{{ url_for('add_room') }}">Add New Room</a>
     <br>
     <a href="{{ url_for('index') }}">Back to Home</a>
+<script>
+function testEffect(event, room) {
+    event.preventDefault();
+    fetch(`/test_effect/${room}`, {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById(`testEffectResult_${room}`);
+        resultDiv.style.display = 'block';
+        if (data.message) {
+            resultDiv.innerHTML = `<p>${data.message}</p>`;
+        } else if (data.error) {
+            resultDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+        }
+        if (data.log_messages) {
+            resultDiv.innerHTML += '<h4>Log Messages:</h4><ul>' + 
+                data.log_messages.map(msg => `<li>${msg}</li>`).join('') + 
+                '</ul>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while testing the effect');
+    });
+}
+</script>
 </body>
 </html>
