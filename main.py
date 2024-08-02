@@ -37,20 +37,32 @@ def create_jungle_theme():
              "Cuddle Cross", "Exit", "Photo Bomb Room", "Deep Playa Handshake", "No Friends Monday", 
              "Template Room", "Monkey Room", "Bike Lock Room", "Vertical Moop March"]
     
+    base_green = 180
+    base_red = 30
+    base_blue = 20
+    base_total_dim = 230
+
     for t in range(0, int(duration) + 1):
         step = {"time": float(t), "rooms": {}}
         for room in rooms:
-            if random.random() < 0.05:  # 5% chance of change per room per second
-                green = random.randint(100, 255)
-                red = random.randint(0, 50)
-                blue = random.randint(0, 30)
-                total_dim = random.randint(200, 255)  # Increased minimum brightness
-                step["rooms"][room] = {
-                    "total_dimming": total_dim,
-                    "r_dimming": red,
-                    "g_dimming": green,
-                    "b_dimming": blue
-                }
+            # Always include all rooms in each step
+            green = base_green + random.randint(-20, 20)
+            red = base_red + random.randint(-10, 10)
+            blue = base_blue + random.randint(-10, 10)
+            total_dim = base_total_dim + random.randint(-10, 10)
+            
+            # Ensure values are within valid range
+            green = max(0, min(255, green))
+            red = max(0, min(255, red))
+            blue = max(0, min(255, blue))
+            total_dim = max(200, min(255, total_dim))
+            
+            step["rooms"][room] = {
+                "total_dimming": total_dim,
+                "r_dimming": red,
+                "g_dimming": green,
+                "b_dimming": blue
+            }
         steps.append(step)
     
     # Smooth out transitions
@@ -60,17 +72,12 @@ def create_jungle_theme():
         next_step = steps[min(i+1, len(steps)-1)]
         interpolated_step = {"time": current_step["time"], "rooms": {}}
         for room in rooms:
-            if room in current_step["rooms"] and room in next_step["rooms"]:
-                interpolated_step["rooms"][room] = {
-                    "total_dimming": (current_step["rooms"][room]["total_dimming"] + next_step["rooms"][room]["total_dimming"]) // 2,
-                    "r_dimming": (current_step["rooms"][room]["r_dimming"] + next_step["rooms"][room]["r_dimming"]) // 2,
-                    "g_dimming": (current_step["rooms"][room]["g_dimming"] + next_step["rooms"][room]["g_dimming"]) // 2,
-                    "b_dimming": (current_step["rooms"][room]["b_dimming"] + next_step["rooms"][room]["b_dimming"]) // 2
-                }
-            elif room in current_step["rooms"]:
-                interpolated_step["rooms"][room] = current_step["rooms"][room]
-            elif room in next_step["rooms"]:
-                interpolated_step["rooms"][room] = next_step["rooms"][room]
+            interpolated_step["rooms"][room] = {
+                "total_dimming": (current_step["rooms"][room]["total_dimming"] + next_step["rooms"][room]["total_dimming"]) // 2,
+                "r_dimming": (current_step["rooms"][room]["r_dimming"] + next_step["rooms"][room]["r_dimming"]) // 2,
+                "g_dimming": (current_step["rooms"][room]["g_dimming"] + next_step["rooms"][room]["g_dimming"]) // 2,
+                "b_dimming": (current_step["rooms"][room]["b_dimming"] + next_step["rooms"][room]["b_dimming"]) // 2
+            }
         smoothed_steps.append(interpolated_step)
     
     return {"duration": duration, "steps": smoothed_steps}
