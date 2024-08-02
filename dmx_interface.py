@@ -12,7 +12,7 @@ class DMXInterface:
     BREAK_TIME = 0.000176  # 176µs break time
     MAB_TIME = 0.000012  # 12µs mark after break
     FRAME_DELAY = 0.000001  # 1µs frame delay
-    FRAME_TIME = 0.023  # Aim for ~40Hz refresh rate
+    FRAME_TIME = 0.025  # Aim for 40Hz refresh rate (25ms)
 
     def __init__(self, url='ftdi://ftdi:232:A10NI4B7/1'):
         self.url = url
@@ -21,6 +21,7 @@ class DMXInterface:
         self.data[0] = self.START_CODE
         self.lock = Lock()
         self.last_send_time = 0
+        self.changed_channels = set()
         self._initialize_port()
 
     def _initialize_port(self):
@@ -38,7 +39,9 @@ class DMXInterface:
     def set_channel(self, channel, value):
         if 1 <= channel <= self.DMX_CHANNELS:
             with self.lock:
-                self.data[channel] = value
+                if self.data[channel] != value:
+                    self.data[channel] = value
+                    self.changed_channels.add(channel)
             logger.debug(f"Set DMX channel {channel} to value {value}")
         else:
             logger.warning(f"Invalid DMX channel {channel}. Must be between 1 and {self.DMX_CHANNELS}.")
@@ -47,7 +50,9 @@ class DMXInterface:
         with self.lock:
             for channel, value in channel_values.items():
                 if 1 <= channel <= self.DMX_CHANNELS:
-                    self.data[channel] = value
+                    if self.data[channel] != value:
+                        self.data[channel] = value
+                        self.changed_channels.add(channel)
                 else:
                     logger.warning(f"Invalid DMX channel {channel}. Must be between 1 and {self.DMX_CHANNELS}.")
 
@@ -60,13 +65,17 @@ class DMXInterface:
         
         try:
             with self.lock:
-                self.port.set_break(True)
-                time.sleep(self.BREAK_TIME)
-                self.port.set_break(False)
-                time.sleep(self.MAB_TIME)
-                self.port.write_data(self.data)
-                time.sleep(self.FRAME_DELAY)
-            logger.debug("DMX frame sent")
+                if self.changed_channels:
+                    self.port.set_break(True)
+                    time.sleep(self.BREAK_TIME)
+                    self.port.set_break(False)
+                    time.sleep(self.MAB_TIME)
+                    self.port.write_data(self.data)
+                    time.sleep(self.FRAME_DELAY)
+                    self.changed_channels.clear()
+                    logger.debug("DMX frame sent")
+                else:
+                    logger.debug("No changes, skipping DMX frame")
         except Exception as e:
             logger.error(f"Error sending DMX frame: {str(e)}", exc_info=True)
             self._handle_port_error()
