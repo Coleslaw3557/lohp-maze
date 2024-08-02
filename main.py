@@ -118,7 +118,7 @@ def toggle_verbose_logging():
 @app.route('/rooms')
 def rooms():
     room_layout = light_config.get_room_layout()
-    return render_template('room_manager.html', room_layout=room_layout)
+    return render_template('room_manager.html', room_layout=room_layout, effects_manager=effects_manager)
 
 @app.route('/add_room', methods=['GET', 'POST'])
 def add_room():
