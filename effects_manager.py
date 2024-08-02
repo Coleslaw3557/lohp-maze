@@ -7,6 +7,7 @@ class EffectsManager:
     def __init__(self, config_file='effects_config.json'):
         self.config_file = config_file
         self.effects = self.load_config()
+        self.room_effects = {}
 
     def load_config(self):
         try:
@@ -32,26 +33,46 @@ class EffectsManager:
     def get_effect(self, room):
         return self.effects.get(room, None)
 
-    def add_effect(self, room, effect_data):
-        self.effects[room] = effect_data
+    def add_effect(self, effect_name, effect_data):
+        self.effects[effect_name] = effect_data
         self.save_config()
-        logger.info(f"Effect added for room: {room}")
+        logger.info(f"Effect added: {effect_name}")
 
-    def update_effect(self, room, effect_data):
-        if room in self.effects:
-            self.effects[room] = effect_data
+    def update_effect(self, effect_name, effect_data):
+        if effect_name in self.effects:
+            self.effects[effect_name] = effect_data
             self.save_config()
-            logger.info(f"Effect updated for room: {room}")
+            logger.info(f"Effect updated: {effect_name}")
         else:
-            logger.warning(f"No effect found for room: {room}")
+            logger.warning(f"No effect found: {effect_name}")
 
-    def remove_effect(self, room):
-        if room in self.effects:
-            del self.effects[room]
+    def remove_effect(self, effect_name):
+        if effect_name in self.effects:
+            del self.effects[effect_name]
             self.save_config()
-            logger.info(f"Effect removed for room: {room}")
+            logger.info(f"Effect removed: {effect_name}")
         else:
-            logger.warning(f"No effect found for room: {room}")
+            logger.warning(f"No effect found: {effect_name}")
+
+    def assign_effect_to_room(self, room, effect_name):
+        if effect_name in self.effects:
+            self.room_effects[room] = effect_name
+            logger.info(f"Effect {effect_name} assigned to room: {room}")
+        else:
+            logger.warning(f"No effect found: {effect_name}")
+
+    def remove_effect_from_room(self, room):
+        if room in self.room_effects:
+            del self.room_effects[room]
+            logger.info(f"Effect removed from room: {room}")
+        else:
+            logger.warning(f"No effect assigned to room: {room}")
+
+    def get_room_effect(self, room):
+        effect_name = self.room_effects.get(room)
+        if effect_name:
+            return self.effects.get(effect_name)
+        return None
 
     def get_all_effects(self):
         return self.effects

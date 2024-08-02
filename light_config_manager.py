@@ -3,10 +3,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from dmx_interface import DMXInterface
+
 class LightConfigManager:
-    def __init__(self, config_file='light_config.json'):
+    def __init__(self, config_file='light_config.json', dmx_interface=None):
         self.config_file = config_file
         self.light_configs = self.load_config()
+        self.dmx_interface = dmx_interface or DMXInterface()
 
     def load_config(self):
         try:
@@ -100,4 +103,32 @@ class LightConfigManager:
             if 'channels' not in config:
                 logger.error(f"Invalid configuration for {model}: 'channels' field missing")
                 return False
+        return True
+
+    def test_effect(self, room, effect_data):
+        room_layout = self.get_room_layout()
+        if room not in room_layout:
+            logger.warning(f"Room not found: {room}")
+            return False
+
+        lights = room_layout[room]
+        for step in effect_data['steps']:
+            for light in lights:
+                start_address = light['start_address']
+                light_model = self.get_light_config(light['model'])
+                for channel, value in step['channels'].items():
+                    if channel in light_model['channels']:
+                        channel_offset = light_model['channels'][channel]
+                        self.dmx_interface.set_channel(start_address + channel_offset, value)
+            self.dmx_interface.send_dmx()
+            time.sleep(step['time'])
+
+        # Reset channels after effect
+        for light in lights:
+            start_address = light['start_address']
+            light_model = self.get_light_config(light['model'])
+            for channel in light_model['channels'].values():
+                self.dmx_interface.set_channel(start_address + channel, 0)
+        self.dmx_interface.send_dmx()
+
         return True

@@ -23,7 +23,7 @@ app.secret_key = SECRET_KEY
 
 # Initialize components
 dmx = DMXInterface()
-light_config = LightConfigManager()
+light_config = LightConfigManager(dmx_interface=dmx)
 effects_manager = EffectsManager()
 effects_manager.create_cop_dodge_effect()
 
@@ -217,18 +217,32 @@ def edit_effect(room):
     effect = effects_manager.get_effect(room)
     return render_template('edit_effect.html', room=room, effect=effect)
 
-@app.route('/remove_effect/<room>', methods=['POST'])
-def remove_effect(room):
-    effects_manager.remove_effect(room)
+@app.route('/remove_effect/<effect_name>', methods=['POST'])
+def remove_effect(effect_name):
+    effects_manager.remove_effect(effect_name)
     return redirect(url_for('effects'))
 
-@app.route('/execute_effect/<room>', methods=['POST'])
-def execute_effect(room):
-    effect = effects_manager.get_effect(room)
+@app.route('/assign_effect', methods=['POST'])
+def assign_effect():
+    room = request.form['room']
+    effect_name = request.form['effect_name']
+    effects_manager.assign_effect_to_room(room, effect_name)
+    return redirect(url_for('rooms'))
+
+@app.route('/remove_room_effect/<room>', methods=['POST'])
+def remove_room_effect(room):
+    effects_manager.remove_effect_from_room(room)
+    return redirect(url_for('rooms'))
+
+@app.route('/test_effect/<room>', methods=['POST'])
+def test_effect(room):
+    effect = effects_manager.get_room_effect(room)
     if effect:
-        # Here you would implement the logic to execute the effect
-        # This might involve sending DMX commands based on the effect data
-        return jsonify({"message": f"Effect for room {room} executed successfully"}), 200
+        success = light_config.test_effect(room, effect)
+        if success:
+            return jsonify({"message": f"Effect for room {room} tested successfully"}), 200
+        else:
+            return jsonify({"error": f"Failed to test effect for room {room}"}), 500
     else:
         return jsonify({"error": f"No effect found for room {room}"}), 404
 
