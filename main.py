@@ -40,11 +40,11 @@ def create_jungle_theme():
     for t in range(0, int(duration) + 1):
         step = {"time": float(t), "rooms": {}}
         for room in rooms:
-            if random.random() < 0.1:  # 10% chance of change per room per second
+            if random.random() < 0.05:  # 5% chance of change per room per second
                 green = random.randint(100, 255)
                 red = random.randint(0, 50)
                 blue = random.randint(0, 30)
-                total_dim = random.randint(150, 255)
+                total_dim = random.randint(200, 255)  # Increased minimum brightness
                 step["rooms"][room] = {
                     "total_dimming": total_dim,
                     "r_dimming": red,
@@ -53,7 +53,27 @@ def create_jungle_theme():
                 }
         steps.append(step)
     
-    return {"duration": duration, "steps": steps}
+    # Smooth out transitions
+    smoothed_steps = []
+    for i in range(len(steps)):
+        current_step = steps[i]
+        next_step = steps[min(i+1, len(steps)-1)]
+        interpolated_step = {"time": current_step["time"], "rooms": {}}
+        for room in rooms:
+            if room in current_step["rooms"] and room in next_step["rooms"]:
+                interpolated_step["rooms"][room] = {
+                    "total_dimming": (current_step["rooms"][room]["total_dimming"] + next_step["rooms"][room]["total_dimming"]) // 2,
+                    "r_dimming": (current_step["rooms"][room]["r_dimming"] + next_step["rooms"][room]["r_dimming"]) // 2,
+                    "g_dimming": (current_step["rooms"][room]["g_dimming"] + next_step["rooms"][room]["g_dimming"]) // 2,
+                    "b_dimming": (current_step["rooms"][room]["b_dimming"] + next_step["rooms"][room]["b_dimming"]) // 2
+                }
+            elif room in current_step["rooms"]:
+                interpolated_step["rooms"][room] = current_step["rooms"][room]
+            elif room in next_step["rooms"]:
+                interpolated_step["rooms"][room] = next_step["rooms"][room]
+        smoothed_steps.append(interpolated_step)
+    
+    return {"duration": duration, "steps": smoothed_steps}
 
 # Create and add the jungle theme
 jungle_theme = create_jungle_theme()
