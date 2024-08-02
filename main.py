@@ -11,7 +11,7 @@ import threading
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 SECRET_KEY = os.environ.get('SECRET_KEY', 'your_secret_key_here')
-DMX_UPDATE_RATE = 40  # Hz
+DMX_UPDATE_RATE = 40  # Hz (fixed at 40Hz)
 DMX_STATUS_CHECK_INTERVAL = 60  # seconds
 
 # Set up logging
