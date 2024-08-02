@@ -154,12 +154,16 @@ class EffectsManager:
     def _generate_room_channels(self, theme_data):
         base_hue = random.random()
         channels = {}
+        brightness = theme_data.get('brightness', 1.0)  # Default brightness to 1.0 if not present
+        color_shift = theme_data.get('color_shift', 0.0)  # Default color_shift to 0.0 if not present
+        randomness = theme_data.get('randomness', 0.0)  # Default randomness to 0.0 if not present
         for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming']:
-            value = int(theme_data['brightness'] * 255)
+            value = int(brightness * 255)
             if channel != 'total_dimming':
-                hue_offset = (base_hue + theme_data['color_shift'] * random.random()) % 1
-                value = int(self._hue_to_rgb(hue_offset)[['r_dimming', 'g_dimming', 'b_dimming'].index(channel)] * value)
-            channels[channel] = max(0, min(255, int(value + theme_data['randomness'] * random.uniform(-value, 255-value))))
+                hue_offset = (base_hue + color_shift * random.random()) % 1
+                rgb_values = self._hue_to_rgb(hue_offset)
+                value = int(rgb_values[channel] * value)
+            channels[channel] = max(0, min(255, int(value + randomness * random.uniform(-value, 255-value))))
         return channels
 
     def _hue_to_rgb(self, hue):
