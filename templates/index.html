@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoHP-MazeManager Control System</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+        h1, h2 { color: #333; }
+        nav ul { list-style-type: none; padding: 0; }
+        nav ul li { display: inline; margin-right: 10px; }
+        form { margin-bottom: 20px; }
+        .toggle-switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2196F3; }
+        input:checked + .slider:before { transform: translateX(26px); }
+    </style>
+</head>
+<body>
+    <h1>LoHP-MazeManager Control System</h1>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('rooms') }}">Manage Rooms</a></li>
+            <li><a href="{{ url_for('light_models') }}">Manage Light Models</a></li>
+            <li><a href="{{ url_for('test_mode') }}">Test Mode</a></li>
+        </ul>
+    </nav>
+    
+    <h2>System Settings</h2>
+    <div>
+        <label class="toggle-switch">
+            <input type="checkbox" id="verbose_logging" name="verbose_logging" {% if verbose_logging %}checked{% endif %} onchange="toggleVerboseLogging(this)">
+            <span class="slider"></span>
+        </label>
+        <label for="verbose_logging">Enable Verbose Logging</label>
+    </div>
+
+
+    <script>
+    function toggleVerboseLogging(checkbox) {
+        fetch('{{ url_for('toggle_verbose_logging') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'verbose_logging=' + checkbox.checked
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                checkbox.checked = data.verbose_logging;
+            } else {
+                alert('Failed to toggle verbose logging');
+                checkbox.checked = !checkbox.checked;
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('An error occurred while toggling verbose logging');
+            checkbox.checked = !checkbox.checked;
+        });
+    }
+    </script>
+</body>
+</html>

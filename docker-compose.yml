@@ -1,0 +1,13 @@
+version: '3'
+services:
+  escape-room-control:
+    build: .
+    ports:
+      - "5000:5000"
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    privileged: true
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=production

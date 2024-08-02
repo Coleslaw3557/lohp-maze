@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Light Model</title>
+</head>
+<body>
+    <h1>Add Light Model</h1>
+    <form method="POST">
+        <label for="model">Model Name:</label>
+        <input type="text" id="model" name="model" required><br><br>
+        
+        <h2>Channels</h2>
+        <div id="channels">
+            <div>
+                <input type="text" name="channel_name_0" placeholder="Channel Name">
+                <input type="number" name="channel_0" placeholder="Channel Number" min="0" max="511">
+            </div>
+        </div>
+        <button type="button" onclick="addChannel()">Add Channel</button><br><br>
+        
+        <input type="submit" value="Add Light Model">
+    </form>
+    
+    <a href="{{ url_for('light_models') }}">Back to Light Models</a>
+
+    <script>
+        let channelCount = 1;
+        function addChannel() {
+            const channelsDiv = document.getElementById('channels');
+            const newChannel = document.createElement('div');
+            newChannel.innerHTML = `
+                <input type="text" name="channel_name_${channelCount}" placeholder="Channel Name">
+                <input type="number" name="channel_${channelCount}" placeholder="Channel Number" min="0" max="511">
+            `;
+            channelsDiv.appendChild(newChannel);
+            channelCount++;
+        }
+    </script>
+</body>
+</html>

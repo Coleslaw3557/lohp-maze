@@ -1,0 +1,58 @@
+{
+    "light_models": {
+        "Par Light - Model ZQ01424": {
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 1,
+                "g_dimming": 2,
+                "b_dimming": 3,
+                "w_dimming": 4,
+                "total_strobe": 5,
+                "function_selection": 6,
+                "function_speed": 7
+            }
+        },
+        "U'King LED Par Light - Model ZQ07010/ZQ07011": {
+            "channels": {
+                "master_dimmer": 0,
+                "red": 1,
+                "green": 2,
+                "blue": 3,
+                "white": 4,
+                "color_macro": 5
+            }
+        }
+    },
+    "room_layout": {
+        "Entrance": [{"model": "Par Light - Model ZQ01424", "start_address": 1}],
+        "Cop Dodge": [{"model": "Par Light - Model ZQ01424", "start_address": 9}],
+        "Gate": [{"model": "Par Light - Model ZQ01424", "start_address": 17}],
+        "Guy Line Climb": [
+            {"model": "Par Light - Model ZQ01424", "start_address": 25},
+            {"model": "Par Light - Model ZQ01424", "start_address": 33}
+        ],
+        "Sparkle Pony Room": [{"model": "Par Light - Model ZQ01424", "start_address": 41}],
+        "Porto Room": [{"model": "Par Light - Model ZQ01424", "start_address": 49}],
+        "Cuddle Cross": [
+            {"model": "Par Light - Model ZQ01424", "start_address": 57},
+            {"model": "Par Light - Model ZQ01424", "start_address": 65}
+        ],
+        "Exit": [{"model": "Par Light - Model ZQ01424", "start_address": 73}],
+        "Photo Bomb Room": [
+            {"model": "Par Light - Model ZQ01424", "start_address": 81},
+            {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 89}
+        ],
+        "Deep Playa Handshake": [{"model": "Par Light - Model ZQ01424", "start_address": 95}],
+        "No Friends Monday": [{"model": "Par Light - Model ZQ01424", "start_address": 103}],
+        "Template Room": [{"model": "Par Light - Model ZQ01424", "start_address": 111}],
+        "Monkey Room": [
+            {"model": "Par Light - Model ZQ01424", "start_address": 119},
+            {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 127}
+        ],
+        "Bike Lock Room": [{"model": "Par Light - Model ZQ01424", "start_address": 133}],
+        "Vertical Moop March": [
+            {"model": "Par Light - Model ZQ01424", "start_address": 141},
+            {"model": "Par Light - Model ZQ01424", "start_address": 149}
+        ]
+    }
+}
