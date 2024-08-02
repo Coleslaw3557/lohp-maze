@@ -50,13 +50,13 @@ def create_jungle_theme():
             green = base_green + int(random.randint(-40, 40) * time_factor)
             red = base_red + int(random.randint(-20, 20) * time_factor)
             blue = base_blue + int(random.randint(-20, 20) * time_factor)
-            total_dim = base_total_dim + int(random.randint(-20, 20) * time_factor)
+            total_dim = base_total_dim + int(random.randint(-100, 0) * time_factor)  # Allow dimming down to 25%
             
             # Ensure values are within valid range
             green = max(0, min(255, green))
             red = max(0, min(255, red))
             blue = max(0, min(255, blue))
-            total_dim = max(200, min(255, total_dim))
+            total_dim = max(64, min(255, total_dim))  # 64 is 25% of 255
             
             step["rooms"][room] = {
                 "total_dimming": total_dim,
@@ -74,10 +74,10 @@ def create_jungle_theme():
         interpolated_step = {"time": current_step["time"], "rooms": {}}
         for room in rooms:
             interpolated_step["rooms"][room] = {
-                "total_dimming": (current_step["rooms"][room]["total_dimming"] + next_step["rooms"][room]["total_dimming"]) // 2,
-                "r_dimming": (current_step["rooms"][room]["r_dimming"] + next_step["rooms"][room]["r_dimming"]) // 2,
-                "g_dimming": (current_step["rooms"][room]["g_dimming"] + next_step["rooms"][room]["g_dimming"]) // 2,
-                "b_dimming": (current_step["rooms"][room]["b_dimming"] + next_step["rooms"][room]["b_dimming"]) // 2
+                "total_dimming": int(current_step["rooms"][room]["total_dimming"] * 0.75 + next_step["rooms"][room]["total_dimming"] * 0.25),
+                "r_dimming": int(current_step["rooms"][room]["r_dimming"] * 0.75 + next_step["rooms"][room]["r_dimming"] * 0.25),
+                "g_dimming": int(current_step["rooms"][room]["g_dimming"] * 0.75 + next_step["rooms"][room]["g_dimming"] * 0.25),
+                "b_dimming": int(current_step["rooms"][room]["b_dimming"] * 0.75 + next_step["rooms"][room]["b_dimming"] * 0.25)
             }
         smoothed_steps.append(interpolated_step)
     
