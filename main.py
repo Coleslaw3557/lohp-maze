@@ -31,7 +31,7 @@ effects_manager.create_cop_dodge_effect()
 import random
 
 def create_jungle_theme():
-    duration = 120.0  # 2 minutes
+    duration = 600.0  # 10 minutes
     steps = []
     rooms = ["Entrance", "Cop Dodge", "Gate", "Guy Line Climb", "Sparkle Pony Room", "Porto Room", 
              "Cuddle Cross", "Exit", "Photo Bomb Room", "Deep Playa Handshake", "No Friends Monday", 
@@ -44,12 +44,13 @@ def create_jungle_theme():
 
     for t in range(0, int(duration) + 1):
         step = {"time": float(t), "rooms": {}}
+        time_factor = t / duration  # Factor to increase variation over time
         for room in rooms:
-            # Always include all rooms in each step
-            green = base_green + random.randint(-20, 20)
-            red = base_red + random.randint(-10, 10)
-            blue = base_blue + random.randint(-10, 10)
-            total_dim = base_total_dim + random.randint(-10, 10)
+            # Increase variation over time
+            green = base_green + int(random.randint(-40, 40) * time_factor)
+            red = base_red + int(random.randint(-20, 20) * time_factor)
+            blue = base_blue + int(random.randint(-20, 20) * time_factor)
+            total_dim = base_total_dim + int(random.randint(-20, 20) * time_factor)
             
             # Ensure values are within valid range
             green = max(0, min(255, green))
