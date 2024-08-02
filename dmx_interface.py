@@ -1,5 +1,6 @@
 import time
 import logging
+import threading
 from pyftdi.ftdi import Ftdi
 from threading import Lock
 
