@@ -30,15 +30,15 @@ effects_manager.create_cop_dodge_effect()
 
 # Create a jungle theme
 jungle_theme = {
-    "duration": 60.0,
+    "duration": 30.0,
     "steps": [
         {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 0}},
-        {"time": 10.0, "channels": {"total_dimming": 200, "r_dimming": 0, "g_dimming": 200, "b_dimming": 0}},
-        {"time": 20.0, "channels": {"total_dimming": 255, "r_dimming": 50, "g_dimming": 255, "b_dimming": 0}},
-        {"time": 30.0, "channels": {"total_dimming": 150, "r_dimming": 0, "g_dimming": 150, "b_dimming": 0}},
-        {"time": 40.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 50}},
-        {"time": 50.0, "channels": {"total_dimming": 200, "r_dimming": 25, "g_dimming": 200, "b_dimming": 25}},
-        {"time": 60.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 0}}
+        {"time": 5.0, "channels": {"total_dimming": 200, "r_dimming": 50, "g_dimming": 200, "b_dimming": 0}},
+        {"time": 10.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 50}},
+        {"time": 15.0, "channels": {"total_dimming": 180, "r_dimming": 30, "g_dimming": 180, "b_dimming": 30}},
+        {"time": 20.0, "channels": {"total_dimming": 220, "r_dimming": 20, "g_dimming": 220, "b_dimming": 0}},
+        {"time": 25.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 20}},
+        {"time": 30.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 0}}
     ]
 }
 effects_manager.add_theme("Jungle", jungle_theme)
