@@ -218,6 +218,11 @@ def set_theme():
         effects_manager.stop_current_theme()
     return redirect(url_for('index'))
 
+@app.route('/stop_theme', methods=['POST'])
+def stop_theme():
+    effects_manager.stop_current_theme()
+    return jsonify({"status": "success", "message": "Theme stopped successfully"})
+
 @app.route('/themes')
 def themes():
     return render_template('themes.html', themes=effects_manager.get_all_themes(), current_theme=effects_manager.current_theme)

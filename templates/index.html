@@ -52,6 +52,7 @@
         </select>
         <input type="submit" value="Set Theme">
     </form>
+    <button id="stopThemeButton" style="display: none;">Stop Theme</button>
     <div id="brightnessSlider" style="display: none;">
         <label for="brightness">Brightness: <span id="brightnessValue">100%</span></label>
         <input type="range" id="brightness" name="brightness" min="0" max="1" step="0.01" value="1">
@@ -95,9 +96,32 @@
         const brightnessSlider = document.getElementById('brightnessSlider');
         const brightnessInput = document.getElementById('brightness');
         const brightnessValue = document.getElementById('brightnessValue');
+        const stopThemeButton = document.getElementById('stopThemeButton');
 
         themeSelect.addEventListener('change', function() {
             brightnessSlider.style.display = this.value ? 'block' : 'none';
+            stopThemeButton.style.display = this.value ? 'inline-block' : 'none';
+        });
+
+        stopThemeButton.addEventListener('click', function() {
+            fetch('{{ url_for('stop_theme') }}', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Theme stopped successfully');
+                    themeSelect.value = '';
+                    brightnessSlider.style.display = 'none';
+                    stopThemeButton.style.display = 'none';
+                } else {
+                    alert('Failed to stop theme: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while stopping the theme');
+            });
         });
 
         brightnessInput.addEventListener('input', function() {
