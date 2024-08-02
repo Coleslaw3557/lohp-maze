@@ -25,8 +25,23 @@ app.secret_key = SECRET_KEY
 # Initialize components
 dmx = DMXInterface()
 light_config = LightConfigManager(dmx_interface=dmx)
-effects_manager = EffectsManager()
+effects_manager = EffectsManager(light_config_manager=light_config)
 effects_manager.create_cop_dodge_effect()
+
+# Create a jungle theme
+jungle_theme = {
+    "duration": 60.0,
+    "steps": [
+        {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 0}},
+        {"time": 10.0, "channels": {"total_dimming": 200, "r_dimming": 0, "g_dimming": 200, "b_dimming": 0}},
+        {"time": 20.0, "channels": {"total_dimming": 255, "r_dimming": 50, "g_dimming": 255, "b_dimming": 0}},
+        {"time": 30.0, "channels": {"total_dimming": 150, "r_dimming": 0, "g_dimming": 150, "b_dimming": 0}},
+        {"time": 40.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 50}},
+        {"time": 50.0, "channels": {"total_dimming": 200, "r_dimming": 25, "g_dimming": 200, "b_dimming": 25}},
+        {"time": 60.0, "channels": {"total_dimming": 255, "r_dimming": 0, "g_dimming": 255, "b_dimming": 0}}
+    ]
+}
+effects_manager.add_theme("Jungle", jungle_theme)
 
 def dmx_update_loop():
     last_status_check = time.time()
@@ -115,6 +130,19 @@ def toggle_verbose_logging():
     session['verbose_logging'] = new_state
     set_verbose_logging(new_state)
     return jsonify({"status": "success", "verbose_logging": new_state})
+
+@app.route('/set_theme', methods=['POST'])
+def set_theme():
+    theme_name = request.form.get('theme_name')
+    if theme_name:
+        effects_manager.set_current_theme(theme_name)
+    else:
+        effects_manager.stop_current_theme()
+    return redirect(url_for('index'))
+
+@app.route('/themes')
+def themes():
+    return render_template('themes.html', themes=effects_manager.get_all_themes(), current_theme=effects_manager.current_theme)
 
 @app.route('/rooms')
 def rooms():

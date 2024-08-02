@@ -25,11 +25,22 @@
             <li><a href="{{ url_for('rooms') }}">Manage Rooms</a></li>
             <li><a href="{{ url_for('light_models') }}">Manage Light Models</a></li>
             <li><a href="{{ url_for('effects') }}">Manage Effects</a></li>
+            <li><a href="{{ url_for('themes') }}">Manage Themes</a></li>
             <li><a href="{{ url_for('test_mode') }}">Test Mode</a></li>
         </ul>
     </nav>
     
     <h2>System Settings</h2>
+    <h3>Current Theme</h3>
+    <form action="{{ url_for('set_theme') }}" method="post">
+        <select name="theme_name">
+            <option value="">None</option>
+            {% for theme_name in themes %}
+            <option value="{{ theme_name }}" {% if theme_name == current_theme %}selected{% endif %}>{{ theme_name }}</option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="Set Theme">
+    </form>
     <div>
         <label class="toggle-switch">
             <input type="checkbox" id="verbose_logging" name="verbose_logging" {% if verbose_logging %}checked{% endif %} onchange="toggleVerboseLogging(this)">

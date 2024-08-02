@@ -1,13 +1,20 @@
 import json
 import logging
+import time
+import threading
 
 logger = logging.getLogger(__name__)
 
 class EffectsManager:
-    def __init__(self, config_file='effects_config.json'):
+    def __init__(self, config_file='effects_config.json', light_config_manager=None):
         self.config_file = config_file
         self.effects = self.load_config()
         self.room_effects = {}
+        self.themes = {}
+        self.current_theme = None
+        self.theme_thread = None
+        self.stop_theme = threading.Event()
+        self.light_config_manager = light_config_manager
 
     def load_config(self):
         try:
@@ -76,6 +83,67 @@ class EffectsManager:
 
     def get_all_effects(self):
         return self.effects
+
+    def add_theme(self, theme_name, theme_data):
+        self.themes[theme_name] = theme_data
+        self.save_config()
+        logger.info(f"Theme added: {theme_name}")
+
+    def remove_theme(self, theme_name):
+        if theme_name in self.themes:
+            del self.themes[theme_name]
+            self.save_config()
+            logger.info(f"Theme removed: {theme_name}")
+        else:
+            logger.warning(f"No theme found: {theme_name}")
+
+    def get_all_themes(self):
+        return self.themes
+
+    def set_current_theme(self, theme_name):
+        if theme_name in self.themes:
+            self.current_theme = theme_name
+            self.stop_theme.set()
+            if self.theme_thread:
+                self.theme_thread.join()
+            self.stop_theme.clear()
+            self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
+            self.theme_thread.start()
+            logger.info(f"Current theme set to: {theme_name}")
+        else:
+            logger.warning(f"Theme not found: {theme_name}")
+
+    def _run_theme(self, theme_name):
+        theme_data = self.themes[theme_name]
+        while not self.stop_theme.is_set():
+            start_time = time.time()
+            for step in theme_data['steps']:
+                if self.stop_theme.is_set():
+                    break
+                self._apply_theme_step(step)
+                time.sleep(step['time'])
+            if time.time() - start_time < theme_data['duration']:
+                time.sleep(theme_data['duration'] - (time.time() - start_time))
+
+    def _apply_theme_step(self, step):
+        room_layout = self.light_config_manager.get_room_layout()
+        for room, lights in room_layout.items():
+            if room not in self.room_effects:
+                for light in lights:
+                    start_address = light['start_address']
+                    light_model = self.light_config_manager.get_light_config(light['model'])
+                    for channel, value in step['channels'].items():
+                        if channel in light_model['channels']:
+                            channel_offset = light_model['channels'][channel]
+                            self.light_config_manager.dmx_interface.set_channel(start_address + channel_offset, value)
+        self.light_config_manager.dmx_interface.send_dmx()
+
+    def stop_current_theme(self):
+        self.stop_theme.set()
+        if self.theme_thread:
+            self.theme_thread.join()
+        self.current_theme = None
+        logger.info("Current theme stopped")
 
     def create_cop_dodge_effect(self):
         cop_dodge_effect = {
