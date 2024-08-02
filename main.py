@@ -228,7 +228,8 @@ def edit_theme(theme_name):
             'color_variation': float(request.form['color_variation']),
             'intensity_fluctuation': float(request.form['intensity_fluctuation']),
             'overall_brightness': float(request.form['overall_brightness']),
-            'green_blue_balance': float(request.form['green_blue_balance'])
+            'green_blue_balance': float(request.form['green_blue_balance']),
+            'frequency': int(request.form['frequency'])
         }
         effects_manager.update_theme(theme_name, theme_data)
         return redirect(url_for('themes'))

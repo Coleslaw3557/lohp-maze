@@ -12,9 +12,8 @@ class DMXInterface:
     BREAK_TIME = 0.000176  # 176µs break time
     MAB_TIME = 0.000012  # 12µs mark after break
     FRAME_DELAY = 0.000001  # 1µs frame delay
-    FRAME_TIME = 0.025  # Aim for 40Hz refresh rate (25ms)
 
-    def __init__(self, url='ftdi://ftdi:232:A10NI4B7/1'):
+    def __init__(self, url='ftdi://ftdi:232:A10NI4B7/1', frequency=40):
         self.url = url
         self.port = None
         self.data = bytearray(self.DMX_CHANNELS + 1)
@@ -22,7 +21,12 @@ class DMXInterface:
         self.lock = Lock()
         self.last_send_time = 0
         self.changed_channels = set()
+        self.set_frequency(frequency)
         self._initialize_port()
+
+    def set_frequency(self, frequency):
+        self.frequency = frequency
+        self.FRAME_TIME = 1 / frequency
 
     def _initialize_port(self):
         try:

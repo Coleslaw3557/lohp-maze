@@ -86,12 +86,14 @@ class EffectsManager:
         return self.effects
 
     def add_theme(self, theme_name, theme_data):
+        theme_data['frequency'] = theme_data.get('frequency', 40)  # Default to 40 Hz if not provided
         self.themes[theme_name] = theme_data
         self.save_config()
         logger.info(f"Theme added: {theme_name}")
 
     def update_theme(self, theme_name, theme_data):
         if theme_name in self.themes:
+            theme_data['frequency'] = theme_data.get('frequency', 40)  # Default to 40 Hz if not provided
             self.themes[theme_name] = theme_data
             self.save_config()
             logger.info(f"Theme updated: {theme_name}")
@@ -127,6 +129,7 @@ class EffectsManager:
 
     def _run_theme(self, theme_name):
         theme_data = self.themes[theme_name]
+        self.light_config_manager.dmx_interface.set_frequency(theme_data.get('frequency', 40))
         while not self.stop_theme.is_set():
             start_time = time.time()
             self._generate_and_apply_theme_steps(theme_data)

@@ -25,6 +25,9 @@
         
         <label for="green_blue_balance">Green-Blue Balance: <span id="green_blue_balance-value">{{ theme.green_blue_balance }}</span></label>
         <input type="range" id="green_blue_balance" name="green_blue_balance" min="0" max="1" step="0.01" value="{{ theme.green_blue_balance }}" oninput="updateSliderValue('green_blue_balance')"><br><br>
+        
+        <label for="frequency">Frequency (Hz): <span id="frequency-value">{{ theme.frequency }}</span></label>
+        <input type="range" id="frequency" name="frequency" min="1" max="100" step="1" value="{{ theme.frequency }}" oninput="updateSliderValue('frequency')"><br><br>
 
         <script>
         function updateSliderValue(id) {
