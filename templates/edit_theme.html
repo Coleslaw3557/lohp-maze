@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Theme</title>
+</head>
+<body>
+    <h1>Edit Theme: {{ theme_name }}</h1>
+    <form method="POST">
+        <label for="duration">Duration (seconds):</label>
+        <input type="number" id="duration" name="duration" step="0.1" min="0" value="{{ theme.duration }}" required><br><br>
+        
+        <label for="speed">Speed (0-1):</label>
+        <input type="number" id="speed" name="speed" step="0.01" min="0" max="1" value="{{ theme.speed }}" required><br><br>
+        
+        <label for="flow">Flow (0-1):</label>
+        <input type="number" id="flow" name="flow" step="0.01" min="0" max="1" value="{{ theme.flow }}" required><br><br>
+        
+        <label for="randomness">Randomness (0-1):</label>
+        <input type="number" id="randomness" name="randomness" step="0.01" min="0" max="1" value="{{ theme.randomness }}" required><br><br>
+        
+        <label for="brightness">Brightness (0-1):</label>
+        <input type="number" id="brightness" name="brightness" step="0.01" min="0" max="1" value="{{ theme.brightness }}" required><br><br>
+        
+        <label for="color_shift">Color Shift (0-1):</label>
+        <input type="number" id="color_shift" name="color_shift" step="0.01" min="0" max="1" value="{{ theme.color_shift }}" required><br><br>
+        
+        <input type="submit" value="Update Theme">
+    </form>
+    
+    <a href="{{ url_for('themes') }}">Back to Themes</a>
+</body>
+</html>

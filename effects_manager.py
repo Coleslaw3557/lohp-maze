@@ -2,6 +2,7 @@ import json
 import logging
 import time
 import threading
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,14 @@ class EffectsManager:
         self.save_config()
         logger.info(f"Theme added: {theme_name}")
 
+    def update_theme(self, theme_name, theme_data):
+        if theme_name in self.themes:
+            self.themes[theme_name] = theme_data
+            self.save_config()
+            logger.info(f"Theme updated: {theme_name}")
+        else:
+            logger.warning(f"No theme found: {theme_name}")
+
     def remove_theme(self, theme_name):
         if theme_name in self.themes:
             del self.themes[theme_name]
@@ -99,6 +108,9 @@ class EffectsManager:
 
     def get_all_themes(self):
         return self.themes
+
+    def get_theme(self, theme_name):
+        return self.themes.get(theme_name)
 
     def set_current_theme(self, theme_name):
         if theme_name in self.themes:
@@ -117,13 +129,55 @@ class EffectsManager:
         theme_data = self.themes[theme_name]
         while not self.stop_theme.is_set():
             start_time = time.time()
-            for step in theme_data['steps']:
-                if self.stop_theme.is_set():
-                    break
-                self._apply_theme_step(step)
-                time.sleep(step['time'])
+            self._generate_and_apply_theme_steps(theme_data)
             if time.time() - start_time < theme_data['duration']:
                 time.sleep(theme_data['duration'] - (time.time() - start_time))
+
+    def _generate_and_apply_theme_steps(self, theme_data):
+        room_layout = self.light_config_manager.get_room_layout()
+        step_duration = 1.0 / theme_data['speed']
+        for _ in range(int(theme_data['duration'] * theme_data['speed'])):
+            if self.stop_theme.is_set():
+                break
+            step = self._generate_theme_step(theme_data, room_layout)
+            self._apply_theme_step(step)
+            time.sleep(step_duration)
+
+    def _generate_theme_step(self, theme_data, room_layout):
+        step = {'rooms': {}}
+        for room in room_layout.keys():
+            if room not in self.room_effects:
+                step['rooms'][room] = self._generate_room_channels(theme_data)
+        return step
+
+    def _generate_room_channels(self, theme_data):
+        base_hue = random.random()
+        channels = {}
+        for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming']:
+            value = int(theme_data['brightness'] * 255)
+            if channel != 'total_dimming':
+                hue_offset = (base_hue + theme_data['color_shift'] * random.random()) % 1
+                value = int(self._hue_to_rgb(hue_offset)[['r_dimming', 'g_dimming', 'b_dimming'].index(channel)] * value)
+            channels[channel] = max(0, min(255, int(value + theme_data['randomness'] * random.uniform(-value, 255-value))))
+        return channels
+
+    def _hue_to_rgb(self, hue):
+        r = self._hue_to_rgb_helper(hue + 1/3)
+        g = self._hue_to_rgb_helper(hue)
+        b = self._hue_to_rgb_helper(hue - 1/3)
+        return {'r_dimming': r, 'g_dimming': g, 'b_dimming': b}
+
+    def _hue_to_rgb_helper(self, hue):
+        hue = hue % 1
+        if hue < 0:
+            hue += 1
+        if hue * 6 < 1:
+            return hue * 6
+        if hue * 2 < 1:
+            return 1
+        if hue * 3 < 2:
+            return (2/3 - hue) * 6
+        return 0
 
     def _apply_theme_step(self, step):
         room_layout = self.light_config_manager.get_room_layout()

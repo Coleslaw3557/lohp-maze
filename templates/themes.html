@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Theme Manager</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 <body>
     <h1>Theme Manager</h1>
@@ -12,17 +26,28 @@
         <tr>
             <th>Theme Name</th>
             <th>Duration</th>
+            <th>Speed</th>
+            <th>Flow</th>
+            <th>Randomness</th>
+            <th>Brightness</th>
+            <th>Color Shift</th>
             <th>Actions</th>
         </tr>
         {% for theme_name, theme_data in themes.items() %}
         <tr>
             <td>{{ theme_name }}</td>
             <td>{{ theme_data.duration }} seconds</td>
+            <td>{{ theme_data.speed }}</td>
+            <td>{{ theme_data.flow }}</td>
+            <td>{{ theme_data.randomness }}</td>
+            <td>{{ theme_data.brightness }}</td>
+            <td>{{ theme_data.color_shift }}</td>
             <td>
                 <form action="{{ url_for('set_theme') }}" method="post" style="display: inline;">
                     <input type="hidden" name="theme_name" value="{{ theme_name }}">
                     <input type="submit" value="Set as Current Theme">
                 </form>
+                <a href="{{ url_for('edit_theme', theme_name=theme_name) }}">Edit</a>
                 <form action="{{ url_for('remove_theme', theme_name=theme_name) }}" method="post" style="display: inline;">
                     <input type="submit" value="Remove" onclick="return confirm('Are you sure you want to remove this theme?');">
                 </form>
@@ -30,6 +55,8 @@
         </tr>
         {% endfor %}
     </table>
+    <br>
+    <a href="{{ url_for('add_theme') }}">Add New Theme</a>
     <br>
     <a href="{{ url_for('index') }}">Back to Home</a>
 </body>

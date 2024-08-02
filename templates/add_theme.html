@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Theme</title>
+</head>
+<body>
+    <h1>Add Theme</h1>
+    <form method="POST">
+        <label for="theme_name">Theme Name:</label>
+        <input type="text" id="theme_name" name="theme_name" required><br><br>
+        
+        <label for="duration">Duration (seconds):</label>
+        <input type="number" id="duration" name="duration" step="0.1" min="0" required><br><br>
+        
+        <label for="speed">Speed (0-1):</label>
+        <input type="number" id="speed" name="speed" step="0.01" min="0" max="1" required><br><br>
+        
+        <label for="flow">Flow (0-1):</label>
+        <input type="number" id="flow" name="flow" step="0.01" min="0" max="1" required><br><br>
+        
+        <label for="randomness">Randomness (0-1):</label>
+        <input type="number" id="randomness" name="randomness" step="0.01" min="0" max="1" required><br><br>
+        
+        <label for="brightness">Brightness (0-1):</label>
+        <input type="number" id="brightness" name="brightness" step="0.01" min="0" max="1" required><br><br>
+        
+        <label for="color_shift">Color Shift (0-1):</label>
+        <input type="number" id="color_shift" name="color_shift" step="0.01" min="0" max="1" required><br><br>
+        
+        <input type="submit" value="Add Theme">
+    </form>
+    
+    <a href="{{ url_for('themes') }}">Back to Themes</a>
+</body>
+</html>

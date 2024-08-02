@@ -197,8 +197,35 @@ def remove_theme(theme_name):
 
 @app.route('/add_theme', methods=['GET', 'POST'])
 def add_theme():
-    # Placeholder for add_theme functionality
-    return "Add theme functionality not implemented yet", 501
+    if request.method == 'POST':
+        theme_name = request.form['theme_name']
+        theme_data = {
+            'duration': float(request.form['duration']),
+            'speed': float(request.form['speed']),
+            'flow': float(request.form['flow']),
+            'randomness': float(request.form['randomness']),
+            'brightness': float(request.form['brightness']),
+            'color_shift': float(request.form['color_shift'])
+        }
+        effects_manager.add_theme(theme_name, theme_data)
+        return redirect(url_for('themes'))
+    return render_template('add_theme.html')
+
+@app.route('/edit_theme/<theme_name>', methods=['GET', 'POST'])
+def edit_theme(theme_name):
+    if request.method == 'POST':
+        theme_data = {
+            'duration': float(request.form['duration']),
+            'speed': float(request.form['speed']),
+            'flow': float(request.form['flow']),
+            'randomness': float(request.form['randomness']),
+            'brightness': float(request.form['brightness']),
+            'color_shift': float(request.form['color_shift'])
+        }
+        effects_manager.update_theme(theme_name, theme_data)
+        return redirect(url_for('themes'))
+    theme = effects_manager.get_theme(theme_name)
+    return render_template('edit_theme.html', theme_name=theme_name, theme=theme)
 
 @app.route('/rooms')
 def rooms():
