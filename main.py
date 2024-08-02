@@ -142,7 +142,7 @@ def update_hz():
     dmx.set_frequency(new_hz)
     effects_manager.update_frequency(new_hz)
     flash('Global Hz updated successfully', 'success')
-    return redirect(url_for('index'))
+    return jsonify({'status': 'success', 'message': 'Global Hz updated successfully'})
 
 @app.route('/test_mode')
 def test_mode():
