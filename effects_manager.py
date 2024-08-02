@@ -152,7 +152,6 @@ class EffectsManager:
         return step
 
     def _generate_room_channels(self, theme_data):
-        base_hue = random.random()
         channels = {}
         overall_brightness = theme_data.get('overall_brightness', 0.5)
         green_blue_balance = theme_data.get('green_blue_balance', 0.5)
@@ -164,27 +163,19 @@ class EffectsManager:
         base_blue = int(20 * (1 + (0.5 - green_blue_balance) * 0.4))  # 20% variation
         base_red = 30  # Keep red constant for jungle theme
 
-        for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming']:
-            if channel == 'total_dimming':
-                value = int(overall_brightness * 255)
-            elif channel == 'r_dimming':
-                value = base_red
-            elif channel == 'g_dimming':
-                value = base_green
-            elif channel == 'b_dimming':
-                value = base_blue
+        # Apply color variation and intensity fluctuation
+        red = max(0, min(255, base_red + int(random.uniform(-20, 20) * color_variation)))
+        green = max(0, min(255, base_green + int(random.uniform(-40, 40) * color_variation)))
+        blue = max(0, min(255, base_blue + int(random.uniform(-20, 20) * color_variation)))
 
-            # Apply color variation
-            if channel != 'total_dimming':
-                value += int(random.uniform(-40, 40) * color_variation)
+        # Apply overall brightness and intensity fluctuation
+        total_dimming = int(overall_brightness * 255 * (1 + random.uniform(-0.2, 0.2) * intensity_fluctuation))
+        total_dimming = max(0, min(255, total_dimming))
 
-            # Apply intensity fluctuation
-            value += int(random.uniform(-50, 50) * intensity_fluctuation)
-
-            # Ensure values are within valid range
-            value = max(0, min(255, value))
-
-            channels[channel] = value
+        channels['total_dimming'] = total_dimming
+        channels['r_dimming'] = red
+        channels['g_dimming'] = green
+        channels['b_dimming'] = blue
 
         return channels
 

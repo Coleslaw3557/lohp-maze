@@ -224,11 +224,11 @@ def edit_theme(theme_name):
     if request.method == 'POST':
         theme_data = {
             'duration': float(request.form['duration']),
-            'speed': float(request.form['speed']),
-            'flow': float(request.form['flow']),
-            'randomness': float(request.form['randomness']),
-            'brightness': float(request.form['brightness']),
-            'color_shift': float(request.form['color_shift'])
+            'transition_speed': float(request.form['transition_speed']),
+            'color_variation': float(request.form['color_variation']),
+            'intensity_fluctuation': float(request.form['intensity_fluctuation']),
+            'overall_brightness': float(request.form['overall_brightness']),
+            'green_blue_balance': float(request.form['green_blue_balance'])
         }
         effects_manager.update_theme(theme_name, theme_data)
         return redirect(url_for('themes'))
