@@ -144,6 +144,11 @@ def set_theme():
 def themes():
     return render_template('themes.html', themes=effects_manager.get_all_themes(), current_theme=effects_manager.current_theme)
 
+@app.route('/remove_theme/<theme_name>', methods=['POST'])
+def remove_theme(theme_name):
+    effects_manager.remove_theme(theme_name)
+    return redirect(url_for('themes'))
+
 @app.route('/rooms')
 def rooms():
     room_layout = light_config.get_room_layout()
