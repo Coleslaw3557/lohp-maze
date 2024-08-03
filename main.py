@@ -74,6 +74,10 @@ def stop_theme():
 def themes():
     return render_template('themes.html', themes=effects_manager.get_all_themes(), current_theme=effects_manager.current_theme)
 
+@app.route('/effects')
+def effects():
+    return render_template('effects.html', effects=effects_manager.get_all_effects())
+
 @app.route('/rooms')
 def rooms():
     return render_template('room_manager.html', room_layout=light_config.get_room_layout(), effects_manager=effects_manager)
