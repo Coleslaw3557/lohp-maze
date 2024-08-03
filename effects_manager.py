@@ -77,35 +77,8 @@ class EffectsManager:
 
     def assign_effect_to_room(self, room, effect_name):
         if effect_name in self.effects:
-            effect_data = self.effects[effect_name]
             self.room_effects[room] = effect_name
-            
-            # Get the fixture IDs for the room
-            room_layout = self.light_config_manager.get_room_layout()
-            fixture_ids = [(light['start_address'] - 1) // 8 for light in room_layout.get(room, [])]
-            
-            logger.info(f"Assigning effect '{effect_name}' to room '{room}'")
-            logger.debug(f"Effect data: {effect_data}")
-            logger.debug(f"Fixture IDs for room: {fixture_ids}")
-            
-            if self.interrupt_handler:
-                # Use the interrupt handler to apply the effect
-                logger.info(f"Starting effect '{effect_name}' in room '{room}' on fixtures: {fixture_ids}")
-                for fixture_id in fixture_ids:
-                    try:
-                        self.interrupt_handler.interrupt_fixture(
-                            fixture_id,
-                            effect_data['duration'],
-                            lambda elapsed_time: self._get_effect_step_values(effect_data, elapsed_time)
-                        )
-                        logger.debug(f"Effect '{effect_name}' applied to fixture {fixture_id}")
-                    except Exception as e:
-                        logger.error(f"Error applying effect to fixture {fixture_id}: {str(e)}")
-                logger.info(f"Effect '{effect_name}' completed in room '{room}'")
-            else:
-                logger.error(f"InterruptHandler not available. Effect {effect_name} assigned to room {room}, but cannot be applied.")
-                logger.info("Attempting to apply effect directly using DMX State Manager...")
-                self._apply_effect_directly(room, effect_data, fixture_ids)
+            logger.info(f"Effect '{effect_name}' assigned to room '{room}'")
         else:
             logger.warning(f"No effect found: {effect_name}")
 
@@ -127,6 +100,38 @@ class EffectsManager:
                         logger.error(f"Error applying step to fixture {fixture_id}: {str(e)}")
             time.sleep(0.05)  # Small delay to prevent excessive CPU usage
         logger.info(f"Effect application completed for room '{room}'")
+
+    def apply_effect_to_room(self, room, effect_data):
+        room_layout = self.light_config_manager.get_room_layout()
+        fixture_ids = [(light['start_address'] - 1) // 8 for light in room_layout.get(room, [])]
+        
+        logger.info(f"Applying effect to room '{room}'")
+        logger.debug(f"Effect data: {effect_data}")
+        logger.debug(f"Fixture IDs for room: {fixture_ids}")
+        
+        log_messages = []
+        
+        if self.interrupt_handler:
+            logger.info(f"Using InterruptHandler to apply effect in room '{room}' on fixtures: {fixture_ids}")
+            for fixture_id in fixture_ids:
+                try:
+                    self.interrupt_handler.interrupt_fixture(
+                        fixture_id,
+                        effect_data['duration'],
+                        lambda elapsed_time: self._get_effect_step_values(effect_data, elapsed_time)
+                    )
+                    log_messages.append(f"Effect applied to fixture {fixture_id}")
+                except Exception as e:
+                    error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
+                    logger.error(error_msg)
+                    log_messages.append(error_msg)
+            logger.info(f"Effect application completed in room '{room}'")
+        else:
+            logger.warning("InterruptHandler not available. Applying effect directly using DMX State Manager.")
+            self._apply_effect_directly(room, effect_data, fixture_ids)
+            log_messages.append("Effect applied directly using DMX State Manager")
+        
+        return True, log_messages
 
     def _get_effect_step_values(self, effect_data, elapsed_time):
         for step in effect_data['steps']:

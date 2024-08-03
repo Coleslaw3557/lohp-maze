@@ -189,10 +189,14 @@ def remove_room_effect(room):
 
 @app.route('/test_effect/<room>', methods=['POST'])
 def test_effect(room):
-    effect = effects_manager.get_room_effect(room)
-    if effect:
-        success, log_messages = light_config.test_effect(room, effect)
-        return jsonify({"success": success, "log_messages": log_messages})
+    effect_name = effects_manager.room_effects.get(room)
+    if effect_name:
+        effect_data = effects_manager.effects.get(effect_name)
+        if effect_data:
+            success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
+            return jsonify({"success": success, "log_messages": log_messages})
+        else:
+            return jsonify({"error": f"Effect '{effect_name}' not found"}), 400
     return jsonify({"error": "No effect assigned to this room"}), 400
 
 @app.route('/edit_light_model/<model>', methods=['GET', 'POST'])
