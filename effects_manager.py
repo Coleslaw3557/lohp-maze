@@ -299,24 +299,28 @@ class EffectsManager:
 
     def create_cop_dodge_effect(self):
         cop_dodge_effect = {
-            "duration": 15.0,
+            "duration": 10.0,
             "steps": [
-                # Slower alternating sequence
-                {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 1.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 1.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 2.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 2.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                # Repeat the sequence
-                {"time": 3.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 3.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 4.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 4.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 5.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 5.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                # Initial state (off)
+                {"time": 0.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                # Red flash
+                {"time": 0.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 0.3, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                # Blue flash
+                {"time": 0.4, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 0.6, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                # Repeat the pattern faster
+                {"time": 0.7, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 0.8, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                {"time": 0.9, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 1.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                # Continue the pattern...
+                {"time": 1.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 1.2, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                {"time": 1.3, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 1.4, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
                 # Final off state
-                {"time": 15.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}}
+                {"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}}
             ]
         }
         self.add_effect("Cop Dodge", cop_dodge_effect)
