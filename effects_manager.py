@@ -207,6 +207,7 @@ class EffectsManager:
             else:
                 # Skip rooms with active effects
                 logger.debug(f"Skipping theme application for room {room} due to active effect")
+                self._reset_room_lights(room)
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
@@ -319,6 +320,14 @@ class EffectsManager:
                             channel_offset = light_model['channels'][channel]
                             fixture_values[channel_offset] = value
                     self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+
+    def _reset_room_lights(self, room):
+        room_layout = self.light_config_manager.get_room_layout()
+        lights = room_layout.get(room, [])
+        for light in lights:
+            fixture_id = (light['start_address'] - 1) // 8
+            self.dmx_state_manager.reset_fixture(fixture_id)
+        logger.debug(f"Reset lights for room {room}")
 
     def stop_current_theme(self):
         self.stop_theme.set()
