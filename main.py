@@ -164,14 +164,14 @@ def run_channel_test(rooms, channel_values):
         for room in rooms:
             lights = light_config.get_room_layout().get(room, [])
             for light in lights:
-                fixture_id = light['fixture_id']
+                start_address = light['start_address']
                 light_model = light_config.get_light_config(light['model'])
                 fixture_values = [0] * CHANNELS_PER_FIXTURE
                 for channel, value in channel_values.items():
                     if channel in light_model['channels']:
                         channel_offset = light_model['channels'][channel]
                         fixture_values[channel_offset] = int(value)
-                dmx_state_manager.update_fixture(fixture_id, fixture_values)
+                dmx_state_manager.update_fixture((start_address - 1) // CHANNELS_PER_FIXTURE, fixture_values)
         return jsonify({"message": f"Channel test applied to rooms: {', '.join(rooms)}"}), 200
     except Exception as e:
         logger.exception(f"Error in channel test for rooms: {', '.join(rooms)}")
