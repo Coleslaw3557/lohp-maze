@@ -20,6 +20,11 @@ class EffectsManager:
         self.dmx_state_manager = dmx_state_manager
         self.interrupt_handler = interrupt_handler
         self.frequency = 44  # Updated to 44 Hz
+        
+        if self.interrupt_handler is None:
+            logger.warning("InterruptHandler not provided. Some features may not work correctly.")
+        else:
+            logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
         self.create_police_lights_effect()
         
         if self.interrupt_handler is None:
@@ -296,7 +301,7 @@ class EffectsManager:
         for room, lights in room_layout.items():
             if room not in self.room_effects:
                 step = self._generate_theme_step(theme_data, room)
-                self._apply_theme_step(step, room)
+                self._apply_theme_step(step)
             else:
                 # Skip rooms with active effects
                 logger.debug(f"Skipping theme application for room {room} due to active effect")
@@ -531,7 +536,7 @@ class EffectsManager:
                 interpolated_values = [int(current + (theme - current) * progress)
                                        for current, theme in zip(current_values, theme_values)]
                 self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
-            time.sleep(1 / self.FREQUENCY)  # 44Hz update rate
+            time.sleep(1 / self.frequency)  # 44Hz update rate
 
     def _generate_theme_values(self, room):
         # This method should generate the current theme values for the room
