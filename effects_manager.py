@@ -23,6 +23,8 @@ class EffectsManager:
         
         if self.interrupt_handler is None:
             logger.warning("InterruptHandler not provided. Some features may not work correctly.")
+        else:
+            logger.info("InterruptHandler successfully initialized.")
 
     def update_frequency(self, new_frequency):
         self.frequency = new_frequency
