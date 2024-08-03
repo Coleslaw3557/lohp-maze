@@ -143,6 +143,11 @@ def edit_room(room):
         abort(404)
     return render_template('edit_room.html', room=room, lights=room_layout[room], light_models=light_config.get_light_models())
 
+@app.route('/delete_room/<room>', methods=['POST'])
+def delete_room(room):
+    light_config.remove_room(room)
+    return redirect(url_for('rooms'))
+
 @app.route('/set_theme_brightness', methods=['POST'])
 def set_theme_brightness():
     theme_name = request.form.get('theme_name')
