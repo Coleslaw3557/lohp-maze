@@ -13,6 +13,7 @@ class LightConfigManager:
         self.dmx_state_manager = dmx_state_manager
         if self.dmx_state_manager is None:
             logger.warning("DMX State Manager not provided. Some features may not work correctly.")
+        self.dmx_interface = None  # Remove this line if it exists
 
     def load_config(self):
         try:
@@ -109,6 +110,9 @@ class LightConfigManager:
         return True
 
     def test_effect(self, room, effect_data):
+        if self.dmx_state_manager is None:
+            return False, ["DMX State Manager not initialized. Cannot test effect."]
+
         room_layout = self.get_room_layout()
         log_messages = []
 
