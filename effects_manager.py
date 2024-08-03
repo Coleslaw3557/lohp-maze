@@ -117,13 +117,8 @@ class EffectsManager:
         
         if self.interrupt_handler:
             logger.info(f"Using InterruptHandler to apply effect in room '{room}' on fixtures: {fixture_ids}")
-            tasks = []
             for fixture_id in fixture_ids:
-                task = asyncio.create_task(self._apply_effect_to_fixture(fixture_id, effect_data))
-                tasks.append(task)
-            
-            # Wait for all tasks to complete
-            asyncio.gather(*tasks)
+                self._apply_effect_to_fixture_sync(fixture_id, effect_data)
             
             log_messages.append(f"Effect applied to all fixtures in room '{room}'")
             logger.info(f"Effect application completed in room '{room}'")
@@ -479,3 +474,14 @@ class EffectsManager:
         self.add_effect("Police Lights", police_lights_effect)
         logger.debug(f"Created Police Lights effect: {police_lights_effect}")
         logger.info(f"Police Lights effect created with {len(police_lights_effect['steps'])} steps over {police_lights_effect['duration']} seconds")
+    def _apply_effect_to_fixture_sync(self, fixture_id, effect_data):
+        try:
+            self.interrupt_handler.interrupt_fixture_sync(
+                fixture_id,
+                effect_data['duration'],
+                self._get_effect_step_values(effect_data)
+            )
+            logger.debug(f"Effect applied to fixture {fixture_id}")
+        except Exception as e:
+            error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
+            logger.error(error_msg)
