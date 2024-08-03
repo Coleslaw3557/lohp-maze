@@ -8,9 +8,7 @@ class InterruptHandler:
         self.dmx_state_manager = dmx_state_manager
 
     def interrupt_fixture(self, fixture_id, duration, interrupt_sequence):
-        original_state = self.dmx_state_manager.get_fixture_state(fixture_id)
         logger.info(f"Starting effect on fixture {fixture_id} for {duration} seconds")
-        logger.debug(f"Original state: {original_state}")
         
         start_time = time.time()
         end_time = start_time + duration
@@ -18,14 +16,12 @@ class InterruptHandler:
         while time.time() < end_time:
             elapsed_time = time.time() - start_time
             new_values = interrupt_sequence(elapsed_time)
-            self.dmx_state_manager.update_fixture(fixture_id, new_values)
+            self.dmx_state_manager.update_fixture(fixture_id, new_values, override=True)
             logger.debug(f"Step {step_count}: Fixture {fixture_id}, Elapsed time: {elapsed_time:.3f}s, New values: {new_values}")
             time.sleep(0.025)  # 40Hz update rate
             step_count += 1
 
-        # Restore the original state after the effect
-        self.dmx_state_manager.update_fixture(fixture_id, original_state)
-        logger.info(f"Effect completed for fixture {fixture_id}. Restored to original state.")
+        logger.info(f"Effect completed for fixture {fixture_id}.")
         logger.debug(f"Completed {step_count} steps for fixture {fixture_id} over {duration} seconds")
 
     def interrupt_room(self, room, duration, interrupt_sequence):

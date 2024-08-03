@@ -137,18 +137,17 @@ class EffectsManager:
 
     def _get_effect_step_values(self, effect_data):
         def get_values(elapsed_time):
-            for step in effect_data['steps']:
+            for i, step in enumerate(effect_data['steps']):
                 if elapsed_time <= step['time']:
-                    return [
-                        step['channels'].get('total_dimming', 0),
-                        step['channels'].get('r_dimming', 0),
-                        step['channels'].get('g_dimming', 0),
-                        step['channels'].get('b_dimming', 0),
-                        step['channels'].get('w_dimming', 0),
-                        step['channels'].get('total_strobe', 0),
-                        0,  # function_selection
-                        0   # function_speed
-                    ]
+                    if i == 0:
+                        return [step['channels'].get(channel, 0) for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming', 'w_dimming', 'total_strobe', 'function_selection', 'function_speed']]
+                    else:
+                        prev_step = effect_data['steps'][i-1]
+                        t = (elapsed_time - prev_step['time']) / (step['time'] - prev_step['time'])
+                        return [
+                            int(prev_step['channels'].get(channel, 0) + t * (step['channels'].get(channel, 0) - prev_step['channels'].get(channel, 0)))
+                            for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming', 'w_dimming', 'total_strobe', 'function_selection', 'function_speed']
+                        ]
             return [0] * 8  # Return all zeros if elapsed_time is beyond the last step
         return get_values
 
