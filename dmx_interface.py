@@ -12,7 +12,7 @@ class DMXOutputManager(threading.Thread):
     BREAK_TIME = 0.000176  # 176µs break time
     MAB_TIME = 0.000012  # 12µs mark after break
     FRAME_DELAY = 0.000001  # 1µs frame delay
-    FREQUENCY = 44  # Fixed 44Hz update rate
+    FREQUENCY = 44  # Fixed 44Hz update rate as per DMX512 standard
 
     def __init__(self, dmx_state_manager, url='ftdi://ftdi:232:A10NI4B7/1', universe=0):
         super().__init__()
