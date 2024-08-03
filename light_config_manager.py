@@ -4,13 +4,13 @@ import time
 
 logger = logging.getLogger(__name__)
 
-from dmx_interface import DMXInterface
+from dmx_interface import DMXOutputManager
 
 class LightConfigManager:
-    def __init__(self, config_file='light_config.json', dmx_interface=None):
+    def __init__(self, config_file='light_config.json', dmx_state_manager=None):
         self.config_file = config_file
         self.light_configs = self.load_config()
-        self.dmx_interface = dmx_interface or DMXInterface()
+        self.dmx_state_manager = dmx_state_manager
 
     def load_config(self):
         try:
