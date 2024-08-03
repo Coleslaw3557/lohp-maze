@@ -300,7 +300,6 @@ class EffectsManager:
             else:
                 # Skip rooms with active effects
                 logger.debug(f"Skipping theme application for room {room} due to active effect")
-                self._reset_room_lights(room)
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
@@ -579,3 +578,30 @@ class EffectsManager:
         except Exception as e:
             error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
             logger.error(error_msg)
+    def _fade_to_black(self, room, fixture_ids, duration):
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            progress = (time.time() - start_time) / duration
+            for fixture_id in fixture_ids:
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                faded_values = [int(value * (1 - progress)) for value in current_values]
+                self.dmx_state_manager.update_fixture(fixture_id, faded_values)
+            time.sleep(1 / 44)  # 44Hz update rate
+
+    def _fade_to_theme(self, room, fixture_ids, duration):
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            progress = (time.time() - start_time) / duration
+            for fixture_id in fixture_ids:
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                theme_values = self._generate_theme_values(room)
+                interpolated_values = [int(current + (theme - current) * progress)
+                                       for current, theme in zip(current_values, theme_values)]
+                self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
+            time.sleep(1 / self.FREQUENCY)  # 44Hz update rate
+
+    def _generate_theme_values(self, room):
+        # This method should generate the current theme values for the room
+        # You'll need to implement this based on your theme logic
+        # For now, we'll return a placeholder
+        return [128, 64, 32, 0, 255, 0, 0, 0]
