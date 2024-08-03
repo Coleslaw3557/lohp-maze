@@ -20,3 +20,8 @@ class DMXStateManager:
         with self.locks[fixture_id]:
             start_index = fixture_id * 8
             self.state[start_index:start_index + 8] = [0] * 8
+
+    def get_fixture_state(self, fixture_id):
+        with self.locks[fixture_id]:
+            start_index = fixture_id * 8
+            return self.state[start_index:start_index + 8]

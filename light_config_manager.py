@@ -124,6 +124,20 @@ class LightConfigManager:
         log_messages.append(f"Testing effect in room: {room}")
         log_messages.append(f"Number of lights: {len(lights)}")
 
+        # Store the current state before applying the effect
+        original_states = {}
+        for light in lights:
+            start_address = light['start_address']
+            fixture_id = (start_address - 1) // 8
+            original_states[fixture_id] = self.dmx_state_manager.get_fixture_state(fixture_id)
+
+        # Reset channels before applying the effect
+        log_messages.append("Resetting channels before effect")
+        for light in lights:
+            start_address = light['start_address']
+            fixture_id = (start_address - 1) // 8
+            self.dmx_state_manager.reset_fixture(fixture_id)
+
         for step_index, step in enumerate(effect_data['steps']):
             log_messages.append(f"Step {step_index + 1}:")
             for light in lights:
@@ -143,11 +157,9 @@ class LightConfigManager:
             log_messages.append(f"  Waiting for {step['time']} seconds")
             time.sleep(step['time'])
 
-        # Reset channels after effect
-        log_messages.append("Resetting channels after effect")
-        for light in lights:
-            start_address = light['start_address']
-            fixture_id = (start_address - 1) // 8
-            self.dmx_state_manager.reset_fixture(fixture_id)
+        # Restore the original state after the effect
+        log_messages.append("Restoring original state after effect")
+        for fixture_id, original_state in original_states.items():
+            self.dmx_state_manager.update_fixture(fixture_id, original_state)
 
         return True, log_messages
