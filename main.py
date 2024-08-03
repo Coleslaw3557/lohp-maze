@@ -127,6 +127,22 @@ def remove_theme(theme_name):
     effects_manager.remove_theme(theme_name)
     return redirect(url_for('themes'))
 
+@app.route('/edit_room/<room>', methods=['GET', 'POST'])
+def edit_room(room):
+    if request.method == 'POST':
+        lights = []
+        for i in range(int(request.form['light_count'])):
+            lights.append({
+                'model': request.form[f'model_{i}'],
+                'start_address': int(request.form[f'start_address_{i}'])
+            })
+        light_config.update_room(room, lights)
+        return redirect(url_for('rooms'))
+    room_layout = light_config.get_room_layout()
+    if room not in room_layout:
+        abort(404)
+    return render_template('edit_room.html', room=room, lights=room_layout[room], light_models=light_config.get_light_models())
+
 @app.route('/set_theme_brightness', methods=['POST'])
 def set_theme_brightness():
     theme_name = request.form.get('theme_name')
