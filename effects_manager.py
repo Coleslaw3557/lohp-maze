@@ -512,6 +512,34 @@ class EffectsManager:
         self.add_effect("Police Lights", police_lights_effect)
         logger.debug(f"Created Police Lights effect: {police_lights_effect}")
         logger.info(f"Police Lights effect created with {len(police_lights_effect['steps'])} steps over {police_lights_effect['duration']} seconds")
+    def _fade_to_black(self, room, fixture_ids, duration):
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            progress = (time.time() - start_time) / duration
+            for fixture_id in fixture_ids:
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                faded_values = [int(value * (1 - progress)) for value in current_values]
+                self.dmx_state_manager.update_fixture(fixture_id, faded_values)
+            time.sleep(0.025)  # 40Hz update rate
+
+    def _fade_to_theme(self, room, fixture_ids, duration):
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            progress = (time.time() - start_time) / duration
+            for fixture_id in fixture_ids:
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                theme_values = self._generate_theme_values(room)
+                interpolated_values = [int(current + (theme - current) * progress)
+                                       for current, theme in zip(current_values, theme_values)]
+                self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
+            time.sleep(0.025)  # 40Hz update rate
+
+    def _generate_theme_values(self, room):
+        # This method should generate the current theme values for the room
+        # You'll need to implement this based on your theme logic
+        # For now, we'll return a placeholder
+        return [128, 64, 32, 0, 255, 0, 0, 0]
+
     def _apply_effect_to_fixture_sync(self, fixture_id, effect_data):
         try:
             self.interrupt_handler.interrupt_fixture_sync(
