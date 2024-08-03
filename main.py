@@ -149,6 +149,32 @@ def delete_room(room):
     light_config.remove_room(room)
     return redirect(url_for('rooms'))
 
+@app.route('/add_room', methods=['GET', 'POST'])
+def add_room():
+    if request.method == 'POST':
+        room_name = request.form['room_name']
+        lights = []
+        for i in range(int(request.form['light_count'])):
+            lights.append({
+                'model': request.form[f'model_{i}'],
+                'start_address': int(request.form[f'start_address_{i}'])
+            })
+        light_config.add_room(room_name, lights)
+        return redirect(url_for('rooms'))
+    return render_template('add_room.html', light_models=light_config.get_light_models())
+
+@app.route('/add_light_model', methods=['GET', 'POST'])
+def add_light_model():
+    if request.method == 'POST':
+        model = request.form['model']
+        channels = {}
+        for key, value in request.form.items():
+            if key.startswith('channel_'):
+                channels[request.form[f'channel_name_{key[8:]}']] = int(value)
+        light_config.add_light_model(model, {"channels": channels})
+        return redirect(url_for('light_models'))
+    return render_template('add_light_model.html')
+
 @app.route('/assign_effect', methods=['POST'])
 def assign_effect():
     room = request.form.get('room')

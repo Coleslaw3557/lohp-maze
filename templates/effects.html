@@ -9,11 +9,10 @@
     <h1>Effects Manager</h1>
     <table>
         <tr>
-            <th>Room</th>
+            <th>Effect Name</th>
             <th>Duration</th>
             <th>Actions</th>
         </tr>
-        {% for room, effect in effects.items() %}
         {% for effect_name, effect in effects.items() %}
         <tr>
             <td>{{ effect_name }}</td>
@@ -26,33 +25,7 @@
             </td>
         </tr>
         {% endfor %}
-        {% endfor %}
     </table>
-    <a href="{{ url_for('add_effect') }}">Add New Effect</a>
-    <br>
-    <a href="{{ url_for('index') }}">Back to Home</a>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Effects Manager</title>
-</head>
-<body>
-    <h1>Effects Manager</h1>
-    <ul>
-        {% for effect_name, effect in effects.items() %}
-        <li>
-            {{ effect_name }}
-            <a href="{{ url_for('edit_effect', effect_name=effect_name) }}">Edit</a>
-            <form action="{{ url_for('remove_effect', effect_name=effect_name) }}" method="post" style="display: inline;">
-                <input type="submit" value="Remove" onclick="return confirm('Are you sure you want to remove this effect?');">
-            </form>
-        </li>
-        {% endfor %}
-    </ul>
     <a href="{{ url_for('add_effect') }}">Add New Effect</a>
     <br>
     <a href="{{ url_for('index') }}">Back to Home</a>
