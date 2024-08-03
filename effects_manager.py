@@ -3,6 +3,7 @@ import logging
 import time
 import threading
 import random
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -116,18 +117,15 @@ class EffectsManager:
         
         if self.interrupt_handler:
             logger.info(f"Using InterruptHandler to apply effect in room '{room}' on fixtures: {fixture_ids}")
+            tasks = []
             for fixture_id in fixture_ids:
-                try:
-                    self.interrupt_handler.interrupt_fixture(
-                        fixture_id,
-                        effect_data['duration'],
-                        self._get_effect_step_values(effect_data)
-                    )
-                    log_messages.append(f"Effect applied to fixture {fixture_id}")
-                except Exception as e:
-                    error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
-                    logger.error(error_msg)
-                    log_messages.append(error_msg)
+                task = asyncio.create_task(self._apply_effect_to_fixture(fixture_id, effect_data))
+                tasks.append(task)
+            
+            # Wait for all tasks to complete
+            asyncio.gather(*tasks)
+            
+            log_messages.append(f"Effect applied to all fixtures in room '{room}'")
             logger.info(f"Effect application completed in room '{room}'")
         else:
             logger.warning("InterruptHandler not available. Applying effect directly using DMX State Manager.")
@@ -138,6 +136,18 @@ class EffectsManager:
         self._reset_room_lights(room)
         
         return True, log_messages
+
+    async def _apply_effect_to_fixture(self, fixture_id, effect_data):
+        try:
+            await self.interrupt_handler.interrupt_fixture(
+                fixture_id,
+                effect_data['duration'],
+                self._get_effect_step_values(effect_data)
+            )
+            logger.debug(f"Effect applied to fixture {fixture_id}")
+        except Exception as e:
+            error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
+            logger.error(error_msg)
 
     def _reset_room_lights(self, room):
         room_layout = self.light_config_manager.get_room_layout()
