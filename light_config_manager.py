@@ -11,6 +11,8 @@ class LightConfigManager:
         self.config_file = config_file
         self.light_configs = self.load_config()
         self.dmx_state_manager = dmx_state_manager
+        if self.dmx_state_manager is None:
+            logger.warning("DMX State Manager not provided. Some features may not work correctly.")
 
     def load_config(self):
         try:
@@ -123,16 +125,17 @@ class LightConfigManager:
             for light in lights:
                 start_address = light['start_address']
                 light_model = self.get_light_config(light['model'])
+                fixture_id = (start_address - 1) // 8
+                fixture_values = [0] * 8
                 log_messages.append(f"  Light: {light['model']} (Start Address: {start_address})")
                 for channel, value in step['channels'].items():
                     if channel in light_model['channels']:
                         channel_offset = light_model['channels'][channel]
-                        dmx_address = start_address + channel_offset
-                        self.dmx_interface.set_channel(dmx_address, value)
-                        log_messages.append(f"    Channel: {channel}, DMX Address: {dmx_address}, Value: {value}")
+                        fixture_values[channel_offset] = value
+                        log_messages.append(f"    Channel: {channel}, DMX Address: {start_address + channel_offset}, Value: {value}")
                     else:
                         log_messages.append(f"    Warning: Channel {channel} not found in light model")
-            self.dmx_interface.send_dmx()
+                self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
             log_messages.append(f"  Waiting for {step['time']} seconds")
             time.sleep(step['time'])
 
@@ -140,9 +143,7 @@ class LightConfigManager:
         log_messages.append("Resetting channels after effect")
         for light in lights:
             start_address = light['start_address']
-            light_model = self.get_light_config(light['model'])
-            for channel in light_model['channels'].values():
-                self.dmx_interface.set_channel(start_address + channel, 0)
-        self.dmx_interface.send_dmx()
+            fixture_id = (start_address - 1) // 8
+            self.dmx_state_manager.reset_fixture(fixture_id)
 
         return True, log_messages
