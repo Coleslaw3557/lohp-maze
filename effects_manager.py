@@ -360,14 +360,14 @@ class EffectsManager:
 
     def create_police_lights_effect(self):
         police_lights_effect = {
-            "duration": 10.0,
+            "duration": 20.0,
             "steps": []
         }
-        for i in range(20):  # 20 cycles to fill 10 seconds
-            t = i * 0.5
+        for i in range(20):  # 20 cycles to fill 20 seconds
+            t = i * 1.0
             police_lights_effect["steps"].extend([
                 {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": t + 0.25, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}}
+                {"time": t + 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}}
             ])
-        police_lights_effect["steps"].append({"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}})
+        police_lights_effect["steps"].append({"time": 20.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}})
         self.add_effect("Police Lights", police_lights_effect)
