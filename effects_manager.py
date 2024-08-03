@@ -18,6 +18,7 @@ class EffectsManager:
         self.light_config_manager = light_config_manager
         self.dmx_state_manager = dmx_state_manager
         self.frequency = 24  # Default frequency
+        self.create_police_lights_effect()
 
     def update_frequency(self, new_frequency):
         self.frequency = new_frequency
@@ -283,3 +284,23 @@ class EffectsManager:
             ]
         }
         self.add_effect("Cop Dodge", cop_dodge_effect)
+
+    def create_police_lights_effect(self):
+        police_lights_effect = {
+            "duration": 10.0,
+            "steps": [
+                {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0}},
+                {"time": 0.25, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0}},
+                {"time": 0.5, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0}},
+                {"time": 0.75, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0}},
+                {"time": 1.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0}},
+                {"time": 1.25, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0}},
+                {"time": 1.5, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0}},
+                {"time": 1.75, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0}},
+                {"time": 2.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0}},
+                {"time": 2.25, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0}},
+                # Final off state
+                {"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0}}
+            ]
+        }
+        self.add_effect("Police Lights", police_lights_effect)
