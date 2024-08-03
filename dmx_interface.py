@@ -12,8 +12,9 @@ class DMXOutputManager(threading.Thread):
     BREAK_TIME = 0.000176  # 176µs break time
     MAB_TIME = 0.000012  # 12µs mark after break
     FRAME_DELAY = 0.000001  # 1µs frame delay
+    FREQUENCY = 44  # Fixed 44Hz update rate
 
-    def __init__(self, dmx_state_manager, url='ftdi://ftdi:232:A10NI4B7/1', universe=0, frequency=44):
+    def __init__(self, dmx_state_manager, url='ftdi://ftdi:232:A10NI4B7/1', universe=0):
         super().__init__()
         self.dmx_state_manager = dmx_state_manager
         self.url = url
@@ -22,7 +23,6 @@ class DMXOutputManager(threading.Thread):
         self.running = True
         self.data = bytearray(self.DMX_CHANNELS + 1)
         self.data[0] = self.START_CODE
-        self.frequency = frequency
         self._initialize_port()
 
     def _initialize_port(self):
@@ -40,7 +40,7 @@ class DMXOutputManager(threading.Thread):
     def run(self):
         while self.running:
             self.send_dmx_data()
-            time.sleep(1 / self.frequency)
+            time.sleep(1 / self.FREQUENCY)
 
     def send_dmx_data(self):
         try:
