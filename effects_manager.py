@@ -204,6 +204,9 @@ class EffectsManager:
             if room not in self.room_effects:
                 step = self._generate_theme_step(theme_data, room)
                 self._apply_theme_step(step, room)
+            else:
+                # Skip rooms with active effects
+                logger.debug(f"Skipping theme application for room {room} due to active effect")
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()

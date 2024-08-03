@@ -11,7 +11,8 @@ class InterruptHandler:
         original_state = self.dmx_state_manager.get_fixture_state(fixture_id)
         
         start_time = time.time()
-        while time.time() - start_time < duration:
+        end_time = start_time + duration
+        while time.time() < end_time:
             elapsed_time = time.time() - start_time
             new_values = interrupt_sequence(fixture_id, elapsed_time)
             self.dmx_state_manager.update_fixture(fixture_id, new_values)
