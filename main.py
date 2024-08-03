@@ -30,6 +30,7 @@ light_config = LightConfigManager(dmx_state_manager=dmx_state_manager)
 effects_manager = EffectsManager(light_config_manager=light_config, dmx_state_manager=dmx_state_manager)
 sequence_runner = SequenceRunner(dmx_state_manager)
 interrupt_handler = InterruptHandler(dmx_state_manager)
+effects_manager = EffectsManager(light_config_manager=light_config, dmx_state_manager=dmx_state_manager, interrupt_handler=interrupt_handler)
 
 # Start threads
 dmx_output_manager.start()
