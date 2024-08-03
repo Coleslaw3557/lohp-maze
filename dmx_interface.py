@@ -52,7 +52,6 @@ class DMXOutputManager(threading.Thread):
             time.sleep(self.MAB_TIME)
             self.port.write_data(self.data)
             time.sleep(self.FRAME_DELAY)
-            logger.debug("DMX frame sent")
         except Exception as e:
             logger.error(f"Error sending DMX frame: {str(e)}", exc_info=True)
             self._handle_port_error()
