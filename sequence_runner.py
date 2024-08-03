@@ -15,7 +15,7 @@ class SequenceRunner(threading.Thread):
     def run(self):
         while self.running:
             self.update_sequence()
-            time.sleep(0.025)  # 40Hz update rate
+            time.sleep(1 / self.FREQUENCY)  # 44Hz update rate
 
     def update_sequence(self):
         current_time = time.time() + self.time_offset

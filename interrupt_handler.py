@@ -19,7 +19,7 @@ class InterruptHandler:
             new_values = interrupt_sequence(elapsed_time)
             self.dmx_state_manager.update_fixture(fixture_id, new_values, override=True)
             logger.debug(f"Step {step_count}: Fixture {fixture_id}, Elapsed time: {elapsed_time:.3f}s, New values: {new_values}")
-            await asyncio.sleep(0.025)  # 40Hz update rate
+            await asyncio.sleep(1 / 44)  # 44Hz update rate
             step_count += 1
 
         logger.info(f"Effect completed for fixture {fixture_id}.")
