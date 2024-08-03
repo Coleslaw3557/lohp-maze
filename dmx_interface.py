@@ -67,6 +67,10 @@ class DMXOutputManager(threading.Thread):
     def stop(self):
         self.running = False
 
+    def set_frequency(self, hz):
+        self.frequency = hz
+        logger.info(f"DMX output frequency set to {hz} Hz")
+
     def __del__(self):
         self.stop()
         if self.port:

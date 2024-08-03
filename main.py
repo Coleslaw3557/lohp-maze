@@ -188,5 +188,17 @@ def stop_test():
         logger.exception("Error stopping test")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/update_hz', methods=['POST'])
+def update_hz():
+    try:
+        new_hz = int(request.form['hz'])
+        dmx_output_manager.set_frequency(new_hz)
+        return jsonify({"status": "success", "message": f"Frequency updated to {new_hz} Hz"}), 200
+    except ValueError:
+        return jsonify({"status": "error", "message": "Invalid Hz value"}), 400
+    except Exception as e:
+        logger.exception("Error updating Hz")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=DEBUG, threaded=True)
