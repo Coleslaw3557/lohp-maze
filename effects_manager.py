@@ -90,13 +90,14 @@ class EffectsManager:
             
             if self.interrupt_handler:
                 # Use the interrupt handler to apply the effect
+                logger.info(f"Starting effect '{effect_name}' in room '{room}' on fixtures: {fixture_ids}")
                 for fixture_id in fixture_ids:
                     self.interrupt_handler.interrupt_fixture(
                         fixture_id,
                         effect_data['duration'],
                         lambda elapsed_time: self._get_effect_step_values(effect_data, elapsed_time)
                     )
-                logger.info(f"Effect {effect_name} assigned and applied to room: {room}")
+                logger.info(f"Effect '{effect_name}' completed in room '{room}'")
             else:
                 logger.warning(f"InterruptHandler not available. Effect {effect_name} assigned to room {room}, but not applied.")
         else:
