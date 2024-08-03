@@ -17,7 +17,7 @@ class InterruptHandler:
         step_count = 0
         while time.time() < end_time:
             elapsed_time = time.time() - start_time
-            new_values = interrupt_sequence(fixture_id, elapsed_time)
+            new_values = interrupt_sequence(elapsed_time)
             self.dmx_state_manager.update_fixture(fixture_id, new_values)
             logger.debug(f"Step {step_count}: Fixture {fixture_id}, Elapsed time: {elapsed_time:.3f}s, New values: {new_values}")
             time.sleep(0.025)  # 40Hz update rate
