@@ -96,3 +96,27 @@ function testEffect(event, room) {
 </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Manager</title>
+</head>
+<body>
+    <h1>Room Manager</h1>
+    <ul>
+    {% for room, lights in room_layout.items() %}
+        <li>
+            {{ room }}
+            <ul>
+            {% for light in lights %}
+                <li>{{ light.model }} (Start Address: {{ light.start_address }})</li>
+            {% endfor %}
+            </ul>
+        </li>
+    {% endfor %}
+    </ul>
+    <a href="{{ url_for('index') }}">Back to Home</a>
+</body>
+</html>
