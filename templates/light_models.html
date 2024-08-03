@@ -23,3 +23,28 @@
     <a href="{{ url_for('index') }}">Back to Home</a>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light Models</title>
+</head>
+<body>
+    <h1>Light Models</h1>
+    <ul>
+        {% for model, config in light_models.items() %}
+        <li>
+            {{ model }}
+            <a href="{{ url_for('edit_light_model', model=model) }}">Edit</a>
+            <form action="{{ url_for('remove_light_model', model=model) }}" method="post" style="display: inline;">
+                <input type="submit" value="Remove" onclick="return confirm('Are you sure you want to remove this light model?');">
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('add_light_model') }}">Add New Light Model</a>
+    <br>
+    <a href="{{ url_for('index') }}">Back to Home</a>
+</body>
+</html>

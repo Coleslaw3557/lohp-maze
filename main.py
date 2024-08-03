@@ -78,6 +78,10 @@ def themes():
 def rooms():
     return render_template('room_manager.html', room_layout=light_config.get_room_layout(), effects_manager=effects_manager)
 
+@app.route('/light_models')
+def light_models():
+    return render_template('light_models.html', light_models=light_config.get_light_models())
+
 @app.route('/add_theme', methods=['GET', 'POST'])
 def add_theme():
     if request.method == 'POST':
