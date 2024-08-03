@@ -8,15 +8,17 @@ class InterruptHandler:
         self.dmx_state_manager = dmx_state_manager
 
     def interrupt_fixture(self, fixture_id, duration, interrupt_sequence):
-        self.dmx_state_manager.reset_fixture(fixture_id)
+        original_state = self.dmx_state_manager.get_fixture_state(fixture_id)
         
         start_time = time.time()
         while time.time() - start_time < duration:
-            new_values = interrupt_sequence(fixture_id, time.time() - start_time)
+            elapsed_time = time.time() - start_time
+            new_values = interrupt_sequence(fixture_id, elapsed_time)
             self.dmx_state_manager.update_fixture(fixture_id, new_values)
             time.sleep(0.025)  # 40Hz update rate
 
-        self.dmx_state_manager.reset_fixture(fixture_id)
+        # Restore the original state after the effect
+        self.dmx_state_manager.update_fixture(fixture_id, original_state)
 
     def interrupt_room(self, room, duration, interrupt_sequence):
         room_layout = self.dmx_state_manager.light_config.get_room_layout()

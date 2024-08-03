@@ -200,6 +200,13 @@ class EffectsManager:
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
+        for room, lights in room_layout.items():
+            if room not in self.room_effects:
+                step = self._generate_theme_step(theme_data, room)
+                self._apply_theme_step(step, room)
+
+    def _generate_and_apply_theme_steps(self, theme_data):
+        room_layout = self.light_config_manager.get_room_layout()
         speed = theme_data.get('speed', 1.0)
         step_duration = 1.0 / speed
         for _ in range(int(theme_data['duration'] * speed)):
@@ -360,14 +367,14 @@ class EffectsManager:
 
     def create_police_lights_effect(self):
         police_lights_effect = {
-            "duration": 20.0,
+            "duration": 10.0,
             "steps": []
         }
-        for i in range(20):  # 20 cycles to fill 20 seconds
-            t = i * 1.0
+        for i in range(20):  # 20 cycles to fill 10 seconds
+            t = i * 0.5
             police_lights_effect["steps"].extend([
-                {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": t + 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}}
+                {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0}},
+                {"time": t + 0.25, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0}}
             ])
-        police_lights_effect["steps"].append({"time": 20.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}})
+        police_lights_effect["steps"].append({"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0}})
         self.add_effect("Police Lights", police_lights_effect)
