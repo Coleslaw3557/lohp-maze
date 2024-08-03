@@ -118,15 +118,15 @@ class EffectsManager:
         # Pause theme application for this room
         self.room_effects[room] = True
         
-        # Reset all fixtures in the room to black before applying the effect
-        for fixture_id in fixture_ids:
-            self.dmx_state_manager.reset_fixture(fixture_id)
+        # Gradually fade to black before applying the effect
+        self._fade_to_black(room, fixture_ids, duration=0.5)
         
         threads = []
         for fixture_id in fixture_ids:
             thread = threading.Thread(target=self._apply_effect_to_fixture_sync, args=(fixture_id, effect_data))
             thread.start()
             threads.append(thread)
+            time.sleep(0.05)  # Small delay between starting each fixture's effect
         
         for thread in threads:
             thread.join()
@@ -141,6 +141,16 @@ class EffectsManager:
         self.room_effects.pop(room, None)
         
         return True, log_messages
+
+    def _fade_to_black(self, room, fixture_ids, duration):
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            progress = (time.time() - start_time) / duration
+            for fixture_id in fixture_ids:
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                faded_values = [int(value * (1 - progress)) for value in current_values]
+                self.dmx_state_manager.update_fixture(fixture_id, faded_values)
+            time.sleep(0.025)  # 40Hz update rate
 
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:
