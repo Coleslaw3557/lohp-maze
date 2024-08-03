@@ -105,7 +105,8 @@ class EffectsManager:
 
     def apply_effect_to_room(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
-        fixture_ids = [(light['start_address'] - 1) // 8 for light in room_layout.get(room, [])]
+        lights = room_layout.get(room, [])
+        fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
         
         logger.info(f"Applying effect to room '{room}'")
         logger.debug(f"Effect data: {effect_data}")
