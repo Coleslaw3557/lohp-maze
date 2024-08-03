@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project is the control system for the interactive art maze of the Burning Man camp "Legends of the Hidden Playa". It manages the lighting and effects throughout the maze, providing a dynamic and immersive experience for participants.
+This project is the control system for the interactive art maze of the Burning Man camp "Legends of the Hidden Playa". It manages the lighting and effects throughout the maze, providing a dynamic and immersive experience for participants. The system has been updated with new features and improvements for enhanced functionality and reliability.
 
 ## System Architecture
 
@@ -12,6 +12,9 @@ The system consists of several key components:
 2. **DMX Interface**: Manages communication with the lighting fixtures.
 3. **Light Configuration Manager**: Handles the setup and management of light models and room layouts.
 4. **Effects Manager**: Controls the creation and execution of lighting effects and themes.
+5. **Interrupt Handler**: Manages interruptions for specific fixtures and coordinates transitions.
+6. **DMX State Manager**: Maintains the current state of all DMX channels and provides thread-safe access.
+7. **Sequence Runner**: Executes the main lighting sequence for continuous color morphing.
 
 ### Hardware Setup
 
@@ -34,6 +37,7 @@ Key features:
 - Real-time effect testing
 - Global Hz (update frequency) control
 - Verbose logging toggle
+- Interrupt system for specific fixture control
 
 ### 2. DMX Interface (`dmx_interface.py`)
 
@@ -43,7 +47,7 @@ Handles low-level communication with DMX fixtures:
 - Provides thread-safe operations for concurrent access
 
 Technical specs:
-- DMX refresh rate: Up to 40Hz (configurable)
+- DMX refresh rate: Up to 44Hz (configurable)
 - 512 DMX channels supported
 - Automatic error recovery and port management
 
@@ -60,6 +64,25 @@ Handles the creation, storage, and execution of lighting effects and themes:
 - JSON-based effect and theme storage
 - Real-time theme generation and execution
 - Supports complex, multi-room lighting sequences
+- Integrates with the Interrupt Handler for seamless effect transitions
+
+### 5. Interrupt Handler (`interrupt_handler.py`)
+
+Manages interruptions for specific fixtures:
+- Coordinates transitions between main sequence and interrupted states
+- Allows for precise control of individual fixtures during effects
+
+### 6. DMX State Manager (`dmx_state_manager.py`)
+
+Maintains the current state of all DMX channels:
+- Provides thread-safe access to channel values
+- Implements locking mechanism to prevent race conditions
+
+### 7. Sequence Runner (`sequence_runner.py`)
+
+Executes the main lighting sequence:
+- Runs in a separate thread for non-blocking operation
+- Implements continuous color morphing across all fixtures
 
 ## Key Files
 
@@ -67,8 +90,10 @@ Handles the creation, storage, and execution of lighting effects and themes:
 - `dmx_interface.py`: DMX communication layer
 - `light_config_manager.py`: Light and room configuration management
 - `effects_manager.py`: Effect and theme management
+- `interrupt_handler.py`: Manages fixture interruptions
+- `dmx_state_manager.py`: Maintains DMX channel states
+- `sequence_runner.py`: Executes main lighting sequence
 - `light_config.json`: Configuration file for light models and room layouts
-- `effects_config.json`: Storage for custom effects
 - `requirements.txt`: Python dependencies
 - `Dockerfile` and `docker-compose.yml`: Containerization setup
 
@@ -94,12 +119,14 @@ Key functionalities:
 - Effects: Create and edit lighting effects
 - Themes: Design and control overarching lighting themes
 - Test Mode: Real-time testing of individual fixtures and effects
+- Interrupt System: Control specific fixtures during ongoing effects
 
 ## Technical Considerations
 
-- The system uses a fixed 40Hz update rate for DMX communication to ensure smooth transitions and effects.
-- Thread-safe operations are implemented throughout to handle concurrent access to the DMX interface.
+- The system uses a configurable update rate (default 44Hz) for DMX communication to ensure smooth transitions and effects.
+- Thread-safe operations are implemented throughout to handle concurrent access to the DMX interface and state management.
 - The Effects Manager uses a sophisticated algorithm to generate dynamic themes based on parameters like color variation, intensity fluctuation, and overall brightness.
+- The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence.
 - Error handling and logging are implemented at multiple levels for robust operation and debugging.
 
 ## Future Enhancements
@@ -108,6 +135,7 @@ Key functionalities:
 - Mobile app for remote control
 - Machine learning-based theme generation
 - Audio synchronization for music-reactive lighting
+- Enhanced interrupt system for more complex fixture interactions
 
 ## Contributing
 
