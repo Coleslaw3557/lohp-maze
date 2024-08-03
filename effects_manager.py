@@ -314,12 +314,15 @@ class EffectsManager:
                 for light in lights:
                     fixture_id = (light['start_address'] - 1) // 8  # Assuming 8 channels per fixture
                     light_model = self.light_config_manager.get_light_config(light['model'])
-                    fixture_values = [0] * 8  # Initialize with 8 channels
+                    fixture_values = [0] * 8  # Initialize all channels to 0
                     for channel, value in room_channels.items():
                         if channel in light_model['channels']:
                             channel_offset = light_model['channels'][channel]
                             fixture_values[channel_offset] = value
                     self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+                    logger.debug(f"Applied theme step to room {room}, fixture {fixture_id}: {fixture_values}")
+            else:
+                logger.debug(f"Skipped theme application for room {room} due to active effect")
 
     def _reset_room_lights(self, room):
         room_layout = self.light_config_manager.get_room_layout()
@@ -382,11 +385,12 @@ class EffectsManager:
             "duration": 10.0,
             "steps": []
         }
-        for i in range(20):  # 20 cycles to fill 10 seconds
-            t = i * 0.5
+        for i in range(10):  # 10 cycles to fill 10 seconds
+            t = i * 1.0
             police_lights_effect["steps"].extend([
-                {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0}},
-                {"time": t + 0.25, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0}}
+                {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": t + 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
             ])
-        police_lights_effect["steps"].append({"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0}})
+        police_lights_effect["steps"].append({"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}})
         self.add_effect("Police Lights", police_lights_effect)
+        logger.debug(f"Created Police Lights effect: {police_lights_effect}")
