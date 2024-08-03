@@ -148,6 +148,72 @@ def delete_room(room):
     light_config.remove_room(room)
     return redirect(url_for('rooms'))
 
+@app.route('/assign_effect', methods=['POST'])
+def assign_effect():
+    room = request.form.get('room')
+    effect_name = request.form.get('effect_name')
+    effects_manager.assign_effect_to_room(room, effect_name)
+    return redirect(url_for('rooms'))
+
+@app.route('/remove_room_effect/<room>', methods=['POST'])
+def remove_room_effect(room):
+    effects_manager.remove_effect_from_room(room)
+    return redirect(url_for('rooms'))
+
+@app.route('/test_effect/<room>', methods=['POST'])
+def test_effect(room):
+    effect = effects_manager.get_room_effect(room)
+    if effect:
+        success, log_messages = light_config.test_effect(room, effect)
+        return jsonify({"success": success, "log_messages": log_messages})
+    return jsonify({"error": "No effect assigned to this room"}), 400
+
+@app.route('/edit_light_model/<model>', methods=['GET', 'POST'])
+def edit_light_model(model):
+    if request.method == 'POST':
+        channels = {}
+        for key, value in request.form.items():
+            if key.startswith('channel_'):
+                channels[key[8:]] = int(value)
+        light_config.update_light_model(model, {"channels": channels})
+        return redirect(url_for('light_models'))
+    light_model = light_config.get_light_config(model)
+    return render_template('edit_light_model.html', model=model, light_model=light_model)
+
+@app.route('/remove_light_model/<model>', methods=['POST'])
+def remove_light_model(model):
+    light_config.remove_light_model(model)
+    return redirect(url_for('light_models'))
+
+@app.route('/add_effect', methods=['GET', 'POST'])
+def add_effect():
+    if request.method == 'POST':
+        effect_name = request.form['effect_name']
+        effect_data = {
+            'duration': float(request.form['duration']),
+            'steps': json.loads(request.form['steps'])
+        }
+        effects_manager.add_effect(effect_name, effect_data)
+        return redirect(url_for('effects'))
+    return render_template('add_effect.html', rooms=light_config.get_room_layout().keys())
+
+@app.route('/edit_effect/<effect_name>', methods=['GET', 'POST'])
+def edit_effect(effect_name):
+    if request.method == 'POST':
+        effect_data = {
+            'duration': float(request.form['duration']),
+            'steps': json.loads(request.form['steps'])
+        }
+        effects_manager.update_effect(effect_name, effect_data)
+        return redirect(url_for('effects'))
+    effect = effects_manager.get_effect(effect_name)
+    return render_template('edit_effect.html', effect_name=effect_name, effect=effect)
+
+@app.route('/remove_effect/<effect_name>', methods=['POST'])
+def remove_effect(effect_name):
+    effects_manager.remove_effect(effect_name)
+    return redirect(url_for('effects'))
+
 @app.route('/set_theme_brightness', methods=['POST'])
 def set_theme_brightness():
     theme_name = request.form.get('theme_name')
