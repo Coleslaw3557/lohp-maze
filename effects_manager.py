@@ -18,7 +18,7 @@ class EffectsManager:
         self.light_config_manager = light_config_manager
         self.dmx_state_manager = dmx_state_manager
         self.interrupt_handler = interrupt_handler
-        self.frequency = 40  # Fixed at 40 Hz as per new design
+        self.frequency = 44  # Updated to 44 Hz
         self.create_police_lights_effect()
 
     def update_frequency(self, new_frequency):
@@ -86,12 +86,27 @@ class EffectsManager:
                 self.interrupt_handler.interrupt_fixture(
                     fixture_id,
                     effect_data['duration'],
-                    effect_data['sequence']
+                    lambda elapsed_time: self._get_effect_step_values(effect_data, elapsed_time)
                 )
             
             logger.info(f"Effect {effect_name} assigned and applied to room: {room}")
         else:
             logger.warning(f"No effect found: {effect_name}")
+
+    def _get_effect_step_values(self, effect_data, elapsed_time):
+        for step in effect_data['steps']:
+            if elapsed_time <= step['time']:
+                return [
+                    step['channels'].get('total_dimming', 0),
+                    step['channels'].get('r_dimming', 0),
+                    step['channels'].get('g_dimming', 0),
+                    step['channels'].get('b_dimming', 0),
+                    step['channels'].get('w_dimming', 0),
+                    step['channels'].get('total_strobe', 0),
+                    0,  # function_selection
+                    0   # function_speed
+                ]
+        return [0] * 8  # Return all zeros if elapsed_time is beyond the last step
 
     def remove_effect_from_room(self, room):
         if room in self.room_effects:
@@ -302,15 +317,13 @@ class EffectsManager:
         self.add_effect("Cop Dodge", cop_dodge_effect)
 
     def create_police_lights_effect(self):
-        def police_lights_sequence(fixture_id, elapsed_time):
-            cycle_time = 0.5  # 0.5 seconds for a complete red-blue cycle
-            phase = (elapsed_time % cycle_time) / cycle_time
-            if phase < 0.5:
-                return [255, 255, 0, 0, 0, 0, 0, 0]  # Red
-            else:
-                return [255, 0, 0, 255, 0, 0, 0, 0]  # Blue
-
-        self.add_effect("Police Lights", {
+        police_lights_effect = {
             "duration": 10.0,
-            "sequence": police_lights_sequence
-        })
+            "steps": [
+                {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 0.25, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 0.5, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 0.75, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}}
+            ]
+        }
+        self.add_effect("Police Lights", police_lights_effect)
