@@ -7,7 +7,7 @@ import random
 logger = logging.getLogger(__name__)
 
 class EffectsManager:
-    def __init__(self, config_file='effects_config.json', light_config_manager=None):
+    def __init__(self, config_file='effects_config.json', light_config_manager=None, dmx_state_manager=None):
         self.config_file = config_file
         self.effects = self.load_config()
         self.room_effects = {}
@@ -16,6 +16,7 @@ class EffectsManager:
         self.theme_thread = None
         self.stop_theme = threading.Event()
         self.light_config_manager = light_config_manager
+        self.dmx_state_manager = dmx_state_manager
         self.frequency = 24  # Default frequency
 
     def update_frequency(self, new_frequency):
