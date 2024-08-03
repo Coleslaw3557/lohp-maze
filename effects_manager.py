@@ -122,22 +122,15 @@ class EffectsManager:
         # Gradually fade to black before applying the effect
         self._fade_to_black(room, fixture_ids, duration=0.5)
         
-        # Start a background thread to continue running the theme for other rooms
-        theme_thread = threading.Thread(target=self._continue_theme_for_other_rooms, args=(room,))
-        theme_thread.start()
-        
-        threads = []
+        # Apply the effect to all fixtures in the room
         for fixture_id in fixture_ids:
-            thread = threading.Thread(target=self._apply_effect_to_fixture_sync, args=(fixture_id, effect_data))
-            thread.start()
-            threads.append(thread)
-            time.sleep(0.05)  # Small delay between starting each fixture's effect
+            self._apply_effect_to_fixture_sync(fixture_id, effect_data)
         
-        for thread in threads:
-            thread.join()
-        
-        log_messages.append(f"Effect applied concurrently to all fixtures in room '{room}'")
+        log_messages.append(f"Effect applied to all fixtures in room '{room}'")
         logger.info(f"Effect application completed in room '{room}'")
+        
+        # Keep the effect running for its duration
+        time.sleep(effect_data['duration'])
         
         # Gradually fade back to the theme over 1 second
         self._fade_to_theme(room, fixture_ids, duration=1.0)
@@ -145,17 +138,12 @@ class EffectsManager:
         # Remove the active effect flag for this room
         self.room_effects.pop(room, None)
         
-        # Stop the background theme thread
-        self.stop_background_theme = True
-        theme_thread.join()
-        
         return True, log_messages
 
-    def _continue_theme_for_other_rooms(self, active_effect_room):
-        self.stop_background_theme = False
-        while not self.stop_background_theme:
+    def _continue_theme_for_other_rooms(self):
+        while True:
             for room, lights in self.light_config_manager.get_room_layout().items():
-                if room != active_effect_room and room not in self.room_effects:
+                if room not in self.room_effects:
                     fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
                     theme_values = self._generate_theme_values(room)
                     for fixture_id in fixture_ids:
