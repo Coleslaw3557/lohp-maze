@@ -20,6 +20,9 @@ class EffectsManager:
         self.interrupt_handler = interrupt_handler
         self.frequency = 44  # Updated to 44 Hz
         self.create_police_lights_effect()
+        
+        if self.interrupt_handler is None:
+            logger.warning("InterruptHandler not provided. Some features may not work correctly.")
 
     def update_frequency(self, new_frequency):
         self.frequency = new_frequency
@@ -81,15 +84,17 @@ class EffectsManager:
             room_layout = self.light_config_manager.get_room_layout()
             fixture_ids = [(light['start_address'] - 1) // 8 for light in room_layout.get(room, [])]
             
-            # Use the interrupt handler to apply the effect
-            for fixture_id in fixture_ids:
-                self.interrupt_handler.interrupt_fixture(
-                    fixture_id,
-                    effect_data['duration'],
-                    lambda elapsed_time: self._get_effect_step_values(effect_data, elapsed_time)
-                )
-            
-            logger.info(f"Effect {effect_name} assigned and applied to room: {room}")
+            if self.interrupt_handler:
+                # Use the interrupt handler to apply the effect
+                for fixture_id in fixture_ids:
+                    self.interrupt_handler.interrupt_fixture(
+                        fixture_id,
+                        effect_data['duration'],
+                        lambda elapsed_time: self._get_effect_step_values(effect_data, elapsed_time)
+                    )
+                logger.info(f"Effect {effect_name} assigned and applied to room: {room}")
+            else:
+                logger.warning(f"InterruptHandler not available. Effect {effect_name} assigned to room {room}, but not applied.")
         else:
             logger.warning(f"No effect found: {effect_name}")
 
