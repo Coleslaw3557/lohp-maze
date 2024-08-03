@@ -134,7 +134,18 @@ class EffectsManager:
             self._apply_effect_directly(room, effect_data, fixture_ids)
             log_messages.append("Effect applied directly using DMX State Manager")
         
+        # Ensure the effect is applied to all fixtures in the room
+        self._reset_room_lights(room)
+        
         return True, log_messages
+
+    def _reset_room_lights(self, room):
+        room_layout = self.light_config_manager.get_room_layout()
+        lights = room_layout.get(room, [])
+        for light in lights:
+            fixture_id = (light['start_address'] - 1) // 8
+            self.dmx_state_manager.reset_fixture(fixture_id)
+        logger.debug(f"Reset lights for room {room}")
 
     def _get_effect_step_values(self, effect_data):
         def get_values(elapsed_time):
