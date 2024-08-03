@@ -92,16 +92,41 @@ class EffectsManager:
                 # Use the interrupt handler to apply the effect
                 logger.info(f"Starting effect '{effect_name}' in room '{room}' on fixtures: {fixture_ids}")
                 for fixture_id in fixture_ids:
-                    self.interrupt_handler.interrupt_fixture(
-                        fixture_id,
-                        effect_data['duration'],
-                        lambda elapsed_time: self._get_effect_step_values(effect_data, elapsed_time)
-                    )
+                    try:
+                        self.interrupt_handler.interrupt_fixture(
+                            fixture_id,
+                            effect_data['duration'],
+                            lambda elapsed_time: self._get_effect_step_values(effect_data, elapsed_time)
+                        )
+                        logger.debug(f"Effect '{effect_name}' applied to fixture {fixture_id}")
+                    except Exception as e:
+                        logger.error(f"Error applying effect to fixture {fixture_id}: {str(e)}")
                 logger.info(f"Effect '{effect_name}' completed in room '{room}'")
             else:
-                logger.warning(f"InterruptHandler not available. Effect {effect_name} assigned to room {room}, but not applied.")
+                logger.error(f"InterruptHandler not available. Effect {effect_name} assigned to room {room}, but cannot be applied.")
+                logger.info("Attempting to apply effect directly using DMX State Manager...")
+                self._apply_effect_directly(room, effect_data, fixture_ids)
         else:
             logger.warning(f"No effect found: {effect_name}")
+
+    def _apply_effect_directly(self, room, effect_data, fixture_ids):
+        if not self.dmx_state_manager:
+            logger.error("DMX State Manager not available. Cannot apply effect directly.")
+            return
+
+        logger.info(f"Applying effect directly to room '{room}' on fixtures: {fixture_ids}")
+        start_time = time.time()
+        for step in effect_data['steps']:
+            current_time = time.time() - start_time
+            if current_time >= step['time']:
+                for fixture_id in fixture_ids:
+                    try:
+                        self.dmx_state_manager.update_fixture(fixture_id, list(step['channels'].values()))
+                        logger.debug(f"Applied step to fixture {fixture_id}: {step['channels']}")
+                    except Exception as e:
+                        logger.error(f"Error applying step to fixture {fixture_id}: {str(e)}")
+            time.sleep(0.05)  # Small delay to prevent excessive CPU usage
+        logger.info(f"Effect application completed for room '{room}'")
 
     def _get_effect_step_values(self, effect_data, elapsed_time):
         for step in effect_data['steps']:
