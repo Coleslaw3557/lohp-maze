@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify, abort, flash
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
