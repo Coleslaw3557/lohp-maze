@@ -520,7 +520,7 @@ class EffectsManager:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 faded_values = [int(value * (1 - progress)) for value in current_values]
                 self.dmx_state_manager.update_fixture(fixture_id, faded_values)
-            time.sleep(0.025)  # 40Hz update rate
+            time.sleep(1 / 44)  # 44Hz update rate
 
     def _fade_to_theme(self, room, fixture_ids, duration):
         start_time = time.time()
@@ -532,7 +532,7 @@ class EffectsManager:
                 interpolated_values = [int(current + (theme - current) * progress)
                                        for current, theme in zip(current_values, theme_values)]
                 self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
-            time.sleep(0.025)  # 40Hz update rate
+            time.sleep(1 / self.FREQUENCY)  # 44Hz update rate
 
     def _generate_theme_values(self, room):
         # This method should generate the current theme values for the room
