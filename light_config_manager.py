@@ -4,13 +4,16 @@ import time
 
 logger = logging.getLogger(__name__)
 
-from dmx_interface import DMXInterface
+from dmx_interface import DMXOutputManager
 
 class LightConfigManager:
-    def __init__(self, config_file='light_config.json', dmx_interface=None):
+    def __init__(self, config_file='light_config.json', dmx_state_manager=None):
         self.config_file = config_file
         self.light_configs = self.load_config()
-        self.dmx_interface = dmx_interface or DMXInterface()
+        self.dmx_state_manager = dmx_state_manager
+        if self.dmx_state_manager is None:
+            logger.warning("DMX State Manager not provided. Some features may not work correctly.")
+        self.dmx_interface = None  # Remove this line if it exists
 
     def load_config(self):
         try:
@@ -107,6 +110,9 @@ class LightConfigManager:
         return True
 
     def test_effect(self, room, effect_data):
+        if self.dmx_state_manager is None:
+            return False, ["DMX State Manager not initialized. Cannot test effect."]
+
         room_layout = self.get_room_layout()
         log_messages = []
 
@@ -117,32 +123,49 @@ class LightConfigManager:
         lights = room_layout[room]
         log_messages.append(f"Testing effect in room: {room}")
         log_messages.append(f"Number of lights: {len(lights)}")
+        log_messages.append(f"Effect data: {effect_data}")
+
+        # Store the current state before applying the effect
+        original_states = {}
+        for light in lights:
+            start_address = light['start_address']
+            fixture_id = (start_address - 1) // 8
+            original_state = self.dmx_state_manager.get_fixture_state(fixture_id)
+            original_states[fixture_id] = original_state
+            log_messages.append(f"Original state for fixture {fixture_id}: {original_state}")
+
+        # Reset channels before applying the effect
+        log_messages.append("Resetting channels before effect")
+        for light in lights:
+            start_address = light['start_address']
+            fixture_id = (start_address - 1) // 8
+            self.dmx_state_manager.reset_fixture(fixture_id)
+            log_messages.append(f"Reset fixture {fixture_id}")
 
         for step_index, step in enumerate(effect_data['steps']):
             log_messages.append(f"Step {step_index + 1}:")
             for light in lights:
                 start_address = light['start_address']
                 light_model = self.get_light_config(light['model'])
+                fixture_id = (start_address - 1) // 8
+                fixture_values = [0] * 8
                 log_messages.append(f"  Light: {light['model']} (Start Address: {start_address})")
                 for channel, value in step['channels'].items():
                     if channel in light_model['channels']:
                         channel_offset = light_model['channels'][channel]
-                        dmx_address = start_address + channel_offset
-                        self.dmx_interface.set_channel(dmx_address, value)
-                        log_messages.append(f"    Channel: {channel}, DMX Address: {dmx_address}, Value: {value}")
+                        fixture_values[channel_offset] = value
+                        log_messages.append(f"    Channel: {channel}, DMX Address: {start_address + channel_offset}, Value: {value}")
                     else:
                         log_messages.append(f"    Warning: Channel {channel} not found in light model")
-            self.dmx_interface.send_dmx()
+                self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+                log_messages.append(f"  Updated fixture {fixture_id} with values: {fixture_values}")
             log_messages.append(f"  Waiting for {step['time']} seconds")
             time.sleep(step['time'])
 
-        # Reset channels after effect
-        log_messages.append("Resetting channels after effect")
-        for light in lights:
-            start_address = light['start_address']
-            light_model = self.get_light_config(light['model'])
-            for channel in light_model['channels'].values():
-                self.dmx_interface.set_channel(start_address + channel, 0)
-        self.dmx_interface.send_dmx()
+        # Restore the original state after the effect
+        log_messages.append("Restoring original state after effect")
+        for fixture_id, original_state in original_states.items():
+            self.dmx_state_manager.update_fixture(fixture_id, original_state)
+            log_messages.append(f"Restored fixture {fixture_id} to original state: {original_state}")
 
         return True, log_messages

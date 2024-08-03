@@ -7,7 +7,7 @@ import random
 logger = logging.getLogger(__name__)
 
 class EffectsManager:
-    def __init__(self, config_file='effects_config.json', light_config_manager=None):
+    def __init__(self, config_file='effects_config.json', light_config_manager=None, dmx_state_manager=None, interrupt_handler=None):
         self.config_file = config_file
         self.effects = self.load_config()
         self.room_effects = {}
@@ -16,7 +16,15 @@ class EffectsManager:
         self.theme_thread = None
         self.stop_theme = threading.Event()
         self.light_config_manager = light_config_manager
-        self.frequency = 24  # Default frequency
+        self.dmx_state_manager = dmx_state_manager
+        self.interrupt_handler = interrupt_handler
+        self.frequency = 44  # Updated to 44 Hz
+        self.create_police_lights_effect()
+        
+        if self.interrupt_handler is None:
+            logger.warning("InterruptHandler not provided. Some features may not work correctly.")
+        else:
+            logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
 
     def update_frequency(self, new_frequency):
         self.frequency = new_frequency
@@ -72,9 +80,76 @@ class EffectsManager:
     def assign_effect_to_room(self, room, effect_name):
         if effect_name in self.effects:
             self.room_effects[room] = effect_name
-            logger.info(f"Effect {effect_name} assigned to room: {room}")
+            logger.info(f"Effect '{effect_name}' assigned to room '{room}'")
         else:
             logger.warning(f"No effect found: {effect_name}")
+
+    def _apply_effect_directly(self, room, effect_data, fixture_ids):
+        if not self.dmx_state_manager:
+            logger.error("DMX State Manager not available. Cannot apply effect directly.")
+            return
+
+        logger.info(f"Applying effect directly to room '{room}' on fixtures: {fixture_ids}")
+        start_time = time.time()
+        for step in effect_data['steps']:
+            current_time = time.time() - start_time
+            if current_time >= step['time']:
+                for fixture_id in fixture_ids:
+                    try:
+                        self.dmx_state_manager.update_fixture(fixture_id, list(step['channels'].values()))
+                        logger.debug(f"Applied step to fixture {fixture_id}: {step['channels']}")
+                    except Exception as e:
+                        logger.error(f"Error applying step to fixture {fixture_id}: {str(e)}")
+            time.sleep(0.05)  # Small delay to prevent excessive CPU usage
+        logger.info(f"Effect application completed for room '{room}'")
+
+    def apply_effect_to_room(self, room, effect_data):
+        room_layout = self.light_config_manager.get_room_layout()
+        fixture_ids = [(light['start_address'] - 1) // 8 for light in room_layout.get(room, [])]
+        
+        logger.info(f"Applying effect to room '{room}'")
+        logger.debug(f"Effect data: {effect_data}")
+        logger.debug(f"Fixture IDs for room: {fixture_ids}")
+        
+        log_messages = []
+        
+        if self.interrupt_handler:
+            logger.info(f"Using InterruptHandler to apply effect in room '{room}' on fixtures: {fixture_ids}")
+            for fixture_id in fixture_ids:
+                try:
+                    self.interrupt_handler.interrupt_fixture(
+                        fixture_id,
+                        effect_data['duration'],
+                        self._get_effect_step_values(effect_data)
+                    )
+                    log_messages.append(f"Effect applied to fixture {fixture_id}")
+                except Exception as e:
+                    error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
+                    logger.error(error_msg)
+                    log_messages.append(error_msg)
+            logger.info(f"Effect application completed in room '{room}'")
+        else:
+            logger.warning("InterruptHandler not available. Applying effect directly using DMX State Manager.")
+            self._apply_effect_directly(room, effect_data, fixture_ids)
+            log_messages.append("Effect applied directly using DMX State Manager")
+        
+        return True, log_messages
+
+    def _get_effect_step_values(self, effect_data):
+        def get_values(elapsed_time):
+            for i, step in enumerate(effect_data['steps']):
+                if elapsed_time <= step['time']:
+                    if i == 0:
+                        return [step['channels'].get(channel, 0) for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming', 'w_dimming', 'total_strobe', 'function_selection', 'function_speed']]
+                    else:
+                        prev_step = effect_data['steps'][i-1]
+                        t = (elapsed_time - prev_step['time']) / (step['time'] - prev_step['time'])
+                        return [
+                            int(prev_step['channels'].get(channel, 0) + t * (step['channels'].get(channel, 0) - prev_step['channels'].get(channel, 0)))
+                            for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming', 'w_dimming', 'total_strobe', 'function_selection', 'function_speed']
+                        ]
+            return [0] * 8  # Return all zeros if elapsed_time is beyond the last step
+        return get_values
 
     def remove_effect_from_room(self, room):
         if room in self.room_effects:
@@ -154,12 +229,56 @@ class EffectsManager:
 
     def _run_theme(self, theme_name):
         theme_data = self.themes[theme_name]
-        self.light_config_manager.dmx_interface.set_frequency(40)  # Fixed at 40 Hz
         while not self.stop_theme.is_set():
             start_time = time.time()
             self._generate_and_apply_theme_steps(theme_data)
-            if time.time() - start_time < theme_data['duration']:
-                time.sleep(theme_data['duration'] - (time.time() - start_time))
+            elapsed_time = time.time() - start_time
+            if elapsed_time < 1 / self.frequency:
+                time.sleep(1 / self.frequency - elapsed_time)
+
+    def _generate_and_apply_theme_steps(self, theme_data):
+        room_layout = self.light_config_manager.get_room_layout()
+        for room, lights in room_layout.items():
+            if room not in self.room_effects:
+                step = self._generate_theme_step(theme_data, room)
+                self._apply_theme_step(step, room)
+            else:
+                # Skip rooms with active effects
+                logger.debug(f"Skipping theme application for room {room} due to active effect")
+                self._reset_room_lights(room)
+
+    def _generate_and_apply_theme_steps(self, theme_data):
+        room_layout = self.light_config_manager.get_room_layout()
+        speed = theme_data.get('speed', 1.0)
+        step_duration = 1.0 / speed
+        for _ in range(int(theme_data['duration'] * speed)):
+            if self.stop_theme.is_set():
+                break
+            step = self._generate_theme_step(theme_data, room_layout)
+            self._apply_theme_step(step)
+            time.sleep(step_duration)
+
+    def _generate_theme_step(self, theme_data, room_layout):
+        step = {'rooms': {}}
+        for room in room_layout.keys():
+            if room not in self.room_effects:
+                step['rooms'][room] = self._generate_room_channels(theme_data)
+        return step
+
+    def _apply_theme_step(self, step):
+        room_layout = self.light_config_manager.get_room_layout()
+        for room, lights in room_layout.items():
+            if room not in self.room_effects:
+                room_channels = step['rooms'].get(room, {})
+                for light in lights:
+                    fixture_id = (light['start_address'] - 1) // 8
+                    light_model = self.light_config_manager.get_light_config(light['model'])
+                    fixture_values = [0] * 8
+                    for channel, value in room_channels.items():
+                        if channel in light_model['channels']:
+                            channel_offset = light_model['channels'][channel]
+                            fixture_values[channel_offset] = value
+                    self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
@@ -171,6 +290,30 @@ class EffectsManager:
             step = self._generate_theme_step(theme_data, room_layout)
             self._apply_theme_step(step)
             time.sleep(step_duration)
+
+    def _generate_theme_step(self, theme_data, room_layout):
+        step = {'rooms': {}}
+        for room in room_layout.keys():
+            if room not in self.room_effects:
+                step['rooms'][room] = self._generate_room_channels(theme_data)
+        return step
+
+    def _apply_theme_step(self, step):
+        room_layout = self.light_config_manager.get_room_layout()
+        for room, lights in room_layout.items():
+            if room not in self.room_effects:
+                room_channels = step['rooms'].get(room, {})
+                for light in lights:
+                    fixture_id = (light['start_address'] - 1) // 8
+                    light_model = self.light_config_manager.get_light_config(light['model'])
+                    fixture_values = [0] * 8
+                    for channel, value in room_channels.items():
+                        if channel in light_model['channels']:
+                            channel_offset = light_model['channels'][channel]
+                            fixture_values[channel_offset] = value
+                    self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+            else:
+                logger.debug(f"Skipping theme application for room {room} due to active effect")
 
     def _generate_theme_step(self, theme_data, room_layout):
         step = {'rooms': {}}
@@ -231,13 +374,25 @@ class EffectsManager:
             if room not in self.room_effects:
                 room_channels = step['rooms'].get(room, {})
                 for light in lights:
-                    start_address = light['start_address']
+                    fixture_id = (light['start_address'] - 1) // 8  # Assuming 8 channels per fixture
                     light_model = self.light_config_manager.get_light_config(light['model'])
+                    fixture_values = [0] * 8  # Initialize all channels to 0
                     for channel, value in room_channels.items():
                         if channel in light_model['channels']:
                             channel_offset = light_model['channels'][channel]
-                            self.light_config_manager.dmx_interface.set_channel(start_address + channel_offset, value)
-        self.light_config_manager.dmx_interface.send_dmx()
+                            fixture_values[channel_offset] = value
+                    self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+                    logger.debug(f"Applied theme step to room {room}, fixture {fixture_id}: {fixture_values}")
+            else:
+                logger.debug(f"Skipped theme application for room {room} due to active effect")
+
+    def _reset_room_lights(self, room):
+        room_layout = self.light_config_manager.get_room_layout()
+        lights = room_layout.get(room, [])
+        for light in lights:
+            fixture_id = (light['start_address'] - 1) // 8
+            self.dmx_state_manager.reset_fixture(fixture_id)
+        logger.debug(f"Reset lights for room {room}")
 
     def stop_current_theme(self):
         self.stop_theme.set()
@@ -261,24 +416,44 @@ class EffectsManager:
 
     def create_cop_dodge_effect(self):
         cop_dodge_effect = {
-            "duration": 15.0,
+            "duration": 10.0,
             "steps": [
-                # Slower alternating sequence
-                {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 1.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 1.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 2.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 2.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                # Repeat the sequence
-                {"time": 3.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 3.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 4.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 4.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 5.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 5.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                # Initial state (off)
+                {"time": 0.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                # Red flash
+                {"time": 0.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 0.3, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                # Blue flash
+                {"time": 0.4, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 0.6, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                # Repeat the pattern faster
+                {"time": 0.7, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 0.8, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                {"time": 0.9, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 1.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                # Continue the pattern...
+                {"time": 1.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": 1.2, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
+                {"time": 1.3, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
+                {"time": 1.4, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
                 # Final off state
-                {"time": 15.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}}
+                {"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}}
             ]
         }
         self.add_effect("Cop Dodge", cop_dodge_effect)
+
+    def create_police_lights_effect(self):
+        police_lights_effect = {
+            "duration": 15.0,
+            "steps": []
+        }
+        for i in range(15):  # 15 cycles to fill 15 seconds
+            t = i * 1.0
+            police_lights_effect["steps"].extend([
+                {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": t + 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
+            ])
+        police_lights_effect["steps"].append({"time": 15.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}})
+        self.add_effect("Police Lights", police_lights_effect)
+        logger.debug(f"Created Police Lights effect: {police_lights_effect}")
+        logger.info(f"Police Lights effect created with {len(police_lights_effect['steps'])} steps over {police_lights_effect['duration']} seconds")

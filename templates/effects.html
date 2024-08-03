@@ -9,11 +9,10 @@
     <h1>Effects Manager</h1>
     <table>
         <tr>
-            <th>Room</th>
+            <th>Effect Name</th>
             <th>Duration</th>
             <th>Actions</th>
         </tr>
-        {% for room, effect in effects.items() %}
         {% for effect_name, effect in effects.items() %}
         <tr>
             <td>{{ effect_name }}</td>
@@ -25,7 +24,6 @@
                 </form>
             </td>
         </tr>
-        {% endfor %}
         {% endfor %}
     </table>
     <a href="{{ url_for('add_effect') }}">Add New Effect</a>
