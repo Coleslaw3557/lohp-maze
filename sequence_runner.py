@@ -11,11 +11,12 @@ class SequenceRunner(threading.Thread):
         self.dmx_state_manager = dmx_state_manager
         self.running = True
         self.time_offset = 0
+        self.FREQUENCY = 44  # Default to 44Hz update rate
 
     def run(self):
         while self.running:
             self.update_sequence()
-            time.sleep(1 / self.FREQUENCY)  # 44Hz update rate
+            time.sleep(1 / self.FREQUENCY)
 
     def update_sequence(self):
         current_time = time.time() + self.time_offset
