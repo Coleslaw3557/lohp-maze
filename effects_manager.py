@@ -84,6 +84,10 @@ class EffectsManager:
             room_layout = self.light_config_manager.get_room_layout()
             fixture_ids = [(light['start_address'] - 1) // 8 for light in room_layout.get(room, [])]
             
+            logger.info(f"Assigning effect '{effect_name}' to room '{room}'")
+            logger.debug(f"Effect data: {effect_data}")
+            logger.debug(f"Fixture IDs for room: {fixture_ids}")
+            
             if self.interrupt_handler:
                 # Use the interrupt handler to apply the effect
                 for fixture_id in fixture_ids:
@@ -394,3 +398,4 @@ class EffectsManager:
         police_lights_effect["steps"].append({"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}})
         self.add_effect("Police Lights", police_lights_effect)
         logger.debug(f"Created Police Lights effect: {police_lights_effect}")
+        logger.info(f"Police Lights effect created with {len(police_lights_effect['steps'])} steps over {police_lights_effect['duration']} seconds")

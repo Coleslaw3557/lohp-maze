@@ -60,15 +60,6 @@
                 </form>
                 <div id="testEffectResult_{{ room }}" style="display: none;"></div>
                 {% endif %}
-                {% if room in effects_manager.room_effects %}
-                <form action="{{ url_for('remove_room_effect', room=room) }}" method="post" style="display: inline;">
-                    <input type="submit" value="Remove Effect">
-                </form>
-                <form action="{{ url_for('test_effect', room=room) }}" method="post" style="display: inline;">
-                    <input type="submit" value="Test Effect" onclick="testEffect(event, '{{ room }}')">
-                </form>
-                <div id="testEffectResult_{{ room }}" style="display: none;"></div>
-                {% endif %}
             </td>
         </tr>
         {% endfor %}
