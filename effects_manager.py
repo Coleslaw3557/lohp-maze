@@ -200,6 +200,39 @@ class EffectsManager:
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
+        speed = theme_data.get('speed', 1.0)
+        step_duration = 1.0 / speed
+        for _ in range(int(theme_data['duration'] * speed)):
+            if self.stop_theme.is_set():
+                break
+            step = self._generate_theme_step(theme_data, room_layout)
+            self._apply_theme_step(step)
+            time.sleep(step_duration)
+
+    def _generate_theme_step(self, theme_data, room_layout):
+        step = {'rooms': {}}
+        for room in room_layout.keys():
+            if room not in self.room_effects:
+                step['rooms'][room] = self._generate_room_channels(theme_data)
+        return step
+
+    def _apply_theme_step(self, step):
+        room_layout = self.light_config_manager.get_room_layout()
+        for room, lights in room_layout.items():
+            if room not in self.room_effects:
+                room_channels = step['rooms'].get(room, {})
+                for light in lights:
+                    fixture_id = (light['start_address'] - 1) // 8
+                    light_model = self.light_config_manager.get_light_config(light['model'])
+                    fixture_values = [0] * 8
+                    for channel, value in room_channels.items():
+                        if channel in light_model['channels']:
+                            channel_offset = light_model['channels'][channel]
+                            fixture_values[channel_offset] = value
+                    self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+
+    def _generate_and_apply_theme_steps(self, theme_data):
+        room_layout = self.light_config_manager.get_room_layout()
         speed = theme_data.get('speed', 1.0)  # Default to 1.0 if 'speed' is not present
         step_duration = 1.0 / speed
         for _ in range(int(theme_data['duration'] * speed)):
@@ -328,11 +361,13 @@ class EffectsManager:
     def create_police_lights_effect(self):
         police_lights_effect = {
             "duration": 10.0,
-            "steps": [
-                {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 0.25, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 0.5, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 0.75, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}}
-            ]
+            "steps": []
         }
+        for i in range(20):  # 20 cycles to fill 10 seconds
+            t = i * 0.5
+            police_lights_effect["steps"].extend([
+                {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
+                {"time": t + 0.25, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}}
+            ])
+        police_lights_effect["steps"].append({"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}})
         self.add_effect("Police Lights", police_lights_effect)
