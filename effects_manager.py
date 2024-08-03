@@ -20,6 +20,7 @@ class EffectsManager:
         self.dmx_state_manager = dmx_state_manager
         self.interrupt_handler = interrupt_handler
         self.frequency = 44  # Updated to 44 Hz
+        self.stop_background_theme = False
         
         if self.interrupt_handler is None:
             logger.warning("InterruptHandler not provided. Some features may not work correctly.")
@@ -120,11 +121,15 @@ class EffectsManager:
         
         log_messages = []
         
-        # Pause theme application for this room
+        # Mark this room as having an active effect
         self.room_effects[room] = True
         
         # Gradually fade to black before applying the effect
         self._fade_to_black(room, fixture_ids, duration=0.5)
+        
+        # Start a background thread to continue running the theme for other rooms
+        theme_thread = threading.Thread(target=self._continue_theme_for_other_rooms, args=(room,))
+        theme_thread.start()
         
         threads = []
         for fixture_id in fixture_ids:
@@ -142,10 +147,25 @@ class EffectsManager:
         # Gradually fade back to the theme over 1 second
         self._fade_to_theme(room, fixture_ids, duration=1.0)
         
-        # Resume theme application for this room
+        # Remove the active effect flag for this room
         self.room_effects.pop(room, None)
         
+        # Stop the background theme thread
+        self.stop_background_theme = True
+        theme_thread.join()
+        
         return True, log_messages
+
+    def _continue_theme_for_other_rooms(self, active_effect_room):
+        self.stop_background_theme = False
+        while not self.stop_background_theme:
+            for room, lights in self.light_config_manager.get_room_layout().items():
+                if room != active_effect_room and room not in self.room_effects:
+                    fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+                    theme_values = self._generate_theme_values(room)
+                    for fixture_id in fixture_ids:
+                        self.dmx_state_manager.update_fixture(fixture_id, theme_values)
+            time.sleep(1 / self.frequency)
 
     def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
@@ -603,7 +623,7 @@ class EffectsManager:
                 interpolated_values = [int(current + (theme - current) * progress)
                                        for current, theme in zip(current_values, theme_values)]
                 self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
-            time.sleep(1 / self.FREQUENCY)  # 44Hz update rate
+            time.sleep(1 / self.frequency)  # Use the instance attribute 'frequency'
 
     def _generate_theme_values(self, room):
         # This method should generate the current theme values for the room
