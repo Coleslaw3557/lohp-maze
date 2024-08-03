@@ -115,23 +115,17 @@ class EffectsManager:
         
         log_messages = []
         
-        if self.interrupt_handler:
-            logger.info(f"Using InterruptHandler to apply effect in room '{room}' on fixtures: {fixture_ids}")
-            threads = []
-            for fixture_id in fixture_ids:
-                thread = threading.Thread(target=self._apply_effect_to_fixture_sync, args=(fixture_id, effect_data))
-                thread.start()
-                threads.append(thread)
-            
-            for thread in threads:
-                thread.join()
-            
-            log_messages.append(f"Effect applied concurrently to all fixtures in room '{room}'")
-            logger.info(f"Effect application completed in room '{room}'")
-        else:
-            logger.warning("InterruptHandler not available. Applying effect directly using DMX State Manager.")
-            self._apply_effect_directly(room, effect_data, fixture_ids)
-            log_messages.append("Effect applied directly using DMX State Manager")
+        threads = []
+        for fixture_id in fixture_ids:
+            thread = threading.Thread(target=self._apply_effect_to_fixture_sync, args=(fixture_id, effect_data))
+            thread.start()
+            threads.append(thread)
+        
+        for thread in threads:
+            thread.join()
+        
+        log_messages.append(f"Effect applied concurrently to all fixtures in room '{room}'")
+        logger.info(f"Effect application completed in room '{room}'")
         
         # Ensure the effect is applied to all fixtures in the room
         self._reset_room_lights(room)
