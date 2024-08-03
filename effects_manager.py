@@ -115,6 +115,13 @@ class EffectsManager:
         
         log_messages = []
         
+        # Pause theme application for this room
+        self.room_effects[room] = True
+        
+        # Reset all fixtures in the room to black before applying the effect
+        for fixture_id in fixture_ids:
+            self.dmx_state_manager.reset_fixture(fixture_id)
+        
         threads = []
         for fixture_id in fixture_ids:
             thread = threading.Thread(target=self._apply_effect_to_fixture_sync, args=(fixture_id, effect_data))
@@ -127,8 +134,11 @@ class EffectsManager:
         log_messages.append(f"Effect applied concurrently to all fixtures in room '{room}'")
         logger.info(f"Effect application completed in room '{room}'")
         
-        # Ensure the effect is applied to all fixtures in the room
-        self._reset_room_lights(room)
+        # Gradually fade back to the theme over 1 second
+        self._fade_to_theme(room, fixture_ids, duration=1.0)
+        
+        # Resume theme application for this room
+        self.room_effects.pop(room, None)
         
         return True, log_messages
 
@@ -151,6 +161,24 @@ class EffectsManager:
             fixture_id = (light['start_address'] - 1) // 8
             self.dmx_state_manager.reset_fixture(fixture_id)
         logger.debug(f"Reset lights for room {room}")
+
+    def _fade_to_theme(self, room, fixture_ids, duration):
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            progress = (time.time() - start_time) / duration
+            for fixture_id in fixture_ids:
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                theme_values = self._generate_theme_values(room)
+                interpolated_values = [int(current + (theme - current) * progress)
+                                       for current, theme in zip(current_values, theme_values)]
+                self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
+            time.sleep(0.025)  # 40Hz update rate
+
+    def _generate_theme_values(self, room):
+        # This method should generate the current theme values for the room
+        # You'll need to implement this based on your theme logic
+        # For now, we'll return a placeholder
+        return [128, 64, 32, 0, 255, 0, 0, 0]
 
     def _get_effect_step_values(self, effect_data):
         def get_values(elapsed_time):
