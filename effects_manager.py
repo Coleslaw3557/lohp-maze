@@ -430,15 +430,16 @@ class EffectsManager:
             if self.stop_theme.is_set():
                 break
             current_time = time.time() - start_time
-            step = self._generate_theme_step(theme_data, room_layout, current_time)
+            step = self._generate_theme_step(theme_data, room_layout)
             self._apply_theme_step(step)
             time.sleep(1 / self.frequency)  # Use the instance attribute 'frequency'
 
     def _generate_theme_step(self, theme_data, room_layout):
         step = {'rooms': {}}
+        current_time = time.time()
         for room in room_layout.keys():
             if room not in self.room_effects:
-                step['rooms'][room] = self._generate_room_channels(theme_data)
+                step['rooms'][room] = self._generate_room_channels(theme_data, current_time)
         return step
 
     def _apply_theme_step(self, step):
