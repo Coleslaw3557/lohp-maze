@@ -344,12 +344,12 @@ class EffectsManager:
         # Load themes from a JSON file or database
         self.themes = {
             "Ocean": {
-                "duration": 90,
-                "transition_speed": 0.3,
-                "color_variation": 0.4,
-                "intensity_fluctuation": 0.3,
-                "overall_brightness": 0.6,
-                "blue_green_balance": 0.8
+                "duration": 120,
+                "transition_speed": 0.2,
+                "color_variation": 0.5,
+                "intensity_fluctuation": 0.4,
+                "overall_brightness": 0.7,
+                "blue_green_balance": 0.9
             },
             "Jungle": {
                 "duration": 60,
@@ -360,7 +360,7 @@ class EffectsManager:
                 "green_blue_balance": 0.3
             }
         }
-        self.default_theme = "Jungle"
+        self.default_theme = "Ocean"
         self.set_current_theme(self.default_theme)
 
 
