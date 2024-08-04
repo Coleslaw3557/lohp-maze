@@ -65,12 +65,30 @@ def set_master_brightness():
 
 @app.route('/set_theme', methods=['POST'])
 def set_theme():
-    theme_name = request.form.get('theme_name')
+    theme_name = request.json.get('theme_name')
     if effects_manager.set_current_theme(theme_name):
-        flash(f'Theme set to {theme_name}', 'success')
+        return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
     else:
-        flash(f'Failed to set theme to {theme_name}', 'error')
-    return redirect(url_for('index'))
+        return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+
+@app.route('/run_effect', methods=['POST'])
+def run_effect():
+    room = request.json.get('room')
+    effect_name = request.json.get('effect_name')
+    
+    if not room or not effect_name:
+        return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
+    
+    effect_data = effects_manager.get_effect(effect_name)
+    if not effect_data:
+        return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
+    
+    success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
+    
+    if success:
+        return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}', 'log_messages': log_messages})
+    else:
+        return jsonify({'status': 'error', 'message': f'Failed to apply effect {effect_name} to room {room}', 'log_messages': log_messages}), 500
 
 @app.route('/toggle_verbose_logging', methods=['POST'])
 def toggle_verbose_logging():

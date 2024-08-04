@@ -383,6 +383,44 @@ class EffectsManager:
             logger.warning(f"Theme not found: {theme_name}")
             return False
 
+    def get_effect(self, effect_name):
+        return self.effects.get(effect_name)
+
+    def apply_effect_to_room(self, room, effect_data):
+        room_layout = self.light_config_manager.get_room_layout()
+        lights = room_layout.get(room, [])
+        fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+        
+        logger.info(f"Applying effect to room '{room}'")
+        logger.debug(f"Effect data: {effect_data}")
+        logger.debug(f"Fixture IDs for room: {fixture_ids}")
+        
+        log_messages = []
+        
+        # Mark this room as having an active effect
+        self.room_effects[room] = True
+        
+        # Gradually fade to black before applying the effect
+        self._fade_to_black(room, fixture_ids, duration=0.5)
+        
+        # Apply the effect to all fixtures in the room
+        for fixture_id in fixture_ids:
+            self._apply_effect_to_fixture_sync(fixture_id, effect_data)
+        
+        log_messages.append(f"Effect applied to all fixtures in room '{room}'")
+        logger.info(f"Effect application completed in room '{room}'")
+        
+        # Keep the effect running for its duration
+        time.sleep(effect_data['duration'])
+        
+        # Gradually fade back to the theme over 1 second
+        self._fade_to_theme(room, fixture_ids, duration=1.0)
+        
+        # Remove the active effect flag for this room
+        self.room_effects.pop(room, None)
+        
+        return True, log_messages
+
     def _run_theme_with_transition(self, old_theme, new_theme):
         transition_duration = 2.0  # 2 seconds transition
         start_time = time.time()
