@@ -48,10 +48,7 @@ def before_request():
 @app.route('/')
 def index():
     return render_template('index.html', 
-                           verbose_logging=session.get('verbose_logging', False),
-                           themes=effects_manager.get_all_themes(),
-                           current_theme=effects_manager.current_theme,
-                           default_theme=effects_manager.default_theme)
+                           verbose_logging=session.get('verbose_logging', False))
 
 @app.route('/toggle_verbose_logging', methods=['POST'])
 def toggle_verbose_logging():
@@ -59,35 +56,6 @@ def toggle_verbose_logging():
     session['verbose_logging'] = new_state
     set_verbose_logging(new_state)
     return jsonify({"status": "success", "verbose_logging": new_state})
-
-@app.route('/set_theme', methods=['POST'])
-def set_theme():
-    theme_name = request.form.get('theme_name')
-    if theme_name:
-        effects_manager.set_current_theme(theme_name)
-    else:
-        effects_manager.stop_current_theme()
-    return redirect(url_for('index'))
-
-@app.route('/set_default_theme', methods=['POST'])
-def set_default_theme():
-    theme_name = request.form.get('theme_name')
-    effects_manager.set_default_theme(theme_name)
-    return redirect(url_for('index'))
-
-@app.route('/start_default_theme', methods=['POST'])
-def start_default_theme():
-    effects_manager.start_default_theme()
-    return redirect(url_for('index'))
-
-@app.route('/stop_theme', methods=['POST'])
-def stop_theme():
-    effects_manager.stop_current_theme()
-    return jsonify({"status": "success", "message": "Theme stopped successfully"})
-
-@app.route('/themes')
-def themes():
-    return render_template('themes.html', themes=effects_manager.get_all_themes(), current_theme=effects_manager.current_theme)
 
 @app.route('/effects')
 def effects():
@@ -100,47 +68,6 @@ def rooms():
 @app.route('/light_models')
 def light_models():
     return render_template('light_models.html', light_models=light_config.get_light_models())
-
-@app.route('/add_theme', methods=['GET', 'POST'])
-def add_theme():
-    if request.method == 'POST':
-        theme_name = request.form['theme_name']
-        theme_data = {
-            'duration': float(request.form['duration']),
-            'transition_speed': float(request.form['transition_speed']),
-            'color_variation': float(request.form['color_variation']),
-            'intensity_fluctuation': float(request.form['intensity_fluctuation']),
-            'overall_brightness': float(request.form['overall_brightness']),
-            'green_blue_balance': float(request.form['green_blue_balance'])
-        }
-        effects_manager.add_theme(theme_name, theme_data)
-        return redirect(url_for('themes'))
-    return render_template('add_theme.html')
-
-@app.route('/edit_theme/<theme_name>', methods=['GET', 'POST'])
-def edit_theme(theme_name):
-    if request.method == 'POST':
-        theme_data = {
-            'duration': float(request.form['duration']),
-            'transition_speed': float(request.form['transition_speed']),
-            'color_variation': float(request.form['color_variation']),
-            'intensity_fluctuation': float(request.form['intensity_fluctuation']),
-            'overall_brightness': float(request.form['overall_brightness']),
-            'green_blue_balance': float(request.form['green_blue_balance'])
-        }
-        try:
-            effects_manager.update_theme(theme_name, theme_data)
-            flash('Theme updated successfully', 'success')
-        except Exception as e:
-            flash(f'Error updating theme: {str(e)}', 'error')
-        return jsonify({'status': 'success', 'message': 'Theme updated successfully'})
-    theme = effects_manager.get_theme(theme_name)
-    return render_template('edit_theme.html', theme_name=theme_name, theme=theme)
-
-@app.route('/remove_theme/<theme_name>', methods=['POST'])
-def remove_theme(theme_name):
-    effects_manager.remove_theme(theme_name)
-    return redirect(url_for('themes'))
 
 @app.route('/edit_room/<room>', methods=['GET', 'POST'])
 def edit_room(room):
@@ -258,18 +185,6 @@ def edit_effect(effect_name):
 def remove_effect(effect_name):
     effects_manager.remove_effect(effect_name)
     return redirect(url_for('effects'))
-
-@app.route('/set_theme_brightness', methods=['POST'])
-def set_theme_brightness():
-    theme_name = request.form.get('theme_name')
-    brightness = float(request.form.get('brightness'))
-    if theme_name and brightness is not None:
-        try:
-            effects_manager.set_theme_brightness(theme_name, brightness)
-            return jsonify({'status': 'success'})
-        except Exception as e:
-            return jsonify({'status': 'error', 'message': str(e)})
-    return jsonify({'status': 'error', 'message': 'Invalid input'})
 
 @app.route('/test_mode')
 def test_mode():
