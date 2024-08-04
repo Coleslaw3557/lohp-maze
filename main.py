@@ -97,23 +97,7 @@ def get_themes():
     themes = effects_manager.get_all_themes()
     return jsonify(themes)
 
-@app.route('/api/trigger_lightning', methods=['POST'])
-def trigger_lightning():
-    try:
-        room_layout = light_config.get_room_layout()
-        for room in room_layout.keys():
-            effect_data = effects_manager.get_effect("Lightning")
-            if effect_data:
-                success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
-                if not success:
-                    logger.warning(f"Failed to apply lightning effect to room {room}")
-            else:
-                logger.error("Lightning effect not found")
-                return jsonify({"error": "Lightning effect not found"}), 404
-        return jsonify({"message": "Lightning effect triggered"}), 200
-    except Exception as e:
-        logger.exception("Error triggering lightning effect")
-        return jsonify({"error": str(e)}), 500
+# This route has been removed as it was a duplicate
 
 @app.route('/api/run_test', methods=['POST'])
 def run_test():
