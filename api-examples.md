@@ -36,13 +36,6 @@ curl -X POST http://$CONTROLLER_IP:5000/api/set_theme \
      -d '{"theme_name": "Jungle"}'
 ```
 
-Alternatively, using form data:
-
-```bash
-curl -X POST http://$CONTROLLER_IP:5000/api/set_theme \
-     -d "theme_name=Jungle"
-```
-
 ## Run Effect in a Specific Room
 
 Trigger an effect in a specific room.
@@ -69,32 +62,6 @@ Trigger the lightning effect across all rooms.
 
 ```bash
 curl -X POST http://$CONTROLLER_IP:5000/api/trigger_lightning
-```
-
-## Get Room State
-
-Get the current state of a specific room.
-
-```bash
-curl -X GET http://$CONTROLLER_IP:5000/api/room_state/Entrance
-```
-
-## Set Room State
-
-Set the state of a specific room.
-
-```bash
-curl -X POST http://$CONTROLLER_IP:5000/api/room_state/Entrance \
-     -H "Content-Type: application/json" \
-     -d '{"assigned_effect": "Lightning", "is_active": true}'
-```
-
-## Get All Room States
-
-Get the current state of all rooms.
-
-```bash
-curl -X GET http://$CONTROLLER_IP:5000/api/all_room_states
 ```
 
 These examples cover the main API endpoints available in the current version of the LoHP-MazeManager Control System. Remember to replace `$CONTROLLER_IP` with the actual IP address of your controller.
