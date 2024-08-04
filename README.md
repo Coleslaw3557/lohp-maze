@@ -14,21 +14,17 @@ The system consists of several key components:
 4. **Effects Manager**: Controls the creation and execution of lighting effects and themes.
 5. **Interrupt Handler**: Manages interruptions for specific fixtures and coordinates transitions.
 6. **DMX State Manager**: Maintains the current state of all DMX channels and provides thread-safe access.
-7. **Sequence Runner**: Executes the main lighting sequence for continuous color morphing.
 
 ### Hardware Setup
 
-- **Controller**: Raspberry Pi 4 (4GB RAM)
 - **DMX Interface**: FTDI-based USB to DMX adapter
 - **Lighting**: Various DMX-controlled LED fixtures (see `light_config.json` for specific models)
-- **Network**: Local Wi-Fi network for control access
 
 ## Software Components
 
 ### 1. Flask Web Application (`main.py`)
 
 The core of the control system, providing:
-- Web-based user interface for managing rooms, light models, effects, and themes
 - RESTful API endpoints for real-time control
 - Integration of all other components
 
@@ -36,7 +32,6 @@ Key features:
 - Dynamic theme management
 - Real-time effect testing
 - Master brightness control
-- Verbose logging toggle
 - Interrupt system for specific fixture control
 
 ### 2. DMX Interface (`dmx_interface.py`)
@@ -79,12 +74,6 @@ Maintains the current state of all DMX channels:
 - Provides thread-safe access to channel values
 - Implements locking mechanism to prevent race conditions
 
-### 7. Sequence Runner (`sequence_runner.py`)
-
-Executes the main lighting sequence:
-- Runs in a separate thread for non-blocking operation
-- Implements continuous color morphing across all fixtures
-
 ## Key Files
 
 - `main.py`: Main Flask application and control logic
@@ -93,97 +82,64 @@ Executes the main lighting sequence:
 - `effects_manager.py`: Effect and theme management
 - `interrupt_handler.py`: Manages fixture interruptions
 - `dmx_state_manager.py`: Maintains DMX channel states
-- `sequence_runner.py`: Executes main lighting sequence
 - `light_config.json`: Configuration file for light models and room layouts
-- `requirements.txt`: Python dependencies
-- `Dockerfile` and `docker-compose.yml`: Containerization setup
 
 ## Setup and Installation
 
-1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Configure `light_config.json` with your specific light models and room layout
-4. Set the CONTROLLER_IP environment variable:
-   ```bash
-   export CONTROLLER_IP=<your-controller-ip-address>
-   ```
-5. Run the application: `python main.py`
-
-For containerized deployment:
-```bash
-docker-compose up --build
-```
+1. Install dependencies: `pip install -r requirements.txt`
+2. Configure `light_config.json` with your specific light models and room layout
+3. Run the application: `python main.py`
 
 ## Usage
 
-Access the web interface at `http://${CONTROLLER_IP}:5000`
+Access the API endpoints at `http://localhost:5000`
 
 Key functionalities:
-- Room Manager: Add, edit, and remove rooms
-- Light Models: Manage different types of lighting fixtures
-- Effects: Create and edit lighting effects
-- Themes: Design and control overarching lighting themes
+- Effects: Create and trigger lighting effects
+- Themes: Set and control overarching lighting themes
 - Test Mode: Real-time testing of individual fixtures and effects
-- Interrupt System: Control specific fixtures during ongoing effects
 
 ### API Examples
 
 List all rooms:
 ```bash
-curl -X GET http://$CONTROLLER_IP:5000/api/rooms
+curl -X GET http://localhost:5000/api/rooms
 ```
 
 List all effects:
 ```bash
-curl -X GET http://$CONTROLLER_IP:5000/api/effects
+curl -X GET http://localhost:5000/api/effects
 ```
 
 List all themes:
 ```bash
-curl -X GET http://$CONTROLLER_IP:5000/api/themes
+curl -X GET http://localhost:5000/api/themes
 ```
 
 Set a theme:
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/api/set_theme \
+curl -X POST http://localhost:5000/api/set_theme \
      -H "Content-Type: application/json" \
      -d '{"theme_name": "Jungle"}'
-```
-Or using form data:
-```bash
-curl -X POST http://$CONTROLLER_IP:5000/api/set_theme \
-     -d "theme_name=Jungle"
 ```
 
 Run an effect in a specific room:
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/api/run_effect \
+curl -X POST http://localhost:5000/api/run_effect \
      -H "Content-Type: application/json" \
      -d '{"room": "Entrance", "effect_name": "Lightning"}'
 ```
 
 Set master brightness:
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/api/set_master_brightness \
+curl -X POST http://localhost:5000/api/set_master_brightness \
      -H "Content-Type: application/json" \
      -d '{"brightness": 0.8}'
 ```
 
-Get the current state of a specific room:
+Trigger lightning effect:
 ```bash
-curl -X GET http://$CONTROLLER_IP:5000/api/room_state/Entrance
-```
-
-Set the state of a specific room:
-```bash
-curl -X POST http://$CONTROLLER_IP:5000/api/room_state/Entrance \
-     -H "Content-Type: application/json" \
-     -d '{"assigned_effect": "Lightning", "is_active": true}'
-```
-
-Get the current state of all rooms:
-```bash
-curl -X GET http://$CONTROLLER_IP:5000/api/all_room_states
+curl -X POST http://localhost:5000/api/trigger_lightning
 ```
 
 ## Technical Considerations
