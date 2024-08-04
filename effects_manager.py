@@ -24,6 +24,8 @@ class EffectsManager:
         self.stop_background_theme = False
         self.theme_lock = threading.Lock()
         self.load_themes()
+        self._step_count = 0
+        self._last_values = {}
         
         if self.interrupt_handler is None:
             logger.warning("InterruptHandler not provided. Some features may not work correctly.")
@@ -369,17 +371,16 @@ class EffectsManager:
         pass
 
     def _run_theme(self, theme_name):
+        self._step_count = 0
+        self._last_values = {}
         theme_data = self.themes[theme_name]
         while not self.stop_theme.is_set():
-            with self.theme_lock:
-                if self.current_theme != theme_name:
-                    break  # Exit if the current theme has changed
-                start_time = time.time()
-                self._generate_and_apply_theme_steps(theme_data)
-                elapsed_time = time.time() - start_time
-                sleep_time = max(0, 1 / self.frequency - elapsed_time)
+            start_time = time.time()
+            self._generate_and_apply_theme_steps(theme_data)
+            elapsed_time = time.time() - start_time
+            sleep_time = max(0, 1 / self.frequency - elapsed_time)
             if self.stop_theme.wait(timeout=sleep_time):
-                break  # Exit the loop if stop_theme is set
+                break
         logger.info(f"Theme {theme_name} stopped")
 
     def _generate_and_apply_theme_steps(self, theme_data):
@@ -593,6 +594,12 @@ class EffectsManager:
                 fixture_id = (start_address - 1) // 8  # Assuming 8 channels per fixture
                 self.dmx_state_manager.reset_fixture(fixture_id)
         logger.info("All lights reset")
+
+    def _significant_change(self, changes):
+        # Implement logic to determine if the change is significant
+        # For example, check if any value has changed by more than 10%
+        return any(abs(new - old) > 25 for _, _, new_values in changes 
+                   for new, old in zip(new_values, self._last_values.get(_, [0]*8)))
 
     def create_cop_dodge_effect(self):
         cop_dodge_effect = {
