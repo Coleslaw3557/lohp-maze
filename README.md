@@ -129,22 +129,22 @@ Key functionalities:
 ### API Examples
 
 List all themes:
-```bash
+```
 curl -X GET http://$CONTROLLER_IP:5000/api/themes
 ```
 
 List all rooms:
-```bash
-curl -X GET http://${CONTROLLER_IP}:5000/api/rooms
+```
+curl -X GET http://$CONTROLLER_IP:5000/api/rooms
 ```
 
 List all effects:
-```bash
-curl -X GET http://${CONTROLLER_IP}:5000/api/effects
+```
+curl -X GET http://$CONTROLLER_IP:5000/api/effects
 ```
 
 Set a theme:
-```bash
+```
 curl -X POST http://$CONTROLLER_IP:5000/set_theme \
      -H "Content-Type: application/json" \
      -d '{"theme_name": "Jungle"}'
