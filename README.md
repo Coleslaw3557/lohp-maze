@@ -35,7 +35,7 @@ The core of the control system, providing:
 Key features:
 - Dynamic theme management
 - Real-time effect testing
-- Global Hz (update frequency) control
+- Master brightness control
 - Verbose logging toggle
 - Interrupt system for specific fixture control
 
@@ -65,6 +65,7 @@ Handles the creation, storage, and execution of lighting effects and themes:
 - Real-time theme generation and execution
 - Supports complex, multi-room lighting sequences
 - Integrates with the Interrupt Handler for seamless effect transitions
+- Implements master brightness control
 
 ### 5. Interrupt Handler (`interrupt_handler.py`)
 
@@ -137,6 +138,13 @@ curl -X POST http://<controller-ip>:5000/run_effect \
      -d '{"room": "Entrance", "effect_name": "Lightning"}'
 ```
 
+Set master brightness:
+```bash
+curl -X POST http://<controller-ip>:5000/set_master_brightness \
+     -H "Content-Type: application/json" \
+     -d '{"brightness": 0.8}'
+```
+
 ## Technical Considerations
 
 - The system uses a fixed 44Hz update rate for DMX communication to ensure smooth transitions and effects.
@@ -144,3 +152,4 @@ curl -X POST http://<controller-ip>:5000/run_effect \
 - The Effects Manager uses a sophisticated algorithm to generate dynamic themes based on parameters like color variation, intensity fluctuation, and overall brightness.
 - The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence.
 - Error handling and logging are implemented at multiple levels for robust operation and debugging.
+- Master brightness control affects all lighting outputs, allowing for global intensity adjustment without altering individual effect or theme designs.
