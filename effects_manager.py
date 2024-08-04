@@ -14,6 +14,7 @@ class EffectsManager:
         self.room_effects = {}
         self.themes = {}
         self.current_theme = None
+        self.default_theme = None
         self.theme_thread = None
         self.stop_theme = threading.Event()
         self.light_config_manager = light_config_manager
@@ -21,6 +22,7 @@ class EffectsManager:
         self.interrupt_handler = interrupt_handler
         self.frequency = 44  # Updated to 44 Hz
         self.stop_background_theme = False
+        self.load_themes()
         
         if self.interrupt_handler is None:
             logger.warning("InterruptHandler not provided. Some features may not work correctly.")
@@ -277,6 +279,16 @@ class EffectsManager:
     def get_theme(self, theme_name):
         return self.themes.get(theme_name)
 
+    def load_themes(self):
+        # Load themes from a JSON file or database
+        # For now, we'll use a simple dictionary
+        self.themes = {
+            "Jungle": self._jungle_theme,
+            "Ocean": self._ocean_theme,
+            "Sunset": self._sunset_theme
+        }
+        self.default_theme = "Jungle"
+
     def set_current_theme(self, theme_name):
         if theme_name in self.themes:
             self.current_theme = theme_name
@@ -289,6 +301,42 @@ class EffectsManager:
             logger.info(f"Current theme set to: {theme_name}")
         else:
             logger.warning(f"Theme not found: {theme_name}")
+
+    def set_default_theme(self, theme_name):
+        if theme_name in self.themes:
+            self.default_theme = theme_name
+            logger.info(f"Default theme set to: {theme_name}")
+        else:
+            logger.warning(f"Theme not found: {theme_name}")
+
+    def start_default_theme(self):
+        if self.default_theme:
+            self.set_current_theme(self.default_theme)
+        else:
+            logger.warning("No default theme set")
+
+    def stop_current_theme(self):
+        self.stop_theme.set()
+        if self.theme_thread:
+            self.theme_thread.join()
+        self.current_theme = None
+        self._reset_all_lights()
+        logger.info("Current theme stopped and all lights reset")
+
+    def get_all_themes(self):
+        return list(self.themes.keys())
+
+    def _jungle_theme(self):
+        # Implement jungle theme logic here
+        pass
+
+    def _ocean_theme(self):
+        # Implement ocean theme logic here
+        pass
+
+    def _sunset_theme(self):
+        # Implement sunset theme logic here
+        pass
 
     def _run_theme(self, theme_name):
         theme_data = self.themes[theme_name]

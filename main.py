@@ -50,7 +50,8 @@ def index():
     return render_template('index.html', 
                            verbose_logging=session.get('verbose_logging', False),
                            themes=effects_manager.get_all_themes(),
-                           current_theme=effects_manager.current_theme)
+                           current_theme=effects_manager.current_theme,
+                           default_theme=effects_manager.default_theme)
 
 @app.route('/toggle_verbose_logging', methods=['POST'])
 def toggle_verbose_logging():
@@ -66,6 +67,17 @@ def set_theme():
         effects_manager.set_current_theme(theme_name)
     else:
         effects_manager.stop_current_theme()
+    return redirect(url_for('index'))
+
+@app.route('/set_default_theme', methods=['POST'])
+def set_default_theme():
+    theme_name = request.form.get('theme_name')
+    effects_manager.set_default_theme(theme_name)
+    return redirect(url_for('index'))
+
+@app.route('/start_default_theme', methods=['POST'])
+def start_default_theme():
+    effects_manager.start_default_theme()
     return redirect(url_for('index'))
 
 @app.route('/stop_theme', methods=['POST'])

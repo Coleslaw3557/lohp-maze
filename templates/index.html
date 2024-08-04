@@ -31,7 +31,7 @@
     </nav>
     
     <h2>System Settings</h2>
-    <h3>Current Theme</h3>
+    <h3>Theme Management</h3>
     <form action="{{ url_for('set_theme') }}" method="post" id="themeForm">
         <select name="theme_name" id="themeSelect">
             <option value="">None</option>
@@ -44,13 +44,25 @@
             </option>
             {% endfor %}
         </select>
-        <input type="submit" value="Set Theme">
+        <input type="submit" value="Set Current Theme">
     </form>
-    <button id="stopThemeButton" style="display: none;">Stop Theme</button>
-    <div id="brightnessSlider" style="display: none;">
-        <label for="brightness">Brightness: <span id="brightnessValue">100%</span></label>
-        <input type="range" id="brightness" name="brightness" min="0" max="1" step="0.01" value="1">
-    </div>
+    <form action="{{ url_for('set_default_theme') }}" method="post">
+        <select name="theme_name">
+            {% for theme_name in themes %}
+            <option value="{{ theme_name }}"
+                    {% if theme_name == default_theme %}
+                        selected
+                    {% endif %}>
+                {{ theme_name }}
+            </option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="Set Default Theme">
+    </form>
+    <form action="{{ url_for('start_default_theme') }}" method="post">
+        <input type="submit" value="Start Default Theme">
+    </form>
+    <button id="stopThemeButton">Stop Current Theme</button>
     <div>
         <label class="toggle-switch">
             <input type="checkbox" id="verbose_logging" name="verbose_logging" {% if verbose_logging %}checked{% endif %} onchange="toggleVerboseLogging(this)">
