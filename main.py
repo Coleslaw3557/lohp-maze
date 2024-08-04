@@ -1,7 +1,7 @@
 import os
 import logging
 import json
-from flask import Flask, request, render_template, redirect, url_for, session, jsonify, abort, flash
+from flask import Flask, request, jsonify, abort
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
@@ -50,26 +50,15 @@ def set_verbose_logging(enabled):
 def before_request():
     set_verbose_logging(session.get('verbose_logging', False))
 
-@app.route('/')
-def index():
-    return render_template('index.html', 
-                           verbose_logging=session.get('verbose_logging', False),
-                           current_theme=effects_manager.current_theme,
-                           master_brightness=effects_manager.master_brightness)
-
-@app.route('/set_master_brightness', methods=['POST'])
+@app.route('/api/set_master_brightness', methods=['POST'])
 def set_master_brightness():
-    brightness = float(request.form.get('brightness', 1.0))
+    brightness = float(request.json.get('brightness', 1.0))
     effects_manager.set_master_brightness(brightness)
     return jsonify({"status": "success", "master_brightness": brightness})
 
-@app.route('/set_theme', methods=['POST'])
+@app.route('/api/set_theme', methods=['POST'])
 def set_theme():
-    if request.is_json:
-        theme_name = request.json.get('theme_name')
-    else:
-        theme_name = request.form.get('theme_name')
-
+    theme_name = request.json.get('theme_name')
     if not theme_name:
         return jsonify({'status': 'error', 'message': 'Theme name is required'}), 400
 
@@ -78,7 +67,7 @@ def set_theme():
     else:
         return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
 
-@app.route('/run_effect', methods=['POST'])
+@app.route('/api/run_effect', methods=['POST'])
 def run_effect():
     room = request.json.get('room')
     effect_name = request.json.get('effect_name')
@@ -97,142 +86,6 @@ def run_effect():
     else:
         return jsonify({'status': 'error', 'message': f'Failed to apply effect {effect_name} to room {room}', 'log_messages': log_messages}), 500
 
-@app.route('/toggle_verbose_logging', methods=['POST'])
-def toggle_verbose_logging():
-    new_state = request.form.get('verbose_logging') == 'true'
-    session['verbose_logging'] = new_state
-    set_verbose_logging(new_state)
-    return jsonify({"status": "success", "verbose_logging": new_state})
-
-@app.route('/effects')
-def effects():
-    return render_template('effects.html', effects=effects_manager.get_all_effects())
-
-@app.route('/rooms')
-def rooms():
-    return render_template('room_manager.html', room_layout=light_config.get_room_layout(), effects_manager=effects_manager)
-
-@app.route('/light_models')
-def light_models():
-    return render_template('light_models.html', light_models=light_config.get_light_models())
-
-@app.route('/edit_room/<room>', methods=['GET', 'POST'])
-def edit_room(room):
-    if request.method == 'POST':
-        lights = []
-        for i in range(int(request.form['light_count'])):
-            lights.append({
-                'model': request.form[f'model_{i}'],
-                'start_address': int(request.form[f'start_address_{i}'])
-            })
-        light_config.update_room(room, lights)
-        return redirect(url_for('rooms'))
-    room_layout = light_config.get_room_layout()
-    if room not in room_layout:
-        abort(404)
-    return render_template('edit_room.html', room=room, lights=room_layout[room], light_models=light_config.get_light_models())
-
-@app.route('/delete_room/<room>', methods=['POST'])
-def delete_room(room):
-    light_config.remove_room(room)
-    return redirect(url_for('rooms'))
-
-@app.route('/add_room', methods=['GET', 'POST'])
-def add_room():
-    if request.method == 'POST':
-        room_name = request.form['room_name']
-        lights = []
-        for i in range(int(request.form['light_count'])):
-            lights.append({
-                'model': request.form[f'model_{i}'],
-                'start_address': int(request.form[f'start_address_{i}'])
-            })
-        light_config.add_room(room_name, lights)
-        return redirect(url_for('rooms'))
-    return render_template('add_room.html', light_models=light_config.get_light_models())
-
-@app.route('/add_light_model', methods=['GET', 'POST'])
-def add_light_model():
-    if request.method == 'POST':
-        model = request.form['model']
-        channels = {}
-        for key, value in request.form.items():
-            if key.startswith('channel_'):
-                channels[request.form[f'channel_name_{key[8:]}']] = int(value)
-        light_config.add_light_model(model, {"channels": channels})
-        return redirect(url_for('light_models'))
-    return render_template('add_light_model.html')
-
-@app.route('/assign_effect', methods=['POST'])
-def assign_effect():
-    room = request.form.get('room')
-    effect_name = request.form.get('effect_name')
-    effects_manager.assign_effect_to_room(room, effect_name)
-    return redirect(url_for('rooms'))
-
-@app.route('/remove_room_effect/<room>', methods=['POST'])
-def remove_room_effect(room):
-    effects_manager.remove_effect_from_room(room)
-    return redirect(url_for('rooms'))
-
-@app.route('/test_effect/<room>', methods=['POST'])
-def test_effect(room):
-    effect_name = effects_manager.room_effects.get(room)
-    if effect_name:
-        effect_data = effects_manager.effects.get(effect_name)
-        if effect_data:
-            success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
-            return jsonify({"success": success, "log_messages": log_messages})
-        else:
-            return jsonify({"error": f"Effect '{effect_name}' not found"}), 400
-    return jsonify({"error": "No effect assigned to this room"}), 400
-
-@app.route('/edit_light_model/<model>', methods=['GET', 'POST'])
-def edit_light_model(model):
-    if request.method == 'POST':
-        channels = {}
-        for key, value in request.form.items():
-            if key.startswith('channel_'):
-                channels[key[8:]] = int(value)
-        light_config.update_light_model(model, {"channels": channels})
-        return redirect(url_for('light_models'))
-    light_model = light_config.get_light_config(model)
-    return render_template('edit_light_model.html', model=model, light_model=light_model)
-
-@app.route('/remove_light_model/<model>', methods=['POST'])
-def remove_light_model(model):
-    light_config.remove_light_model(model)
-    return redirect(url_for('light_models'))
-
-@app.route('/add_effect', methods=['GET', 'POST'])
-def add_effect():
-    if request.method == 'POST':
-        effect_name = request.form['effect_name']
-        effect_data = {
-            'duration': float(request.form['duration']),
-            'steps': json.loads(request.form['steps'])
-        }
-        effects_manager.add_effect(effect_name, effect_data)
-        return redirect(url_for('effects'))
-    return render_template('add_effect.html', rooms=light_config.get_room_layout().keys())
-
-@app.route('/edit_effect/<effect_name>', methods=['GET', 'POST'])
-def edit_effect(effect_name):
-    if request.method == 'POST':
-        effect_data = {
-            'duration': float(request.form['duration']),
-            'steps': json.loads(request.form['steps'])
-        }
-        effects_manager.update_effect(effect_name, effect_data)
-        return redirect(url_for('effects'))
-    effect = effects_manager.get_effect(effect_name)
-    return render_template('edit_effect.html', effect_name=effect_name, effect=effect)
-
-@app.route('/remove_effect/<effect_name>', methods=['POST'])
-def remove_effect(effect_name):
-    effects_manager.remove_effect(effect_name)
-    return redirect(url_for('effects'))
-
 @app.route('/api/rooms', methods=['GET'])
 def get_rooms():
     rooms = light_config.get_room_layout()
@@ -248,13 +101,7 @@ def get_themes():
     themes = effects_manager.get_all_themes()
     return jsonify(themes)
 
-@app.route('/test_mode')
-def test_mode():
-    rooms = light_config.get_room_layout().keys()
-    effects = effects_manager.get_all_effects().keys()
-    return render_template('test_mode.html', rooms=rooms, effects=effects)
-
-@app.route('/run_test', methods=['POST'])
+@app.route('/api/run_test', methods=['POST'])
 def run_test():
     test_type = request.json['testType']
     rooms = request.json['rooms']
@@ -306,7 +153,7 @@ def run_effect_test(rooms, effect_name):
         logger.exception(f"Error in effect test for rooms: {', '.join(rooms)}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/stop_test', methods=['POST'])
+@app.route('/api/stop_test', methods=['POST'])
 def stop_test():
     try:
         for fixture_id in range(NUM_FIXTURES):
@@ -317,10 +164,9 @@ def stop_test():
         logger.exception("Error stopping test")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/trigger_lightning', methods=['POST'])
+@app.route('/api/trigger_lightning', methods=['POST'])
 def trigger_lightning():
     try:
-        # Assuming the lightning effect should be applied to all rooms
         room_layout = light_config.get_room_layout()
         for room in room_layout.keys():
             effect_data = effects_manager.get_effect("Lightning")
