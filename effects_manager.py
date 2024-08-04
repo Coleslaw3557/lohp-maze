@@ -21,11 +21,8 @@ class EffectsManager:
         self.dmx_state_manager = dmx_state_manager
         self.interrupt_handler = interrupt_handler
         self.frequency = 44  # Updated to 44 Hz
-        self.stop_background_theme = False
         self.theme_lock = threading.Lock()
         self.load_themes()
-        self._step_count = 0
-        self._last_values = {}
         
     def _significant_change(self, changes):
         # Implement logic to determine if the change is significant
@@ -336,24 +333,6 @@ class EffectsManager:
             logger.warning(f"Theme not found: {theme_name}")
             return False
 
-    def _reset_all_lights(self):
-        # Reset all lights to their default state
-        for fixture_id in range(self.dmx_state_manager.num_fixtures):
-            self.dmx_state_manager.reset_fixture(fixture_id)
-
-    def set_default_theme(self, theme_name):
-        if theme_name in self.themes:
-            self.default_theme = theme_name
-            logger.info(f"Default theme set to: {theme_name}")
-        else:
-            logger.warning(f"Theme not found: {theme_name}")
-
-    def start_default_theme(self):
-        if self.default_theme:
-            self.set_current_theme(self.default_theme)
-        else:
-            logger.warning("No default theme set")
-
     def stop_current_theme(self):
         if self.current_theme:
             self.stop_theme.set()
@@ -363,25 +342,13 @@ class EffectsManager:
             self._reset_all_lights()
             logger.info("Current theme stopped and all lights reset")
 
-    def get_all_themes(self):
-        return list(self.themes.keys())
-
-    def _jungle_theme(self):
-        # Implement jungle theme logic here
-        pass
-
-    def _ocean_theme(self):
-        # Implement ocean theme logic here
-        pass
-
-    def _sunset_theme(self):
-        # Implement sunset theme logic here
-        pass
+    def _reset_all_lights(self):
+        for fixture_id in range(self.dmx_state_manager.num_fixtures):
+            self.dmx_state_manager.reset_fixture(fixture_id)
 
     def _run_theme(self, theme_name):
-        self._step_count = 0
-        self._last_values = {}
         theme_data = self.themes[theme_name]
+        logger.info(f"Starting theme: {theme_name}")
         while not self.stop_theme.is_set():
             start_time = time.time()
             self._generate_and_apply_theme_steps(theme_data)
