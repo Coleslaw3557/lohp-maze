@@ -446,6 +446,7 @@ class EffectsManager:
 
     def _apply_theme_step(self, step):
         room_layout = self.light_config_manager.get_room_layout()
+        changes = []
         for room, lights in room_layout.items():
             if room not in self.room_effects:
                 room_channels = step['rooms'].get(room, {})
@@ -458,8 +459,12 @@ class EffectsManager:
                             channel_offset = light_model['channels'][channel]
                             fixture_values[channel_offset] = value
                     self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+                    changes.append((room, fixture_id, fixture_values))
             else:
-                logger.debug(f"Skipping theme application for room {room} due to active effect")
+                changes.append((room, None, "Skipped due to active effect"))
+        
+        if changes:
+            logger.debug(f"Theme step applied: {changes}")
 
     def _generate_theme_step(self, theme_data, room_layout):
         step = {'rooms': {}}
