@@ -289,6 +289,14 @@ class EffectsManager:
                 "intensity_fluctuation": 0.2,
                 "overall_brightness": 0.7,
                 "green_blue_balance": 0.6
+            },
+            "Ocean": {
+                "duration": 90,
+                "transition_speed": 0.3,
+                "color_variation": 0.4,
+                "intensity_fluctuation": 0.3,
+                "overall_brightness": 0.6,
+                "blue_green_balance": 0.7
             }
         }
         self.default_theme = "Jungle"
@@ -460,19 +468,24 @@ class EffectsManager:
     def _generate_room_channels(self, theme_data):
         channels = {}
         overall_brightness = theme_data.get('overall_brightness', 0.5)
-        green_blue_balance = theme_data.get('green_blue_balance', 0.5)
         color_variation = theme_data.get('color_variation', 0.5)
         intensity_fluctuation = theme_data.get('intensity_fluctuation', 0.5)
 
-        # Adjust base colors based on green-blue balance
-        base_green = int(180 * (1 + (green_blue_balance - 0.5) * 0.4))  # 20% variation
-        base_blue = int(20 * (1 + (0.5 - green_blue_balance) * 0.4))  # 20% variation
-        base_red = 30  # Keep red constant for jungle theme
+        if 'green_blue_balance' in theme_data:  # Jungle theme
+            green_blue_balance = theme_data.get('green_blue_balance', 0.5)
+            base_green = int(180 * (1 + (green_blue_balance - 0.5) * 0.4))  # 20% variation
+            base_blue = int(20 * (1 + (0.5 - green_blue_balance) * 0.4))  # 20% variation
+            base_red = 30  # Keep red constant for jungle theme
+        elif 'blue_green_balance' in theme_data:  # Ocean theme
+            blue_green_balance = theme_data.get('blue_green_balance', 0.5)
+            base_blue = int(180 * (1 + (blue_green_balance - 0.5) * 0.4))  # 20% variation
+            base_green = int(100 * (1 + (0.5 - blue_green_balance) * 0.4))  # 20% variation
+            base_red = 10  # Keep red low for ocean theme
 
         # Apply color variation and intensity fluctuation
         red = max(0, min(255, base_red + int(random.uniform(-20, 20) * color_variation)))
         green = max(0, min(255, base_green + int(random.uniform(-40, 40) * color_variation)))
-        blue = max(0, min(255, base_blue + int(random.uniform(-20, 20) * color_variation)))
+        blue = max(0, min(255, base_blue + int(random.uniform(-40, 40) * color_variation)))
 
         # Apply overall brightness and intensity fluctuation
         total_dimming = int(overall_brightness * 255 * (1 + random.uniform(-0.2, 0.2) * intensity_fluctuation))
