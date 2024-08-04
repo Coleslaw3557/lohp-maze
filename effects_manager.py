@@ -381,9 +381,10 @@ class EffectsManager:
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
+        current_time = time.time()
         for room, lights in room_layout.items():
             if room not in self.room_effects:
-                room_channels = self._generate_room_channels(theme_data)
+                room_channels = self._generate_room_channels(theme_data, current_time)
                 for light in lights:
                     fixture_id = (light['start_address'] - 1) // 8
                     light_model = self.light_config_manager.get_light_config(light['model'])
