@@ -6,7 +6,6 @@ from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
-from sequence_runner import SequenceRunner
 from interrupt_handler import InterruptHandler
 
 # Configuration
