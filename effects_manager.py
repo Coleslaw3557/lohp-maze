@@ -599,19 +599,27 @@ class EffectsManager:
         time_factor = current_time * transition_speed
 
         # Generate base colors using HSV color space for smoother transitions
-        hue = (math.sin(time_factor * 0.1) + 1) / 2
-        saturation = color_variation
+        if 'blue_green_balance' in theme_data:  # Ocean theme
+            hue = 0.5 + (math.sin(time_factor * 0.1) * 0.1)  # Oscillate around blue (0.5)
+            blue_green_balance = theme_data.get('blue_green_balance', 0.8)
+            saturation = 0.8 + (math.sin(time_factor * 0.2) * 0.2 * color_variation)
+        elif 'green_blue_balance' in theme_data:  # Jungle theme
+            hue = 0.3 + (math.sin(time_factor * 0.1) * 0.1)  # Oscillate around green (0.3)
+            green_blue_balance = theme_data.get('green_blue_balance', 0.6)
+            saturation = 0.7 + (math.sin(time_factor * 0.2) * 0.3 * color_variation)
+        else:
+            hue = (math.sin(time_factor * 0.1) + 1) / 2
+            saturation = color_variation
+
         value = overall_brightness * (1 + math.sin(time_factor * 2) * intensity_fluctuation)
 
         r, g, b = self._hsv_to_rgb(hue, saturation, value)
 
         # Apply theme-specific color balance
         if 'blue_green_balance' in theme_data:  # Ocean theme
-            blue_green_balance = theme_data.get('blue_green_balance', 0.8)
             b = b * blue_green_balance
             g = g * (1 - blue_green_balance)
         elif 'green_blue_balance' in theme_data:  # Jungle theme
-            green_blue_balance = theme_data.get('green_blue_balance', 0.6)
             g = g * green_blue_balance
             b = b * (1 - green_blue_balance)
 
@@ -622,7 +630,7 @@ class EffectsManager:
         channels['b_dimming'] = int(b * 255)
 
         # Add white channel for RGBW fixtures
-        channels['w_dimming'] = int(min(r, g, b) * 255)
+        channels['w_dimming'] = int(min(r, g, b) * 255 * 0.5)  # Reduce white intensity
 
         # Add strobe effect
         strobe_speed = theme_data.get('strobe_speed', 0)
