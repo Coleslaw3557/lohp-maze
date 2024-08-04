@@ -48,7 +48,15 @@ def before_request():
 @app.route('/')
 def index():
     return render_template('index.html', 
-                           verbose_logging=session.get('verbose_logging', False))
+                           verbose_logging=session.get('verbose_logging', False),
+                           current_theme=effects_manager.current_theme)
+
+@app.route('/set_theme', methods=['POST'])
+def set_theme():
+    theme_name = request.form.get('theme_name')
+    effects_manager.set_current_theme(theme_name)
+    flash(f'Theme set to {theme_name}', 'success')
+    return redirect(url_for('index'))
 
 @app.route('/toggle_verbose_logging', methods=['POST'])
 def toggle_verbose_logging():
