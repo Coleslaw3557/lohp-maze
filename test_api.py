@@ -2,7 +2,7 @@ import requests
 import json
 import time
 
-BASE_URL = "http://localhost:5000/api"
+BASE_URL = "http://192.168.1.238:5000/api"
 
 def test_get_rooms():
     response = requests.get(f"{BASE_URL}/rooms")
