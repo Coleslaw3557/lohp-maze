@@ -359,10 +359,13 @@ class EffectsManager:
     def _run_theme(self, theme_name):
         theme_data = self.themes[theme_name]
         logger.info(f"Starting theme: {theme_name}")
+        start_time = time.time()
         while not self.stop_theme.is_set():
-            start_time = time.time()
+            current_time = time.time() - start_time
+            if current_time >= theme_data['duration']:
+                start_time = time.time()  # Reset start time for looping
             self._generate_and_apply_theme_steps(theme_data)
-            elapsed_time = time.time() - start_time
+            elapsed_time = time.time() - (start_time + current_time)
             sleep_time = max(0, 1 / self.frequency - elapsed_time)
             if self.stop_theme.wait(timeout=sleep_time):
                 break
