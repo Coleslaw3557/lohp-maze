@@ -101,46 +101,36 @@ Key functionalities:
 
 ### API Examples
 
-List all rooms:
+For a comprehensive list of API examples, please refer to the `api-examples.md` file in the project root directory. This file contains detailed examples of how to use each API endpoint, including:
+
+- Retrieving room layouts
+- Listing available effects and themes
+- Setting themes
+- Running effects in specific rooms
+- Adjusting master brightness
+- Triggering special effects like lightning
+
+To view the API examples:
+
 ```bash
-curl -X GET http://localhost:5000/api/rooms
+cat api-examples.md
 ```
 
-List all effects:
+For the most up-to-date API documentation, always refer to the `api-examples.md` file.
+
+### Docker Usage
+
+To run the application using Docker:
+
+1. Ensure Docker and Docker Compose are installed on your system.
+2. Navigate to the project root directory.
+3. Build and start the containers:
+
 ```bash
-curl -X GET http://localhost:5000/api/effects
+docker-compose up --build
 ```
 
-List all themes:
-```bash
-curl -X GET http://localhost:5000/api/themes
-```
-
-Set a theme:
-```bash
-curl -X POST http://localhost:5000/api/set_theme \
-     -H "Content-Type: application/json" \
-     -d '{"theme_name": "Jungle"}'
-```
-
-Run an effect in a specific room:
-```bash
-curl -X POST http://localhost:5000/api/run_effect \
-     -H "Content-Type: application/json" \
-     -d '{"room": "Entrance", "effect_name": "Lightning"}'
-```
-
-Set master brightness:
-```bash
-curl -X POST http://localhost:5000/api/set_master_brightness \
-     -H "Content-Type: application/json" \
-     -d '{"brightness": 0.8}'
-```
-
-Trigger lightning effect:
-```bash
-curl -X POST http://localhost:5000/api/trigger_lightning
-```
+This will start the application and make it accessible at `http://localhost:5000`.
 
 ## Technical Considerations
 
