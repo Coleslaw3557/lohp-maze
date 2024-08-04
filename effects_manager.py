@@ -491,9 +491,10 @@ class EffectsManager:
 
     def _generate_theme_step(self, theme_data, room_layout):
         step = {'rooms': {}}
+        current_time = time.time()
         for room in room_layout.keys():
             if room not in self.room_effects:
-                step['rooms'][room] = self._generate_room_channels(theme_data)
+                step['rooms'][room] = self._generate_room_channels(theme_data, current_time)
         return step
 
     def _generate_room_channels(self, theme_data, current_time):
