@@ -149,6 +149,11 @@ curl -X POST http://$CONTROLLER_IP:5000/set_theme \
      -H "Content-Type: application/json" \
      -d '{"theme_name": "Jungle"}'
 ```
+Or using form data:
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/set_theme \
+     -d "theme_name=Jungle"
+```
 
 Run an effect in a specific room:
 ```bash
