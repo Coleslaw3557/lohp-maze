@@ -128,6 +128,21 @@ Key functionalities:
 
 ### API Examples
 
+List all themes:
+```bash
+curl -X GET http://${CONTROLLER_IP}:5000/api/themes
+```
+
+List all rooms:
+```bash
+curl -X GET http://${CONTROLLER_IP}:5000/api/rooms
+```
+
+List all effects:
+```bash
+curl -X GET http://${CONTROLLER_IP}:5000/api/effects
+```
+
 Set a theme:
 ```bash
 curl -X POST http://${CONTROLLER_IP}:5000/set_theme \
@@ -147,6 +162,11 @@ Set master brightness:
 curl -X POST http://${CONTROLLER_IP}:5000/set_master_brightness \
      -H "Content-Type: application/json" \
      -d '{"brightness": 0.8}'
+```
+
+Get system status:
+```bash
+curl -X GET http://${CONTROLLER_IP}:5000/status
 ```
 
 ## Technical Considerations
