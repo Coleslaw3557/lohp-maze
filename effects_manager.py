@@ -27,6 +27,14 @@ class EffectsManager:
         self._step_count = 0
         self._last_values = {}
         
+    def _significant_change(self, changes):
+        # Implement logic to determine if the change is significant
+        # For example, check if any value has changed by more than 10%
+        return any(abs(new - old) > 25 for _, _, new_values in changes 
+                   for new, old in zip(new_values, self._last_values.get(_, [0]*8)))
+        self._step_count = 0
+        self._last_values = {}
+        
         if self.interrupt_handler is None:
             logger.warning("InterruptHandler not provided. Some features may not work correctly.")
         else:
