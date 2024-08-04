@@ -37,11 +37,11 @@
         <tr>
             <td>{{ theme_name }}</td>
             <td>{{ theme_data.duration }} seconds</td>
-            <td>{{ theme_data.speed }}</td>
-            <td>{{ theme_data.flow }}</td>
-            <td>{{ theme_data.randomness }}</td>
-            <td>{{ theme_data.brightness }}</td>
-            <td>{{ theme_data.color_shift }}</td>
+            <td>{{ theme_data.transition_speed }}</td>
+            <td>{{ theme_data.color_variation }}</td>
+            <td>{{ theme_data.intensity_fluctuation }}</td>
+            <td>{{ theme_data.overall_brightness }}</td>
+            <td>{{ theme_data.green_blue_balance }}</td>
             <td>
                 <form action="{{ url_for('set_theme') }}" method="post" style="display: inline;">
                     <input type="hidden" name="theme_name" value="{{ theme_name }}">

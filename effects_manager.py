@@ -281,11 +281,15 @@ class EffectsManager:
 
     def load_themes(self):
         # Load themes from a JSON file or database
-        # For now, we'll use a simple dictionary
         self.themes = {
-            "Jungle": self._jungle_theme,
-            "Ocean": self._ocean_theme,
-            "Sunset": self._sunset_theme
+            "Jungle": {
+                "duration": 60,
+                "transition_speed": 0.5,
+                "color_variation": 0.3,
+                "intensity_fluctuation": 0.2,
+                "overall_brightness": 0.7,
+                "green_blue_balance": 0.6
+            }
         }
         self.default_theme = "Jungle"
 
@@ -346,6 +350,13 @@ class EffectsManager:
             elapsed_time = time.time() - start_time
             if elapsed_time < 1 / self.frequency:
                 time.sleep(1 / self.frequency - elapsed_time)
+
+    def _generate_and_apply_theme_steps(self, theme_data):
+        room_layout = self.light_config_manager.get_room_layout()
+        for room, lights in room_layout.items():
+            if room not in self.room_effects:
+                step = self._generate_theme_step(theme_data, room)
+                self._apply_theme_step(step)
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
