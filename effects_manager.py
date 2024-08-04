@@ -353,14 +353,14 @@ class EffectsManager:
             },
             "Jungle": {
                 "duration": 60,
-                "transition_speed": 0.5,
-                "color_variation": 0.3,
-                "intensity_fluctuation": 0.2,
-                "overall_brightness": 0.7,
-                "green_blue_balance": 0.6
+                "transition_speed": 0.4,
+                "color_variation": 0.5,
+                "intensity_fluctuation": 0.3,
+                "overall_brightness": 0.6,
+                "green_blue_balance": 0.3
             }
         }
-        self.default_theme = "Ocean"
+        self.default_theme = "Jungle"
         self.set_current_theme(self.default_theme)
 
 
