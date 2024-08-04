@@ -54,7 +54,8 @@ def index():
 @app.route('/set_theme', methods=['POST'])
 def set_theme():
     theme_name = request.form.get('theme_name')
-    effects_manager.set_current_theme(theme_name)
+    effects_manager.stop_current_theme()  # Stop the current theme
+    effects_manager.set_current_theme(theme_name)  # Set and start the new theme
     flash(f'Theme set to {theme_name}', 'success')
     return redirect(url_for('index'))
 

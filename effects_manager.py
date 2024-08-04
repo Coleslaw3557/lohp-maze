@@ -293,6 +293,15 @@ class EffectsManager:
         }
         self.default_theme = "Jungle"
 
+    def stop_current_theme(self):
+        if self.current_theme:
+            self.stop_theme.set()
+            if self.theme_thread:
+                self.theme_thread.join()
+            self.current_theme = None
+            self._reset_all_lights()
+            logger.info("Current theme stopped and all lights reset")
+
     def set_current_theme(self, theme_name):
         if theme_name in self.themes:
             self.current_theme = theme_name
@@ -305,6 +314,11 @@ class EffectsManager:
             logger.info(f"Current theme set to: {theme_name}")
         else:
             logger.warning(f"Theme not found: {theme_name}")
+
+    def _reset_all_lights(self):
+        # Reset all lights to their default state
+        for fixture_id in range(self.dmx_state_manager.num_fixtures):
+            self.dmx_state_manager.reset_fixture(fixture_id)
 
     def set_default_theme(self, theme_name):
         if theme_name in self.themes:
