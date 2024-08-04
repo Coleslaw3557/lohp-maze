@@ -27,15 +27,17 @@ app.secret_key = SECRET_KEY
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
 dmx_output_manager = DMXOutputManager(dmx_state_manager)
 light_config = LightConfigManager(dmx_state_manager=dmx_state_manager)
-effects_manager = EffectsManager(light_config_manager=light_config, dmx_state_manager=dmx_state_manager)
-sequence_runner = SequenceRunner(dmx_state_manager)
+effects_manager = EffectsManager(config_file='effects_config.json', light_config_manager=light_config, dmx_state_manager=dmx_state_manager)
 interrupt_handler = InterruptHandler(dmx_state_manager)
-effects_manager = EffectsManager(config_file='effects_config.json', light_config_manager=light_config, dmx_state_manager=dmx_state_manager, interrupt_handler=interrupt_handler)
+effects_manager.interrupt_handler = interrupt_handler
 logger.info("InterruptHandler initialized and passed to EffectsManager")
+
+# Reset all lights to off
+for fixture_id in range(NUM_FIXTURES):
+    dmx_state_manager.reset_fixture(fixture_id)
 
 # Start threads
 dmx_output_manager.start()
-sequence_runner.start()
 
 def set_verbose_logging(enabled):
     logging.getLogger().setLevel(logging.DEBUG if enabled else logging.INFO)
