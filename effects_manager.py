@@ -332,6 +332,16 @@ class EffectsManager:
             logger.warning(f"Theme not found: {theme_name}")
             return False
 
+    def _run_theme(self, theme_name):
+        theme_data = self.themes[theme_name]
+        logger.info(f"Starting theme: {theme_name}")
+        start_time = time.time()
+        while not self.stop_theme.is_set():
+            current_time = time.time() - start_time
+            self._generate_and_apply_theme_steps(theme_data)
+            time.sleep(1 / self.frequency)
+        logger.info(f"Theme {theme_name} stopped")
+
     def stop_current_theme(self):
         if self.current_theme:
             self.stop_theme.set()
@@ -390,11 +400,11 @@ class EffectsManager:
             self._apply_theme_step(step)
             time.sleep(step_duration)
 
-    def _generate_theme_step(self, theme_data, room_layout):
+    def _generate_theme_step(self, theme_data, room_layout, current_time):
         step = {'rooms': {}}
         for room in room_layout.keys():
             if room not in self.room_effects:
-                step['rooms'][room] = self._generate_room_channels(theme_data)
+                step['rooms'][room] = self._generate_room_channels(theme_data, current_time)
         return step
 
     def _apply_theme_step(self, step):
@@ -414,14 +424,14 @@ class EffectsManager:
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
-        speed = theme_data.get('speed', 1.0)  # Default to 1.0 if 'speed' is not present
-        step_duration = 1.0 / speed
-        for _ in range(int(theme_data['duration'] * speed)):
+        start_time = time.time()
+        while time.time() - start_time < theme_data['duration']:
             if self.stop_theme.is_set():
                 break
-            step = self._generate_theme_step(theme_data, room_layout)
+            current_time = time.time() - start_time
+            step = self._generate_theme_step(theme_data, room_layout, current_time)
             self._apply_theme_step(step)
-            time.sleep(step_duration)
+            time.sleep(1 / self.frequency)  # Use the instance attribute 'frequency'
 
     def _generate_theme_step(self, theme_data, room_layout):
         step = {'rooms': {}}
@@ -479,30 +489,43 @@ class EffectsManager:
                 step['rooms'][room] = self._generate_room_channels(theme_data)
         return step
 
-    def _generate_room_channels(self, theme_data):
+    def _generate_room_channels(self, theme_data, current_time):
         channels = {}
         overall_brightness = theme_data.get('overall_brightness', 0.5)
         color_variation = theme_data.get('color_variation', 0.5)
         intensity_fluctuation = theme_data.get('intensity_fluctuation', 0.5)
+        transition_speed = theme_data.get('transition_speed', 0.5)
+
+        # Use time-based oscillation for smooth transitions
+        time_factor = current_time * transition_speed
 
         if 'green_blue_balance' in theme_data:  # Jungle theme
             green_blue_balance = theme_data.get('green_blue_balance', 0.5)
-            base_green = int(180 * (1 + (green_blue_balance - 0.5) * 0.4))  # 20% variation
-            base_blue = int(20 * (1 + (0.5 - green_blue_balance) * 0.4))  # 20% variation
-            base_red = 30  # Keep red constant for jungle theme
+            base_green = int(180 * (1 + math.sin(time_factor) * color_variation))
+            base_blue = int(20 * (1 + math.cos(time_factor) * color_variation))
+            base_red = int(30 * (1 + math.sin(time_factor * 0.5) * color_variation))
         elif 'blue_green_balance' in theme_data:  # Ocean theme
             blue_green_balance = theme_data.get('blue_green_balance', 0.5)
-            base_blue = int(180 * (1 + (blue_green_balance - 0.5) * 0.4))  # 20% variation
-            base_green = int(100 * (1 + (0.5 - blue_green_balance) * 0.4))  # 20% variation
-            base_red = 10  # Keep red low for ocean theme
+            base_blue = int(180 * (1 + math.sin(time_factor) * color_variation))
+            base_green = int(100 * (1 + math.cos(time_factor) * color_variation))
+            base_red = int(10 * (1 + math.sin(time_factor * 0.5) * color_variation))
 
-        # Apply color variation and intensity fluctuation
-        red = max(0, min(255, base_red + int(random.uniform(-20, 20) * color_variation)))
-        green = max(0, min(255, base_green + int(random.uniform(-40, 40) * color_variation)))
-        blue = max(0, min(255, base_blue + int(random.uniform(-40, 40) * color_variation)))
+        # Apply color balance
+        if 'green_blue_balance' in theme_data:
+            base_green = int(base_green * green_blue_balance)
+            base_blue = int(base_blue * (1 - green_blue_balance))
+        elif 'blue_green_balance' in theme_data:
+            base_blue = int(base_blue * blue_green_balance)
+            base_green = int(base_green * (1 - blue_green_balance))
+
+        # Ensure values are within valid range
+        red = max(0, min(255, base_red))
+        green = max(0, min(255, base_green))
+        blue = max(0, min(255, base_blue))
 
         # Apply overall brightness and intensity fluctuation
-        total_dimming = int(overall_brightness * 255 * (1 + random.uniform(-0.2, 0.2) * intensity_fluctuation))
+        brightness_factor = overall_brightness * (1 + math.sin(time_factor * 2) * intensity_fluctuation)
+        total_dimming = int(255 * brightness_factor)
         total_dimming = max(0, min(255, total_dimming))
 
         channels['total_dimming'] = total_dimming
