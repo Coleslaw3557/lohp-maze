@@ -54,9 +54,10 @@ def index():
 @app.route('/set_theme', methods=['POST'])
 def set_theme():
     theme_name = request.form.get('theme_name')
-    effects_manager.stop_current_theme()  # Stop the current theme
-    effects_manager.set_current_theme(theme_name)  # Set and start the new theme
-    flash(f'Theme set to {theme_name}', 'success')
+    if effects_manager.set_current_theme(theme_name):
+        flash(f'Theme set to {theme_name}', 'success')
+    else:
+        flash(f'Failed to set theme to {theme_name}', 'error')
     return redirect(url_for('index'))
 
 @app.route('/toggle_verbose_logging', methods=['POST'])
