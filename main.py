@@ -257,6 +257,26 @@ def stop_test():
         logger.exception("Error stopping test")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/trigger_lightning', methods=['POST'])
+def trigger_lightning():
+    try:
+        # Assuming the lightning effect should be applied to all rooms
+        room_layout = light_config.get_room_layout()
+        for room in room_layout.keys():
+            effect_data = effects_manager.get_effect("Lightning")
+            if effect_data:
+                success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
+                if not success:
+                    logger.warning(f"Failed to apply lightning effect to room {room}")
+            else:
+                logger.error("Lightning effect not found")
+                return jsonify({"error": "Lightning effect not found"}), 404
+        return jsonify({"message": "Lightning effect triggered"}), 200
+    except Exception as e:
+        logger.exception("Error triggering lightning effect")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
+    # Create the lightning effect
+    effects_manager.create_lightning_effect()
     app.run(host='0.0.0.0', port=5000, debug=DEBUG, threaded=True)
