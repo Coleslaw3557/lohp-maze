@@ -65,11 +65,14 @@ def set_master_brightness():
 
 @app.route('/set_theme', methods=['POST'])
 def set_theme():
-    theme_name = request.json.get('theme_name')
-    if effects_manager.set_current_theme(theme_name):
-        return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+    if request.is_json:
+        theme_name = request.json.get('theme_name')
+        if effects_manager.set_current_theme(theme_name):
+            return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+        else:
+            return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
     else:
-        return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+        return jsonify({'status': 'error', 'message': 'Invalid content type, expected JSON'}), 415
 
 @app.route('/run_effect', methods=['POST'])
 def run_effect():
