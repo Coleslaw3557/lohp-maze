@@ -14,13 +14,12 @@ class EffectsManager:
         self.room_effects = {}
         self.themes = {}
         self.current_theme = None
-        self.default_theme = None
         self.theme_thread = None
         self.stop_theme = threading.Event()
         self.light_config_manager = light_config_manager
         self.dmx_state_manager = dmx_state_manager
         self.interrupt_handler = interrupt_handler
-        self.frequency = 44  # Updated to 44 Hz
+        self.frequency = 44  # 44 Hz update rate
         self.theme_lock = threading.Lock()
         self.load_themes()
         
@@ -327,7 +326,7 @@ class EffectsManager:
                 self.stop_theme.clear()
                 self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
                 self.theme_thread.start()
-            logger.info(f"Current theme set to: {theme_name}")
+            logger.info(f"Theme changed to: {theme_name}")
             return True
         else:
             logger.warning(f"Theme not found: {theme_name}")
@@ -457,9 +456,8 @@ class EffectsManager:
                    for new, old in zip(new_values, self._last_values.get(_, [0]*8)))
 
     def _run_theme(self, theme_name):
-        self._step_count = 0
-        self._last_values = {}
         theme_data = self.themes[theme_name]
+        logger.info(f"Starting theme: {theme_name}")
         while not self.stop_theme.is_set():
             start_time = time.time()
             self._generate_and_apply_theme_steps(theme_data)
