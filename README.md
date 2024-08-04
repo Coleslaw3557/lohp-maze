@@ -103,7 +103,11 @@ Executes the main lighting sequence:
 1. Clone the repository
 2. Install dependencies: `pip install -r requirements.txt`
 3. Configure `light_config.json` with your specific light models and room layout
-4. Run the application: `python main.py`
+4. Set the CONTROLLER_IP environment variable:
+   ```bash
+   export CONTROLLER_IP=<your-controller-ip-address>
+   ```
+5. Run the application: `python main.py`
 
 For containerized deployment:
 ```bash
@@ -112,7 +116,7 @@ docker-compose up --build
 
 ## Usage
 
-Access the web interface at `http://<controller-ip>:5000`
+Access the web interface at `http://${CONTROLLER_IP}:5000`
 
 Key functionalities:
 - Room Manager: Add, edit, and remove rooms
@@ -126,21 +130,21 @@ Key functionalities:
 
 Set a theme:
 ```bash
-curl -X POST http://<controller-ip>:5000/set_theme \
+curl -X POST http://${CONTROLLER_IP}:5000/set_theme \
      -H "Content-Type: application/json" \
      -d '{"theme_name": "Jungle"}'
 ```
 
 Run an effect in a specific room:
 ```bash
-curl -X POST http://<controller-ip>:5000/run_effect \
+curl -X POST http://${CONTROLLER_IP}:5000/run_effect \
      -H "Content-Type: application/json" \
      -d '{"room": "Entrance", "effect_name": "Lightning"}'
 ```
 
 Set master brightness:
 ```bash
-curl -X POST http://<controller-ip>:5000/set_master_brightness \
+curl -X POST http://${CONTROLLER_IP}:5000/set_master_brightness \
      -H "Content-Type: application/json" \
      -d '{"brightness": 0.8}'
 ```
