@@ -39,6 +39,9 @@ for fixture_id in range(NUM_FIXTURES):
 # Start threads
 dmx_output_manager.start()
 
+# Ensure no theme is running at startup
+effects_manager.stop_current_theme()
+
 def set_verbose_logging(enabled):
     logging.getLogger().setLevel(logging.DEBUG if enabled else logging.INFO)
     logger.log(logging.DEBUG if enabled else logging.INFO, f"Verbose logging {'enabled' if enabled else 'disabled'}")
