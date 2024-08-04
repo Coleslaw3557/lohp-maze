@@ -363,16 +363,42 @@ class EffectsManager:
     def set_current_theme(self, theme_name):
         if theme_name in self.themes:
             with self.theme_lock:
+                old_theme = self.current_theme
                 self.stop_current_theme()
                 self.current_theme = theme_name
                 self.stop_theme.clear()
-                self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
+                self.theme_thread = threading.Thread(target=self._run_theme_with_transition, args=(old_theme, theme_name))
                 self.theme_thread.start()
-            logger.info(f"Theme changed to: {theme_name}")
+            logger.info(f"Theme changing from {old_theme} to: {theme_name}")
             return True
         else:
             logger.warning(f"Theme not found: {theme_name}")
             return False
+
+    def _run_theme_with_transition(self, old_theme, new_theme):
+        transition_duration = 2.0  # 2 seconds transition
+        start_time = time.time()
+        while time.time() - start_time < transition_duration:
+            progress = (time.time() - start_time) / transition_duration
+            self._generate_and_apply_transition_step(self.themes[old_theme], self.themes[new_theme], progress)
+            time.sleep(1 / self.frequency)
+        self._run_theme(new_theme)
+
+    def _generate_and_apply_transition_step(self, old_theme_data, new_theme_data, progress):
+        room_layout = self.light_config_manager.get_room_layout()
+        current_time = time.time()
+        for room, lights in room_layout.items():
+            if room not in self.room_effects:
+                old_channels = self._generate_room_channels(old_theme_data, current_time)
+                new_channels = self._generate_room_channels(new_theme_data, current_time)
+                transition_channels = self._interpolate_channels(old_channels, new_channels, progress)
+                self._apply_room_channels(room, lights, transition_channels)
+
+    def _interpolate_channels(self, old_channels, new_channels, progress):
+        return {
+            channel: int(old_value + (new_channels[channel] - old_value) * progress)
+            for channel, old_value in old_channels.items()
+        }
 
     def stop_current_theme(self):
         with self.theme_lock:
@@ -387,13 +413,11 @@ class EffectsManager:
     def _run_theme(self, theme_name):
         theme_data = self.themes[theme_name]
         logger.info(f"Starting theme: {theme_name}")
+        start_time = time.time()
         while not self.stop_theme.is_set():
-            start_time = time.time()
-            self._generate_and_apply_theme_steps(theme_data)
-            elapsed_time = time.time() - start_time
-            sleep_time = max(0, 1 / self.frequency - elapsed_time)
-            if self.stop_theme.wait(timeout=sleep_time):
-                break
+            current_time = time.time() - start_time
+            self._generate_and_apply_theme_step(theme_data, current_time)
+            time.sleep(1 / self.frequency)
         logger.info(f"Theme {theme_name} stopped")
 
     def stop_current_theme(self):
@@ -424,12 +448,12 @@ class EffectsManager:
                 break
         logger.info(f"Theme {theme_name} stopped")
 
-    def _generate_and_apply_theme_steps(self, theme_data):
+    def _generate_and_apply_theme_step(self, theme_data, current_time):
         room_layout = self.light_config_manager.get_room_layout()
         for room, lights in room_layout.items():
             if room not in self.room_effects:
-                step = self._generate_theme_step(theme_data, room)
-                self._apply_theme_step(step)
+                room_channels = self._generate_room_channels(theme_data, current_time)
+                self._apply_room_channels(room, lights, room_channels)
 
     def _generate_and_apply_theme_steps(self, theme_data):
         room_layout = self.light_config_manager.get_room_layout()
@@ -559,39 +583,28 @@ class EffectsManager:
         # Use time-based oscillation for smooth transitions
         time_factor = current_time * transition_speed
 
+        # Generate base colors using HSV color space for smoother transitions
+        hue = (math.sin(time_factor * 0.1) + 1) / 2
+        saturation = color_variation
+        value = overall_brightness * (1 + math.sin(time_factor * 2) * intensity_fluctuation)
+
+        r, g, b = self._hsv_to_rgb(hue, saturation, value)
+
+        # Apply theme-specific color balance
         if 'blue_green_balance' in theme_data:  # Ocean theme
             blue_green_balance = theme_data.get('blue_green_balance', 0.8)
-            base_blue = int(200 * (1 + math.sin(time_factor) * color_variation))
-            base_green = int(150 * (1 + math.cos(time_factor * 1.2) * color_variation))
-            base_red = int(50 * (1 + math.sin(time_factor * 0.7) * color_variation))
+            b = b * blue_green_balance
+            g = g * (1 - blue_green_balance)
         elif 'green_blue_balance' in theme_data:  # Jungle theme
             green_blue_balance = theme_data.get('green_blue_balance', 0.6)
-            base_green = int(180 * (1 + math.sin(time_factor) * color_variation))
-            base_blue = int(100 * (1 + math.cos(time_factor * 1.1) * color_variation))
-            base_red = int(80 * (1 + math.sin(time_factor * 0.9) * color_variation))
+            g = g * green_blue_balance
+            b = b * (1 - green_blue_balance)
 
-        # Apply color balance
-        if 'blue_green_balance' in theme_data:
-            base_blue = int(base_blue * blue_green_balance)
-            base_green = int(base_green * (1 - blue_green_balance))
-        elif 'green_blue_balance' in theme_data:
-            base_green = int(base_green * green_blue_balance)
-            base_blue = int(base_blue * (1 - green_blue_balance))
-
-        # Ensure values are within valid range
-        red = max(0, min(255, base_red))
-        green = max(0, min(255, base_green))
-        blue = max(0, min(255, base_blue))
-
-        # Apply overall brightness and intensity fluctuation
-        brightness_factor = overall_brightness * (1 + math.sin(time_factor * 2) * intensity_fluctuation)
-        total_dimming = int(255 * brightness_factor)
-        total_dimming = max(0, min(255, total_dimming))
-
-        channels['total_dimming'] = total_dimming
-        channels['r_dimming'] = red
-        channels['g_dimming'] = green
-        channels['b_dimming'] = blue
+        # Convert to 8-bit color values
+        channels['total_dimming'] = int(value * 255)
+        channels['r_dimming'] = int(r * 255)
+        channels['g_dimming'] = int(g * 255)
+        channels['b_dimming'] = int(b * 255)
 
         return channels
 
@@ -765,3 +778,14 @@ class EffectsManager:
         # You'll need to implement this based on your theme logic
         # For now, we'll return a placeholder
         return [128, 64, 32, 0, 255, 0, 0, 0]
+    def _apply_room_channels(self, room, lights, room_channels):
+        for light in lights:
+            start_address = light['start_address']
+            light_model = self.light_config_manager.get_light_config(light['model'])
+            fixture_id = (start_address - 1) // 8
+            fixture_values = [0] * 8
+            for channel, value in room_channels.items():
+                if channel in light_model['channels']:
+                    channel_offset = light_model['channels'][channel]
+                    fixture_values[channel_offset] = value
+            self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
