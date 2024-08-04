@@ -229,6 +229,16 @@ def remove_effect(effect_name):
     effects_manager.remove_effect(effect_name)
     return redirect(url_for('effects'))
 
+@app.route('/api/rooms', methods=['GET'])
+def get_rooms():
+    rooms = light_config.get_room_layout()
+    return jsonify(rooms)
+
+@app.route('/api/effects', methods=['GET'])
+def get_effects():
+    effects = effects_manager.get_all_effects()
+    return jsonify(effects)
+
 @app.route('/test_mode')
 def test_mode():
     rooms = light_config.get_room_layout().keys()
