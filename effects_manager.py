@@ -604,9 +604,9 @@ class EffectsManager:
             blue_green_balance = theme_data.get('blue_green_balance', 0.8)
             saturation = 0.8 + (math.sin(time_factor * 0.2) * 0.2 * color_variation)
         elif 'green_blue_balance' in theme_data:  # Jungle theme
-            hue = 0.25 + (math.sin(time_factor * 0.1) * 0.15)  # Oscillate between green and yellow-green
-            green_blue_balance = theme_data.get('green_blue_balance', 0.7)
-            saturation = 0.8 + (math.sin(time_factor * 0.2) * 0.2 * color_variation)
+            hue = 0.3 + (math.sin(time_factor * 0.1) * 0.1)  # Oscillate around green (0.3)
+            green_blue_balance = theme_data.get('green_blue_balance', 0.9)  # Increase green dominance
+            saturation = 0.9 + (math.sin(time_factor * 0.2) * 0.1 * color_variation)  # Increase overall saturation
         else:
             hue = (math.sin(time_factor * 0.1) + 1) / 2
             saturation = color_variation
@@ -630,7 +630,7 @@ class EffectsManager:
         channels['b_dimming'] = int(b * 255)
 
         # Add white channel for RGBW fixtures
-        channels['w_dimming'] = int(min(r, g, b) * 255 * 0.2)  # Further reduce white intensity for Jungle theme
+        channels['w_dimming'] = int(min(r, g, b) * 255 * 0.05)  # Significantly reduce white intensity for Jungle theme
 
         # Add strobe effect
         strobe_speed = theme_data.get('strobe_speed', 0)
