@@ -334,14 +334,26 @@ class EffectsManager:
             logger.warning(f"Theme not found: {theme_name}")
             return False
 
+    def stop_current_theme(self):
+        with self.theme_lock:
+            if self.current_theme:
+                self.stop_theme.set()
+                if self.theme_thread and self.theme_thread.is_alive():
+                    self.theme_thread.join(timeout=5)  # Wait up to 5 seconds for the thread to finish
+                self.current_theme = None
+                self._reset_all_lights()
+                logger.info("Current theme stopped and all lights reset")
+
     def _run_theme(self, theme_name):
         theme_data = self.themes[theme_name]
         logger.info(f"Starting theme: {theme_name}")
-        start_time = time.time()
         while not self.stop_theme.is_set():
-            current_time = time.time() - start_time
+            start_time = time.time()
             self._generate_and_apply_theme_steps(theme_data)
-            time.sleep(1 / self.frequency)
+            elapsed_time = time.time() - start_time
+            sleep_time = max(0, 1 / self.frequency - elapsed_time)
+            if self.stop_theme.wait(timeout=sleep_time):
+                break
         logger.info(f"Theme {theme_name} stopped")
 
     def stop_current_theme(self):
