@@ -239,6 +239,11 @@ def get_effects():
     effects = effects_manager.get_all_effects()
     return jsonify(effects)
 
+@app.route('/api/themes', methods=['GET'])
+def get_themes():
+    themes = effects_manager.get_all_themes()
+    return jsonify(themes)
+
 @app.route('/test_mode')
 def test_mode():
     rooms = light_config.get_room_layout().keys()
