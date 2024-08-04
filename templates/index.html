@@ -33,6 +33,7 @@
     <form action="{{ url_for('set_theme') }}" method="post">
         <select name="theme_name">
             <option value="Jungle" {% if current_theme == 'Jungle' %}selected{% endif %}>Jungle</option>
+            <option value="Ocean" {% if current_theme == 'Ocean' %}selected{% endif %}>Ocean</option>
         </select>
         <input type="submit" value="Set Theme">
     </form>
