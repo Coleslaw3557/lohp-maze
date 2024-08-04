@@ -251,7 +251,8 @@ def get_themes():
 @app.route('/test_mode')
 def test_mode():
     rooms = light_config.get_room_layout().keys()
-    return render_template('test_mode.html', rooms=rooms)
+    effects = effects_manager.get_all_effects().keys()
+    return render_template('test_mode.html', rooms=rooms, effects=effects)
 
 @app.route('/run_test', methods=['POST'])
 def run_test():
@@ -262,6 +263,9 @@ def run_test():
         if test_type == 'channel':
             channel_values = request.json['channelValues']
             return run_channel_test(rooms, channel_values)
+        elif test_type == 'effect':
+            effect_name = request.json['effectName']
+            return run_effect_test(rooms, effect_name)
         else:
             return jsonify({"error": "Invalid test type"}), 400
     except Exception as e:
@@ -284,6 +288,22 @@ def run_channel_test(rooms, channel_values):
         return jsonify({"message": f"Channel test applied to rooms: {', '.join(rooms)}"}), 200
     except Exception as e:
         logger.exception(f"Error in channel test for rooms: {', '.join(rooms)}")
+        return jsonify({"error": str(e)}), 500
+
+def run_effect_test(rooms, effect_name):
+    try:
+        effect_data = effects_manager.get_effect(effect_name)
+        if not effect_data:
+            return jsonify({"error": f"Effect '{effect_name}' not found"}), 404
+        
+        for room in rooms:
+            success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
+            if not success:
+                return jsonify({"error": f"Failed to apply effect to room {room}"}), 500
+        
+        return jsonify({"message": f"Effect '{effect_name}' applied to rooms: {', '.join(rooms)}"}), 200
+    except Exception as e:
+        logger.exception(f"Error in effect test for rooms: {', '.join(rooms)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/stop_test', methods=['POST'])
