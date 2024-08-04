@@ -31,7 +31,7 @@ curl -X GET http://$CONTROLLER_IP:5000/api/themes
 Set the current theme for the entire maze.
 
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/set_theme \
+curl -X POST http://$CONTROLLER_IP:5000/api/set_theme \
      -H "Content-Type: application/json" \
      -d '{"theme_name": "Jungle"}'
 ```
@@ -39,7 +39,7 @@ curl -X POST http://$CONTROLLER_IP:5000/set_theme \
 Alternatively, using form data:
 
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/set_theme \
+curl -X POST http://$CONTROLLER_IP:5000/api/set_theme \
      -d "theme_name=Jungle"
 ```
 
@@ -48,7 +48,7 @@ curl -X POST http://$CONTROLLER_IP:5000/set_theme \
 Trigger an effect in a specific room.
 
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/run_effect \
+curl -X POST http://$CONTROLLER_IP:5000/api/run_effect \
      -H "Content-Type: application/json" \
      -d '{"room": "Entrance", "effect_name": "Lightning"}'
 ```
@@ -58,7 +58,7 @@ curl -X POST http://$CONTROLLER_IP:5000/run_effect \
 Adjust the master brightness for all lights.
 
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/set_master_brightness \
+curl -X POST http://$CONTROLLER_IP:5000/api/set_master_brightness \
      -H "Content-Type: application/json" \
      -d '{"brightness": 0.8}'
 ```
@@ -68,7 +68,33 @@ curl -X POST http://$CONTROLLER_IP:5000/set_master_brightness \
 Trigger the lightning effect across all rooms.
 
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/trigger_lightning
+curl -X POST http://$CONTROLLER_IP:5000/api/trigger_lightning
+```
+
+## Get Room State
+
+Get the current state of a specific room.
+
+```bash
+curl -X GET http://$CONTROLLER_IP:5000/api/room_state/Entrance
+```
+
+## Set Room State
+
+Set the state of a specific room.
+
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/api/room_state/Entrance \
+     -H "Content-Type: application/json" \
+     -d '{"assigned_effect": "Lightning", "is_active": true}'
+```
+
+## Get All Room States
+
+Get the current state of all rooms.
+
+```bash
+curl -X GET http://$CONTROLLER_IP:5000/api/all_room_states
 ```
 
 These examples cover the main API endpoints available in the current version of the LoHP-MazeManager Control System. Remember to replace `$CONTROLLER_IP` with the actual IP address of your controller.

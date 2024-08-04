@@ -145,28 +145,45 @@ curl -X GET http://$CONTROLLER_IP:5000/api/themes
 
 Set a theme:
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/set_theme \
+curl -X POST http://$CONTROLLER_IP:5000/api/set_theme \
      -H "Content-Type: application/json" \
      -d '{"theme_name": "Jungle"}'
 ```
 Or using form data:
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/set_theme \
+curl -X POST http://$CONTROLLER_IP:5000/api/set_theme \
      -d "theme_name=Jungle"
 ```
 
 Run an effect in a specific room:
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/run_effect \
+curl -X POST http://$CONTROLLER_IP:5000/api/run_effect \
      -H "Content-Type: application/json" \
      -d '{"room": "Entrance", "effect_name": "Lightning"}'
 ```
 
 Set master brightness:
 ```bash
-curl -X POST http://$CONTROLLER_IP:5000/set_master_brightness \
+curl -X POST http://$CONTROLLER_IP:5000/api/set_master_brightness \
      -H "Content-Type: application/json" \
      -d '{"brightness": 0.8}'
+```
+
+Get the current state of a specific room:
+```bash
+curl -X GET http://$CONTROLLER_IP:5000/api/room_state/Entrance
+```
+
+Set the state of a specific room:
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/api/room_state/Entrance \
+     -H "Content-Type: application/json" \
+     -d '{"assigned_effect": "Lightning", "is_active": true}'
+```
+
+Get the current state of all rooms:
+```bash
+curl -X GET http://$CONTROLLER_IP:5000/api/all_room_states
 ```
 
 ## Technical Considerations
