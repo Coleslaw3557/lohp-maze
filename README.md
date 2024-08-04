@@ -138,6 +138,11 @@ List all effects:
 curl -X GET http://$CONTROLLER_IP:5000/api/effects
 ```
 
+List all themes:
+```bash
+curl -X GET http://$CONTROLLER_IP:5000/api/themes
+```
+
 Set a theme:
 ```bash
 curl -X POST http://$CONTROLLER_IP:5000/set_theme \
