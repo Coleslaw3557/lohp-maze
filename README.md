@@ -121,6 +121,22 @@ Key functionalities:
 - Test Mode: Real-time testing of individual fixtures and effects
 - Interrupt System: Control specific fixtures during ongoing effects
 
+### API Examples
+
+Set a theme:
+```bash
+curl -X POST http://<controller-ip>:5000/set_theme \
+     -H "Content-Type: application/json" \
+     -d '{"theme_name": "Jungle"}'
+```
+
+Run an effect in a specific room:
+```bash
+curl -X POST http://<controller-ip>:5000/run_effect \
+     -H "Content-Type: application/json" \
+     -d '{"room": "Entrance", "effect_name": "Lightning"}'
+```
+
 ## Technical Considerations
 
 - The system uses a fixed 44Hz update rate for DMX communication to ensure smooth transitions and effects.
