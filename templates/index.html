@@ -46,6 +46,11 @@
         </label>
         <label for="verbose_logging">Enable Verbose Logging</label>
     </div>
+    <div>
+        <label for="master_brightness">Master Brightness:</label>
+        <input type="range" id="master_brightness" name="master_brightness" min="0" max="1" step="0.01" value="{{ master_brightness }}" onchange="setMasterBrightness(this.value)">
+        <span id="brightness_value">{{ master_brightness }}</span>
+    </div>
 
     <script>
     function toggleVerboseLogging(checkbox) {
@@ -69,6 +74,28 @@
             console.error('Error:', error);
             alert('An error occurred while toggling verbose logging');
             checkbox.checked = !checkbox.checked;
+        });
+    }
+
+    function setMasterBrightness(value) {
+        fetch('{{ url_for('set_master_brightness') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'brightness=' + value
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('brightness_value').textContent = data.master_brightness;
+            } else {
+                alert('Failed to set master brightness');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('An error occurred while setting master brightness');
         });
     }
     </script>

@@ -22,6 +22,7 @@ class EffectsManager:
         self.interrupt_handler = interrupt_handler
         self.frequency = 44  # 44 Hz update rate
         self.theme_lock = threading.Lock()
+        self.master_brightness = 1.0  # Initialize master brightness to 100%
         self.load_themes()
         
     def _significant_change(self, changes):
@@ -590,7 +591,7 @@ class EffectsManager:
 
     def _generate_room_channels(self, theme_data, current_time):
         channels = {}
-        overall_brightness = theme_data.get('overall_brightness', 0.5)
+        overall_brightness = theme_data.get('overall_brightness', 0.5) * self.master_brightness
         color_variation = theme_data.get('color_variation', 0.5)
         intensity_fluctuation = theme_data.get('intensity_fluctuation', 0.5)
         transition_speed = theme_data.get('transition_speed', 0.5)
@@ -641,6 +642,10 @@ class EffectsManager:
 
         logger.debug(f"Generated room channels: {channels}")
         return channels
+
+    def set_master_brightness(self, brightness):
+        self.master_brightness = max(0.0, min(1.0, brightness))
+        logger.info(f"Master brightness set to {self.master_brightness}")
 
     def _hue_to_rgb(self, hue):
         r = self._hue_to_rgb_helper(hue + 1/3)

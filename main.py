@@ -54,7 +54,14 @@ def before_request():
 def index():
     return render_template('index.html', 
                            verbose_logging=session.get('verbose_logging', False),
-                           current_theme=effects_manager.current_theme)
+                           current_theme=effects_manager.current_theme,
+                           master_brightness=effects_manager.master_brightness)
+
+@app.route('/set_master_brightness', methods=['POST'])
+def set_master_brightness():
+    brightness = float(request.form.get('brightness', 1.0))
+    effects_manager.set_master_brightness(brightness)
+    return jsonify({"status": "success", "master_brightness": brightness})
 
 @app.route('/set_theme', methods=['POST'])
 def set_theme():
