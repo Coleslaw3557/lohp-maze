@@ -97,6 +97,11 @@ def get_themes():
     themes = effects_manager.get_all_themes()
     return jsonify(themes)
 
+@app.route('/api/light_models', methods=['GET'])
+def get_light_models():
+    light_models = light_config.get_light_models()
+    return jsonify(light_models)
+
 # This route has been removed as it was a duplicate
 
 @app.route('/api/run_test', methods=['POST'])

@@ -64,4 +64,12 @@ Trigger the lightning effect across all rooms.
 curl -X POST http://$CONTROLLER_IP:5000/api/trigger_lightning
 ```
 
+## Get Light Models
+
+Retrieve a list of all light fixture models and their characteristics.
+
+```bash
+curl -X GET http://$CONTROLLER_IP:5000/api/light_models
+```
+
 These examples cover the main API endpoints available in the current version of the LoHP-MazeManager Control System. Remember to replace `$CONTROLLER_IP` with the actual IP address of your controller.
