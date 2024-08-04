@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project is the control system for the interactive art maze of the Burning Man camp "Legends of the Hidden Playa". It manages the lighting and effects throughout the maze, providing a dynamic and immersive experience for participants. The system has been updated with new features and improvements for enhanced functionality and reliability.
+This project is the control system for the interactive art maze of the Burning Man camp "Legends of the Hidden Playa". It manages the lighting and effects throughout the maze, providing a dynamic and immersive experience for participants.
 
 ## System Architecture
 
@@ -47,7 +47,7 @@ Handles low-level communication with DMX fixtures:
 - Provides thread-safe operations for concurrent access
 
 Technical specs:
-- DMX refresh rate: Up to 44Hz (configurable)
+- DMX refresh rate: 44Hz (fixed as per DMX512 standard)
 - 512 DMX channels supported
 - Automatic error recovery and port management
 
@@ -123,24 +123,8 @@ Key functionalities:
 
 ## Technical Considerations
 
-- The system uses a configurable update rate (default 44Hz) for DMX communication to ensure smooth transitions and effects.
+- The system uses a fixed 44Hz update rate for DMX communication to ensure smooth transitions and effects.
 - Thread-safe operations are implemented throughout to handle concurrent access to the DMX interface and state management.
 - The Effects Manager uses a sophisticated algorithm to generate dynamic themes based on parameters like color variation, intensity fluctuation, and overall brightness.
 - The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence.
 - Error handling and logging are implemented at multiple levels for robust operation and debugging.
-
-## Future Enhancements
-
-- Integration with external sensors for interactive effects
-- Mobile app for remote control
-- Machine learning-based theme generation
-- Audio synchronization for music-reactive lighting
-- Enhanced interrupt system for more complex fixture interactions
-
-## Contributing
-
-Contributions to the Legends of the Hidden Playa maze control system are welcome. Please submit pull requests or open issues for bugs, feature requests, or improvements.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
