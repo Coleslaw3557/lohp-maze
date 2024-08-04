@@ -371,7 +371,10 @@ class EffectsManager:
                 self.stop_current_theme()
                 self.current_theme = theme_name
                 self.stop_theme.clear()
-                self.theme_thread = threading.Thread(target=self._run_theme_with_transition, args=(old_theme, theme_name))
+                if old_theme is None:
+                    self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
+                else:
+                    self.theme_thread = threading.Thread(target=self._run_theme_with_transition, args=(old_theme, theme_name))
                 self.theme_thread.start()
             logger.info(f"Theme changing from {old_theme} to: {theme_name}")
             return True
@@ -382,9 +385,17 @@ class EffectsManager:
     def _run_theme_with_transition(self, old_theme, new_theme):
         transition_duration = 2.0  # 2 seconds transition
         start_time = time.time()
+        old_theme_data = self.themes.get(old_theme, {})
+        new_theme_data = self.themes.get(new_theme, {})
+        
+        if not old_theme_data:
+            logger.warning(f"Old theme '{old_theme}' not found. Starting new theme without transition.")
+            self._run_theme(new_theme)
+            return
+        
         while time.time() - start_time < transition_duration:
             progress = (time.time() - start_time) / transition_duration
-            self._generate_and_apply_transition_step(self.themes[old_theme], self.themes[new_theme], progress)
+            self._generate_and_apply_transition_step(old_theme_data, new_theme_data, progress)
             time.sleep(1 / self.frequency)
         self._run_theme(new_theme)
 
