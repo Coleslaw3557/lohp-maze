@@ -46,10 +46,6 @@ def set_verbose_logging(enabled):
     logging.getLogger().setLevel(logging.DEBUG if enabled else logging.INFO)
     logger.log(logging.DEBUG if enabled else logging.INFO, f"Verbose logging {'enabled' if enabled else 'disabled'}")
 
-@app.before_request
-def before_request():
-    set_verbose_logging(session.get('verbose_logging', False))
-
 @app.route('/api/set_master_brightness', methods=['POST'])
 def set_master_brightness():
     brightness = float(request.json.get('brightness', 1.0))
