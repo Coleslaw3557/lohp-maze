@@ -1,0 +1,74 @@
+# API Examples for LoHP-MazeManager Control System
+
+This document provides examples of how to use the API endpoints for the LoHP-MazeManager Control System.
+
+## Get Rooms
+
+Retrieve a list of all rooms and their configurations.
+
+```bash
+curl -X GET http://$CONTROLLER_IP:5000/api/rooms
+```
+
+## Get Effects
+
+Retrieve a list of all available effects.
+
+```bash
+curl -X GET http://$CONTROLLER_IP:5000/api/effects
+```
+
+## Get Themes
+
+Retrieve a list of all available themes.
+
+```bash
+curl -X GET http://$CONTROLLER_IP:5000/api/themes
+```
+
+## Set Theme
+
+Set the current theme for the entire maze.
+
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/set_theme \
+     -H "Content-Type: application/json" \
+     -d '{"theme_name": "Jungle"}'
+```
+
+Alternatively, using form data:
+
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/set_theme \
+     -d "theme_name=Jungle"
+```
+
+## Run Effect in a Specific Room
+
+Trigger an effect in a specific room.
+
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/run_effect \
+     -H "Content-Type: application/json" \
+     -d '{"room": "Entrance", "effect_name": "Lightning"}'
+```
+
+## Set Master Brightness
+
+Adjust the master brightness for all lights.
+
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/set_master_brightness \
+     -H "Content-Type: application/json" \
+     -d '{"brightness": 0.8}'
+```
+
+## Trigger Lightning Effect
+
+Trigger the lightning effect across all rooms.
+
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/trigger_lightning
+```
+
+These examples cover the main API endpoints available in the current version of the LoHP-MazeManager Control System. Remember to replace `$CONTROLLER_IP` with the actual IP address of your controller.
