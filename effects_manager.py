@@ -306,7 +306,7 @@ class EffectsManager:
                 "blue_green_balance": 0.7
             }
         }
-        self.default_theme = "Jungle"
+        self.default_theme = "Ocean"
 
     def stop_current_theme(self):
         with self.theme_lock:
