@@ -463,8 +463,29 @@ class EffectsManager:
             else:
                 changes.append((room, None, "Skipped due to active effect"))
         
-        if changes:
-            logger.debug(f"Theme step applied: {changes}")
+        # Log only every 10th step or when there's a significant change
+        if changes and (self._step_count % 10 == 0 or self._significant_change(changes)):
+            logger.debug(f"Theme step {self._step_count} applied: {changes}")
+        self._step_count += 1
+
+    def _significant_change(self, changes):
+        # Implement logic to determine if the change is significant
+        # For example, check if any value has changed by more than 10%
+        return any(abs(new - old) > 25 for _, _, new_values in changes 
+                   for new, old in zip(new_values, self._last_values.get(_, [0]*8)))
+
+    def _run_theme(self, theme_name):
+        self._step_count = 0
+        self._last_values = {}
+        theme_data = self.themes[theme_name]
+        while not self.stop_theme.is_set():
+            start_time = time.time()
+            self._generate_and_apply_theme_steps(theme_data)
+            elapsed_time = time.time() - start_time
+            sleep_time = max(0, 1 / self.frequency - elapsed_time)
+            if self.stop_theme.wait(timeout=sleep_time):
+                break
+        logger.info(f"Theme {theme_name} stopped")
 
     def _generate_theme_step(self, theme_data, room_layout):
         step = {'rooms': {}}
