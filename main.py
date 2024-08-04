@@ -7,6 +7,7 @@ from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
 from interrupt_handler import InterruptHandler
+from sequence_runner import SequenceRunner
 
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
