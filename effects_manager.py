@@ -290,6 +290,14 @@ class EffectsManager:
     def load_themes(self):
         # Load themes from a JSON file or database
         self.themes = {
+            "Ocean": {
+                "duration": 90,
+                "transition_speed": 0.3,
+                "color_variation": 0.4,
+                "intensity_fluctuation": 0.3,
+                "overall_brightness": 0.6,
+                "blue_green_balance": 0.8
+            },
             "Jungle": {
                 "duration": 60,
                 "transition_speed": 0.5,
@@ -297,17 +305,10 @@ class EffectsManager:
                 "intensity_fluctuation": 0.2,
                 "overall_brightness": 0.7,
                 "green_blue_balance": 0.6
-            },
-            "Ocean": {
-                "duration": 90,
-                "transition_speed": 0.3,
-                "color_variation": 0.4,
-                "intensity_fluctuation": 0.3,
-                "overall_brightness": 0.6,
-                "blue_green_balance": 0.7
             }
         }
         self.default_theme = "Ocean"
+        self.set_current_theme(self.default_theme)
 
     def stop_current_theme(self):
         with self.theme_lock:
@@ -504,24 +505,24 @@ class EffectsManager:
         # Use time-based oscillation for smooth transitions
         time_factor = current_time * transition_speed
 
-        if 'green_blue_balance' in theme_data:  # Jungle theme
-            green_blue_balance = theme_data.get('green_blue_balance', 0.5)
+        if 'blue_green_balance' in theme_data:  # Ocean theme
+            blue_green_balance = theme_data.get('blue_green_balance', 0.8)
+            base_blue = int(200 * (1 + math.sin(time_factor) * color_variation))
+            base_green = int(150 * (1 + math.cos(time_factor * 1.2) * color_variation))
+            base_red = int(50 * (1 + math.sin(time_factor * 0.7) * color_variation))
+        elif 'green_blue_balance' in theme_data:  # Jungle theme
+            green_blue_balance = theme_data.get('green_blue_balance', 0.6)
             base_green = int(180 * (1 + math.sin(time_factor) * color_variation))
-            base_blue = int(20 * (1 + math.cos(time_factor) * color_variation))
-            base_red = int(30 * (1 + math.sin(time_factor * 0.5) * color_variation))
-        elif 'blue_green_balance' in theme_data:  # Ocean theme
-            blue_green_balance = theme_data.get('blue_green_balance', 0.5)
-            base_blue = int(180 * (1 + math.sin(time_factor) * color_variation))
-            base_green = int(100 * (1 + math.cos(time_factor) * color_variation))
-            base_red = int(10 * (1 + math.sin(time_factor * 0.5) * color_variation))
+            base_blue = int(100 * (1 + math.cos(time_factor * 1.1) * color_variation))
+            base_red = int(80 * (1 + math.sin(time_factor * 0.9) * color_variation))
 
         # Apply color balance
-        if 'green_blue_balance' in theme_data:
-            base_green = int(base_green * green_blue_balance)
-            base_blue = int(base_blue * (1 - green_blue_balance))
-        elif 'blue_green_balance' in theme_data:
+        if 'blue_green_balance' in theme_data:
             base_blue = int(base_blue * blue_green_balance)
             base_green = int(base_green * (1 - blue_green_balance))
+        elif 'green_blue_balance' in theme_data:
+            base_green = int(base_green * green_blue_balance)
+            base_blue = int(base_blue * (1 - green_blue_balance))
 
         # Ensure values are within valid range
         red = max(0, min(255, base_red))
