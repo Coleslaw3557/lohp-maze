@@ -542,12 +542,9 @@ class EffectsManager:
         for room, lights in room_layout.items():
             for light in lights:
                 start_address = light['start_address']
-                light_model = self.light_config_manager.get_light_config(light['model'])
-                for channel_name, channel_offset in light_model['channels'].items():
-                    self.light_config_manager.dmx_interface.set_channel(start_address + channel_offset, 0)
-        self.light_config_manager.dmx_interface.send_dmx()
-        # Ensure the DMX interface sends the reset values
-        self.light_config_manager.dmx_interface.send_dmx()
+                fixture_id = (start_address - 1) // 8  # Assuming 8 channels per fixture
+                self.dmx_state_manager.reset_fixture(fixture_id)
+        logger.info("All lights reset")
 
     def create_cop_dodge_effect(self):
         cop_dodge_effect = {
