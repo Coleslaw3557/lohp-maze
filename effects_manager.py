@@ -25,12 +25,13 @@ class EffectsManager:
         self.load_themes()
         
     def _significant_change(self, changes):
-        # Implement logic to determine if the change is significant
-        # For example, check if any value has changed by more than 10%
-        return any(abs(new - old) > 25 for _, _, new_values in changes 
-                   for new, old in zip(new_values, self._last_values.get(_, [0]*8)))
-        self._step_count = 0
-        self._last_values = {}
+        threshold = 25  # Adjust this value to change sensitivity
+        for _, fixture_id, new_values in changes:
+            old_values = self._last_values.get(fixture_id, [0]*8)
+            if any(abs(new - old) > threshold for new, old in zip(new_values, old_values)):
+                self._last_values[fixture_id] = new_values
+                return True
+        return False
         
         if self.interrupt_handler is None:
             logger.warning("InterruptHandler not provided. Some features may not work correctly.")
@@ -203,10 +204,58 @@ class EffectsManager:
             time.sleep(1 / 44)  # 44Hz update rate
 
     def _generate_theme_values(self, room):
-        # This method should generate the current theme values for the room
-        # You'll need to implement this based on your theme logic
-        # For now, we'll return a placeholder
-        return [128, 64, 32, 0, 255, 0, 0, 0]
+        if not self.current_theme or self.current_theme not in self.themes:
+            return [0] * 8  # Return all zeros if no theme is set
+
+        theme_data = self.themes[self.current_theme]
+        current_time = time.time()
+        
+        # Use theme parameters to generate values
+        hue = (math.sin(current_time * theme_data['transition_speed']) + 1) / 2
+        saturation = theme_data['color_variation']
+        value = theme_data['overall_brightness']
+        
+        # Convert HSV to RGB
+        r, g, b = self._hsv_to_rgb(hue, saturation, value)
+        
+        # Apply green-blue balance
+        if 'green_blue_balance' in theme_data:
+            g = g * theme_data['green_blue_balance']
+            b = b * (1 - theme_data['green_blue_balance'])
+        
+        # Apply intensity fluctuation
+        intensity = 1 + (math.sin(current_time * 2) * theme_data['intensity_fluctuation'])
+        
+        return [
+            int(255 * intensity),  # total_dimming
+            int(r * 255),  # r_dimming
+            int(g * 255),  # g_dimming
+            int(b * 255),  # b_dimming
+            0,  # w_dimming (not used in this example)
+            0,  # total_strobe (not used in this example)
+            0,  # function_selection (not used in this example)
+            0   # function_speed (not used in this example)
+        ]
+
+    def _hsv_to_rgb(self, h, s, v):
+        if s == 0.0:
+            return (v, v, v)
+        i = int(h * 6.)
+        f = (h * 6.) - i
+        p, q, t = v * (1. - s), v * (1. - s * f), v * (1. - s * (1. - f))
+        i %= 6
+        if i == 0:
+            return (v, t, p)
+        if i == 1:
+            return (q, v, p)
+        if i == 2:
+            return (p, v, t)
+        if i == 3:
+            return (p, q, v)
+        if i == 4:
+            return (t, p, v)
+        if i == 5:
+            return (v, p, q)
 
     def _get_effect_step_values(self, effect_data):
         def get_values(elapsed_time):
@@ -310,15 +359,6 @@ class EffectsManager:
         self.default_theme = "Ocean"
         self.set_current_theme(self.default_theme)
 
-    def stop_current_theme(self):
-        with self.theme_lock:
-            if self.current_theme:
-                self.stop_theme.set()
-                if self.theme_thread and self.theme_thread.is_alive():
-                    self.theme_thread.join(timeout=5)  # Wait up to 5 seconds for the thread to finish
-                self.current_theme = None
-                self._reset_all_lights()
-                logger.info("Current theme stopped and all lights reset")
 
     def set_current_theme(self, theme_name):
         if theme_name in self.themes:
