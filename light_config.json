@@ -10,7 +10,8 @@
                 "total_strobe": 5,
                 "function_selection": 6,
                 "function_speed": 7
-            }
+            },
+            "type": "RGBW"
         },
         "U'King LED Par Light - Model ZQ07010/ZQ07011": {
             "channels": {

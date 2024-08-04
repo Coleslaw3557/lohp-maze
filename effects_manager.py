@@ -291,16 +291,20 @@ class EffectsManager:
 
     def add_theme(self, theme_name, theme_data):
         theme_data['frequency'] = 40  # Fixed at 40 Hz
+        theme_data.setdefault('strobe_speed', 0)  # Add strobe_speed with default 0 (off)
         self.themes[theme_name] = theme_data
         self.save_config()
         logger.info(f"Theme added: {theme_name}")
+        logger.debug(f"Theme data: {theme_data}")
 
     def update_theme(self, theme_name, theme_data):
         if theme_name in self.themes:
             theme_data['frequency'] = 40  # Fixed at 40 Hz
+            theme_data.setdefault('strobe_speed', 0)  # Add strobe_speed with default 0 (off)
             self.themes[theme_name] = theme_data
             self.save_config()
             logger.info(f"Theme updated: {theme_name}")
+            logger.debug(f"Updated theme data: {theme_data}")
             if self.current_theme == theme_name:
                 self.stop_theme.set()
                 if self.theme_thread:
@@ -606,6 +610,17 @@ class EffectsManager:
         channels['g_dimming'] = int(g * 255)
         channels['b_dimming'] = int(b * 255)
 
+        # Add white channel for RGBW fixtures
+        channels['w_dimming'] = int(min(r, g, b) * 255)
+
+        # Add strobe effect
+        strobe_speed = theme_data.get('strobe_speed', 0)
+        if strobe_speed > 0:
+            channels['total_strobe'] = int(127 + (math.sin(time_factor * strobe_speed) + 1) * 64)
+        else:
+            channels['total_strobe'] = 0
+
+        logger.debug(f"Generated room channels: {channels}")
         return channels
 
     def _hue_to_rgb(self, hue):
@@ -784,8 +799,13 @@ class EffectsManager:
             light_model = self.light_config_manager.get_light_config(light['model'])
             fixture_id = (start_address - 1) // 8
             fixture_values = [0] * 8
+            logger.debug(f"Applying theme to room {room}, light model {light['model']}")
             for channel, value in room_channels.items():
                 if channel in light_model['channels']:
                     channel_offset = light_model['channels'][channel]
                     fixture_values[channel_offset] = value
+                    logger.debug(f"  Setting channel {channel} (offset {channel_offset}) to value {value}")
+                else:
+                    logger.debug(f"  Channel {channel} not found in light model, skipping")
             self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+            logger.debug(f"  Final fixture values: {fixture_values}")
