@@ -196,18 +196,5 @@ def run_effect_all_rooms():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Create effects
-    effects_manager.create_lightning_effect()
-    effects_manager.create_police_lights_effect()
-    effects_manager.create_gate_inspection_effect()
-    effects_manager.create_gate_greeters_effect()
-    effects_manager.create_wrong_answer_effect()
-    effects_manager.create_correct_answer_effect()
-    effects_manager.create_entrance_effect()
-    effects_manager.create_guy_line_climb_effect()
-    effects_manager.create_spark_pony_effect()
-    effects_manager.create_porto_hit_effect()
-    effects_manager.create_cuddle_puddle_effect()
-    effects_manager.create_photobomb_bg_effect()
-    effects_manager.create_photobomb_spot_effect()
+    # Effects are now initialized in the EffectsManager constructor
     app.run(host='0.0.0.0', port=5000, debug=DEBUG)
