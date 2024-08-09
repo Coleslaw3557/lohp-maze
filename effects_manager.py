@@ -967,6 +967,48 @@ class EffectsManager:
         logger.debug(f"Created Wrong Answer effect: {wrong_answer_effect}")
         logger.info(f"Wrong Answer effect created with {len(wrong_answer_effect['steps'])} steps over {wrong_answer_effect['duration']} seconds")
 
+    def create_entrance_effect(self):
+        entrance_effect = {
+            "duration": 10.0,
+            "description": "Green light ramp up and hold for Entrance",
+            "steps": []
+        }
+        
+        # Ramp up green light over 5 seconds
+        for i in range(51):  # 0 to 255 in 50 steps
+            entrance_effect["steps"].append({
+                "time": i * 0.1,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 0,
+                    "g_dimming": i * 5,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Hold at max brightness for 5 seconds
+        entrance_effect["steps"].append({
+            "time": 10.0,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 0,
+                "g_dimming": 255,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("Entrance", entrance_effect)
+        logger.debug(f"Created Entrance effect: {entrance_effect}")
+        logger.info(f"Entrance effect created with {len(entrance_effect['steps'])} steps over {entrance_effect['duration']} seconds")
+
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
         if not effect_data:
