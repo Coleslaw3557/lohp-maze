@@ -1428,6 +1428,53 @@ class EffectsManager:
         logger.debug(f"Created Cuddle Puddle effect: {cuddle_puddle_effect}")
         logger.info(f"Cuddle Puddle effect created with {len(cuddle_puddle_effect['steps'])} steps over {cuddle_puddle_effect['duration']} seconds")
 
+    def create_photobomb_bg_effect(self):
+        photobomb_bg_effect = {
+            "duration": 60.0,
+            "description": "Rainbow dance party with steady strobe like at the Disco",
+            "steps": []
+        }
+        
+        # Generate 1200 steps for smooth transitions (20 steps per second)
+        for i in range(1200):
+            t = i * 0.05
+            # Use sine waves for smooth color transitions
+            hue = (math.sin(t * 0.2) + 1) / 2  # Oscillate hue between 0 and 1
+            r, g, b = self._hsv_to_rgb(hue, 1, 1)
+            
+            photobomb_bg_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": int(r * 255),
+                    "g_dimming": int(g * 255),
+                    "b_dimming": int(b * 255),
+                    "w_dimming": 0,
+                    "total_strobe": 255,  # Steady strobe
+                    "function_selection": 0,
+                    "function_speed": 255  # Maximum strobe speed
+                }
+            })
+        
+        # Final step to fade out
+        photobomb_bg_effect["steps"].append({
+            "time": 60.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("PhotoBomb-BG", photobomb_bg_effect)
+        logger.debug(f"Created PhotoBomb-BG effect: {photobomb_bg_effect}")
+        logger.info(f"PhotoBomb-BG effect created with {len(photobomb_bg_effect['steps'])} steps over {photobomb_bg_effect['duration']} seconds")
+
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
         if not effect_data:
