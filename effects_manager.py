@@ -422,6 +422,18 @@ class EffectsManager:
         
         return True, log_messages
 
+    def _apply_effect_to_fixture_sync(self, fixture_id, effect_data):
+        try:
+            self.interrupt_handler.interrupt_fixture_sync(
+                fixture_id,
+                effect_data['duration'],
+                self._get_effect_step_values(effect_data)
+            )
+            logger.debug(f"Effect applied to fixture {fixture_id}")
+        except Exception as e:
+            error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
+            logger.error(error_msg)
+
     def _run_theme_with_transition(self, old_theme, new_theme):
         transition_duration = 2.0  # 2 seconds transition
         start_time = time.time()
