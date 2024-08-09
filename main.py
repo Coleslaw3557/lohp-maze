@@ -205,4 +205,5 @@ if __name__ == '__main__':
     effects_manager.create_entrance_effect()
     effects_manager.create_guy_line_climb_effect()
     effects_manager.create_spark_pony_effect()
+    effects_manager.create_porto_hit_effect()
     app.run(host='0.0.0.0', port=5000, debug=DEBUG)

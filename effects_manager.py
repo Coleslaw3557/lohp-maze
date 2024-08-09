@@ -38,6 +38,7 @@ class EffectsManager:
         self.create_police_lights_effect()
         self.create_gate_inspection_effect()
         self.create_porto_standby_effect()
+        self.create_porto_hit_effect()
 
     def update_frequency(self, new_frequency):
         self.frequency = new_frequency
@@ -1203,6 +1204,94 @@ class EffectsManager:
         self.add_effect("PortoStandBy", porto_standby_effect)
         logger.debug(f"Created Porto StandBy effect: {porto_standby_effect}")
         logger.info(f"Porto StandBy effect created with {len(porto_standby_effect['steps'])} steps over {porto_standby_effect['duration']} seconds")
+
+    def create_porto_hit_effect(self):
+        porto_hit_effect = {
+            "duration": 15.0,
+            "description": "Green light blinking 5 times, then staying lit for 5 seconds, followed by red",
+            "steps": []
+        }
+        
+        # Green light blinking 5 times
+        for i in range(5):
+            t = i * 0.5
+            # Green on
+            porto_hit_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 0,
+                    "g_dimming": 255,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+            # Green off
+            porto_hit_effect["steps"].append({
+                "time": t + 0.25,
+                "channels": {
+                    "total_dimming": 0,
+                    "r_dimming": 0,
+                    "g_dimming": 0,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Green light staying on for 5 seconds
+        porto_hit_effect["steps"].append({
+            "time": 2.5,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 0,
+                "g_dimming": 255,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        # Switch to red at 7.5 seconds
+        porto_hit_effect["steps"].append({
+            "time": 7.5,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 255,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        # Final step to keep red on until the end
+        porto_hit_effect["steps"].append({
+            "time": 15.0,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 255,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("PortoHit", porto_hit_effect)
+        logger.debug(f"Created Porto Hit effect: {porto_hit_effect}")
+        logger.info(f"Porto Hit effect created with {len(porto_hit_effect['steps'])} steps over {porto_hit_effect['duration']} seconds")
 
     def create_porto_hit_effect(self):
         porto_hit_effect = {
