@@ -1057,6 +1057,77 @@ class EffectsManager:
         logger.debug(f"Created Guy Line Climb effect: {guy_line_climb_effect}")
         logger.info(f"Guy Line Climb effect created with {len(guy_line_climb_effect['steps'])} steps over {guy_line_climb_effect['duration']} seconds")
 
+    def create_spark_pony_effect(self):
+        spark_pony_effect = {
+            "duration": 20.0,
+            "description": "My Little Pony inspired colors with sparkles",
+            "steps": []
+        }
+        
+        # My Little Pony inspired colors
+        pony_colors = [
+            (255, 128, 180),  # Pink
+            (130, 200, 255),  # Light Blue
+            (255, 200, 100),  # Light Orange
+            (200, 255, 150),  # Light Green
+            (230, 150, 255),  # Lavender
+            (255, 255, 150)   # Light Yellow
+        ]
+        
+        # Generate 200 steps for smooth transitions (10 steps per second)
+        for i in range(200):
+            t = i * 0.1
+            
+            # Blend between two colors
+            color_index = int(t / 4) % len(pony_colors)
+            next_color_index = (color_index + 1) % len(pony_colors)
+            blend_factor = (t % 4) / 4
+            
+            color1 = pony_colors[color_index]
+            color2 = pony_colors[next_color_index]
+            
+            red = int(color1[0] * (1 - blend_factor) + color2[0] * blend_factor)
+            green = int(color1[1] * (1 - blend_factor) + color2[1] * blend_factor)
+            blue = int(color1[2] * (1 - blend_factor) + color2[2] * blend_factor)
+            
+            # Add sparkles
+            white = 0
+            if random.random() < 0.1:  # 10% chance of sparkle
+                white = random.randint(200, 255)
+            
+            spark_pony_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": red,
+                    "g_dimming": green,
+                    "b_dimming": blue,
+                    "w_dimming": white,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Add final step to turn off lights
+        spark_pony_effect["steps"].append({
+            "time": 20.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("SparkPony", spark_pony_effect)
+        logger.debug(f"Created Spark Pony effect: {spark_pony_effect}")
+        logger.info(f"Spark Pony effect created with {len(spark_pony_effect['steps'])} steps over {spark_pony_effect['duration']} seconds")
+
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
         if not effect_data:
