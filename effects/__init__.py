@@ -1,6 +1,7 @@
 from .lightning import create_lightning_effect
 from .police_lights import create_police_lights_effect
 from .gate_inspection import create_gate_inspection_effect
+from .gate_inspection import create_gate_inspection_effect
 from .gate_greeters import create_gate_greeters_effect
 from .wrong_answer import create_wrong_answer_effect
 from .correct_answer import create_correct_answer_effect

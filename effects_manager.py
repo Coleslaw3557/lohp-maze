@@ -784,6 +784,7 @@ class EffectsManager:
         self.add_effect("Lightning", create_lightning_effect())
         self.add_effect("PoliceLights", create_police_lights_effect())
         self.add_effect("GateInspection", create_gate_inspection_effect())
+        self.add_effect("GateInspection", create_gate_inspection_effect())
         self.add_effect("GateGreeters", create_gate_greeters_effect())
         self.add_effect("WrongAnswer", create_wrong_answer_effect())
         self.add_effect("CorrectAnswer", create_correct_answer_effect())
