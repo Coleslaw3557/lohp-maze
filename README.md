@@ -61,12 +61,14 @@ Handles the creation, storage, and execution of lighting effects and themes:
 - Supports complex, multi-room lighting sequences
 - Integrates with the Interrupt Handler for seamless effect transitions
 - Implements master brightness control
+- Supports both asynchronous and synchronous effect execution
 
 ### 5. Interrupt Handler (`interrupt_handler.py`)
 
 Manages interruptions for specific fixtures:
 - Coordinates transitions between main sequence and interrupted states
 - Allows for precise control of individual fixtures during effects
+- Supports both asynchronous and synchronous interruption methods
 
 ### 6. DMX State Manager (`dmx_state_manager.py`)
 
@@ -95,9 +97,10 @@ Maintains the current state of all DMX channels:
 Access the API endpoints at `http://localhost:5000`
 
 Key functionalities:
-- Effects: Create and trigger lighting effects
+- Effects: Create and trigger lighting effects (both asynchronously and synchronously)
 - Themes: Set and control overarching lighting themes
 - Test Mode: Real-time testing of individual fixtures and effects
+- Synchronous Effect Execution: Run effects in a blocking manner for precise timing control
 
 ### API Examples
 
