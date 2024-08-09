@@ -833,6 +833,111 @@ class EffectsManager:
         logger.debug(f"Created Lightning effect: {lightning_effect}")
         logger.info(f"Lightning effect created with {len(lightning_effect['steps'])} steps over {lightning_effect['duration']} seconds")
 
+    def create_police_lights_effect(self):
+        police_lights_effect = {
+            "duration": 15.0,
+            "steps": []
+        }
+        for i in range(15):  # 15 cycles to fill 15 seconds
+            t = i * 1.0
+            police_lights_effect["steps"].extend([
+                {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": t + 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
+            ])
+        police_lights_effect["steps"].append({"time": 15.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}})
+        self.add_effect("PoliceLights", police_lights_effect)
+        logger.debug(f"Created Police Lights effect: {police_lights_effect}")
+        logger.info(f"Police Lights effect created with {len(police_lights_effect['steps'])} steps over {police_lights_effect['duration']} seconds")
+
+    def create_cop_dodge_effect(self):
+        cop_dodge_effect = {
+            "duration": 10.0,
+            "steps": [
+                {"time": 0.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 0.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 0.3, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 0.4, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 0.6, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 0.7, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 0.8, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 0.9, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 1.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 1.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 1.2, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 1.3, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 1.4, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
+            ]
+        }
+        self.add_effect("CopDodge", cop_dodge_effect)
+        logger.debug(f"Created Cop Dodge effect: {cop_dodge_effect}")
+        logger.info(f"Cop Dodge effect created with {len(cop_dodge_effect['steps'])} steps over {cop_dodge_effect['duration']} seconds")
+
+    def create_gate_inspection_effect(self):
+        gate_inspection_effect = {
+            "duration": 6.0,
+            "steps": [
+                {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 5.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 6.0, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
+            ]
+        }
+        self.add_effect("GateInspection", gate_inspection_effect)
+        logger.debug(f"Created Gate Inspection effect: {gate_inspection_effect}")
+        logger.info(f"Gate Inspection effect created with {len(gate_inspection_effect['steps'])} steps over {gate_inspection_effect['duration']} seconds")
+
+    def create_gate_greeters_effect(self):
+        gate_greeters_effect = {
+            "duration": 10.0,
+            "steps": []
+        }
+        
+        colors = [
+            (255, 0, 0),    # Red
+            (255, 127, 0),  # Orange
+            (255, 255, 0),  # Yellow
+            (0, 255, 0),    # Green
+            (0, 0, 255),    # Blue
+            (75, 0, 130),   # Indigo
+            (143, 0, 255)   # Violet
+        ]
+        
+        step_duration = 0.2
+        for i in range(50):
+            color = colors[i % len(colors)]
+            strobe = 255 if i % 2 == 0 else 0
+            gate_greeters_effect["steps"].append({
+                "time": i * step_duration,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": color[0],
+                    "g_dimming": color[1],
+                    "b_dimming": color[2],
+                    "w_dimming": 0,
+                    "total_strobe": strobe,
+                    "function_selection": 0,
+                    "function_speed": 255
+                }
+            })
+        
+        gate_greeters_effect["steps"].append({
+            "time": 10.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("GateGreeters", gate_greeters_effect)
+        logger.debug(f"Created Gate Greeters effect: {gate_greeters_effect}")
+        logger.info(f"Gate Greeters effect created with {len(gate_greeters_effect['steps'])} steps over {gate_greeters_effect['duration']} seconds")
+
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
         if not effect_data:
@@ -851,73 +956,6 @@ class EffectsManager:
         
         logger.info(f"{effect_name} effect triggered in all rooms")
         return True, f"{effect_name} effect triggered in all rooms"
-
-    def create_gate_inspection_effect(self):
-        gate_inspection_effect = {
-            "duration": 6.0,  # Increased duration to accommodate fade out
-            "steps": [
-                {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 5.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 6.0, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
-            ]
-        }
-        self.add_effect("GateInspection", gate_inspection_effect)
-        logger.debug(f"Created GateInspection effect: {gate_inspection_effect}")
-        logger.info(f"GateInspection effect created with {len(gate_inspection_effect['steps'])} steps over {gate_inspection_effect['duration']} seconds")
-
-    def create_gate_greeters_effect(self):
-        gate_greeters_effect = {
-            "duration": 10.0,
-            "steps": []
-        }
-        
-        # Create a rainbow effect with excitement
-        colors = [
-            (255, 0, 0),    # Red
-            (255, 127, 0),  # Orange
-            (255, 255, 0),  # Yellow
-            (0, 255, 0),    # Green
-            (0, 0, 255),    # Blue
-            (75, 0, 130),   # Indigo
-            (143, 0, 255)   # Violet
-        ]
-        
-        step_duration = 0.2  # Each color lasts for 0.2 seconds
-        for i in range(50):  # 50 steps to fill 10 seconds
-            color = colors[i % len(colors)]
-            strobe = 255 if i % 2 == 0 else 0  # Alternating strobe for excitement
-            gate_greeters_effect["steps"].append({
-                "time": i * step_duration,
-                "channels": {
-                    "total_dimming": 255,
-                    "r_dimming": color[0],
-                    "g_dimming": color[1],
-                    "b_dimming": color[2],
-                    "w_dimming": 0,
-                    "total_strobe": strobe,
-                    "function_selection": 0,
-                    "function_speed": 255  # Max speed for excitement
-                }
-            })
-        
-        # Add a final step to turn off the lights
-        gate_greeters_effect["steps"].append({
-            "time": 10.0,
-            "channels": {
-                "total_dimming": 0,
-                "r_dimming": 0,
-                "g_dimming": 0,
-                "b_dimming": 0,
-                "w_dimming": 0,
-                "total_strobe": 0,
-                "function_selection": 0,
-                "function_speed": 0
-            }
-        })
-        
-        self.add_effect("GateGreeters", gate_greeters_effect)
-        logger.debug(f"Created GateGreeters effect: {gate_greeters_effect}")
-        logger.info(f"GateGreeters effect created with {len(gate_greeters_effect['steps'])} steps over {gate_greeters_effect['duration']} seconds")
     async def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
