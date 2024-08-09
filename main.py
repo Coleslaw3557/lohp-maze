@@ -202,6 +202,7 @@ if __name__ == '__main__':
     effects_manager.create_gate_inspection_effect()
     effects_manager.create_gate_greeters_effect()
     effects_manager.create_wrong_answer_effect()
+    effects_manager.create_correct_answer_effect()
     effects_manager.create_entrance_effect()
     effects_manager.create_guy_line_climb_effect()
     effects_manager.create_spark_pony_effect()

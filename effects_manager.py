@@ -970,6 +970,78 @@ class EffectsManager:
         logger.debug(f"Created Wrong Answer effect: {wrong_answer_effect}")
         logger.info(f"Wrong Answer effect created with {len(wrong_answer_effect['steps'])} steps over {wrong_answer_effect['duration']} seconds")
 
+    def create_correct_answer_effect(self):
+        correct_answer_effect = {
+            "duration": 3.0,
+            "description": "Three quick green flashes to indicate a correct answer",
+            "steps": []
+        }
+        
+        # Green flash
+        correct_answer_effect["steps"].extend([
+            {
+                "time": 0.0,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 0,
+                    "g_dimming": 255,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            },
+            {
+                "time": 0.5,
+                "channels": {
+                    "total_dimming": 0,
+                    "r_dimming": 0,
+                    "g_dimming": 0,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            }
+        ])
+        
+        # Repeat the flash twice more
+        for i in range(2):
+            correct_answer_effect["steps"].extend([
+                {
+                    "time": 1.0 + i * 1.0,
+                    "channels": {
+                        "total_dimming": 255,
+                        "r_dimming": 0,
+                        "g_dimming": 255,
+                        "b_dimming": 0,
+                        "w_dimming": 0,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                },
+                {
+                    "time": 1.5 + i * 1.0,
+                    "channels": {
+                        "total_dimming": 0,
+                        "r_dimming": 0,
+                        "g_dimming": 0,
+                        "b_dimming": 0,
+                        "w_dimming": 0,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                }
+            ])
+        
+        self.add_effect("CorrectAnswer", correct_answer_effect)
+        logger.debug(f"Created Correct Answer effect: {correct_answer_effect}")
+        logger.info(f"Correct Answer effect created with {len(correct_answer_effect['steps'])} steps over {correct_answer_effect['duration']} seconds")
+
     def create_entrance_effect(self):
         entrance_effect = {
             "duration": 10.0,
