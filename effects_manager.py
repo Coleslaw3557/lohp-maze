@@ -1450,15 +1450,15 @@ class EffectsManager:
                     "g_dimming": int(g * 255),
                     "b_dimming": int(b * 255),
                     "w_dimming": 0,
-                    "total_strobe": 255,  # Steady strobe
+                    "total_strobe": 0,  # Remove strobe effect
                     "function_selection": 0,
-                    "function_speed": 64  # Even slower strobe speed
+                    "function_speed": 0  # Set function speed to 0
                 }
             })
         
         # Final step to fade out
         photobomb_bg_effect["steps"].append({
-            "time": 60.0,
+            "time": 20.0,  # Change to 20.0 to match the duration
             "channels": {
                 "total_dimming": 0,
                 "r_dimming": 0,
