@@ -1513,6 +1513,44 @@ class EffectsManager:
         logger.debug(f"Created PhotoBomb-Spot effect: {photobomb_spot_effect}")
         logger.info(f"PhotoBomb-Spot effect created with {len(photobomb_spot_effect['steps'])} steps over {photobomb_spot_effect['duration']} seconds")
 
+    def create_photobomb_spot_effect(self):
+        photobomb_spot_effect = {
+            "duration": 5.0,
+            "description": "White light at full brightness for 5 seconds",
+            "steps": [
+                {
+                    "time": 0.0,
+                    "channels": {
+                        "total_dimming": 255,
+                        "r_dimming": 255,
+                        "g_dimming": 255,
+                        "b_dimming": 255,
+                        "w_dimming": 255,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                },
+                {
+                    "time": 5.0,
+                    "channels": {
+                        "total_dimming": 255,
+                        "r_dimming": 255,
+                        "g_dimming": 255,
+                        "b_dimming": 255,
+                        "w_dimming": 255,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                }
+            ]
+        }
+        
+        self.add_effect("PhotoBomb-Spot", photobomb_spot_effect)
+        logger.debug(f"Created PhotoBomb-Spot effect: {photobomb_spot_effect}")
+        logger.info(f"PhotoBomb-Spot effect created with {len(photobomb_spot_effect['steps'])} steps over {photobomb_spot_effect['duration']} seconds")
+
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
         if not effect_data:
