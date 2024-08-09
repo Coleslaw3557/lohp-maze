@@ -140,6 +140,6 @@ This will start the application and make it accessible at `http://localhost:5000
 - The system uses a fixed 44Hz update rate for DMX communication to ensure smooth transitions and effects.
 - Thread-safe operations are implemented throughout to handle concurrent access to the DMX interface and state management.
 - The Effects Manager uses a sophisticated algorithm to generate dynamic themes based on parameters like color variation, intensity fluctuation, and overall brightness.
-- The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence.
+- The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence, supporting both asynchronous and synchronous interruption methods.
 - Error handling and logging are implemented at multiple levels for robust operation and debugging.
 - Master brightness control affects all lighting outputs, allowing for global intensity adjustment without altering individual effect or theme designs.
