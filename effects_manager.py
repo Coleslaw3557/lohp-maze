@@ -165,15 +165,17 @@ class EffectsManager:
                         self.dmx_state_manager.update_fixture(fixture_id, theme_values)
             time.sleep(1 / self.frequency)
 
-    def _fade_to_black(self, room, fixture_ids, duration):
+    async def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
             progress = (time.time() - start_time) / duration
+            tasks = []
             for fixture_id in fixture_ids:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 faded_values = [int(value * (1 - progress)) for value in current_values]
-                self.dmx_state_manager.update_fixture(fixture_id, faded_values)
-            time.sleep(1 / 44)  # 44Hz update rate
+                tasks.append(self._update_fixture(fixture_id, faded_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
 
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:
