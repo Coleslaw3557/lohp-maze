@@ -3,6 +3,8 @@ import logging
 import json
 import asyncio
 from flask import Flask, request, jsonify, abort
+from flask_cors import CORS
+import asyncio
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
@@ -22,7 +24,12 @@ logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+CORS(app)
 app.secret_key = SECRET_KEY
+
+# Create an event loop
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
 
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
@@ -65,7 +72,7 @@ def set_theme():
         return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
 
 @app.route('/api/run_effect', methods=['POST'])
-def run_effect():
+async def run_effect():
     room = request.json.get('room')
     effect_name = request.json.get('effect_name')
     
@@ -76,7 +83,7 @@ def run_effect():
     if not effect_data:
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
+    success, log_messages = await effects_manager.apply_effect_to_room(room, effect_data)
     
     if success:
         return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}', 'log_messages': log_messages})
@@ -195,4 +202,4 @@ async def trigger_lightning():
 if __name__ == '__main__':
     # Create the lightning effect
     effects_manager.create_lightning_effect()
-    app.run(host='0.0.0.0', port=5000, debug=DEBUG, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=DEBUG)
