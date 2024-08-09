@@ -74,6 +74,16 @@ Trigger the lightning effect across all rooms.
 curl -X POST http://$CONTROLLER_IP:5000/api/trigger_lightning
 ```
 
+## Run Effect in All Rooms
+
+Trigger an effect in all rooms simultaneously.
+
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/api/run_effect_all_rooms \
+     -H "Content-Type: application/json" \
+     -d '{"effect_name": "Lightning"}'
+```
+
 ## Get Light Models
 
 Retrieve a list of all light fixture models and their characteristics.
