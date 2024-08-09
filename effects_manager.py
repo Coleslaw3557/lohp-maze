@@ -301,7 +301,14 @@ class EffectsManager:
         return None
 
     def get_all_effects(self):
-        return self.effects
+        all_effects = self.effects.copy()
+        if "Police Lights" not in all_effects:
+            all_effects["Police Lights"] = self.get_effect("Police Lights")
+        if "Cop Dodge" not in all_effects:
+            all_effects["Cop Dodge"] = self.get_effect("Cop Dodge")
+        if "GateInspection" not in all_effects:
+            all_effects["GateInspection"] = self.get_effect("GateInspection")
+        return all_effects
 
     def add_theme(self, theme_name, theme_data):
         theme_data['frequency'] = 40  # Fixed at 40 Hz
