@@ -833,6 +833,25 @@ class EffectsManager:
         logger.debug(f"Created Lightning effect: {lightning_effect}")
         logger.info(f"Lightning effect created with {len(lightning_effect['steps'])} steps over {lightning_effect['duration']} seconds")
 
+    def apply_effect_to_all_rooms(self, effect_name):
+        effect_data = self.get_effect(effect_name)
+        if not effect_data:
+            logger.error(f"{effect_name} effect not found")
+            return False, f"{effect_name} effect not found"
+
+        room_layout = self.light_config_manager.get_room_layout()
+        
+        async def apply_effect():
+            tasks = []
+            for room in room_layout.keys():
+                tasks.append(self.apply_effect_to_room(room, effect_data))
+            await asyncio.gather(*tasks)
+
+        asyncio.run(apply_effect())
+        
+        logger.info(f"{effect_name} effect triggered in all rooms")
+        return True, f"{effect_name} effect triggered in all rooms"
+
     def create_gate_inspection_effect(self):
         gate_inspection_effect = {
             "duration": 10.0,

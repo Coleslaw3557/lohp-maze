@@ -174,26 +174,20 @@ def stop_test():
         logger.exception("Error stopping test")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/trigger_lightning', methods=['POST'])
-def trigger_lightning():
+@app.route('/api/run_effect_all_rooms', methods=['POST'])
+def run_effect_all_rooms():
+    effect_name = request.json.get('effect_name')
+    if not effect_name:
+        return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
+
     try:
-        room_layout = light_config.get_room_layout()
-        effect_data = effects_manager.get_effect("Lightning")
-        if not effect_data:
-            logger.error("Lightning effect not found")
-            return jsonify({"error": "Lightning effect not found"}), 404
-        
-        async def apply_lightning():
-            tasks = []
-            for room in room_layout.keys():
-                tasks.append(effects_manager.apply_effect_to_room(room, effect_data))
-            await asyncio.gather(*tasks)
-        
-        asyncio.run(apply_lightning())
-        
-        return jsonify({"message": "Lightning effect triggered in all rooms"}), 200
+        success, message = effects_manager.apply_effect_to_all_rooms(effect_name)
+        if success:
+            return jsonify({"message": f"{effect_name} effect triggered in all rooms"}), 200
+        else:
+            return jsonify({"error": message}), 400
     except Exception as e:
-        logger.exception("Error triggering lightning effect")
+        logger.exception(f"Error triggering {effect_name} effect in all rooms")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
