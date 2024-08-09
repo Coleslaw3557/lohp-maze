@@ -118,8 +118,6 @@ class EffectsManager:
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
         
         logger.info(f"Applying effect to room '{room}'")
-        logger.debug(f"Effect data: {effect_data}")
-        logger.debug(f"Fixture IDs for room: {fixture_ids}")
         
         # Mark this room as having an active effect
         self.room_effects[room] = True
@@ -133,7 +131,7 @@ class EffectsManager:
         # Remove the active effect flag for this room
         self.room_effects.pop(room, None)
         
-        return True, [f"Effect applied to all fixtures in room '{room}'"]
+        return True
 
     def _continue_theme_for_other_rooms(self):
         while True:

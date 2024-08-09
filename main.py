@@ -82,12 +82,12 @@ def run_effect():
     if not effect_data:
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    success, log_messages = asyncio.run(effects_manager.apply_effect_to_room(room, effect_data))
+    success = asyncio.run(effects_manager.apply_effect_to_room(room, effect_data))
     
     if success:
-        return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}', 'log_messages': log_messages})
+        return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
     else:
-        return jsonify({'status': 'error', 'message': f'Failed to apply effect {effect_name} to room {room}', 'log_messages': log_messages}), 500
+        return jsonify({'status': 'error', 'message': f'Failed to apply effect {effect_name} to room {room}'}), 500
 
 @app.route('/api/rooms', methods=['GET'])
 def get_rooms():
