@@ -1,31 +1,32 @@
-# Adding New Effects to the LoHP-MazeManager Control System
+# Adding and Maintaining Effects in the LoHP-MazeManager Control System
 
-This guide explains how to add new effects to the LoHP-MazeManager Control System.
+This guide explains how to add new effects and maintain existing ones in the LoHP-MazeManager Control System.
 
-## Steps to Add a New Effect
+## Adding a New Effect
 
-1. Define the effect in `effects_manager.py`:
-   - Create a new method in the `EffectsManager` class, e.g., `create_new_effect()`.
-   - Define the effect's parameters, including duration, description, and steps.
-   - Use `self.add_effect()` to add the new effect to the system.
+1. Create a new Python file in the `effects/` directory:
+   - Name it appropriately, e.g., `new_effect.py`.
+   - Define a function that creates and returns the effect data.
 
-2. Initialize the effect in `effects_manager.py`:
-   - Add a call to your new effect creation method in the `__init__` method of `EffectsManager`.
+2. Update `effects/__init__.py`:
+   - Import the new effect creation function.
 
-3. Update `main.py`:
-   - Add a call to create your new effect in the `if __name__ == '__main__':` block.
+3. Update `effects_manager.py`:
+   - Add the new effect to the `initialize_effects()` method.
 
 4. (Optional) Update `api-examples.md`:
    - If your effect can be triggered via API, add an example of how to call it.
 
-## Example
+## Example: Adding a New "Strobe" Effect
 
-Here's an example of how to add a new "Strobe" effect:
-
-1. In `effects_manager.py`, add:
+1. Create `effects/strobe.py`:
 
 ```python
-def create_strobe_effect(self):
+import logging
+
+logger = logging.getLogger(__name__)
+
+def create_strobe_effect():
     strobe_effect = {
         "duration": 5.0,
         "description": "Rapid flashing white light",
@@ -34,23 +35,24 @@ def create_strobe_effect(self):
     for i in range(50):  # 50 flashes over 5 seconds
         t = i * 0.1
         strobe_effect["steps"].extend([
-            {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255}},
-            {"time": t + 0.05, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0}}
+            {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+            {"time": t + 0.05, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
         ])
-    self.add_effect("Strobe", strobe_effect)
+    logger.debug(f"Created Strobe effect: {strobe_effect}")
     logger.info(f"Strobe effect created with {len(strobe_effect['steps'])} steps over {strobe_effect['duration']} seconds")
+    return strobe_effect
 ```
 
-2. In the `__init__` method of `EffectsManager`, add:
+2. Update `effects/__init__.py`:
 
 ```python
-self.create_strobe_effect()
+from .strobe import create_strobe_effect
 ```
 
-3. In `main.py`, add to the `if __name__ == '__main__':` block:
+3. In `effects_manager.py`, add to the `initialize_effects()` method:
 
 ```python
-effects_manager.create_strobe_effect()
+self.add_effect("Strobe", create_strobe_effect())
 ```
 
 4. In `api-examples.md`, add:
@@ -65,6 +67,26 @@ curl -X POST http://$CONTROLLER_IP:5000/api/run_effect \
 ```
 ```
 
-After following these steps, the new "Strobe" effect will be available in the system and can be triggered like any other effect.
+## Maintaining Existing Effects
 
-Remember to test your new effect thoroughly to ensure it works as expected and doesn't interfere with other system functionalities.
+1. To modify an existing effect:
+   - Locate the effect's file in the `effects/` directory.
+   - Update the effect creation function as needed.
+   - If you've changed the function name or file name, update `effects/__init__.py` accordingly.
+
+2. If you've changed the effect's parameters or behavior significantly:
+   - Update the `initialize_effects()` method in `effects_manager.py` if necessary.
+   - Update the API documentation in `api-examples.md` if the usage has changed.
+
+3. Always test your changes thoroughly to ensure they work as expected and don't interfere with other system functionalities.
+
+## Best Practices
+
+1. Keep each effect in its own file for better organization and maintainability.
+2. Use descriptive names for effect files and functions.
+3. Include detailed logging in your effect creation functions.
+4. Document any special requirements or considerations for each effect in comments.
+5. When updating effects, consider backwards compatibility with existing configurations.
+6. Regularly review and optimize effects for performance.
+
+Remember to test all changes in a development environment before deploying to production.

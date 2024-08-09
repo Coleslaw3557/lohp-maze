@@ -189,3 +189,19 @@ For detailed API usage, refer to the `api-examples.md` file.
 - If effects are not working as expected, double-check the effect definitions in the `EffectsManager`.
 
 For more detailed information about the system design, refer to `dmx-controller-design-spec.md` and `dmx-controller-design-spec-additional-info.md`.
+
+## Adding and Maintaining Effects
+
+For detailed instructions on how to add new effects or maintain existing ones, please refer to the `adding_new_effects.md` file in the project root directory. This file contains step-by-step guidelines for:
+
+- Creating new effects
+- Updating existing effects
+- Best practices for effect management
+
+To view the instructions:
+
+```bash
+cat adding_new_effects.md
+```
+
+Always refer to this document when working with effects to ensure consistency and proper integration with the system.
