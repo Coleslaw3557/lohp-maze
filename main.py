@@ -196,4 +196,5 @@ if __name__ == '__main__':
     effects_manager.create_police_lights_effect()
     effects_manager.create_gate_inspection_effect()
     effects_manager.create_gate_greeters_effect()
+    effects_manager.create_wrong_answer_effect()
     app.run(host='0.0.0.0', port=5000, debug=DEBUG)

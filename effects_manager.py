@@ -911,6 +911,77 @@ class EffectsManager:
         logger.debug(f"Created Gate Greeters effect: {gate_greeters_effect}")
         logger.info(f"Gate Greeters effect created with {len(gate_greeters_effect['steps'])} steps over {gate_greeters_effect['duration']} seconds")
 
+    def create_wrong_answer_effect(self):
+        wrong_answer_effect = {
+            "duration": 3.0,
+            "steps": []
+        }
+        
+        # Red flash
+        wrong_answer_effect["steps"].extend([
+            {
+                "time": 0.0,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 255,
+                    "g_dimming": 0,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            },
+            {
+                "time": 0.5,
+                "channels": {
+                    "total_dimming": 0,
+                    "r_dimming": 0,
+                    "g_dimming": 0,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            }
+        ])
+        
+        # Repeat the flash twice more
+        for i in range(2):
+            wrong_answer_effect["steps"].extend([
+                {
+                    "time": 1.0 + i * 1.0,
+                    "channels": {
+                        "total_dimming": 255,
+                        "r_dimming": 255,
+                        "g_dimming": 0,
+                        "b_dimming": 0,
+                        "w_dimming": 0,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                },
+                {
+                    "time": 1.5 + i * 1.0,
+                    "channels": {
+                        "total_dimming": 0,
+                        "r_dimming": 0,
+                        "g_dimming": 0,
+                        "b_dimming": 0,
+                        "w_dimming": 0,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                }
+            ])
+        
+        self.add_effect("WrongAnswer", wrong_answer_effect)
+        logger.debug(f"Created Wrong Answer effect: {wrong_answer_effect}")
+        logger.info(f"Wrong Answer effect created with {len(wrong_answer_effect['steps'])} steps over {wrong_answer_effect['duration']} seconds")
+
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
         if not effect_data:
