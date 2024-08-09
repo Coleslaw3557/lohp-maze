@@ -199,7 +199,6 @@ if __name__ == '__main__':
     # Create effects
     effects_manager.create_lightning_effect()
     effects_manager.create_police_lights_effect()
-    effects_manager.create_cop_dodge_effect()
     effects_manager.create_gate_inspection_effect()
     effects_manager.create_gate_greeters_effect()
     effects_manager.create_wrong_answer_effect()

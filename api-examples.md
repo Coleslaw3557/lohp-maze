@@ -58,6 +58,13 @@ curl -X POST http://$CONTROLLER_IP:5000/api/run_effect \
      -d '{"room": "Entrance", "effect_name": "Lightning"}'
 ```
 
+Available effects:
+- Lightning: Simulates a lightning strike with bright flashes
+- Police Lights: Alternating red and blue flashes simulating police lights
+- GateInspection: Bright white light for gate inspection, lasting 5 seconds
+- GateGreeters: Welcoming effect with gentle color transitions and pulsing
+- WrongAnswer: Three quick red flashes to indicate a wrong answer
+
 ## Set Master Brightness
 
 Adjust the master brightness for all lights.

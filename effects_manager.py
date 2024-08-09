@@ -299,7 +299,7 @@ class EffectsManager:
 
     def get_all_effects(self):
         all_effects = self.effects.copy()
-        for effect_name in ["Lightning", "Police Lights", "Cop Dodge", "GateInspection", "GateGreeters", "WrongAnswer"]:
+        for effect_name in ["Lightning", "Police Lights", "GateInspection", "GateGreeters", "WrongAnswer"]:
             if effect_name not in all_effects or all_effects[effect_name] is None:
                 effect = self.get_effect(effect_name)
                 if effect:
@@ -827,34 +827,9 @@ class EffectsManager:
                 {"time": t + 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
             ])
         police_lights_effect["steps"].append({"time": 15.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}})
-        self.add_effect("PoliceLights", police_lights_effect)
+        self.add_effect("Police Lights", police_lights_effect)
         logger.debug(f"Created Police Lights effect: {police_lights_effect}")
         logger.info(f"Police Lights effect created with {len(police_lights_effect['steps'])} steps over {police_lights_effect['duration']} seconds")
-
-    def create_cop_dodge_effect(self):
-        cop_dodge_effect = {
-            "duration": 10.0,
-            "description": "Quick alternating red and blue flashes simulating dodging police",
-            "steps": [
-                {"time": 0.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 0.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 0.3, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 0.4, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 0.6, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 0.7, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 0.8, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 0.9, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 1.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 1.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 1.2, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 1.3, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 1.4, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
-            ]
-        }
-        self.add_effect("CopDodge", cop_dodge_effect)
-        logger.debug(f"Created Cop Dodge effect: {cop_dodge_effect}")
-        logger.info(f"Cop Dodge effect created with {len(cop_dodge_effect['steps'])} steps over {cop_dodge_effect['duration']} seconds")
 
     def create_gate_inspection_effect(self):
         gate_inspection_effect = {
