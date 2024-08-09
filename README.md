@@ -14,6 +14,7 @@ The system consists of several key components:
 4. **Effects Manager**: Controls the creation and execution of lighting effects and themes.
 5. **Interrupt Handler**: Manages interruptions for specific fixtures and coordinates transitions.
 6. **DMX State Manager**: Maintains the current state of all DMX channels and provides thread-safe access.
+7. **Sequence Runner**: Runs sequences of lighting changes.
 
 ### Hardware Setup
 
@@ -76,6 +77,12 @@ Maintains the current state of all DMX channels:
 - Provides thread-safe access to channel values
 - Implements locking mechanism to prevent race conditions
 
+### 7. Sequence Runner (`sequence_runner.py`)
+
+Runs sequences of lighting changes:
+- Executes the main lighting sequence (slow morphing color changes)
+- Runs in a separate thread to allow for non-blocking operation
+
 ## Key Files
 
 - `main.py`: Main Flask application and control logic
@@ -84,6 +91,7 @@ Maintains the current state of all DMX channels:
 - `effects_manager.py`: Effect and theme management
 - `interrupt_handler.py`: Manages fixture interruptions
 - `dmx_state_manager.py`: Maintains DMX channel states
+- `sequence_runner.py`: Runs lighting sequences
 - `light_config.json`: Configuration file for light models and room layouts
 
 ## Setup and Installation
@@ -143,73 +151,12 @@ This will start the application and make it accessible at `http://localhost:5000
 - The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence, supporting both asynchronous and synchronous interruption methods.
 - Error handling and logging are implemented at multiple levels for robust operation and debugging.
 - Master brightness control affects all lighting outputs, allowing for global intensity adjustment without altering individual effect or theme designs.
-# DMX Lighting Control System
-
-This project is a comprehensive DMX lighting control system designed for managing complex lighting setups in various environments, such as escape rooms or interactive installations.
-
-## Table of Contents
-
-1. [System Overview](#system-overview)
-2. [Components](#components)
-3. [Installation](#installation)
-4. [Configuration](#configuration)
-5. [Usage](#usage)
-6. [API Endpoints](#api-endpoints)
-7. [Testing](#testing)
-8. [Troubleshooting](#troubleshooting)
-
-## System Overview
-
-The DMX Lighting Control System is built using Python and Flask, providing a robust backend for managing DMX fixtures, effects, themes, and room layouts. It uses the FTDI library for DMX output and supports various lighting models and effects.
-
-## Components
-
-1. **DMX State Manager**: Manages the current state of all DMX fixtures.
-2. **DMX Output Manager**: Handles the output of DMX data to the physical fixtures.
-3. **Light Config Manager**: Manages the configuration of light models and room layouts.
-4. **Effects Manager**: Handles the creation and application of lighting effects and themes.
-5. **Interrupt Handler**: Manages interruptions for applying effects to specific fixtures or rooms.
-6. **Sequence Runner**: Runs sequences of lighting changes.
-7. **Flask API**: Provides HTTP endpoints for controlling the system.
-
-## Installation
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/your-repo/dmx-lighting-control.git
-   cd dmx-lighting-control
-   ```
-
-2. Install the required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-
-3. Set up the FTDI drivers for your system (refer to the FTDI documentation).
-
-## Configuration
-
-1. Edit `light_config.json` to set up your light models and room layout.
-2. Adjust `effects_config.json` to define custom effects (if needed).
-3. Set environment variables:
-   - `DEBUG`: Set to 'True' for verbose logging (default: 'False')
-   - `SECRET_KEY`: Set a secret key for Flask (default: 'your_secret_key_here')
-
-## Usage
-
-1. Start the server:
-   ```
-   python main.py
-   ```
-
-2. The server will start on `http://0.0.0.0:5000`.
-
-3. Use the API endpoints to control the lighting system.
 
 ## API Endpoints
 
 - `GET /api/rooms`: Get all configured rooms
-- `GET /api/effects`: Get all available effects
+- `GET /api/effects_details`: Get detailed information about all available effects
+- `GET /api/effects_list`: Get a simple list of all available effects
 - `GET /api/themes`: Get all available themes
 - `GET /api/light_models`: Get all configured light models
 - `POST /api/set_theme`: Set the current theme
