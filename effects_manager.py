@@ -25,21 +25,18 @@ class EffectsManager:
         self.theme_lock = threading.Lock()
         self.master_brightness = 1.0  # Initialize master brightness to 100%
         self.load_themes()
-        
-    def _significant_change(self, changes):
-        threshold = 25  # Adjust this value to change sensitivity
-        for _, fixture_id, new_values in changes:
-            old_values = self._last_values.get(fixture_id, [0]*8)
-            if any(abs(new - old) > threshold for new, old in zip(new_values, old_values)):
-                self._last_values[fixture_id] = new_values
-                return True
-        return False
+        self._last_values = {}
+        self._step_count = 0
         
         if self.interrupt_handler is None:
             logger.warning("InterruptHandler not provided. Some features may not work correctly.")
         else:
             logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
+        
+        # Initialize all effects
+        self.create_lightning_effect()
         self.create_police_lights_effect()
+        self.create_cop_dodge_effect()
         self.create_gate_inspection_effect()
 
     def update_frequency(self, new_frequency):
@@ -302,12 +299,13 @@ class EffectsManager:
 
     def get_all_effects(self):
         all_effects = self.effects.copy()
-        if "Police Lights" not in all_effects:
-            all_effects["Police Lights"] = self.get_effect("Police Lights")
-        if "Cop Dodge" not in all_effects:
-            all_effects["Cop Dodge"] = self.get_effect("Cop Dodge")
-        if "GateInspection" not in all_effects:
-            all_effects["GateInspection"] = self.get_effect("GateInspection")
+        for effect_name in ["Lightning", "Police Lights", "Cop Dodge", "GateInspection"]:
+            if effect_name not in all_effects or all_effects[effect_name] is None:
+                effect = self.get_effect(effect_name)
+                if effect:
+                    all_effects[effect_name] = effect
+                else:
+                    logger.warning(f"Effect '{effect_name}' is not properly initialized.")
         return all_effects
 
     def add_theme(self, theme_name, theme_data):
