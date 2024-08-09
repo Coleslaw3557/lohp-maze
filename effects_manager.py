@@ -1009,6 +1009,55 @@ class EffectsManager:
         logger.debug(f"Created Entrance effect: {entrance_effect}")
         logger.info(f"Entrance effect created with {len(entrance_effect['steps'])} steps over {entrance_effect['duration']} seconds")
 
+    def create_guy_line_climb_effect(self):
+        guy_line_climb_effect = {
+            "duration": 15.0,
+            "description": "Simulates climbing vines in a jungle with blues and greens and a low strobe",
+            "steps": []
+        }
+        
+        # Generate 150 steps for smooth transitions (10 steps per second)
+        for i in range(150):
+            t = i * 0.1
+            # Oscillate between blue and green
+            blue = int(127 + 127 * math.sin(t * 1.5))
+            green = int(127 + 127 * math.cos(t * 1.5))
+            # Low strobe effect
+            strobe = int(20 + 10 * math.sin(t * 10))
+            
+            guy_line_climb_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 0,
+                    "g_dimming": green,
+                    "b_dimming": blue,
+                    "w_dimming": 0,
+                    "total_strobe": strobe,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Add final step to turn off lights
+        guy_line_climb_effect["steps"].append({
+            "time": 15.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("GuyLineClimb", guy_line_climb_effect)
+        logger.debug(f"Created Guy Line Climb effect: {guy_line_climb_effect}")
+        logger.info(f"Guy Line Climb effect created with {len(guy_line_climb_effect['steps'])} steps over {guy_line_climb_effect['duration']} seconds")
+
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
         if not effect_data:

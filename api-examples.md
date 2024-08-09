@@ -64,6 +64,7 @@ Available effects:
 - GateInspection: Bright white light for gate inspection, lasting 5 seconds
 - GateGreeters: Welcoming effect with gentle color transitions and pulsing
 - WrongAnswer: Three quick red flashes to indicate a wrong answer
+- GuyLineClimb: Simulates climbing vines in a jungle with blues and greens and a low strobe, lasting 15 seconds
 
 ## Set Master Brightness
 
