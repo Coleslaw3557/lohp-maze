@@ -18,6 +18,7 @@ from .porto_standby import create_porto_standby_effect
 from .porto_hit import create_porto_hit_effect
 from .porto_hit import create_porto_hit_effect
 from .cuddle_puddle import create_cuddle_puddle_effect
+from .cuddle_puddle import create_cuddle_puddle_effect
 from .photobomb_bg import create_photobomb_bg_effect
 from .photobomb_spot import create_photobomb_spot_effect
 from .deep_playa_bg import create_deep_playa_bg_effect

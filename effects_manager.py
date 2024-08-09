@@ -798,6 +798,7 @@ class EffectsManager:
         self.add_effect("PortoStandBy", create_porto_standby_effect())
         self.add_effect("PortoHit", create_porto_hit_effect())
         self.add_effect("CuddlePuddle", create_cuddle_puddle_effect())
+        self.add_effect("CuddlePuddle", create_cuddle_puddle_effect())
         self.add_effect("PhotoBomb-BG", create_photobomb_bg_effect())
         self.add_effect("PhotoBomb-Spot", create_photobomb_spot_effect())
         self.add_effect("DeepPlaya-BG", create_deep_playa_bg_effect())
