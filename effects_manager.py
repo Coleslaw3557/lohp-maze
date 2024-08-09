@@ -6,6 +6,7 @@ import random
 import asyncio
 import math
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -387,7 +388,7 @@ class EffectsManager:
     def get_effect(self, effect_name):
         return self.effects.get(effect_name)
 
-    def apply_effect_to_room(self, room, effect_data):
+    async def apply_effect_to_room(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room, [])
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
@@ -402,20 +403,20 @@ class EffectsManager:
         self.room_effects[room] = True
         
         # Gradually fade to black before applying the effect
-        self._fade_to_black(room, fixture_ids, duration=0.5)
+        await self._fade_to_black(room, fixture_ids, duration=0.5)
         
-        # Apply the effect to all fixtures in the room
-        for fixture_id in fixture_ids:
-            self._apply_effect_to_fixture_sync(fixture_id, effect_data)
+        # Apply the effect to all fixtures in the room concurrently
+        tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        await asyncio.gather(*tasks)
         
         log_messages.append(f"Effect applied to all fixtures in room '{room}'")
         logger.info(f"Effect application completed in room '{room}'")
         
         # Keep the effect running for its duration
-        time.sleep(effect_data['duration'])
+        await asyncio.sleep(effect_data['duration'])
         
         # Gradually fade back to the theme over 1 second
-        self._fade_to_theme(room, fixture_ids, duration=1.0)
+        await self._fade_to_theme(room, fixture_ids, duration=1.0)
         
         # Remove the active effect flag for this room
         self.room_effects.pop(room, None)

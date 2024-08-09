@@ -1,6 +1,7 @@
 import os
 import logging
 import json
+import asyncio
 from flask import Flask, request, jsonify, abort
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
@@ -168,19 +169,25 @@ def stop_test():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/trigger_lightning', methods=['POST'])
-def trigger_lightning():
+async def trigger_lightning():
     try:
         room_layout = light_config.get_room_layout()
+        effect_data = effects_manager.get_effect("Lightning")
+        if not effect_data:
+            logger.error("Lightning effect not found")
+            return jsonify({"error": "Lightning effect not found"}), 404
+        
+        tasks = []
         for room in room_layout.keys():
-            effect_data = effects_manager.get_effect("Lightning")
-            if effect_data:
-                success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
-                if not success:
-                    logger.warning(f"Failed to apply lightning effect to room {room}")
-            else:
-                logger.error("Lightning effect not found")
-                return jsonify({"error": "Lightning effect not found"}), 404
-        return jsonify({"message": "Lightning effect triggered"}), 200
+            tasks.append(effects_manager.apply_effect_to_room(room, effect_data))
+        
+        results = await asyncio.gather(*tasks)
+        
+        if all(success for success, _ in results):
+            return jsonify({"message": "Lightning effect triggered in all rooms"}), 200
+        else:
+            failed_rooms = [room for (success, _), room in zip(results, room_layout.keys()) if not success]
+            return jsonify({"warning": f"Lightning effect failed in rooms: {', '.join(failed_rooms)}"}), 207
     except Exception as e:
         logger.exception("Error triggering lightning effect")
         return jsonify({"error": str(e)}), 500
