@@ -123,8 +123,6 @@ class EffectsManager:
         logger.debug(f"Effect data: {effect_data}")
         logger.debug(f"Fixture IDs for room: {fixture_ids}")
         
-        log_messages = []
-        
         # Mark this room as having an active effect
         self.room_effects[room] = True
         
@@ -132,13 +130,12 @@ class EffectsManager:
         tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
         await asyncio.gather(*tasks)
         
-        log_messages.append(f"Effect applied to all fixtures in room '{room}'")
         logger.info(f"Effect application completed in room '{room}'")
         
         # Remove the active effect flag for this room
         self.room_effects.pop(room, None)
         
-        return True, log_messages
+        return True, [f"Effect applied to all fixtures in room '{room}'"]
 
     def _continue_theme_for_other_rooms(self):
         while True:
