@@ -191,6 +191,7 @@ def run_effect_all_rooms():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Create the lightning effect
+    # Create effects
     effects_manager.create_lightning_effect()
+    effects_manager.create_gate_greeters_effect()
     app.run(host='0.0.0.0', port=5000, debug=DEBUG)

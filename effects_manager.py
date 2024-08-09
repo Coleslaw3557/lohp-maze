@@ -864,6 +864,60 @@ class EffectsManager:
         self.add_effect("GateInspection", gate_inspection_effect)
         logger.debug(f"Created GateInspection effect: {gate_inspection_effect}")
         logger.info(f"GateInspection effect created with {len(gate_inspection_effect['steps'])} steps over {gate_inspection_effect['duration']} seconds")
+
+    def create_gate_greeters_effect(self):
+        gate_greeters_effect = {
+            "duration": 10.0,
+            "steps": []
+        }
+        
+        # Create a rainbow effect with excitement
+        colors = [
+            (255, 0, 0),    # Red
+            (255, 127, 0),  # Orange
+            (255, 255, 0),  # Yellow
+            (0, 255, 0),    # Green
+            (0, 0, 255),    # Blue
+            (75, 0, 130),   # Indigo
+            (143, 0, 255)   # Violet
+        ]
+        
+        step_duration = 0.2  # Each color lasts for 0.2 seconds
+        for i in range(50):  # 50 steps to fill 10 seconds
+            color = colors[i % len(colors)]
+            strobe = 255 if i % 2 == 0 else 0  # Alternating strobe for excitement
+            gate_greeters_effect["steps"].append({
+                "time": i * step_duration,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": color[0],
+                    "g_dimming": color[1],
+                    "b_dimming": color[2],
+                    "w_dimming": 0,
+                    "total_strobe": strobe,
+                    "function_selection": 0,
+                    "function_speed": 255  # Max speed for excitement
+                }
+            })
+        
+        # Add a final step to turn off the lights
+        gate_greeters_effect["steps"].append({
+            "time": 10.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("GateGreeters", gate_greeters_effect)
+        logger.debug(f"Created GateGreeters effect: {gate_greeters_effect}")
+        logger.info(f"GateGreeters effect created with {len(gate_greeters_effect['steps'])} steps over {gate_greeters_effect['duration']} seconds")
     async def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
