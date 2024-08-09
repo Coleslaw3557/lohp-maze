@@ -6,8 +6,6 @@ import random
 import asyncio
 import math
 from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -134,21 +132,12 @@ class EffectsManager:
         # Mark this room as having an active effect
         self.room_effects[room] = True
         
-        # Gradually fade to black before applying the effect
-        await self._fade_to_black(room, fixture_ids, duration=0.5)
-        
         # Apply the effect to all fixtures in the room concurrently
         tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
         await asyncio.gather(*tasks)
         
         log_messages.append(f"Effect applied to all fixtures in room '{room}'")
         logger.info(f"Effect application completed in room '{room}'")
-        
-        # Keep the effect running for its duration
-        await asyncio.sleep(effect_data['duration'])
-        
-        # Gradually fade back to the theme over 1 second
-        await self._fade_to_theme(room, fixture_ids, duration=1.0)
         
         # Remove the active effect flag for this room
         self.room_effects.pop(room, None)

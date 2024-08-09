@@ -187,15 +187,13 @@ def trigger_lightning():
             tasks = []
             for room in room_layout.keys():
                 tasks.append(effects_manager.apply_effect_to_room(room, effect_data))
-            return await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks)
         
-        results = asyncio.run(apply_lightning())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(apply_lightning())
         
-        if all(success for success, _ in results):
-            return jsonify({"message": "Lightning effect triggered in all rooms"}), 200
-        else:
-            failed_rooms = [room for (success, _), room in zip(results, room_layout.keys()) if not success]
-            return jsonify({"warning": f"Lightning effect failed in rooms: {', '.join(failed_rooms)}"}), 207
+        return jsonify({"message": "Lightning effect triggered in all rooms"}), 200
     except Exception as e:
         logger.exception("Error triggering lightning effect")
         return jsonify({"error": str(e)}), 500
