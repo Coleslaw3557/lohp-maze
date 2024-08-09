@@ -166,6 +166,24 @@ class EffectsManager:
             await asyncio.gather(*tasks)
             await asyncio.sleep(1 / self.frequency)
 
+    async def _fade_to_theme(self, room, fixture_ids, duration):
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            progress = (time.time() - start_time) / duration
+            tasks = []
+            for fixture_id in fixture_ids:
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                theme_values = self._generate_theme_values(room)
+                interpolated_values = [int(current + (theme - current) * progress)
+                                       for current, theme in zip(current_values, theme_values)]
+                tasks.append(self._update_fixture(fixture_id, interpolated_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
+
+    async def _update_fixture(self, fixture_id, values):
+        self.dmx_state_manager.update_fixture(fixture_id, values)
+        await asyncio.sleep(0)  # Yield control to allow other coroutines to run
+
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:
             await self.interrupt_handler.interrupt_fixture(
@@ -394,21 +412,12 @@ class EffectsManager:
         # Mark this room as having an active effect
         self.room_effects[room] = True
         
-        # Gradually fade to black before applying the effect
-        await self._fade_to_black(room, fixture_ids, duration=0.5)
-        
         # Apply the effect to all fixtures in the room concurrently
         tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
         await asyncio.gather(*tasks)
         
         log_messages.append(f"Effect applied to all fixtures in room '{room}'")
         logger.info(f"Effect application completed in room '{room}'")
-        
-        # Keep the effect running for its duration
-        await asyncio.sleep(effect_data['duration'])
-        
-        # Gradually fade back to the theme over 1 second
-        await self._fade_to_theme(room, fixture_ids, duration=1.0)
         
         # Remove the active effect flag for this room
         self.room_effects.pop(room, None)
