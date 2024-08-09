@@ -60,7 +60,6 @@ class EffectsManager:
         try:
             with open(self.config_file, 'w') as f:
                 json.dump(self.effects, f, indent=4)
-            logger.info(f"Effects configuration saved to {self.config_file}")
         except IOError:
             logger.error(f"Error writing to {self.config_file}")
 
@@ -70,7 +69,6 @@ class EffectsManager:
     def add_effect(self, effect_name, effect_data):
         self.effects[effect_name] = effect_data
         self.save_config()
-        logger.info(f"Effect added: {effect_name}")
 
     def update_effect(self, effect_name, effect_data):
         if effect_name in self.effects:
@@ -778,28 +776,26 @@ class EffectsManager:
 
 
     def initialize_effects(self):
-        self.add_effect("Lightning", create_lightning_effect())
-        self.add_effect("PoliceLights", create_police_lights_effect())
-        self.add_effect("GateInspection", create_gate_inspection_effect())
-        self.add_effect("GateInspection", create_gate_inspection_effect())
-        self.add_effect("GateGreeters", create_gate_greeters_effect())
-        self.add_effect("WrongAnswer", create_wrong_answer_effect())
-        self.add_effect("CorrectAnswer", create_correct_answer_effect())
-        self.add_effect("CorrectAnswer", create_correct_answer_effect())
-        self.add_effect("Entrance", create_entrance_effect())
-        self.add_effect("Entrance", create_entrance_effect())
-        self.add_effect("GuyLineClimb", create_guy_line_climb_effect())
-        self.add_effect("GuyLineClimb", create_guy_line_climb_effect())
-        self.add_effect("SparkPony", create_spark_pony_effect())
-        self.add_effect("SparkPony", create_spark_pony_effect())
-        self.add_effect("PortoStandBy", create_porto_standby_effect())
-        self.add_effect("PortoStandBy", create_porto_standby_effect())
-        self.add_effect("PortoHit", create_porto_hit_effect())
-        self.add_effect("CuddlePuddle", create_cuddle_puddle_effect())
-        self.add_effect("CuddlePuddle", create_cuddle_puddle_effect())
-        self.add_effect("PhotoBomb-BG", create_photobomb_bg_effect())
-        self.add_effect("PhotoBomb-Spot", create_photobomb_spot_effect())
-        self.add_effect("DeepPlaya-BG", create_deep_playa_bg_effect())
+        effects = [
+            ("Lightning", create_lightning_effect()),
+            ("PoliceLights", create_police_lights_effect()),
+            ("GateInspection", create_gate_inspection_effect()),
+            ("GateGreeters", create_gate_greeters_effect()),
+            ("WrongAnswer", create_wrong_answer_effect()),
+            ("CorrectAnswer", create_correct_answer_effect()),
+            ("Entrance", create_entrance_effect()),
+            ("GuyLineClimb", create_guy_line_climb_effect()),
+            ("SparkPony", create_spark_pony_effect()),
+            ("PortoStandBy", create_porto_standby_effect()),
+            ("PortoHit", create_porto_hit_effect()),
+            ("CuddlePuddle", create_cuddle_puddle_effect()),
+            ("PhotoBomb-BG", create_photobomb_bg_effect()),
+            ("PhotoBomb-Spot", create_photobomb_spot_effect()),
+            ("DeepPlaya-BG", create_deep_playa_bg_effect()),
+        ]
+        for effect_name, effect_data in effects:
+            self.add_effect(effect_name, effect_data)
+        logger.info(f"Initialized {len(effects)} effects")
 
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
