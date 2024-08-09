@@ -38,10 +38,20 @@ curl -X POST http://$CONTROLLER_IP:5000/api/set_theme \
 
 ## Run Effect in a Specific Room
 
-Trigger an effect in a specific room.
+Trigger an effect in a specific room (asynchronous).
 
 ```bash
 curl -X POST http://$CONTROLLER_IP:5000/api/run_effect \
+     -H "Content-Type: application/json" \
+     -d '{"room": "Entrance", "effect_name": "Lightning"}'
+```
+
+## Run Effect Synchronously in a Specific Room
+
+Trigger an effect in a specific room and wait for it to complete (synchronous).
+
+```bash
+curl -X POST http://$CONTROLLER_IP:5000/api/run_effect_sync \
      -H "Content-Type: application/json" \
      -d '{"room": "Entrance", "effect_name": "Lightning"}'
 ```
