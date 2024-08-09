@@ -10,6 +10,7 @@ from .correct_answer import create_correct_answer_effect
 from .entrance import create_entrance_effect
 from .entrance import create_entrance_effect
 from .guy_line_climb import create_guy_line_climb_effect
+from .guy_line_climb import create_guy_line_climb_effect
 from .spark_pony import create_spark_pony_effect
 from .porto_standby import create_porto_standby_effect
 from .porto_hit import create_porto_hit_effect
