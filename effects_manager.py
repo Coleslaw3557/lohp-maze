@@ -854,10 +854,11 @@ class EffectsManager:
 
     def create_gate_inspection_effect(self):
         gate_inspection_effect = {
-            "duration": 5.0,
+            "duration": 6.0,  # Increased duration to accommodate fade out
             "steps": [
                 {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
-                {"time": 5.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
+                {"time": 5.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 6.0, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
             ]
         }
         self.add_effect("GateInspection", gate_inspection_effect)
