@@ -7,6 +7,10 @@ from .wrong_answer import create_wrong_answer_effect
 from .wrong_answer import create_wrong_answer_effect
 from .correct_answer import create_correct_answer_effect
 from .correct_answer import create_correct_answer_effect
+from .wrong_answer import create_wrong_answer_effect
+from .wrong_answer import create_wrong_answer_effect
+from .correct_answer import create_correct_answer_effect
+from .correct_answer import create_correct_answer_effect
 from .entrance import create_entrance_effect
 from .entrance import create_entrance_effect
 from .guy_line_climb import create_guy_line_climb_effect
