@@ -834,6 +834,7 @@ class EffectsManager:
     def create_cop_dodge_effect(self):
         cop_dodge_effect = {
             "duration": 10.0,
+            "description": "Quick alternating red and blue flashes simulating dodging police",
             "steps": [
                 {"time": 0.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
                 {"time": 0.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
