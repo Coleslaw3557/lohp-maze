@@ -94,10 +94,15 @@ def get_rooms():
     rooms = light_config.get_room_layout()
     return jsonify(rooms)
 
-@app.route('/api/effects', methods=['GET'])
-def get_effects():
+@app.route('/api/effects_details', methods=['GET'])
+def get_effects_details():
     effects = effects_manager.get_all_effects()
     return jsonify(effects)
+
+@app.route('/api/effects_list', methods=['GET'])
+def get_effects_list():
+    effects_list = effects_manager.get_effects_list()
+    return jsonify(effects_list)
 
 @app.route('/api/themes', methods=['GET'])
 def get_themes():

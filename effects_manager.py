@@ -299,7 +299,7 @@ class EffectsManager:
 
     def get_all_effects(self):
         all_effects = self.effects.copy()
-        for effect_name in ["Lightning", "Police Lights", "Cop Dodge", "GateInspection"]:
+        for effect_name in ["Lightning", "Police Lights", "Cop Dodge", "GateInspection", "GateGreeters", "WrongAnswer"]:
             if effect_name not in all_effects or all_effects[effect_name] is None:
                 effect = self.get_effect(effect_name)
                 if effect:
@@ -307,6 +307,13 @@ class EffectsManager:
                 else:
                     logger.warning(f"Effect '{effect_name}' is not properly initialized.")
         return all_effects
+
+    def get_effects_list(self):
+        effects_list = {}
+        for effect_name, effect_data in self.get_all_effects().items():
+            description = effect_data.get('description', 'No description available')
+            effects_list[effect_name] = description
+        return effects_list
 
     def add_theme(self, theme_name, theme_data):
         theme_data['frequency'] = 40  # Fixed at 40 Hz
@@ -793,6 +800,7 @@ class EffectsManager:
     def create_lightning_effect(self):
         lightning_effect = {
             "duration": 2.0,
+            "description": "Simulates a lightning strike with bright flashes",
             "steps": [
                 {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
                 {"time": 0.1, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
@@ -809,6 +817,7 @@ class EffectsManager:
     def create_police_lights_effect(self):
         police_lights_effect = {
             "duration": 15.0,
+            "description": "Alternating red and blue flashes simulating police lights",
             "steps": []
         }
         for i in range(15):  # 15 cycles to fill 15 seconds
@@ -849,6 +858,7 @@ class EffectsManager:
     def create_gate_inspection_effect(self):
         gate_inspection_effect = {
             "duration": 6.0,
+            "description": "Bright white light for gate inspection, lasting 5 seconds",
             "steps": [
                 {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
                 {"time": 5.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
@@ -862,6 +872,7 @@ class EffectsManager:
     def create_gate_greeters_effect(self):
         gate_greeters_effect = {
             "duration": 15.0,
+            "description": "Welcoming effect with gentle color transitions and pulsing",
             "steps": []
         }
         
@@ -912,6 +923,7 @@ class EffectsManager:
     def create_wrong_answer_effect(self):
         wrong_answer_effect = {
             "duration": 3.0,
+            "description": "Three quick red flashes to indicate a wrong answer",
             "steps": []
         }
         
