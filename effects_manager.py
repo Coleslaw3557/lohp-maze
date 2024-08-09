@@ -826,7 +826,7 @@ class EffectsManager:
                 {"time": t + 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
             ])
         police_lights_effect["steps"].append({"time": 15.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}})
-        self.add_effect("Police Lights", police_lights_effect)
+        self.add_effect("PoliceLights", police_lights_effect)
         logger.debug(f"Created Police Lights effect: {police_lights_effect}")
         logger.info(f"Police Lights effect created with {len(police_lights_effect['steps'])} steps over {police_lights_effect['duration']} seconds")
 
