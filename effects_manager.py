@@ -7,6 +7,7 @@ import asyncio
 import math
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -865,6 +866,7 @@ class EffectsManager:
 
     async def _update_fixture(self, fixture_id, values):
         self.dmx_state_manager.update_fixture(fixture_id, values)
+        await asyncio.sleep(0)  # Yield control to allow other coroutines to run
     def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
@@ -875,17 +877,19 @@ class EffectsManager:
                 self.dmx_state_manager.update_fixture(fixture_id, faded_values)
             time.sleep(1 / 44)  # 44Hz update rate
 
-    def _fade_to_theme(self, room, fixture_ids, duration):
+    async def _fade_to_theme(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
             progress = (time.time() - start_time) / duration
+            tasks = []
             for fixture_id in fixture_ids:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 theme_values = self._generate_theme_values(room)
                 interpolated_values = [int(current + (theme - current) * progress)
                                        for current, theme in zip(current_values, theme_values)]
-                self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
-            time.sleep(1 / self.frequency)  # Use the instance attribute 'frequency'
+                tasks.append(self._update_fixture(fixture_id, interpolated_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
 
     def _generate_theme_values(self, room):
         # This method should generate the current theme values for the room
