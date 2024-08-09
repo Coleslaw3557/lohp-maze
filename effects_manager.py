@@ -1092,9 +1092,13 @@ class EffectsManager:
             
             # Add dynamic sparkles
             white = 0
-            if random.random() < 0.05:  # 5% chance of sparkle
-                sparkle_intensity = int((math.sin(t * 20) + 1) * 127.5)  # Oscillating sparkle intensity
+            if random.random() < 0.15:  # Increased to 15% chance of sparkle
+                sparkle_intensity = int((math.sin(t * 30) + 1) * 127.5)  # Faster oscillating sparkle intensity
                 white = random.randint(sparkle_intensity, 255)
+                
+                # Add occasional extra bright sparkles
+                if random.random() < 0.3:  # 30% chance of extra bright sparkle
+                    white = 255
             
             spark_pony_effect["steps"].append({
                 "time": t,
