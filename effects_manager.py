@@ -36,7 +36,6 @@ class EffectsManager:
         # Initialize all effects
         self.create_lightning_effect()
         self.create_police_lights_effect()
-        self.create_cop_dodge_effect()
         self.create_gate_inspection_effect()
 
     def update_frequency(self, new_frequency):
