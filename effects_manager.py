@@ -40,6 +40,7 @@ class EffectsManager:
         else:
             logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
         self.create_police_lights_effect()
+        self.create_gate_inspection_effect()
 
     def update_frequency(self, new_frequency):
         self.frequency = new_frequency
@@ -826,6 +827,18 @@ class EffectsManager:
         self.add_effect("Lightning", lightning_effect)
         logger.debug(f"Created Lightning effect: {lightning_effect}")
         logger.info(f"Lightning effect created with {len(lightning_effect['steps'])} steps over {lightning_effect['duration']} seconds")
+
+    def create_gate_inspection_effect(self):
+        gate_inspection_effect = {
+            "duration": 10.0,
+            "steps": [
+                {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 10.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
+            ]
+        }
+        self.add_effect("GateInspection", gate_inspection_effect)
+        logger.debug(f"Created GateInspection effect: {gate_inspection_effect}")
+        logger.info(f"GateInspection effect created with {len(gate_inspection_effect['steps'])} steps over {gate_inspection_effect['duration']} seconds")
     async def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
