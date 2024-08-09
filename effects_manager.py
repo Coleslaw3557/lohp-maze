@@ -1452,7 +1452,7 @@ class EffectsManager:
                     "w_dimming": 0,
                     "total_strobe": 255,  # Steady strobe
                     "function_selection": 0,
-                    "function_speed": 255  # Maximum strobe speed
+                    "function_speed": 128  # Slower strobe speed
                 }
             })
         
