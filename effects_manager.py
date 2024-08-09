@@ -39,6 +39,7 @@ class EffectsManager:
         self.create_gate_inspection_effect()
         self.create_porto_standby_effect()
         self.create_porto_hit_effect()
+        self.create_deep_playa_bg_effect()
 
     def update_frequency(self, new_frequency):
         self.frequency = new_frequency
