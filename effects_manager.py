@@ -37,6 +37,7 @@ class EffectsManager:
         self.create_lightning_effect()
         self.create_police_lights_effect()
         self.create_gate_inspection_effect()
+        self.create_porto_standby_effect()
 
     def update_frequency(self, new_frequency):
         self.frequency = new_frequency
