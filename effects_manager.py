@@ -5,6 +5,7 @@ import threading
 import random
 import asyncio
 import math
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -24,21 +25,21 @@ class EffectsManager:
         self.theme_lock = threading.Lock()
         self.master_brightness = 1.0  # Initialize master brightness to 100%
         self.load_themes()
-        
-    def _significant_change(self, changes):
-        threshold = 25  # Adjust this value to change sensitivity
-        for _, fixture_id, new_values in changes:
-            old_values = self._last_values.get(fixture_id, [0]*8)
-            if any(abs(new - old) > threshold for new, old in zip(new_values, old_values)):
-                self._last_values[fixture_id] = new_values
-                return True
-        return False
+        self._last_values = {}
+        self._step_count = 0
         
         if self.interrupt_handler is None:
             logger.warning("InterruptHandler not provided. Some features may not work correctly.")
         else:
             logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
+        
+        # Initialize all effects
+        self.create_lightning_effect()
         self.create_police_lights_effect()
+        self.create_gate_inspection_effect()
+        self.create_porto_standby_effect()
+        self.create_porto_hit_effect()
+        self.create_deep_playa_bg_effect()
 
     def update_frequency(self, new_frequency):
         self.frequency = new_frequency
@@ -117,7 +118,7 @@ class EffectsManager:
             time.sleep(0.05)  # Small delay to prevent excessive CPU usage
         logger.info(f"Effect application completed for room '{room}'")
 
-    def apply_effect_to_room(self, room, effect_data):
+    async def apply_effect_to_room(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room, [])
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
@@ -131,21 +132,12 @@ class EffectsManager:
         # Mark this room as having an active effect
         self.room_effects[room] = True
         
-        # Gradually fade to black before applying the effect
-        self._fade_to_black(room, fixture_ids, duration=0.5)
-        
-        # Apply the effect to all fixtures in the room
-        for fixture_id in fixture_ids:
-            self._apply_effect_to_fixture_sync(fixture_id, effect_data)
+        # Apply the effect to all fixtures in the room concurrently
+        tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        await asyncio.gather(*tasks)
         
         log_messages.append(f"Effect applied to all fixtures in room '{room}'")
         logger.info(f"Effect application completed in room '{room}'")
-        
-        # Keep the effect running for its duration
-        time.sleep(effect_data['duration'])
-        
-        # Gradually fade back to the theme over 1 second
-        self._fade_to_theme(room, fixture_ids, duration=1.0)
         
         # Remove the active effect flag for this room
         self.room_effects.pop(room, None)
@@ -162,15 +154,35 @@ class EffectsManager:
                         self.dmx_state_manager.update_fixture(fixture_id, theme_values)
             time.sleep(1 / self.frequency)
 
-    def _fade_to_black(self, room, fixture_ids, duration):
+    async def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
             progress = (time.time() - start_time) / duration
+            tasks = []
             for fixture_id in fixture_ids:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 faded_values = [int(value * (1 - progress)) for value in current_values]
-                self.dmx_state_manager.update_fixture(fixture_id, faded_values)
-            time.sleep(1 / 44)  # 44Hz update rate
+                tasks.append(self._update_fixture(fixture_id, faded_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
+
+    async def _fade_to_theme(self, room, fixture_ids, duration):
+        start_time = time.time()
+        while time.time() - start_time < duration:
+            progress = (time.time() - start_time) / duration
+            tasks = []
+            for fixture_id in fixture_ids:
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                theme_values = self._generate_theme_values(room)
+                interpolated_values = [int(current + (theme - current) * progress)
+                                       for current, theme in zip(current_values, theme_values)]
+                tasks.append(self._update_fixture(fixture_id, interpolated_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
+
+    async def _update_fixture(self, fixture_id, values):
+        self.dmx_state_manager.update_fixture(fixture_id, values)
+        await asyncio.sleep(0)  # Yield control to allow other coroutines to run
 
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:
@@ -288,7 +300,22 @@ class EffectsManager:
         return None
 
     def get_all_effects(self):
-        return self.effects
+        all_effects = self.effects.copy()
+        for effect_name in ["Lightning", "Police Lights", "GateInspection", "GateGreeters", "WrongAnswer"]:
+            if effect_name not in all_effects or all_effects[effect_name] is None:
+                effect = self.get_effect(effect_name)
+                if effect:
+                    all_effects[effect_name] = effect
+                else:
+                    logger.warning(f"Effect '{effect_name}' is not properly initialized.")
+        return all_effects
+
+    def get_effects_list(self):
+        effects_list = {}
+        for effect_name, effect_data in self.get_all_effects().items():
+            description = effect_data.get('description', 'No description available')
+            effects_list[effect_name] = description
+        return effects_list
 
     def add_theme(self, theme_name, theme_data):
         theme_data['frequency'] = 40  # Fixed at 40 Hz
@@ -386,7 +413,7 @@ class EffectsManager:
     def get_effect(self, effect_name):
         return self.effects.get(effect_name)
 
-    def apply_effect_to_room(self, room, effect_data):
+    async def apply_effect_to_room(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room, [])
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
@@ -400,26 +427,29 @@ class EffectsManager:
         # Mark this room as having an active effect
         self.room_effects[room] = True
         
-        # Gradually fade to black before applying the effect
-        self._fade_to_black(room, fixture_ids, duration=0.5)
-        
-        # Apply the effect to all fixtures in the room
-        for fixture_id in fixture_ids:
-            self._apply_effect_to_fixture_sync(fixture_id, effect_data)
+        # Apply the effect to all fixtures in the room concurrently
+        tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        await asyncio.gather(*tasks)
         
         log_messages.append(f"Effect applied to all fixtures in room '{room}'")
         logger.info(f"Effect application completed in room '{room}'")
-        
-        # Keep the effect running for its duration
-        time.sleep(effect_data['duration'])
-        
-        # Gradually fade back to the theme over 1 second
-        self._fade_to_theme(room, fixture_ids, duration=1.0)
         
         # Remove the active effect flag for this room
         self.room_effects.pop(room, None)
         
         return True, log_messages
+
+    def _apply_effect_to_fixture_sync(self, fixture_id, effect_data):
+        try:
+            self.interrupt_handler.interrupt_fixture_sync(
+                fixture_id,
+                effect_data['duration'],
+                self._get_effect_step_values(effect_data)
+            )
+            logger.debug(f"Effect applied to fixture {fixture_id}")
+        except Exception as e:
+            error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
+            logger.error(error_msg)
 
     def _run_theme_with_transition(self, old_theme, new_theme):
         transition_duration = 2.0  # 2 seconds transition
@@ -752,33 +782,6 @@ class EffectsManager:
         return any(abs(new - old) > 25 for _, _, new_values in changes 
                    for new, old in zip(new_values, self._last_values.get(_, [0]*8)))
 
-    def create_cop_dodge_effect(self):
-        cop_dodge_effect = {
-            "duration": 10.0,
-            "steps": [
-                # Initial state (off)
-                {"time": 0.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
-                # Red flash
-                {"time": 0.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 0.3, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
-                # Blue flash
-                {"time": 0.4, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 0.6, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
-                # Repeat the pattern faster
-                {"time": 0.7, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 0.8, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
-                {"time": 0.9, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 1.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
-                # Continue the pattern...
-                {"time": 1.1, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0}},
-                {"time": 1.2, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
-                {"time": 1.3, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255}},
-                {"time": 1.4, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}},
-                # Final off state
-                {"time": 10.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0}}
-            ]
-        }
-        self.add_effect("Cop Dodge", cop_dodge_effect)
 
     def create_police_lights_effect(self):
         police_lights_effect = {
@@ -799,6 +802,7 @@ class EffectsManager:
     def create_lightning_effect(self):
         lightning_effect = {
             "duration": 2.0,
+            "description": "Simulates a lightning strike with bright flashes",
             "steps": [
                 {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
                 {"time": 0.1, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
@@ -811,31 +815,787 @@ class EffectsManager:
         self.add_effect("Lightning", lightning_effect)
         logger.debug(f"Created Lightning effect: {lightning_effect}")
         logger.info(f"Lightning effect created with {len(lightning_effect['steps'])} steps over {lightning_effect['duration']} seconds")
-    def _fade_to_black(self, room, fixture_ids, duration):
+
+    def create_police_lights_effect(self):
+        police_lights_effect = {
+            "duration": 15.0,
+            "description": "Alternating red and blue flashes simulating police lights",
+            "steps": []
+        }
+        for i in range(15):  # 15 cycles to fill 15 seconds
+            t = i * 1.0
+            police_lights_effect["steps"].extend([
+                {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": t + 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
+            ])
+        police_lights_effect["steps"].append({"time": 15.0, "channels": {"total_dimming": 0, "r_dimming": 0, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}})
+        self.add_effect("PoliceLights", police_lights_effect)
+        logger.debug(f"Created Police Lights effect: {police_lights_effect}")
+        logger.info(f"Police Lights effect created with {len(police_lights_effect['steps'])} steps over {police_lights_effect['duration']} seconds")
+
+    def create_gate_inspection_effect(self):
+        gate_inspection_effect = {
+            "duration": 6.0,
+            "description": "Bright white light for gate inspection, lasting 5 seconds",
+            "steps": [
+                {"time": 0.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 5.0, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 255, "b_dimming": 255, "w_dimming": 255, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
+                {"time": 6.0, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
+            ]
+        }
+        self.add_effect("GateInspection", gate_inspection_effect)
+        logger.debug(f"Created Gate Inspection effect: {gate_inspection_effect}")
+        logger.info(f"Gate Inspection effect created with {len(gate_inspection_effect['steps'])} steps over {gate_inspection_effect['duration']} seconds")
+
+    def create_gate_greeters_effect(self):
+        gate_greeters_effect = {
+            "duration": 15.0,
+            "description": "Welcoming effect with gentle color transitions and pulsing",
+            "steps": []
+        }
+        
+        colors = [
+            (255, 223, 0),   # Warm Yellow
+            (255, 105, 180), # Hot Pink
+            (0, 191, 255),   # Deep Sky Blue
+            (50, 205, 50),   # Lime Green
+            (255, 165, 0)    # Orange
+        ]
+        
+        step_duration = 0.5
+        for i in range(30):
+            color = colors[i % len(colors)]
+            brightness = 128 + int(64 * math.sin(i * 0.2))  # Gentle pulsing effect
+            gate_greeters_effect["steps"].append({
+                "time": i * step_duration,
+                "channels": {
+                    "total_dimming": brightness,
+                    "r_dimming": color[0],
+                    "g_dimming": color[1],
+                    "b_dimming": color[2],
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 128
+                }
+            })
+        
+        gate_greeters_effect["steps"].append({
+            "time": 15.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("GateGreeters", gate_greeters_effect)
+        logger.debug(f"Created Gate Greeters effect: {gate_greeters_effect}")
+        logger.info(f"Gate Greeters effect created with {len(gate_greeters_effect['steps'])} steps over {gate_greeters_effect['duration']} seconds")
+
+    def create_wrong_answer_effect(self):
+        wrong_answer_effect = {
+            "duration": 3.0,
+            "description": "Three quick red flashes to indicate a wrong answer",
+            "steps": []
+        }
+        
+        # Red flash
+        wrong_answer_effect["steps"].extend([
+            {
+                "time": 0.0,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 255,
+                    "g_dimming": 0,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            },
+            {
+                "time": 0.5,
+                "channels": {
+                    "total_dimming": 0,
+                    "r_dimming": 0,
+                    "g_dimming": 0,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            }
+        ])
+        
+        # Repeat the flash twice more
+        for i in range(2):
+            wrong_answer_effect["steps"].extend([
+                {
+                    "time": 1.0 + i * 1.0,
+                    "channels": {
+                        "total_dimming": 255,
+                        "r_dimming": 255,
+                        "g_dimming": 0,
+                        "b_dimming": 0,
+                        "w_dimming": 0,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                },
+                {
+                    "time": 1.5 + i * 1.0,
+                    "channels": {
+                        "total_dimming": 0,
+                        "r_dimming": 0,
+                        "g_dimming": 0,
+                        "b_dimming": 0,
+                        "w_dimming": 0,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                }
+            ])
+        
+        self.add_effect("WrongAnswer", wrong_answer_effect)
+        logger.debug(f"Created Wrong Answer effect: {wrong_answer_effect}")
+        logger.info(f"Wrong Answer effect created with {len(wrong_answer_effect['steps'])} steps over {wrong_answer_effect['duration']} seconds")
+
+    def create_entrance_effect(self):
+        entrance_effect = {
+            "duration": 10.0,
+            "description": "Green light ramp up and hold for Entrance",
+            "steps": []
+        }
+        
+        # Ramp up green light over 5 seconds
+        for i in range(51):  # 0 to 255 in 50 steps
+            entrance_effect["steps"].append({
+                "time": i * 0.1,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 0,
+                    "g_dimming": i * 5,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Hold at max brightness for 5 seconds
+        entrance_effect["steps"].append({
+            "time": 10.0,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 0,
+                "g_dimming": 255,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("Entrance", entrance_effect)
+        logger.debug(f"Created Entrance effect: {entrance_effect}")
+        logger.info(f"Entrance effect created with {len(entrance_effect['steps'])} steps over {entrance_effect['duration']} seconds")
+
+    def create_guy_line_climb_effect(self):
+        guy_line_climb_effect = {
+            "duration": 15.0,
+            "description": "Simulates climbing with a vaporwave color scheme",
+            "steps": []
+        }
+        
+        # Generate 150 steps for smooth transitions (10 steps per second)
+        for i in range(150):
+            t = i * 0.1
+            # Oscillate between vaporwave colors (pink, cyan, purple)
+            red = int(127 + 127 * math.sin(t * 1.5))
+            green = int(127 + 127 * math.sin(t * 1.5 + 2*math.pi/3))
+            blue = int(127 + 127 * math.sin(t * 1.5 + 4*math.pi/3))
+            
+            guy_line_climb_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": red,
+                    "g_dimming": green,
+                    "b_dimming": blue,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Add final step to turn off lights
+        guy_line_climb_effect["steps"].append({
+            "time": 15.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("GuyLineClimb", guy_line_climb_effect)
+        logger.debug(f"Created Guy Line Climb effect: {guy_line_climb_effect}")
+        logger.info(f"Guy Line Climb effect created with {len(guy_line_climb_effect['steps'])} steps over {guy_line_climb_effect['duration']} seconds")
+
+    def create_spark_pony_effect(self):
+        spark_pony_effect = {
+            "duration": 20.0,
+            "description": "My Little Pony inspired colors with dynamic sparkles",
+            "steps": []
+        }
+        
+        # My Little Pony inspired colors
+        pony_colors = [
+            (255, 128, 180),  # Pink
+            (130, 200, 255),  # Light Blue
+            (255, 200, 100),  # Light Orange
+            (200, 255, 150),  # Light Green
+            (230, 150, 255),  # Lavender
+            (255, 255, 150)   # Light Yellow
+        ]
+        
+        # Generate 200 steps for smooth transitions (10 steps per second)
+        for i in range(200):
+            t = i * 0.1
+            
+            # Blend between two colors
+            color_index = int(t / 4) % len(pony_colors)
+            next_color_index = (color_index + 1) % len(pony_colors)
+            blend_factor = (t % 4) / 4
+            
+            color1 = pony_colors[color_index]
+            color2 = pony_colors[next_color_index]
+            
+            red = int(color1[0] * (1 - blend_factor) + color2[0] * blend_factor)
+            green = int(color1[1] * (1 - blend_factor) + color2[1] * blend_factor)
+            blue = int(color1[2] * (1 - blend_factor) + color2[2] * blend_factor)
+            
+            # Add dynamic sparkles
+            white = 0
+            if random.random() < 0.15:  # Increased to 15% chance of sparkle
+                sparkle_intensity = int((math.sin(t * 30) + 1) * 127.5)  # Faster oscillating sparkle intensity
+                white = random.randint(sparkle_intensity, 255)
+                
+                # Add occasional extra bright sparkles
+                if random.random() < 0.3:  # 30% chance of extra bright sparkle
+                    white = 255
+            
+            spark_pony_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": red,
+                    "g_dimming": green,
+                    "b_dimming": blue,
+                    "w_dimming": white,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Add final step to turn off lights
+        spark_pony_effect["steps"].append({
+            "time": 20.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("SparkPony", spark_pony_effect)
+        logger.debug(f"Created Spark Pony effect: {spark_pony_effect}")
+        logger.info(f"Spark Pony effect created with {len(spark_pony_effect['steps'])} steps over {spark_pony_effect['duration']} seconds")
+
+    def create_porto_standby_effect(self):
+        porto_standby_effect = {
+            "duration": 20.0,
+            "description": "Dim blue light ramping up, followed by red heartbeat",
+            "steps": []
+        }
+        
+        # Ramp up blue light over 7 seconds
+        for i in range(71):  # 0 to 70 steps (0 to 7 seconds)
+            t = i * 0.1
+            blue_value = int((i / 70) * 127)  # Ramp up to 50% of max brightness (127)
+            porto_standby_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 0,
+                    "g_dimming": 0,
+                    "b_dimming": blue_value,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Heartbeat effect from 7 to 20 seconds
+        heartbeat_duration = 1.0  # 1 second per heartbeat
+        for i in range(71, 200):  # 7.1 to 20 seconds
+            t = i * 0.1
+            phase = ((t - 7) % heartbeat_duration) / heartbeat_duration
+            if phase < 0.1:  # Quick rise
+                red_value = int(191 * (phase / 0.1))
+            elif phase < 0.4:  # Quick fall
+                red_value = int(191 * (1 - (phase - 0.1) / 0.3))
+            else:  # Rest
+                red_value = 0
+            
+            porto_standby_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": red_value,
+                    "g_dimming": 0,
+                    "b_dimming": 127,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Final step to turn off lights
+        porto_standby_effect["steps"].append({
+            "time": 20.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("PortoStandBy", porto_standby_effect)
+        logger.debug(f"Created Porto StandBy effect: {porto_standby_effect}")
+        logger.info(f"Porto StandBy effect created with {len(porto_standby_effect['steps'])} steps over {porto_standby_effect['duration']} seconds")
+
+    def create_porto_hit_effect(self):
+        porto_hit_effect = {
+            "duration": 15.0,
+            "description": "Green light blinking 5 times, then staying lit for 5 seconds, followed by red",
+            "steps": []
+        }
+        
+        # Green light blinking 5 times
+        for i in range(5):
+            t = i * 0.5
+            # Green on
+            porto_hit_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 0,
+                    "g_dimming": 255,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+            # Green off
+            porto_hit_effect["steps"].append({
+                "time": t + 0.25,
+                "channels": {
+                    "total_dimming": 0,
+                    "r_dimming": 0,
+                    "g_dimming": 0,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Green light staying on for 5 seconds
+        porto_hit_effect["steps"].append({
+            "time": 2.5,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 0,
+                "g_dimming": 255,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        # Switch to red at 7.5 seconds
+        porto_hit_effect["steps"].append({
+            "time": 7.5,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 255,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        # Final step to keep red on until the end
+        porto_hit_effect["steps"].append({
+            "time": 15.0,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 255,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("PortoHit", porto_hit_effect)
+        logger.debug(f"Created Porto Hit effect: {porto_hit_effect}")
+        logger.info(f"Porto Hit effect created with {len(porto_hit_effect['steps'])} steps over {porto_hit_effect['duration']} seconds")
+
+    def create_porto_hit_effect(self):
+        porto_hit_effect = {
+            "duration": 15.0,
+            "description": "Green light blinking 5 times, then staying lit for 5 seconds, followed by red",
+            "steps": []
+        }
+        
+        # Green light blinking 5 times
+        for i in range(5):
+            t = i * 0.5
+            # Green on
+            porto_hit_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 0,
+                    "g_dimming": 255,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+            # Green off
+            porto_hit_effect["steps"].append({
+                "time": t + 0.25,
+                "channels": {
+                    "total_dimming": 0,
+                    "r_dimming": 0,
+                    "g_dimming": 0,
+                    "b_dimming": 0,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Green light staying on for 5 seconds
+        porto_hit_effect["steps"].append({
+            "time": 2.5,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 0,
+                "g_dimming": 255,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        # Switch to red at 7.5 seconds
+        porto_hit_effect["steps"].append({
+            "time": 7.5,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 255,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        # Final step to keep red on until the end
+        porto_hit_effect["steps"].append({
+            "time": 15.0,
+            "channels": {
+                "total_dimming": 255,
+                "r_dimming": 255,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("PortoHit", porto_hit_effect)
+        logger.debug(f"Created Porto Hit effect: {porto_hit_effect}")
+        logger.info(f"Porto Hit effect created with {len(porto_hit_effect['steps'])} steps over {porto_hit_effect['duration']} seconds")
+
+    def create_cuddle_puddle_effect(self):
+        cuddle_puddle_effect = {
+            "duration": 60.0,
+            "description": "Intense Pink Heart Burning Man camp Cuddle Puddle simulation with fast transitions between Pink and Red",
+            "steps": []
+        }
+        
+        # Generate 1200 steps for faster transitions (20 steps per second)
+        for i in range(1200):
+            t = i * 0.05
+            # Use sine waves for smooth transitions between Pink and Red
+            red = int(200 + 55 * math.sin(t * 0.5))  # Red oscillates between 145 and 255
+            pink = int(255 + 0 * math.sin(t * 0.7))  # Pink stays at 255 for maximum intensity
+            
+            cuddle_puddle_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": red,
+                    "g_dimming": int(pink * 0.15),  # Slight green to make pink more vibrant
+                    "b_dimming": int(pink * 0.25),  # Slight blue to make pink more vibrant
+                    "w_dimming": 0,  # No white component
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Final step to fade out
+        cuddle_puddle_effect["steps"].append({
+            "time": 60.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("CuddlePuddle", cuddle_puddle_effect)
+        logger.debug(f"Created Cuddle Puddle effect: {cuddle_puddle_effect}")
+        logger.info(f"Cuddle Puddle effect created with {len(cuddle_puddle_effect['steps'])} steps over {cuddle_puddle_effect['duration']} seconds")
+
+    def create_photobomb_bg_effect(self):
+        photobomb_bg_effect = {
+            "duration": 20.0,
+            "description": "Rainbow dance party with steady strobe like at the Disco",
+            "steps": []
+        }
+        
+        # Generate 400 steps for smooth transitions (20 steps per second)
+        for i in range(400):
+            t = i * 0.05
+            # Use sine waves for smooth color transitions
+            hue = (math.sin(t * 0.2) + 1) / 2  # Oscillate hue between 0 and 1
+            r, g, b = self._hsv_to_rgb(hue, 1, 1)
+            
+            photobomb_bg_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": int(r * 255),
+                    "g_dimming": int(g * 255),
+                    "b_dimming": int(b * 255),
+                    "w_dimming": 0,
+                    "total_strobe": 0,  # Remove strobe effect
+                    "function_selection": 0,
+                    "function_speed": 0  # Set function speed to 0
+                }
+            })
+        
+        # Final step to fade out
+        photobomb_bg_effect["steps"].append({
+            "time": 20.0,  # Change to 20.0 to match the duration
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("PhotoBomb-BG", photobomb_bg_effect)
+        logger.debug(f"Created PhotoBomb-BG effect: {photobomb_bg_effect}")
+        logger.info(f"PhotoBomb-BG effect created with {len(photobomb_bg_effect['steps'])} steps over {photobomb_bg_effect['duration']} seconds")
+
+    def create_photobomb_spot_effect(self):
+        photobomb_spot_effect = {
+            "duration": 5.0,
+            "description": "White light at full brightness for 5 seconds",
+            "steps": [
+                {
+                    "time": 0.0,
+                    "channels": {
+                        "total_dimming": 255,
+                        "r_dimming": 255,
+                        "g_dimming": 255,
+                        "b_dimming": 255,
+                        "w_dimming": 255,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                },
+                {
+                    "time": 5.0,
+                    "channels": {
+                        "total_dimming": 255,
+                        "r_dimming": 255,
+                        "g_dimming": 255,
+                        "b_dimming": 255,
+                        "w_dimming": 255,
+                        "total_strobe": 0,
+                        "function_selection": 0,
+                        "function_speed": 0
+                    }
+                }
+            ]
+        }
+        
+        self.add_effect("PhotoBomb-Spot", photobomb_spot_effect)
+        logger.debug(f"Created PhotoBomb-Spot effect: {photobomb_spot_effect}")
+        logger.info(f"PhotoBomb-Spot effect created with {len(photobomb_spot_effect['steps'])} steps over {photobomb_spot_effect['duration']} seconds")
+
+    def create_deep_playa_bg_effect(self):
+        deep_playa_bg_effect = {
+            "duration": 60.0,
+            "description": "Slowly morphing background light simulating distant illumination in the deep playa",
+            "steps": []
+        }
+        
+        num_steps = 600  # 10 steps per second for smooth transitions
+        for i in range(num_steps):
+            t = i * 0.1
+            # Use sine waves for smooth color and brightness transitions
+            hue = (math.sin(t * 0.05) + 1) / 2  # Slowly changing hue
+            saturation = 0.7 + 0.3 * math.sin(t * 0.03)  # Varying saturation
+            brightness = 0.3 + 0.2 * math.sin(t * 0.02)  # Slowly fluctuating brightness
+            
+            r, g, b = self._hsv_to_rgb(hue, saturation, brightness)
+            
+            deep_playa_bg_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": int(brightness * 255),
+                    "r_dimming": int(r * 255),
+                    "g_dimming": int(g * 255),
+                    "b_dimming": int(b * 255),
+                    "w_dimming": int(brightness * 64),  # Slight white glow
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        self.add_effect("DeepPlaya-BG", deep_playa_bg_effect)
+        logger.debug(f"Created DeepPlaya-BG effect: {deep_playa_bg_effect}")
+        logger.info(f"DeepPlaya-BG effect created with {len(deep_playa_bg_effect['steps'])} steps over {deep_playa_bg_effect['duration']} seconds")
+
+    def apply_effect_to_all_rooms(self, effect_name):
+        effect_data = self.get_effect(effect_name)
+        if not effect_data:
+            logger.error(f"{effect_name} effect not found")
+            return False, f"{effect_name} effect not found"
+
+        room_layout = self.light_config_manager.get_room_layout()
+        
+        async def apply_effect():
+            tasks = []
+            for room in room_layout.keys():
+                tasks.append(self.apply_effect_to_room(room, effect_data))
+            await asyncio.gather(*tasks)
+
+        asyncio.run(apply_effect())
+        
+        logger.info(f"{effect_name} effect triggered in all rooms")
+        return True, f"{effect_name} effect triggered in all rooms"
+    async def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
             progress = (time.time() - start_time) / duration
+            tasks = []
             for fixture_id in fixture_ids:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 faded_values = [int(value * (1 - progress)) for value in current_values]
-                self.dmx_state_manager.update_fixture(fixture_id, faded_values)
-            time.sleep(1 / self.frequency)
+                tasks.append(self._update_fixture(fixture_id, faded_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
 
-    def _fade_to_theme(self, room, fixture_ids, duration):
+    async def _fade_to_theme(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
             progress = (time.time() - start_time) / duration
+            tasks = []
             for fixture_id in fixture_ids:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 theme_values = self._generate_theme_values(room)
                 interpolated_values = [int(current + (theme - current) * progress)
                                        for current, theme in zip(current_values, theme_values)]
-                self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
-            time.sleep(1 / self.frequency)
+                tasks.append(self._update_fixture(fixture_id, interpolated_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
 
-    def _apply_effect_to_fixture_sync(self, fixture_id, effect_data):
+    async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:
-            self.interrupt_handler.interrupt_fixture_sync(
+            await self.interrupt_handler.interrupt_fixture(
                 fixture_id,
                 effect_data['duration'],
                 self._get_effect_step_values(effect_data)
@@ -844,6 +1604,10 @@ class EffectsManager:
         except Exception as e:
             error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
             logger.error(error_msg)
+
+    async def _update_fixture(self, fixture_id, values):
+        self.dmx_state_manager.update_fixture(fixture_id, values)
+        await asyncio.sleep(0)  # Yield control to allow other coroutines to run
     def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
@@ -854,17 +1618,19 @@ class EffectsManager:
                 self.dmx_state_manager.update_fixture(fixture_id, faded_values)
             time.sleep(1 / 44)  # 44Hz update rate
 
-    def _fade_to_theme(self, room, fixture_ids, duration):
+    async def _fade_to_theme(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
             progress = (time.time() - start_time) / duration
+            tasks = []
             for fixture_id in fixture_ids:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 theme_values = self._generate_theme_values(room)
                 interpolated_values = [int(current + (theme - current) * progress)
                                        for current, theme in zip(current_values, theme_values)]
-                self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
-            time.sleep(1 / self.frequency)  # Use the instance attribute 'frequency'
+                tasks.append(self._update_fixture(fixture_id, interpolated_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
 
     def _generate_theme_values(self, room):
         # This method should generate the current theme values for the room

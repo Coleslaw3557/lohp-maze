@@ -1,7 +1,9 @@
 import os
 import logging
 import json
+import asyncio
 from flask import Flask, request, jsonify, abort
+from flask_cors import CORS
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
@@ -21,7 +23,12 @@ logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+CORS(app)
 app.secret_key = SECRET_KEY
+
+# Create an event loop
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
 
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
@@ -75,7 +82,7 @@ def run_effect():
     if not effect_data:
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
+    success, log_messages = asyncio.run(effects_manager.apply_effect_to_room(room, effect_data))
     
     if success:
         return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}', 'log_messages': log_messages})
@@ -87,10 +94,15 @@ def get_rooms():
     rooms = light_config.get_room_layout()
     return jsonify(rooms)
 
-@app.route('/api/effects', methods=['GET'])
-def get_effects():
+@app.route('/api/effects_details', methods=['GET'])
+def get_effects_details():
     effects = effects_manager.get_all_effects()
     return jsonify(effects)
+
+@app.route('/api/effects_list', methods=['GET'])
+def get_effects_list():
+    effects_list = effects_manager.get_effects_list()
+    return jsonify(effects_list)
 
 @app.route('/api/themes', methods=['GET'])
 def get_themes():
@@ -167,25 +179,34 @@ def stop_test():
         logger.exception("Error stopping test")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/trigger_lightning', methods=['POST'])
-def trigger_lightning():
+@app.route('/api/run_effect_all_rooms', methods=['POST'])
+def run_effect_all_rooms():
+    effect_name = request.json.get('effect_name')
+    if not effect_name:
+        return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
+
     try:
-        room_layout = light_config.get_room_layout()
-        for room in room_layout.keys():
-            effect_data = effects_manager.get_effect("Lightning")
-            if effect_data:
-                success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
-                if not success:
-                    logger.warning(f"Failed to apply lightning effect to room {room}")
-            else:
-                logger.error("Lightning effect not found")
-                return jsonify({"error": "Lightning effect not found"}), 404
-        return jsonify({"message": "Lightning effect triggered"}), 200
+        success, message = effects_manager.apply_effect_to_all_rooms(effect_name)
+        if success:
+            return jsonify({"message": f"{effect_name} effect triggered in all rooms"}), 200
+        else:
+            return jsonify({"error": message}), 400
     except Exception as e:
-        logger.exception("Error triggering lightning effect")
+        logger.exception(f"Error triggering {effect_name} effect in all rooms")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Create the lightning effect
+    # Create effects
     effects_manager.create_lightning_effect()
-    app.run(host='0.0.0.0', port=5000, debug=DEBUG, threaded=True)
+    effects_manager.create_police_lights_effect()
+    effects_manager.create_gate_inspection_effect()
+    effects_manager.create_gate_greeters_effect()
+    effects_manager.create_wrong_answer_effect()
+    effects_manager.create_entrance_effect()
+    effects_manager.create_guy_line_climb_effect()
+    effects_manager.create_spark_pony_effect()
+    effects_manager.create_porto_hit_effect()
+    effects_manager.create_cuddle_puddle_effect()
+    effects_manager.create_photobomb_bg_effect()
+    effects_manager.create_photobomb_spot_effect()
+    app.run(host='0.0.0.0', port=5000, debug=DEBUG)

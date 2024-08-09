@@ -14,6 +14,7 @@ The system consists of several key components:
 4. **Effects Manager**: Controls the creation and execution of lighting effects and themes.
 5. **Interrupt Handler**: Manages interruptions for specific fixtures and coordinates transitions.
 6. **DMX State Manager**: Maintains the current state of all DMX channels and provides thread-safe access.
+7. **Sequence Runner**: Runs sequences of lighting changes.
 
 ### Hardware Setup
 
@@ -61,18 +62,26 @@ Handles the creation, storage, and execution of lighting effects and themes:
 - Supports complex, multi-room lighting sequences
 - Integrates with the Interrupt Handler for seamless effect transitions
 - Implements master brightness control
+- Supports both asynchronous and synchronous effect execution
 
 ### 5. Interrupt Handler (`interrupt_handler.py`)
 
 Manages interruptions for specific fixtures:
 - Coordinates transitions between main sequence and interrupted states
 - Allows for precise control of individual fixtures during effects
+- Supports both asynchronous and synchronous interruption methods
 
 ### 6. DMX State Manager (`dmx_state_manager.py`)
 
 Maintains the current state of all DMX channels:
 - Provides thread-safe access to channel values
 - Implements locking mechanism to prevent race conditions
+
+### 7. Sequence Runner (`sequence_runner.py`)
+
+Runs sequences of lighting changes:
+- Executes the main lighting sequence (slow morphing color changes)
+- Runs in a separate thread to allow for non-blocking operation
 
 ## Key Files
 
@@ -82,6 +91,7 @@ Maintains the current state of all DMX channels:
 - `effects_manager.py`: Effect and theme management
 - `interrupt_handler.py`: Manages fixture interruptions
 - `dmx_state_manager.py`: Maintains DMX channel states
+- `sequence_runner.py`: Runs lighting sequences
 - `light_config.json`: Configuration file for light models and room layouts
 
 ## Setup and Installation
@@ -95,9 +105,10 @@ Maintains the current state of all DMX channels:
 Access the API endpoints at `http://localhost:5000`
 
 Key functionalities:
-- Effects: Create and trigger lighting effects
+- Effects: Create and trigger lighting effects (both asynchronously and synchronously)
 - Themes: Set and control overarching lighting themes
 - Test Mode: Real-time testing of individual fixtures and effects
+- Synchronous Effect Execution: Run effects in a blocking manner for precise timing control
 
 ### API Examples
 
@@ -118,6 +129,10 @@ cat api-examples.md
 
 For the most up-to-date API documentation, always refer to the `api-examples.md` file.
 
+### Adding New Effects
+
+For instructions on how to add new effects to the system, please refer to the `adding_new_effects.md` file. This document provides a step-by-step guide on creating and integrating new lighting effects into the LoHP-MazeManager Control System.
+
 ### Docker Usage
 
 To run the application using Docker:
@@ -137,6 +152,40 @@ This will start the application and make it accessible at `http://localhost:5000
 - The system uses a fixed 44Hz update rate for DMX communication to ensure smooth transitions and effects.
 - Thread-safe operations are implemented throughout to handle concurrent access to the DMX interface and state management.
 - The Effects Manager uses a sophisticated algorithm to generate dynamic themes based on parameters like color variation, intensity fluctuation, and overall brightness.
-- The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence.
+- The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence, supporting both asynchronous and synchronous interruption methods.
 - Error handling and logging are implemented at multiple levels for robust operation and debugging.
 - Master brightness control affects all lighting outputs, allowing for global intensity adjustment without altering individual effect or theme designs.
+
+## API Endpoints
+
+- `GET /api/rooms`: Get all configured rooms
+- `GET /api/effects_details`: Get detailed information about all available effects
+- `GET /api/effects_list`: Get a simple list of all available effects
+- `GET /api/themes`: Get all available themes
+- `GET /api/light_models`: Get all configured light models
+- `POST /api/set_theme`: Set the current theme
+- `POST /api/run_effect`: Run an effect in a specific room
+- `POST /api/set_master_brightness`: Set the master brightness
+- `POST /api/run_test`: Run a channel or effect test
+- `POST /api/stop_test`: Stop the current test and reset lights
+- `POST /api/run_effect_all_rooms`: Run an effect in all rooms
+
+For detailed API usage, refer to the `api-examples.md` file.
+
+## Testing
+
+1. Use the `test_api.py` script to run automated tests:
+   ```
+   python test_api.py
+   ```
+
+2. Use the web interface (if available) to manually test effects and themes.
+
+## Troubleshooting
+
+- Check the logs for detailed error messages.
+- Ensure the FTDI device is properly connected and recognized by the system.
+- Verify that the DMX addresses in `light_config.json` match your physical setup.
+- If effects are not working as expected, double-check the effect definitions in the `EffectsManager`.
+
+For more detailed information about the system design, refer to `dmx-controller-design-spec.md` and `dmx-controller-design-spec-additional-info.md`.
