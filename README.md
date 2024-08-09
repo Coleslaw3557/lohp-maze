@@ -129,6 +129,10 @@ cat api-examples.md
 
 For the most up-to-date API documentation, always refer to the `api-examples.md` file.
 
+### Adding New Effects
+
+For instructions on how to add new effects to the system, please refer to the `adding_new_effects.md` file. This document provides a step-by-step guide on creating and integrating new lighting effects into the LoHP-MazeManager Control System.
+
 ### Docker Usage
 
 To run the application using Docker:
