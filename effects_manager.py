@@ -5,6 +5,7 @@ import threading
 import random
 import asyncio
 import math
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ class EffectsManager:
             time.sleep(0.05)  # Small delay to prevent excessive CPU usage
         logger.info(f"Effect application completed for room '{room}'")
 
-    def apply_effect_to_room(self, room, effect_data):
+    async def apply_effect_to_room(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room, [])
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
@@ -132,20 +133,20 @@ class EffectsManager:
         self.room_effects[room] = True
         
         # Gradually fade to black before applying the effect
-        self._fade_to_black(room, fixture_ids, duration=0.5)
+        await self._fade_to_black(room, fixture_ids, duration=0.5)
         
-        # Apply the effect to all fixtures in the room
-        for fixture_id in fixture_ids:
-            self._apply_effect_to_fixture_sync(fixture_id, effect_data)
+        # Apply the effect to all fixtures in the room concurrently
+        tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        await asyncio.gather(*tasks)
         
         log_messages.append(f"Effect applied to all fixtures in room '{room}'")
         logger.info(f"Effect application completed in room '{room}'")
         
         # Keep the effect running for its duration
-        time.sleep(effect_data['duration'])
+        await asyncio.sleep(effect_data['duration'])
         
         # Gradually fade back to the theme over 1 second
-        self._fade_to_theme(room, fixture_ids, duration=1.0)
+        await self._fade_to_theme(room, fixture_ids, duration=1.0)
         
         # Remove the active effect flag for this room
         self.room_effects.pop(room, None)
@@ -811,31 +812,35 @@ class EffectsManager:
         self.add_effect("Lightning", lightning_effect)
         logger.debug(f"Created Lightning effect: {lightning_effect}")
         logger.info(f"Lightning effect created with {len(lightning_effect['steps'])} steps over {lightning_effect['duration']} seconds")
-    def _fade_to_black(self, room, fixture_ids, duration):
+    async def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
             progress = (time.time() - start_time) / duration
+            tasks = []
             for fixture_id in fixture_ids:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 faded_values = [int(value * (1 - progress)) for value in current_values]
-                self.dmx_state_manager.update_fixture(fixture_id, faded_values)
-            time.sleep(1 / self.frequency)
+                tasks.append(self._update_fixture(fixture_id, faded_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
 
-    def _fade_to_theme(self, room, fixture_ids, duration):
+    async def _fade_to_theme(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
             progress = (time.time() - start_time) / duration
+            tasks = []
             for fixture_id in fixture_ids:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 theme_values = self._generate_theme_values(room)
                 interpolated_values = [int(current + (theme - current) * progress)
                                        for current, theme in zip(current_values, theme_values)]
-                self.dmx_state_manager.update_fixture(fixture_id, interpolated_values)
-            time.sleep(1 / self.frequency)
+                tasks.append(self._update_fixture(fixture_id, interpolated_values))
+            await asyncio.gather(*tasks)
+            await asyncio.sleep(1 / self.frequency)
 
-    def _apply_effect_to_fixture_sync(self, fixture_id, effect_data):
+    async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:
-            self.interrupt_handler.interrupt_fixture_sync(
+            await self.interrupt_handler.interrupt_fixture(
                 fixture_id,
                 effect_data['duration'],
                 self._get_effect_step_values(effect_data)
@@ -844,6 +849,9 @@ class EffectsManager:
         except Exception as e:
             error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
             logger.error(error_msg)
+
+    async def _update_fixture(self, fixture_id, values):
+        self.dmx_state_manager.update_fixture(fixture_id, values)
     def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
