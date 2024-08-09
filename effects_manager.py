@@ -795,6 +795,7 @@ class EffectsManager:
         self.add_effect("SparkPony", create_spark_pony_effect())
         self.add_effect("SparkPony", create_spark_pony_effect())
         self.add_effect("PortoStandBy", create_porto_standby_effect())
+        self.add_effect("PortoStandBy", create_porto_standby_effect())
         self.add_effect("PortoHit", create_porto_hit_effect())
         self.add_effect("CuddlePuddle", create_cuddle_puddle_effect())
         self.add_effect("PhotoBomb-BG", create_photobomb_bg_effect())
