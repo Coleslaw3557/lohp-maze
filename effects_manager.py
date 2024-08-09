@@ -1381,6 +1381,54 @@ class EffectsManager:
         logger.debug(f"Created Porto Hit effect: {porto_hit_effect}")
         logger.info(f"Porto Hit effect created with {len(porto_hit_effect['steps'])} steps over {porto_hit_effect['duration']} seconds")
 
+    def create_cuddle_puddle_effect(self):
+        cuddle_puddle_effect = {
+            "duration": 60.0,
+            "description": "Smooth love theme with emphasis on red and pink, rolling transitions for a chillout space",
+            "steps": []
+        }
+        
+        # Generate 600 steps for smooth transitions (10 steps per second)
+        for i in range(600):
+            t = i * 0.1
+            # Use sine waves for smooth transitions
+            red = int(128 + 127 * math.sin(t * 0.1))
+            pink = int(200 + 55 * math.sin(t * 0.15))
+            blue = int(64 + 63 * math.sin(t * 0.05))  # Subtle blue for depth
+            
+            cuddle_puddle_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": red,
+                    "g_dimming": 0,  # No green to keep the pink/red emphasis
+                    "b_dimming": blue,
+                    "w_dimming": pink,  # Using white channel for pink
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Final step to fade out
+        cuddle_puddle_effect["steps"].append({
+            "time": 60.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("CuddlePuddle", cuddle_puddle_effect)
+        logger.debug(f"Created Cuddle Puddle effect: {cuddle_puddle_effect}")
+        logger.info(f"Cuddle Puddle effect created with {len(cuddle_puddle_effect['steps'])} steps over {cuddle_puddle_effect['duration']} seconds")
+
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
         if not effect_data:
