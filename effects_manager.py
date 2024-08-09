@@ -861,40 +861,38 @@ class EffectsManager:
 
     def create_gate_greeters_effect(self):
         gate_greeters_effect = {
-            "duration": 10.0,
+            "duration": 15.0,
             "steps": []
         }
         
         colors = [
-            (255, 0, 0),    # Red
-            (255, 127, 0),  # Orange
-            (255, 255, 0),  # Yellow
-            (0, 255, 0),    # Green
-            (0, 0, 255),    # Blue
-            (75, 0, 130),   # Indigo
-            (143, 0, 255)   # Violet
+            (255, 223, 0),   # Warm Yellow
+            (255, 105, 180), # Hot Pink
+            (0, 191, 255),   # Deep Sky Blue
+            (50, 205, 50),   # Lime Green
+            (255, 165, 0)    # Orange
         ]
         
-        step_duration = 0.2
-        for i in range(50):
+        step_duration = 0.5
+        for i in range(30):
             color = colors[i % len(colors)]
-            strobe = 255 if i % 2 == 0 else 0
+            brightness = 128 + int(64 * math.sin(i * 0.2))  # Gentle pulsing effect
             gate_greeters_effect["steps"].append({
                 "time": i * step_duration,
                 "channels": {
-                    "total_dimming": 255,
+                    "total_dimming": brightness,
                     "r_dimming": color[0],
                     "g_dimming": color[1],
                     "b_dimming": color[2],
                     "w_dimming": 0,
-                    "total_strobe": strobe,
+                    "total_strobe": 0,
                     "function_selection": 0,
-                    "function_speed": 255
+                    "function_speed": 128
                 }
             })
         
         gate_greeters_effect["steps"].append({
-            "time": 10.0,
+            "time": 15.0,
             "channels": {
                 "total_dimming": 0,
                 "r_dimming": 0,
