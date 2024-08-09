@@ -4,7 +4,6 @@ import json
 import asyncio
 from flask import Flask, request, jsonify, abort
 from flask_cors import CORS
-import asyncio
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
@@ -72,7 +71,7 @@ def set_theme():
         return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
 
 @app.route('/api/run_effect', methods=['POST'])
-async def run_effect():
+def run_effect():
     room = request.json.get('room')
     effect_name = request.json.get('effect_name')
     
@@ -83,7 +82,7 @@ async def run_effect():
     if not effect_data:
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    success, log_messages = await effects_manager.apply_effect_to_room(room, effect_data)
+    success, log_messages = asyncio.run(effects_manager.apply_effect_to_room(room, effect_data))
     
     if success:
         return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}', 'log_messages': log_messages})
@@ -176,7 +175,7 @@ def stop_test():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/trigger_lightning', methods=['POST'])
-async def trigger_lightning():
+def trigger_lightning():
     try:
         room_layout = light_config.get_room_layout()
         effect_data = effects_manager.get_effect("Lightning")
@@ -184,11 +183,13 @@ async def trigger_lightning():
             logger.error("Lightning effect not found")
             return jsonify({"error": "Lightning effect not found"}), 404
         
-        tasks = []
-        for room in room_layout.keys():
-            tasks.append(effects_manager.apply_effect_to_room(room, effect_data))
+        async def apply_lightning():
+            tasks = []
+            for room in room_layout.keys():
+                tasks.append(effects_manager.apply_effect_to_room(room, effect_data))
+            return await asyncio.gather(*tasks)
         
-        results = await asyncio.gather(*tasks)
+        results = asyncio.run(apply_lightning())
         
         if all(success for success, _ in results):
             return jsonify({"message": "Lightning effect triggered in all rooms"}), 200
