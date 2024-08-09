@@ -789,6 +789,7 @@ class EffectsManager:
         self.add_effect("CorrectAnswer", create_correct_answer_effect())
         self.add_effect("CorrectAnswer", create_correct_answer_effect())
         self.add_effect("Entrance", create_entrance_effect())
+        self.add_effect("Entrance", create_entrance_effect())
         self.add_effect("GuyLineClimb", create_guy_line_climb_effect())
         self.add_effect("SparkPony", create_spark_pony_effect())
         self.add_effect("PortoStandBy", create_porto_standby_effect())
