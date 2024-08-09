@@ -1133,6 +1133,76 @@ class EffectsManager:
         logger.debug(f"Created Spark Pony effect: {spark_pony_effect}")
         logger.info(f"Spark Pony effect created with {len(spark_pony_effect['steps'])} steps over {spark_pony_effect['duration']} seconds")
 
+    def create_porto_standby_effect(self):
+        porto_standby_effect = {
+            "duration": 20.0,
+            "description": "Dim blue light ramping up, followed by red heartbeat",
+            "steps": []
+        }
+        
+        # Ramp up blue light over 7 seconds
+        for i in range(71):  # 0 to 70 steps (0 to 7 seconds)
+            t = i * 0.1
+            blue_value = int((i / 70) * 127)  # Ramp up to 50% of max brightness (127)
+            porto_standby_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": 0,
+                    "g_dimming": 0,
+                    "b_dimming": blue_value,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Heartbeat effect from 7 to 20 seconds
+        heartbeat_duration = 1.0  # 1 second per heartbeat
+        for i in range(71, 200):  # 7.1 to 20 seconds
+            t = i * 0.1
+            phase = ((t - 7) % heartbeat_duration) / heartbeat_duration
+            if phase < 0.1:  # Quick rise
+                red_value = int(191 * (phase / 0.1))
+            elif phase < 0.4:  # Quick fall
+                red_value = int(191 * (1 - (phase - 0.1) / 0.3))
+            else:  # Rest
+                red_value = 0
+            
+            porto_standby_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": 255,
+                    "r_dimming": red_value,
+                    "g_dimming": 0,
+                    "b_dimming": 127,
+                    "w_dimming": 0,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        # Final step to turn off lights
+        porto_standby_effect["steps"].append({
+            "time": 20.0,
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 0,
+                "g_dimming": 0,
+                "b_dimming": 0,
+                "w_dimming": 0,
+                "total_strobe": 0,
+                "function_selection": 0,
+                "function_speed": 0
+            }
+        })
+        
+        self.add_effect("PortoStandBy", porto_standby_effect)
+        logger.debug(f"Created Porto StandBy effect: {porto_standby_effect}")
+        logger.info(f"Porto StandBy effect created with {len(porto_standby_effect['steps'])} steps over {porto_standby_effect['duration']} seconds")
+
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
         if not effect_data:
