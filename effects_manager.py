@@ -1430,13 +1430,13 @@ class EffectsManager:
 
     def create_photobomb_bg_effect(self):
         photobomb_bg_effect = {
-            "duration": 60.0,
+            "duration": 20.0,
             "description": "Rainbow dance party with steady strobe like at the Disco",
             "steps": []
         }
         
-        # Generate 1200 steps for smooth transitions (20 steps per second)
-        for i in range(1200):
+        # Generate 400 steps for smooth transitions (20 steps per second)
+        for i in range(400):
             t = i * 0.05
             # Use sine waves for smooth color transitions
             hue = (math.sin(t * 0.2) + 1) / 2  # Oscillate hue between 0 and 1
