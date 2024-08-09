@@ -1012,28 +1012,27 @@ class EffectsManager:
     def create_guy_line_climb_effect(self):
         guy_line_climb_effect = {
             "duration": 15.0,
-            "description": "Simulates climbing vines in a jungle with blues and greens and a low strobe",
+            "description": "Simulates climbing with a vaporwave color scheme",
             "steps": []
         }
         
         # Generate 150 steps for smooth transitions (10 steps per second)
         for i in range(150):
             t = i * 0.1
-            # Oscillate between blue and green
-            blue = int(127 + 127 * math.sin(t * 1.5))
-            green = int(127 + 127 * math.cos(t * 1.5))
-            # Low strobe effect
-            strobe = int(20 + 10 * math.sin(t * 10))
+            # Oscillate between vaporwave colors (pink, cyan, purple)
+            red = int(127 + 127 * math.sin(t * 1.5))
+            green = int(127 + 127 * math.sin(t * 1.5 + 2*math.pi/3))
+            blue = int(127 + 127 * math.sin(t * 1.5 + 4*math.pi/3))
             
             guy_line_climb_effect["steps"].append({
                 "time": t,
                 "channels": {
                     "total_dimming": 255,
-                    "r_dimming": 0,
+                    "r_dimming": red,
                     "g_dimming": green,
                     "b_dimming": blue,
                     "w_dimming": 0,
-                    "total_strobe": strobe,
+                    "total_strobe": 0,
                     "function_selection": 0,
                     "function_speed": 0
                 }
