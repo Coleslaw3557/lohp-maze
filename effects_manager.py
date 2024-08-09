@@ -1513,43 +1513,40 @@ class EffectsManager:
         logger.debug(f"Created PhotoBomb-Spot effect: {photobomb_spot_effect}")
         logger.info(f"PhotoBomb-Spot effect created with {len(photobomb_spot_effect['steps'])} steps over {photobomb_spot_effect['duration']} seconds")
 
-    def create_photobomb_spot_effect(self):
-        photobomb_spot_effect = {
-            "duration": 5.0,
-            "description": "White light at full brightness for 5 seconds",
-            "steps": [
-                {
-                    "time": 0.0,
-                    "channels": {
-                        "total_dimming": 255,
-                        "r_dimming": 255,
-                        "g_dimming": 255,
-                        "b_dimming": 255,
-                        "w_dimming": 255,
-                        "total_strobe": 0,
-                        "function_selection": 0,
-                        "function_speed": 0
-                    }
-                },
-                {
-                    "time": 5.0,
-                    "channels": {
-                        "total_dimming": 255,
-                        "r_dimming": 255,
-                        "g_dimming": 255,
-                        "b_dimming": 255,
-                        "w_dimming": 255,
-                        "total_strobe": 0,
-                        "function_selection": 0,
-                        "function_speed": 0
-                    }
-                }
-            ]
+    def create_deep_playa_bg_effect(self):
+        deep_playa_bg_effect = {
+            "duration": 60.0,
+            "description": "Slowly morphing background light simulating distant illumination in the deep playa",
+            "steps": []
         }
         
-        self.add_effect("PhotoBomb-Spot", photobomb_spot_effect)
-        logger.debug(f"Created PhotoBomb-Spot effect: {photobomb_spot_effect}")
-        logger.info(f"PhotoBomb-Spot effect created with {len(photobomb_spot_effect['steps'])} steps over {photobomb_spot_effect['duration']} seconds")
+        num_steps = 600  # 10 steps per second for smooth transitions
+        for i in range(num_steps):
+            t = i * 0.1
+            # Use sine waves for smooth color and brightness transitions
+            hue = (math.sin(t * 0.05) + 1) / 2  # Slowly changing hue
+            saturation = 0.7 + 0.3 * math.sin(t * 0.03)  # Varying saturation
+            brightness = 0.3 + 0.2 * math.sin(t * 0.02)  # Slowly fluctuating brightness
+            
+            r, g, b = self._hsv_to_rgb(hue, saturation, brightness)
+            
+            deep_playa_bg_effect["steps"].append({
+                "time": t,
+                "channels": {
+                    "total_dimming": int(brightness * 255),
+                    "r_dimming": int(r * 255),
+                    "g_dimming": int(g * 255),
+                    "b_dimming": int(b * 255),
+                    "w_dimming": int(brightness * 64),  # Slight white glow
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+        
+        self.add_effect("DeepPlaya-BG", deep_playa_bg_effect)
+        logger.debug(f"Created DeepPlaya-BG effect: {deep_playa_bg_effect}")
+        logger.info(f"DeepPlaya-BG effect created with {len(deep_playa_bg_effect['steps'])} steps over {deep_playa_bg_effect['duration']} seconds")
 
     def apply_effect_to_all_rooms(self, effect_name):
         effect_data = self.get_effect(effect_name)
