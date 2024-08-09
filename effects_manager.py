@@ -1384,26 +1384,25 @@ class EffectsManager:
     def create_cuddle_puddle_effect(self):
         cuddle_puddle_effect = {
             "duration": 60.0,
-            "description": "Smooth love theme with emphasis on red and pink, rolling transitions for a chillout space",
+            "description": "Intense Pink Heart Burning Man camp Cuddle Puddle simulation with fast transitions",
             "steps": []
         }
         
-        # Generate 600 steps for smooth transitions (10 steps per second)
-        for i in range(600):
-            t = i * 0.1
-            # Use sine waves for smooth transitions
-            red = int(128 + 127 * math.sin(t * 0.1))
-            pink = int(200 + 55 * math.sin(t * 0.15))
-            blue = int(64 + 63 * math.sin(t * 0.05))  # Subtle blue for depth
+        # Generate 1200 steps for faster transitions (20 steps per second)
+        for i in range(1200):
+            t = i * 0.05
+            # Use sine waves for smooth transitions, but with higher frequencies
+            red = int(180 + 75 * math.sin(t * 0.5))  # Increased red base and amplitude
+            pink = int(220 + 35 * math.sin(t * 0.7))  # Increased pink base
             
             cuddle_puddle_effect["steps"].append({
                 "time": t,
                 "channels": {
                     "total_dimming": 255,
                     "r_dimming": red,
-                    "g_dimming": 0,  # No green to keep the pink/red emphasis
-                    "b_dimming": blue,
-                    "w_dimming": pink,  # Using white channel for pink
+                    "g_dimming": int(pink * 0.2),  # Slight green to make pink more vibrant
+                    "b_dimming": int(pink * 0.3),  # Slight blue to make pink more vibrant
+                    "w_dimming": int(pink * 0.1),  # Reduced white, using it subtly to enhance pink
                     "total_strobe": 0,
                     "function_selection": 0,
                     "function_speed": 0
