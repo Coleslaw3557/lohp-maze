@@ -1060,7 +1060,7 @@ class EffectsManager:
     def create_spark_pony_effect(self):
         spark_pony_effect = {
             "duration": 20.0,
-            "description": "My Little Pony inspired colors with sparkles",
+            "description": "My Little Pony inspired colors with dynamic sparkles",
             "steps": []
         }
         
@@ -1090,10 +1090,11 @@ class EffectsManager:
             green = int(color1[1] * (1 - blend_factor) + color2[1] * blend_factor)
             blue = int(color1[2] * (1 - blend_factor) + color2[2] * blend_factor)
             
-            # Add sparkles
+            # Add dynamic sparkles
             white = 0
-            if random.random() < 0.1:  # 10% chance of sparkle
-                white = random.randint(200, 255)
+            if random.random() < 0.05:  # 5% chance of sparkle
+                sparkle_intensity = int((math.sin(t * 20) + 1) * 127.5)  # Oscillating sparkle intensity
+                white = random.randint(sparkle_intensity, 255)
             
             spark_pony_effect["steps"].append({
                 "time": t,
