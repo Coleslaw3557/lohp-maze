@@ -59,11 +59,15 @@ async def set_theme():
     if not theme_name:
         return jsonify({'status': 'error', 'message': 'Theme name is required'}), 400
 
-    success = await effects_manager.set_current_theme(theme_name)
-    if success:
-        return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
-    else:
-        return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+    try:
+        success = await effects_manager.set_current_theme_async(theme_name)
+        if success:
+            return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+        else:
+            return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+    except Exception as e:
+        logger.error(f"Error setting theme: {str(e)}")
+        return jsonify({'status': 'error', 'message': f'An error occurred while setting the theme: {str(e)}'}), 500
 
 @app.route('/api/run_effect', methods=['POST'])
 async def run_effect():
