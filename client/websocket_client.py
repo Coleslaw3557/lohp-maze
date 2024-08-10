@@ -26,7 +26,6 @@ class WebSocketClient:
             "type": "client_connected",
             "data": {
                 "unit_name": self.unit_name,
-                "ip": self.websocket.remote_address[0],  # Send the client IP
                 "associated_rooms": self.config.get('associated_rooms', [])
             }
         }
@@ -123,18 +122,15 @@ class WebSocketClient:
             logger.warning(f"Unknown message type received: {message_type}")
 
     async def handle_audio_start(self, message):
-        room = message.get('room')
-        if room in self.config.get('associated_rooms', []):
-            audio_data = message.get('data') or {}
-            try:
-                audio_file = await asyncio.wait_for(self.websocket.recv(), timeout=5.0)  # Receive the audio file data with a timeout
+        audio_data = message.get('data')
+        if audio_data:
+            audio_file = audio_data.get('audio_file')
+            if audio_file:
                 await self.audio_manager.start_audio(audio_data, audio_file)
-            except asyncio.TimeoutError:
-                logger.error("Timeout while waiting for audio file data")
-            except Exception as e:
-                logger.error(f"Error processing audio start: {e}")
+            else:
+                logger.warning("Received audio_start without audio_file")
         else:
-            logger.warning(f"Received audio_start for unassociated room: {room}")
+            logger.warning("Received audio_start without data")
 
     async def handle_audio_stop(self, message):
         room = message.get('room')

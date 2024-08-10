@@ -16,13 +16,8 @@ class AudioManager:
         self.current_audio = None
         self.stop_event = threading.Event()
 
-    async def start_audio(self, audio_data, audio_file):
-        file_name = audio_data['file_name'].lower()
-        file_path = os.path.join(self.cache_dir, file_name)
-        
-        # Save the received audio file
-        with open(file_path, 'wb') as f:
-            f.write(audio_file)
+    async def start_audio(self, audio_data, audio_file_path):
+        file_path = os.path.join(self.cache_dir, audio_file_path)
         
         self.stop_audio()
         
