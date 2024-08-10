@@ -15,11 +15,11 @@ class RemoteHostManager:
         self.client_rooms = {}
         logger.info("RemoteHostManager initialized")
 
-    def update_client_rooms(self, unit_name, ip, rooms, websocket):
+    def update_client_rooms(self, ip, rooms, websocket):
         client_ip = websocket.remote_address[0]  # Get the actual client IP
         self.client_rooms[client_ip] = rooms
         self.connected_clients[client_ip] = websocket  # Store the WebSocket object
-        self.remote_hosts[client_ip] = {"name": unit_name, "rooms": rooms}
+        self.remote_hosts[client_ip] = {"name": f"Unit-{client_ip}", "rooms": rooms}
         self.save_config()
         logger.info(f"Updated associated rooms for client {unit_name} ({client_ip}): {rooms}")
         for room in rooms:
