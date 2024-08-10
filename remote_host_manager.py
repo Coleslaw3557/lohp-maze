@@ -12,19 +12,31 @@ class RemoteHostManager:
         self.remote_hosts = self.load_config()
         self.websocket_handlers = {}
         logger.info("RemoteHostManager initialized")
+        
+        # Ensure "Cop Dodge" room is associated with the correct IP
+        if "192.168.1.165" not in self.remote_hosts:
+            self.remote_hosts["192.168.1.165"] = {"name": "Cop Dodge Unit", "rooms": ["Cop Dodge"]}
+            self.save_config()
+            logger.info("Added Cop Dodge room to remote hosts configuration")
 
     def load_config(self):
         try:
             with open(self.config_file, 'r') as f:
                 config = json.load(f)['remote_hosts']
             logger.info(f"Successfully loaded configuration from {self.config_file}")
-            return config
         except FileNotFoundError:
-            logger.error(f"Configuration file {self.config_file} not found.")
-            return {}
+            logger.warning(f"Configuration file {self.config_file} not found. Creating default configuration.")
+            config = {
+                "192.168.1.165": {"name": "Cop Dodge Unit", "rooms": ["Cop Dodge"]}
+            }
+            self.save_config()
         except json.JSONDecodeError:
-            logger.error(f"Error decoding JSON from {self.config_file}.")
-            return {}
+            logger.error(f"Error decoding JSON from {self.config_file}. Creating default configuration.")
+            config = {
+                "192.168.1.165": {"name": "Cop Dodge Unit", "rooms": ["Cop Dodge"]}
+            }
+            self.save_config()
+        return config
 
     def initialize_websocket_connections(self):
         logger.info("Initializing WebSocket connections")
@@ -64,3 +76,10 @@ class RemoteHostManager:
             await host.send_audio_command('audio_start', audio_data)
         else:
             logger.warning(f"No remote host found for room: {room}. Cannot stream audio.")
+    def save_config(self):
+        try:
+            with open(self.config_file, 'w') as f:
+                json.dump({"remote_hosts": self.remote_hosts}, f, indent=4)
+            logger.info(f"Configuration saved to {self.config_file}")
+        except IOError:
+            logger.error(f"Error writing to {self.config_file}")
