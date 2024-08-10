@@ -2,6 +2,7 @@ import asyncio
 import websockets
 import json
 import logging
+from websockets.exceptions import ConnectionClosed
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,13 @@ class WebSocketClient:
         self.trigger_manager = trigger_manager
         self.sync_manager = sync_manager
         self.websocket = None
+        self.reconnect_interval = 5  # seconds
 
     async def connect(self):
-        uri = f"ws://{self.server_ip}:{self.server_port}"
+        """
+        Establish a WebSocket connection to the server.
+        """
+        uri = f"ws://{self.server_ip}:{self.server_port}/ws"
         logger.info(f"Attempting to connect to server at {uri}")
         try:
             self.websocket = await websockets.connect(
@@ -30,80 +35,39 @@ class WebSocketClient:
             return True
         except Exception as e:
             logger.error(f"Failed to connect to server: {e}")
-            self.websocket = None
             return False
-        
+
     async def reconnect(self):
-        logger.info("Attempting to reconnect...")
-        connected = await self.connect()
-        if connected:
-            logger.info("Reconnected successfully")
-        else:
-            logger.error("Reconnection failed")
-            await asyncio.sleep(5)  # Wait before next reconnect attempt
-        
-    async def send_status_update(self, status):
-        if self.websocket:
-            message = {
-                "type": "status_update",
-                "data": {
-                    "unit_name": self.unit_name,
-                    "status": status
-                }
-            }
-            await self.websocket.send(json.dumps(message))
-        else:
-            logger.warning("Cannot send status update: WebSocket not connected")
-        
-    async def send_status_update(self, status):
-        if self.websocket:
-            message = {
-                "type": "status_update",
-                "data": {
-                    "unit_name": self.unit_name,
-                    "status": status
-                }
-            }
-            await self.websocket.send(json.dumps(message))
-        else:
-            logger.warning("Cannot send status update: WebSocket not connected")
-
-    async def disconnect(self):
-        if self.websocket:
-            await self.websocket.close()
-            logger.info("Disconnected from server")
-
-    async def listen(self):
+        """
+        Attempt to reconnect to the server.
+        """
         while True:
-            if not self.websocket or self.websocket.closed:
-                logger.warning("No active WebSocket connection. Attempting to reconnect...")
-                await self.reconnect()
-                continue
-            
-            try:
-                message = await self.websocket.recv()
-                await self.handle_message(json.loads(message))
-            except websockets.exceptions.ConnectionClosed:
-                logger.warning("Connection to server closed. Attempting to reconnect...")
-                self.websocket = None
-            except json.JSONDecodeError:
-                logger.error("Received invalid JSON from server")
-            except Exception as e:
-                logger.error(f"Error in WebSocket communication: {e}")
-                self.websocket = None
+            logger.info("Attempting to reconnect...")
+            if await self.connect():
+                logger.info("Reconnected successfully")
+                break
+            else:
+                logger.error("Reconnection failed")
+                await asyncio.sleep(self.reconnect_interval)
 
-    async def handle_message(self, message):
-        if message['type'] == 'audio_start':
-            await self.audio_manager.start_audio(message['data'])
-        elif message['type'] == 'audio_stop':
-            await self.audio_manager.stop_audio()
-        elif message['type'] == 'sync_time':
-            self.sync_manager.sync_time(message['data'])
-        elif message['type'] == 'effect_trigger':
-            # Handle effect trigger if applicable
-            pass
+    async def send_message(self, message):
+        """
+        Send a message to the server.
+        """
+        if self.websocket and not self.websocket.closed:
+            try:
+                await self.websocket.send(json.dumps(message))
+            except Exception as e:
+                logger.error(f"Error sending message: {e}")
+                await self.reconnect()
+        else:
+            logger.warning("Cannot send message: WebSocket not connected")
+            await self.reconnect()
 
     async def send_status_update(self, status):
+        """
+        Send a status update to the server.
+        """
         message = {
             "type": "status_update",
             "data": {
@@ -111,9 +75,12 @@ class WebSocketClient:
                 "status": status
             }
         }
-        await self.websocket.send(json.dumps(message))
+        await self.send_message(message)
 
     async def send_trigger_event(self, trigger_name):
+        """
+        Send a trigger event to the server.
+        """
         message = {
             "type": "trigger_event",
             "data": {
@@ -121,4 +88,59 @@ class WebSocketClient:
                 "trigger": trigger_name
             }
         }
-        await self.websocket.send(json.dumps(message))
+        await self.send_message(message)
+
+    async def disconnect(self):
+        """
+        Disconnect from the server.
+        """
+        if self.websocket:
+            await self.websocket.close()
+            logger.info("Disconnected from server")
+
+    async def listen(self):
+        """
+        Listen for incoming messages from the server.
+        """
+        while True:
+            try:
+                if not self.websocket or self.websocket.closed:
+                    await self.reconnect()
+                    continue
+
+                message = await self.websocket.recv()
+                await self.handle_message(json.loads(message))
+            except ConnectionClosed:
+                logger.warning("Connection to server closed. Attempting to reconnect...")
+                await self.reconnect()
+            except json.JSONDecodeError:
+                logger.error("Received invalid JSON from server")
+            except Exception as e:
+                logger.error(f"Error in WebSocket communication: {e}")
+                await self.reconnect()
+
+    async def handle_message(self, message):
+        """
+        Handle incoming messages from the server.
+        """
+        handlers = {
+            'audio_start': self.audio_manager.start_audio,
+            'audio_stop': self.audio_manager.stop_audio,
+            'sync_time': self.sync_manager.sync_time,
+            'effect_trigger': self.handle_effect_trigger
+        }
+
+        message_type = message.get('type')
+        handler = handlers.get(message_type)
+
+        if handler:
+            await handler(message.get('data'))
+        else:
+            logger.warning(f"Unknown message type received: {message_type}")
+
+    async def handle_effect_trigger(self, data):
+        """
+        Handle effect trigger messages.
+        """
+        # TODO: Implement effect trigger handling
+        logger.info(f"Received effect trigger: {data}")

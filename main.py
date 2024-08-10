@@ -25,42 +25,69 @@ logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
 logger = logging.getLogger(__name__)
 
 from quart import websocket
-from websockets.exceptions import ConnectionClosed as WebSocketDisconnect
+from websockets.exceptions import ConnectionClosed
 
 app = Quart(__name__)
 app = cors(app)
 app.secret_key = SECRET_KEY
 
-@app.websocket('/')
-async def ws():
-    websocket = await request.accept()
-    while True:
-        try:
-            data = await websocket.receive_json()
-            await handle_websocket_message(websocket, data)
-        except WebSocketDisconnect:
-            logger.info("WebSocket client disconnected")
-            break
+connected_clients = set()
 
-async def handle_websocket_message(websocket, data):
+@app.websocket('/ws')
+async def ws():
+    connected_clients.add(websocket._get_current_object())
+    try:
+        while True:
+            try:
+                data = await websocket.receive_json()
+                await handle_websocket_message(websocket, data)
+            except ConnectionClosed:
+                break
+    finally:
+        connected_clients.remove(websocket._get_current_object())
+        logger.info("WebSocket client disconnected")
+
+async def handle_websocket_message(ws, data):
+    """
+    Handle incoming WebSocket messages.
+    """
     message_type = data.get('type')
+    handlers = {
+        'status_update': handle_status_update,
+        'trigger_event': handle_trigger_event
+    }
     
-    if message_type == 'status_update':
-        await handle_status_update(websocket, data)
-    elif message_type == 'trigger_event':
-        await handle_trigger_event(websocket, data)
+    handler = handlers.get(message_type)
+    if handler:
+        await handler(ws, data)
     else:
         logger.warning(f"Unknown message type received: {message_type}")
-        await websocket.send_json({"status": "error", "message": "Unknown message type"})
+        await ws.send_json({"status": "error", "message": "Unknown message type"})
 
-async def handle_status_update(websocket, data):
+async def handle_status_update(ws, data):
+    """
+    Handle status update messages from clients.
+    """
     logger.info(f"Status update received: {data}")
-    await websocket.send_json({"status": "success", "message": "Status update acknowledged"})
+    await ws.send_json({"status": "success", "message": "Status update acknowledged"})
 
-async def handle_trigger_event(websocket, data):
+async def handle_trigger_event(ws, data):
+    """
+    Handle trigger event messages from clients.
+    """
     logger.info(f"Trigger event received: {data}")
     # TODO: Process the trigger event
-    await websocket.send_json({"status": "success", "message": "Trigger event processed"})
+    await ws.send_json({"status": "success", "message": "Trigger event processed"})
+
+async def broadcast_message(message):
+    """
+    Broadcast a message to all connected clients.
+    """
+    for client in connected_clients:
+        try:
+            await client.send_json(message)
+        except Exception as e:
+            logger.error(f"Error broadcasting message to client: {e}")
 
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
