@@ -96,11 +96,13 @@ async def run_effect():
             logger.info(f"Effect {effect_name} applied successfully to room {room}")
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
         else:
-            logger.error(f"Failed to apply effect {effect_name} to room {room}")
-            return jsonify({'status': 'error', 'message': f'Failed to apply effect {effect_name} to room {room}'}), 500
+            error_message = f"Failed to apply effect {effect_name} to room {room}. Check server logs for details."
+            logger.error(error_message)
+            return jsonify({'status': 'error', 'message': error_message}), 500
     except Exception as e:
-        logger.error(f"Error applying effect {effect_name} to room {room}: {str(e)}")
-        return jsonify({'status': 'error', 'message': f'An error occurred while applying the effect: {str(e)}'}), 500
+        error_message = f"Error applying effect {effect_name} to room {room}: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        return jsonify({'status': 'error', 'message': error_message}), 500
 
 @app.route('/api/rooms', methods=['GET'])
 def get_rooms():
