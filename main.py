@@ -104,7 +104,7 @@ dmx_output_manager.start()
 effects_manager.stop_current_theme()
 
 # Initialize WebSocket connections to remote hosts
-remote_host_manager.initialize_websocket_connections()
+await remote_host_manager.initialize_websocket_connections()
 
 @app.route('/api/set_master_brightness', methods=['POST'])
 async def set_master_brightness():

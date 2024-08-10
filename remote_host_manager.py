@@ -27,11 +27,12 @@ class RemoteHostManager:
             logger.error(f"Error decoding JSON from {self.config_file}.")
             self.remote_hosts = {}
 
-    def initialize_websocket_connections(self):
+    async def initialize_websocket_connections(self):
         logger.info("Initializing WebSocket connections")
         for ip, host_info in self.remote_hosts.items():
             self.websocket_handlers[ip] = WebSocketHandler(ip, host_info['name'])
-            logger.debug(f"WebSocket handler created for {host_info['name']} ({ip})")
+            await self.websocket_handlers[ip].connect()
+            logger.debug(f"WebSocket handler created and connected for {host_info['name']} ({ip})")
         logger.info(f"WebSocket connections initialized for {len(self.websocket_handlers)} hosts")
 
     def get_host_by_room(self, room):
@@ -46,9 +47,22 @@ class RemoteHostManager:
         host = self.get_host_by_room(room)
         if host:
             logger.info(f"Sending {command} command to room {room}")
-            await host.send_audio_command(command, audio_data)
+            try:
+                await host.send_audio_command(command, audio_data)
+            except Exception as e:
+                logger.error(f"Error sending {command} command to room {room}: {str(e)}")
+                await self.reconnect_and_retry(host, command, audio_data)
         else:
             logger.warning(f"No remote host found for room: {room}. Cannot send {command} command.")
+
+    async def reconnect_and_retry(self, host, command, audio_data):
+        logger.info(f"Attempting to reconnect to {host.host_name}")
+        await host.connect()
+        if host.websocket:
+            logger.info(f"Reconnected to {host.host_name}. Retrying command.")
+            await host.send_audio_command(command, audio_data)
+        else:
+            logger.error(f"Failed to reconnect to {host.host_name}")
 
     def handle_trigger_event(self, room, trigger):
         logger.info(f"Trigger event received from room {room}: {trigger}")
@@ -63,11 +77,12 @@ class RemoteHostManager:
             try:
                 with open(audio_file, 'rb') as f:
                     audio_data = f.read()
-                await host.send_audio_command('audio_start', audio_data)
+                await self.send_audio_command(room, 'audio_start', audio_data)
             except IOError as e:
                 logger.error(f"Error reading audio file {audio_file}: {str(e)}")
         else:
             logger.warning(f"No remote host found for room: {room}. Cannot stream audio.")
+
     def save_config(self):
         try:
             with open(self.config_file, 'w') as f:
