@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     libusb-1.0-0-dev \
+    libasound2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the current directory contents into the container at /app

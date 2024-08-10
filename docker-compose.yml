@@ -6,6 +6,7 @@ services:
       - "5000:5000"
     devices:
       - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/snd:/dev/snd"
     privileged: true
     volumes:
       - .:/app
