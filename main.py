@@ -57,7 +57,8 @@ async def set_theme():
     if not theme_name:
         return jsonify({'status': 'error', 'message': 'Theme name is required'}), 400
 
-    if await effects_manager.theme_manager.set_current_theme_async(theme_name):
+    success = await effects_manager.set_current_theme(theme_name)
+    if success:
         return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
     else:
         return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
