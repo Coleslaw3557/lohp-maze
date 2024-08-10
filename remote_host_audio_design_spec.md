@@ -21,10 +21,11 @@ Responsibilities:
 
 ### 2.2 AudioManager
 
-Purpose: Handle audio file management and streaming.
+Purpose: Handle audio file management, associations, and streaming.
 
 Responsibilities:
 - Manage audio file storage and retrieval.
+- Maintain associations between effects and audio files.
 - Prepare audio streams for WebSocket transmission.
 - Coordinate audio playback with lighting effects.
 
@@ -88,13 +89,16 @@ Structure:
   "effects": {
     "Lightning": {
       "audio_file": "lightning_crack.mp3",
-      "loop": false
+      "loop": false,
+      "volume": 0.8
     },
     "Background Music": {
       "audio_file": "ambient_music.mp3",
-      "loop": true
+      "loop": true,
+      "volume": 0.5
     }
-  }
+  },
+  "default_volume": 0.7
 }
 ```
 
@@ -179,18 +183,36 @@ Example:
 }
 ```
 
-## 7. Implementation Steps
+## 7. New Audio Module
 
-1. Create new Python files for RemoteHostManager, AudioManager, and WebSocketHandler.
-2. Modify EffectsManager to incorporate audio information in effect definitions.
-3. Update LightConfigManager to include speaker and remote host associations in room configurations.
-4. Extend main.py to initialize and integrate new components.
-5. Implement new API endpoints and modify existing ones as specified.
-6. Develop WebSocket communication protocol and implement in WebSocketHandler.
-7. Create new configuration files: remote_host_config.json and audio_config.json.
-8. Update existing configuration files to include audio-related information.
-9. Implement error handling and logging for new components and functionalities.
-10. Develop unit tests for new components and modified functionalities.
+### 7.1 audio_module.py
+
+This new module will encapsulate all audio-related functionality:
+
+- AudioManager class
+- Audio file handling and management
+- Effect-to-audio associations
+- Audio streaming preparation
+
+### 7.2 Integration with Existing Components
+
+- EffectsManager will use AudioManager to retrieve audio information for effects.
+- RemoteHostManager will use AudioManager to prepare audio streams for transmission.
+- WebSocketHandler will use AudioManager to send audio data to remote hosts.
+
+## 8. Implementation Steps
+
+1. Create new Python files for RemoteHostManager, WebSocketHandler, and the new audio_module.py.
+2. Implement AudioManager class in audio_module.py with effect-to-audio association functionality.
+3. Modify EffectsManager to use AudioManager for retrieving audio information.
+4. Update LightConfigManager to include speaker and remote host associations in room configurations.
+5. Extend main.py to initialize and integrate new components, including the audio module.
+6. Implement new API endpoints and modify existing ones as specified.
+7. Develop WebSocket communication protocol and implement in WebSocketHandler.
+8. Create new configuration files: remote_host_config.json and audio_config.json.
+9. Update existing configuration files to include audio-related information.
+10. Implement error handling and logging for new components and functionalities.
+11. Develop unit tests for new components and modified functionalities, including audio module tests.
 
 ## 8. Considerations
 
