@@ -263,9 +263,11 @@ class EffectsManager:
                 get_effect_step_values(effect_data)
             )
             logger.debug(f"Effect applied to fixture {fixture_id}")
+            return True
         except Exception as e:
             error_msg = f"Error applying effect to fixture {fixture_id}: {str(e)}"
             logger.error(error_msg)
+            return False
 
     async def _update_fixture(self, fixture_id, values):
         self.dmx_state_manager.update_fixture(fixture_id, values)
