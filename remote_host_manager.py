@@ -9,8 +9,9 @@ logger = logging.getLogger(__name__)
 class RemoteHostManager:
     def __init__(self, config_file='remote_host_config.json'):
         self.config_file = config_file
-        self.remote_hosts = self.load_config()
+        self.remote_hosts = {}
         self.websocket_handlers = {}
+        self.load_config()
         logger.info("RemoteHostManager initialized")
         
         # Ensure "Cop Dodge" room is associated with the correct IP
@@ -22,21 +23,20 @@ class RemoteHostManager:
     def load_config(self):
         try:
             with open(self.config_file, 'r') as f:
-                config = json.load(f)['remote_hosts']
+                self.remote_hosts = json.load(f)['remote_hosts']
             logger.info(f"Successfully loaded configuration from {self.config_file}")
         except FileNotFoundError:
             logger.warning(f"Configuration file {self.config_file} not found. Creating default configuration.")
-            config = {
+            self.remote_hosts = {
                 "192.168.1.165": {"name": "Cop Dodge Unit", "rooms": ["Cop Dodge"]}
             }
             self.save_config()
         except json.JSONDecodeError:
             logger.error(f"Error decoding JSON from {self.config_file}. Creating default configuration.")
-            config = {
+            self.remote_hosts = {
                 "192.168.1.165": {"name": "Cop Dodge Unit", "rooms": ["Cop Dodge"]}
             }
             self.save_config()
-        return config
 
     def initialize_websocket_connections(self):
         logger.info("Initializing WebSocket connections")
