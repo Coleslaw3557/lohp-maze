@@ -187,19 +187,29 @@ class RemoteHostManager:
                 logger.info(f"Sending {command} command for room {room} to client {client_ip}")
                 try:
                     if command == 'audio_start':
-                        message = data
+                        message = {
+                            "type": command,
+                            "room": room,
+                            "data": {
+                                "file_name": "audio.mp3",
+                                "volume": 1.0,
+                                "loop": False
+                            }
+                        }
+                        await websocket.send(json.dumps(message))
+                        if isinstance(data, bytes):
+                            await websocket.send(data)
                     elif command == 'audio_data':
                         await websocket.send(data)
                         logger.info(f"Sent audio data for room {room} to client {client_ip}")
-                        return True
                     else:
                         message = {
                             "type": command,
                             "room": room,
                             "data": data
                         }
+                        await websocket.send(json.dumps(message))
                     
-                    await websocket.send(json.dumps(message))
                     logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
                     return True
                 except Exception as e:
