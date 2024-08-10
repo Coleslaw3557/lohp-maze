@@ -21,9 +21,9 @@ class RemoteHostManager:
         self.connected_clients[client_ip] = websocket  # Store the WebSocket object
         self.remote_hosts[client_ip] = {"name": f"Unit-{client_ip}", "rooms": rooms}
         self.save_config()
-        logger.info(f"Updated associated rooms for client {unit_name} ({client_ip}): {rooms}")
+        logger.info(f"Updated associated rooms for client {client_ip}: {rooms}")
         for room in rooms:
-            logger.info(f"Associating room {room} with client {unit_name} ({client_ip})")
+            logger.info(f"Associating room {room} with client {client_ip}")
 
     async def initialize_websocket_connections(self):
         logger.info("WebSocket connections will be initialized when clients connect")
