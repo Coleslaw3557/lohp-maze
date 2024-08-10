@@ -56,29 +56,42 @@ class ThemeManager:
             return False
 
     async def set_current_theme_async(self, theme_name):
+        logger.info(f"Attempting to set theme to: {theme_name}")
         if theme_name in self.themes:
             with self.theme_lock:
                 old_theme = self.current_theme
+                logger.info(f"Stopping current theme: {old_theme}")
                 await self.stop_current_theme_async()
+                logger.info(f"Current theme stopped. Setting new theme: {theme_name}")
                 self.current_theme = theme_name
                 self.stop_theme.clear()
+                logger.info(f"Starting new theme thread for: {theme_name}")
                 self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
                 self.theme_thread.start()
-            logger.info(f"Theme changing from {old_theme} to: {theme_name}")
+            logger.info(f"Theme successfully changed from {old_theme} to: {theme_name}")
             return True
         else:
             logger.warning(f"Theme not found: {theme_name}")
             return False
 
     async def stop_current_theme_async(self):
+        logger.info("Attempting to stop current theme")
         with self.theme_lock:
             if self.current_theme:
+                logger.info(f"Stopping current theme: {self.current_theme}")
                 self.stop_theme.set()
                 if self.theme_thread and self.theme_thread.is_alive():
-                    await asyncio.to_thread(self.theme_thread.join, timeout=5)
+                    logger.info("Waiting for theme thread to join")
+                    try:
+                        await asyncio.wait_for(asyncio.to_thread(self.theme_thread.join), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        logger.warning("Theme thread join timed out after 5 seconds")
                 self.current_theme = None
+                logger.info("Resetting all lights")
                 self._reset_all_lights()
                 logger.info("Current theme stopped and all lights reset")
+            else:
+                logger.info("No current theme to stop")
 
     def stop_current_theme(self):
         with self.theme_lock:
@@ -98,11 +111,16 @@ class ThemeManager:
         theme_data = self.themes[theme_name]
         logger.info(f"Starting theme: {theme_name}")
         start_time = time.time()
-        while not self.stop_theme.is_set():
-            current_time = time.time() - start_time
-            self._generate_and_apply_theme_step(theme_data, current_time)
-            time.sleep(1 / self.frequency)
-        logger.info(f"Theme {theme_name} stopped")
+        try:
+            while not self.stop_theme.is_set():
+                current_time = time.time() - start_time
+                logger.debug(f"Generating and applying theme step for {theme_name} at time {current_time}")
+                self._generate_and_apply_theme_step(theme_data, current_time)
+                time.sleep(1 / self.frequency)
+        except Exception as e:
+            logger.error(f"Error in theme {theme_name}: {str(e)}")
+        finally:
+            logger.info(f"Theme {theme_name} stopped")
 
     def _generate_and_apply_theme_step(self, theme_data, current_time):
         room_layout = self.light_config_manager.get_room_layout()
