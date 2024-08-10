@@ -38,6 +38,14 @@ class ThemeManager:
                 "intensity_fluctuation": 0.3,
                 "overall_brightness": 0.6,
                 "green_blue_balance": 0.3
+            },
+            "MazeMadness": {
+                "duration": 180,
+                "transition_speed": 0.1,
+                "color_variation": 0.7,
+                "intensity_fluctuation": 0.3,
+                "overall_brightness": 0.6,
+                "room_transition_speed": 0.05
             }
         }
 
@@ -126,9 +134,10 @@ class ThemeManager:
 
     def _generate_and_apply_theme_step(self, theme_data, current_time):
         room_layout = self.light_config_manager.get_room_layout()
-        for room, lights in room_layout.items():
+        total_rooms = len(room_layout)
+        for room_index, (room, lights) in enumerate(room_layout.items()):
             if room not in self.paused_rooms:
-                room_channels = generate_theme_values(theme_data, current_time, self.master_brightness)
+                room_channels = generate_theme_values(theme_data, current_time, self.master_brightness, room_index, total_rooms)
                 self._apply_room_channels(room, lights, room_channels)
 
     def pause_theme_for_room(self, room):

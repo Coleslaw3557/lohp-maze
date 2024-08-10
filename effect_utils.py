@@ -23,7 +23,7 @@ def hsv_to_rgb(h, s, v):
     if i == 5:
         return (v, p, q)
 
-def generate_theme_values(theme_data, current_time, master_brightness):
+def generate_theme_values(theme_data, current_time, master_brightness, room_index=0, total_rooms=1):
     channels = {}
     overall_brightness = theme_data.get('overall_brightness', 0.5) * master_brightness
     color_variation = theme_data.get('color_variation', 0.5)
@@ -43,6 +43,11 @@ def generate_theme_values(theme_data, current_time, master_brightness):
         hue = 0.3 + sin_time_slow * 0.05  # Reduce hue variation
         green_blue_balance = theme_data.get('green_blue_balance', 0.9)
         saturation = 0.9 + sin_time_medium * 0.05 * color_variation  # Reduce saturation variation
+    elif 'room_transition_speed' in theme_data:  # MazeMadness theme
+        room_transition_speed = theme_data.get('room_transition_speed', 0.05)
+        room_offset = (room_index / total_rooms + time_factor * room_transition_speed) % 1
+        hue = (room_offset + sin_time_slow * 0.1) % 1  # Smooth color transition across rooms
+        saturation = 0.8 + sin_time_medium * 0.2 * color_variation
     else:
         hue = 0.5 + sin_time_slow * 0.1  # Reduce hue variation
         saturation = 0.8 + sin_time_medium * 0.1 * color_variation  # Reduce saturation variation
