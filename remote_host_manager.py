@@ -71,9 +71,12 @@ class RemoteHostManager:
         host = self.get_host_by_room(room)
         if host:
             logger.info(f"Streaming audio file {audio_file} to room {room}")
-            async with aiofiles.open(audio_file, 'rb') as f:
-                audio_data = await f.read()
-            await host.send_audio_command('audio_start', audio_data)
+            try:
+                with open(audio_file, 'rb') as f:
+                    audio_data = f.read()
+                await host.send_audio_command('audio_start', audio_data)
+            except IOError as e:
+                logger.error(f"Error reading audio file {audio_file}: {str(e)}")
         else:
             logger.warning(f"No remote host found for room: {room}. Cannot stream audio.")
     def save_config(self):
