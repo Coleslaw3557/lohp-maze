@@ -195,31 +195,44 @@ class EffectsManager:
         self.theme_manager.pause_theme_for_room(room)
         
         # Apply lighting effect
-        tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        lighting_tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
         
         # Apply audio effect
         audio_task = self._apply_audio_effect(room, effect_name)
-        tasks.append(audio_task)
         
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Gather all tasks
+        all_tasks = lighting_tasks + [audio_task]
+        results = await asyncio.gather(*all_tasks, return_exceptions=True)
         
-        success = all(isinstance(result, bool) and result for result in results)
-        if success:
-            logger.info(f"Effect application completed successfully in room '{room}'")
+        # Check results
+        lighting_results = results[:len(lighting_tasks)]
+        audio_result = results[-1]
+        
+        lighting_success = all(isinstance(result, bool) and result for result in lighting_results)
+        
+        if lighting_success:
+            logger.info(f"Lighting effect application completed successfully in room '{room}'")
         else:
-            logger.error(f"Failed to apply effect in room '{room}'")
-            for i, result in enumerate(results):
+            logger.error(f"Failed to apply lighting effect in room '{room}'")
+            for i, result in enumerate(lighting_results):
                 if isinstance(result, Exception):
                     logger.error(f"Error applying effect to fixture {fixture_ids[i]}: {str(result)}")
                 elif not result:
                     logger.error(f"Failed to apply effect to fixture {fixture_ids[i]}")
+        
+        if isinstance(audio_result, Exception):
+            logger.error(f"Error applying audio effect in room '{room}': {str(audio_result)}")
+        elif not audio_result:
+            logger.warning(f"Audio effect not applied or not configured for room '{room}'")
+        else:
+            logger.info(f"Audio effect applied successfully in room '{room}'")
         
         self.room_effects.pop(room, None)
         
         # Resume theme for this room
         self.theme_manager.resume_theme_for_room(room)
         
-        return success
+        return lighting_success and (audio_result if isinstance(audio_result, bool) else True)
 
     async def _apply_audio_effect(self, room, effect_name):
         logger.info(f"Applying audio effect '{effect_name}' to room '{room}'")
