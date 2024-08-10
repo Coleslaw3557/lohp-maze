@@ -58,6 +58,14 @@ class RemoteHostManager:
         if websocket:
             logger.info(f"Sending {command} command to room {room}")
             try:
+                if not websocket.open:
+                    logger.warning(f"WebSocket for room {room} is not open. Attempting to reconnect.")
+                    await self.reconnect_websocket(room)
+                    websocket = self.get_host_by_room(room)
+                    if not websocket or not websocket.open:
+                        logger.error(f"Failed to reconnect WebSocket for room {room}")
+                        return False
+
                 if command == 'audio_start':
                     await websocket.send(json.dumps({"type": command}))
                     if isinstance(audio_data, bytes):
@@ -84,6 +92,23 @@ class RemoteHostManager:
             logger.info(f"Connected clients: {list(self.connected_clients.keys())}")
             logger.info(f"Remote hosts configuration: {self.remote_hosts}")
             return False
+
+    async def reconnect_websocket(self, room):
+        ip = self.get_ip_by_room(room)
+        if ip:
+            try:
+                uri = f"ws://{ip}:8765"
+                websocket = await websockets.connect(uri)
+                self.connected_clients[ip] = websocket
+                logger.info(f"Reconnected WebSocket for room {room}")
+            except Exception as e:
+                logger.error(f"Failed to reconnect WebSocket for room {room}: {str(e)}")
+
+    def get_ip_by_room(self, room):
+        for ip, data in self.remote_hosts.items():
+            if room in data.get('rooms', []):
+                return ip
+        return None
 
     async def reconnect_and_retry(self, host, command, audio_data):
         max_retries = 3
