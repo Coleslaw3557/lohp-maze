@@ -23,6 +23,9 @@ logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+from quart import websocket
+from websockets.exceptions import WebSocketDisconnect
+
 app = Quart(__name__)
 app = cors(app)
 app.secret_key = SECRET_KEY
