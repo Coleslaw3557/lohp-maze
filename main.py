@@ -68,9 +68,11 @@ async def handle_client_connected(ws, data):
     """
     unit_name = data.get('unit_name')
     ip = data.get('ip')
+    associated_rooms = data.get('associated_rooms', [])
     if unit_name and ip:
         remote_host_manager.connected_clients[ip] = ws
-        logger.info(f"Client connected: {unit_name} ({ip})")
+        remote_host_manager.update_client_rooms(ip, associated_rooms)
+        logger.info(f"Client connected: {unit_name} ({ip}) - Associated rooms: {associated_rooms}")
         await ws.send(json.dumps({"status": "success", "message": "Connection acknowledged"}))
     else:
         logger.warning("Received incomplete client connection data")

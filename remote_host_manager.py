@@ -11,8 +11,13 @@ class RemoteHostManager:
         self.config_file = config_file
         self.remote_hosts = {}
         self.connected_clients = {}
+        self.client_rooms = {}
         self.load_config()
         logger.info("RemoteHostManager initialized")
+
+    def update_client_rooms(self, ip, rooms):
+        self.client_rooms[ip] = rooms
+        logger.info(f"Updated associated rooms for client {ip}: {rooms}")
 
     def load_config(self):
         try:
@@ -31,13 +36,13 @@ class RemoteHostManager:
         logger.info("WebSocket connections will be initialized when clients connect")
 
     def get_host_by_room(self, room):
-        for ip, host_info in self.remote_hosts.items():
-            if room.lower() in [r.lower() for r in host_info['rooms']]:
-                logger.debug(f"Found host for room {room}: {host_info['name']} ({ip})")
+        for ip, rooms in self.client_rooms.items():
+            if room.lower() in [r.lower() for r in rooms]:
+                logger.debug(f"Found host for room {room}: {ip}")
                 if ip in self.connected_clients:
                     return self.connected_clients[ip]
                 else:
-                    logger.warning(f"Host found for room {room}, but not connected: {host_info['name']} ({ip})")
+                    logger.warning(f"Host found for room {room}, but not connected: {ip}")
                     return None
         logger.warning(f"No host configuration found for room: {room}")
         return None

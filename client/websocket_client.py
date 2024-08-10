@@ -25,7 +25,8 @@ class WebSocketClient:
             "type": "client_connected",
             "data": {
                 "unit_name": self.unit_name,
-                "ip": self.server_ip
+                "ip": self.server_ip,
+                "associated_rooms": self.config.get('associated_rooms', [])
             }
         }
         await self.send_message(message)
