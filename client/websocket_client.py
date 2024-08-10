@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class WebSocketClient:
     def __init__(self, server_ip, server_port, unit_name, audio_manager, trigger_manager, sync_manager):
         self.server_ip = server_ip
-        self.server_port = server_port
+        self.server_port = int(server_port)  # Ensure port is an integer
         self.unit_name = unit_name
         self.audio_manager = audio_manager
         self.trigger_manager = trigger_manager
