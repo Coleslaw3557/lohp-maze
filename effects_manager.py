@@ -185,16 +185,25 @@ class EffectsManager:
         logger.debug(f"Effect data: {effect_data}")
         logger.debug(f"Fixture IDs for room: {fixture_ids}")
         
+        if not fixture_ids:
+            logger.error(f"No fixtures found for room: {room}")
+            return False
+        
         self.room_effects[room] = True
         
         tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        success = all(results)
+        success = all(isinstance(result, bool) and result for result in results)
         if success:
-            logger.info(f"Effect application completed in room '{room}'")
+            logger.info(f"Effect application completed successfully in room '{room}'")
         else:
             logger.error(f"Failed to apply effect in room '{room}'")
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.error(f"Error applying effect to fixture {fixture_ids[i]}: {str(result)}")
+                elif not result:
+                    logger.error(f"Failed to apply effect to fixture {fixture_ids[i]}")
         
         self.room_effects.pop(room, None)
         
@@ -203,15 +212,20 @@ class EffectsManager:
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:
             logger.debug(f"Applying effect to fixture {fixture_id}")
+            step_values = get_effect_step_values(effect_data)
+            if not step_values:
+                logger.error(f"No step values generated for fixture {fixture_id}")
+                return False
+            
             await self.interrupt_handler.interrupt_fixture(
                 fixture_id,
                 effect_data['duration'],
-                get_effect_step_values(effect_data)
+                step_values
             )
-            logger.debug(f"Effect applied to fixture {fixture_id}")
+            logger.debug(f"Effect applied successfully to fixture {fixture_id}")
             return True
         except Exception as e:
-            logger.error(f"Error applying effect to fixture {fixture_id}: {str(e)}")
+            logger.error(f"Error applying effect to fixture {fixture_id}: {str(e)}", exc_info=True)
             return False
     async def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
