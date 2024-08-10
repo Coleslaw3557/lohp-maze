@@ -50,15 +50,20 @@ async def websocket_handler(websocket, path):
         logger.info("WebSocket client disconnected")
 
 async def handle_client_connected(websocket, path, data):
+    logger.info(f"handle_client_connected called with websocket: {websocket}, path: {path}, data: {data}")
     unit_name = data.get('data', {}).get('unit_name')
     associated_rooms = data.get('data', {}).get('associated_rooms', [])
     if unit_name and associated_rooms:
         remote_host_manager.update_client_rooms(unit_name, websocket.remote_address[0], associated_rooms, websocket, path)
         logger.info(f"Client connected: {unit_name} ({websocket.remote_address[0]}) - Associated rooms: {associated_rooms}")
-        await websocket.send(json.dumps({"type": "connection_response", "status": "success", "message": "Connection acknowledged"}))
+        response = {"type": "connection_response", "status": "success", "message": "Connection acknowledged"}
+        await websocket.send(json.dumps(response))
+        logger.info(f"Sent connection response: {response}")
     else:
         logger.warning(f"Received incomplete client connection data: {data}")
-        await websocket.send(json.dumps({"type": "connection_response", "status": "error", "message": "Incomplete connection data"}))
+        response = {"type": "connection_response", "status": "error", "message": "Incomplete connection data"}
+        await websocket.send(json.dumps(response))
+        logger.info(f"Sent error response: {response}")
 
 async def handle_status_update(websocket, data):
     logger.info(f"Status update received: {data}")

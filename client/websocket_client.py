@@ -31,6 +31,23 @@ class WebSocketClient:
         }
         await self.send_message(message)
         logger.info(f"Sent client_connected message: {message}")
+        
+        # Wait for and handle the connection response
+        try:
+            response = await asyncio.wait_for(self.websocket.recv(), timeout=5.0)
+            response_data = json.loads(response)
+            if response_data.get('type') == 'connection_response':
+                logger.info(f"Received connection response: {response_data}")
+                if response_data.get('status') == 'success':
+                    logger.info("Connection acknowledged by server")
+                else:
+                    logger.error(f"Connection error: {response_data.get('message')}")
+            else:
+                logger.warning(f"Unexpected response type: {response_data.get('type')}")
+        except asyncio.TimeoutError:
+            logger.error("Timeout waiting for connection response")
+        except Exception as e:
+            logger.error(f"Error handling connection response: {str(e)}")
 
     async def send_message(self, message):
         if self.websocket:
