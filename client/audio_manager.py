@@ -6,6 +6,7 @@ from pydub import AudioSegment
 from pydub.playback import play
 import io
 import threading
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class AudioManager:
         # Decode and play the MP3 file
         audio = AudioSegment.from_mp3(file_path)
         volume = audio_data.get('volume', 1.0)
-        audio = audio + (20 * log10(volume))  # Adjust volume (pydub uses dB)
+        audio = audio + (20 * math.log10(volume))  # Adjust volume (pydub uses dB)
         
         self.current_audio = audio_data['file']
         self.stop_event.clear()
