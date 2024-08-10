@@ -107,7 +107,7 @@ class WebSocketClient:
             'sync_time': self.sync_manager.sync_time,
             'effect_trigger': self.handle_effect_trigger,
             'connection_response': self.handle_connection_response,
-            'status_update': self.handle_status_update
+            'status_update_response': self.handle_status_update_response
         }
 
         message_type = message.get('type')
@@ -116,6 +116,8 @@ class WebSocketClient:
         if handler:
             logger.info(f"Handling message type: {message_type}")
             await handler(message)
+        elif message_type is None:
+            logger.warning("Received message without 'type' field")
         else:
             logger.warning(f"Unknown message type received: {message_type}")
 
@@ -143,8 +145,8 @@ class WebSocketClient:
     async def handle_connection_response(self, data):
         logger.info(f"Received connection response: {data}")
 
-    async def handle_status_update(self, data):
-        logger.info(f"Received status update: {data}")
+    async def handle_status_update_response(self, data):
+        logger.info(f"Received status update response: {data}")
 
     async def handle_effect_trigger(self, data):
         logger.info(f"Received effect trigger: {data}")

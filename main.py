@@ -61,6 +61,10 @@ async def handle_client_connected(websocket, data):
         logger.warning(f"Received incomplete client connection data: {data}")
         await websocket.send(json.dumps({"type": "connection_response", "status": "error", "message": "Incomplete connection data"}))
 
+async def handle_status_update(websocket, data):
+    logger.info(f"Status update received: {data}")
+    await websocket.send(json.dumps({"type": "status_update_response", "status": "success", "message": "Status update acknowledged"}))
+
 async def handle_websocket_message(ws, data):
     """
     Handle incoming WebSocket messages.
