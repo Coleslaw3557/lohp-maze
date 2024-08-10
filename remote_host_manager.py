@@ -85,11 +85,11 @@ class RemoteHostManager:
         return False
 
     def get_client_ip_by_room(self, room):
-        for ip, data in self.remote_hosts.items():
-            if room.lower() in [r.lower() for r in data.get('rooms', [])]:
-                return ip
         for ip, rooms in self.client_rooms.items():
             if room.lower() in [r.lower() for r in rooms]:
+                return ip
+        for ip, data in self.remote_hosts.items():
+            if room.lower() in [r.lower() for r in data.get('rooms', [])]:
                 return ip
         logger.warning(f"No client IP found for room: {room}")
         return None
@@ -141,9 +141,9 @@ class RemoteHostManager:
             logger.error(f"No audio file provided for room {room}")
             return
 
-        host = self.get_host_by_room(room)
-        if host:
-            logger.info(f"Streaming audio file to room {room}")
+        client_ip = self.get_client_ip_by_room(room)
+        if client_ip:
+            logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
             try:
                 if isinstance(audio_file, str):
                     with open(audio_file, 'rb') as f:
@@ -164,7 +164,7 @@ class RemoteHostManager:
             except Exception as e:
                 logger.error(f"Error streaming audio to room {room}: {str(e)}")
         else:
-            logger.warning(f"No remote host found for room: {room}. Cannot stream audio.")
+            logger.warning(f"No client IP found for room: {room}. Cannot stream audio.")
 
     async def reconnect_and_retry(self, host, command, audio_data):
         max_retries = 3
