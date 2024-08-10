@@ -34,8 +34,12 @@ class RemoteHostManager:
         for ip, host_info in self.remote_hosts.items():
             if room.lower() in [r.lower() for r in host_info['rooms']]:
                 logger.debug(f"Found host for room {room}: {host_info['name']} ({ip})")
-                return self.connected_clients.get(ip)
-        logger.warning(f"No host found for room: {room}")
+                if ip in self.connected_clients:
+                    return self.connected_clients[ip]
+                else:
+                    logger.warning(f"Host found for room {room}, but not connected: {host_info['name']} ({ip})")
+                    return None
+        logger.warning(f"No host configuration found for room: {room}")
         return None
 
     async def send_audio_command(self, room, command, audio_data=None):
@@ -48,12 +52,15 @@ class RemoteHostManager:
                     "data": audio_data.decode('utf-8') if audio_data else None
                 }
                 await websocket.send(json.dumps(message))
+                logger.info(f"Successfully sent {command} command to room {room}")
                 return True
             except Exception as e:
                 logger.error(f"Error sending {command} command to room {room}: {str(e)}")
                 return False
         else:
-            logger.warning(f"No connected client found for room: {room}. Cannot send {command} command.")
+            logger.error(f"No connected client found for room: {room}. Cannot send {command} command.")
+            logger.info(f"Connected clients: {list(self.connected_clients.keys())}")
+            logger.info(f"Remote hosts configuration: {self.remote_hosts}")
             return False
 
     async def reconnect_and_retry(self, host, command, audio_data):
