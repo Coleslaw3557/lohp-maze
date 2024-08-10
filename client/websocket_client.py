@@ -18,12 +18,26 @@ class WebSocketClient:
     async def connect(self):
         uri = f"ws://{self.server_ip}:{self.server_port}/ws"
         try:
-            self.websocket = await websockets.connect(uri, ping_interval=20, ping_timeout=20, extra_headers={"Client-Type": "RemoteUnit"})
+            self.websocket = await websockets.connect(
+                uri,
+                ping_interval=20,
+                ping_timeout=20,
+                extra_headers={"Client-Type": "RemoteUnit"},
+                max_size=None  # Allow unlimited message size
+            )
             logger.info(f"Connected to server at {uri}")
             await self.send_status_update("connected")
         except Exception as e:
             logger.error(f"Failed to connect to server: {e}")
             self.websocket = None  # Ensure websocket is None if connection fails
+        
+    async def reconnect(self):
+        logger.info("Attempting to reconnect...")
+        await self.connect()
+        if self.websocket:
+            logger.info("Reconnected successfully")
+        else:
+            logger.error("Reconnection failed")
         
     async def send_status_update(self, status):
         if self.websocket:
@@ -59,8 +73,8 @@ class WebSocketClient:
     async def listen(self):
         while True:
             if self.websocket is None:
-                logger.warning("No active WebSocket connection. Attempting to connect...")
-                await self.connect()
+                logger.warning("No active WebSocket connection. Attempting to reconnect...")
+                await self.reconnect()
                 if self.websocket is None:
                     await asyncio.sleep(5)
                     continue
@@ -70,10 +84,12 @@ class WebSocketClient:
                 await self.handle_message(json.loads(message))
             except websockets.exceptions.ConnectionClosed:
                 logger.warning("Connection to server closed. Attempting to reconnect...")
-                self.websocket = None
+                await self.reconnect()
+            except json.JSONDecodeError:
+                logger.error("Received invalid JSON from server")
             except Exception as e:
                 logger.error(f"Error in WebSocket communication: {e}")
-                self.websocket = None
+                await self.reconnect()
             
             if self.websocket is None:
                 await asyncio.sleep(5)

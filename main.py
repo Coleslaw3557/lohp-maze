@@ -34,20 +34,47 @@ app.secret_key = SECRET_KEY
 async def ws():
     try:
         await websocket.accept()
-        logger.info(f"WebSocket connection established with {websocket.remote_addr}")
+        client_type = websocket.headers.get("Client-Type")
+        logger.info(f"WebSocket connection established with {websocket.remote_addr}, Client-Type: {client_type}")
+        
         while True:
             try:
                 data = await websocket.receive_json()
-                logger.info(f"Received data: {data}")
-                # Handle the received data
-                await websocket.send_json({"status": "received"})
+                logger.info(f"Received data from {websocket.remote_addr}: {data}")
+                
+                # Handle the received data based on client type
+                if client_type == "RemoteUnit":
+                    await handle_remote_unit_message(websocket, data)
+                else:
+                    await handle_generic_message(websocket, data)
+                
             except WebSocketDisconnect:
                 logger.info(f"WebSocket disconnected from {websocket.remote_addr}")
                 break
+            except json.JSONDecodeError:
+                logger.error(f"Invalid JSON received from {websocket.remote_addr}")
+                await websocket.send_json({"status": "error", "message": "Invalid JSON"})
     except Exception as e:
-        logger.error(f"WebSocket error: {str(e)}")
+        logger.error(f"WebSocket error for {websocket.remote_addr}: {str(e)}")
     finally:
-        logger.info("WebSocket connection closed")
+        logger.info(f"WebSocket connection closed for {websocket.remote_addr}")
+
+async def handle_remote_unit_message(websocket, data):
+    # Handle messages specific to RemoteUnit clients
+    if data.get('type') == 'status_update':
+        logger.info(f"Status update from RemoteUnit: {data}")
+        await websocket.send_json({"status": "received", "message": "Status update acknowledged"})
+    elif data.get('type') == 'trigger_event':
+        logger.info(f"Trigger event from RemoteUnit: {data}")
+        # Process the trigger event (you'll need to implement this part)
+        await websocket.send_json({"status": "received", "message": "Trigger event processed"})
+    else:
+        await websocket.send_json({"status": "error", "message": "Unknown message type for RemoteUnit"})
+
+async def handle_generic_message(websocket, data):
+    # Handle messages from other client types
+    logger.info(f"Generic message received: {data}")
+    await websocket.send_json({"status": "received"})
 
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
