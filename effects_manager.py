@@ -217,13 +217,17 @@ class EffectsManager:
                 logger.error(f"No step values generated for fixture {fixture_id}")
                 return False
             
-            await self.interrupt_handler.interrupt_fixture(
+            result = await self.interrupt_handler.interrupt_fixture(
                 fixture_id,
                 effect_data['duration'],
                 step_values
             )
-            logger.debug(f"Effect applied successfully to fixture {fixture_id}")
-            return True
+            if result:
+                logger.debug(f"Effect applied successfully to fixture {fixture_id}")
+                return True
+            else:
+                logger.error(f"Failed to apply effect to fixture {fixture_id}")
+                return False
         except Exception as e:
             logger.error(f"Error applying effect to fixture {fixture_id}: {str(e)}", exc_info=True)
             return False

@@ -30,24 +30,24 @@ def generate_theme_values(theme_data, current_time, master_brightness):
     intensity_fluctuation = theme_data.get('intensity_fluctuation', 0.5)
     transition_speed = theme_data.get('transition_speed', 0.5)
 
-    time_factor = current_time * transition_speed
+    time_factor = current_time * transition_speed * 0.1  # Slow down the transition
     sin_time = math.sin(time_factor)
     sin_time_slow = math.sin(time_factor * 0.1)
     sin_time_medium = math.sin(time_factor * 0.2)
 
     if 'blue_green_balance' in theme_data:  # Ocean theme
-        hue = 0.5 + sin_time_slow * 0.1
+        hue = 0.5 + sin_time_slow * 0.05  # Reduce hue variation
         blue_green_balance = theme_data.get('blue_green_balance', 0.8)
-        saturation = 0.8 + sin_time_medium * 0.2 * color_variation
+        saturation = 0.8 + sin_time_medium * 0.1 * color_variation  # Reduce saturation variation
     elif 'green_blue_balance' in theme_data:  # Jungle theme
-        hue = 0.3 + sin_time_slow * 0.1
+        hue = 0.3 + sin_time_slow * 0.05  # Reduce hue variation
         green_blue_balance = theme_data.get('green_blue_balance', 0.9)
-        saturation = 0.9 + sin_time_medium * 0.1 * color_variation
+        saturation = 0.9 + sin_time_medium * 0.05 * color_variation  # Reduce saturation variation
     else:
-        hue = (sin_time_slow + 1) * 0.5
-        saturation = color_variation
+        hue = 0.5 + sin_time_slow * 0.1  # Reduce hue variation
+        saturation = 0.8 + sin_time_medium * 0.1 * color_variation  # Reduce saturation variation
 
-    value = overall_brightness * (1 + sin_time * intensity_fluctuation)
+    value = overall_brightness * (1 + sin_time * intensity_fluctuation * 0.5)  # Reduce intensity fluctuation
     r, g, b = hsv_to_rgb(hue, saturation, value)
 
     if 'blue_green_balance' in theme_data:  # Ocean theme
@@ -64,7 +64,7 @@ def generate_theme_values(theme_data, current_time, master_brightness):
     channels['w_dimming'] = int(min(r, g, b) * 12.75)  # 255 * 0.05 = 12.75
 
     strobe_speed = theme_data.get('strobe_speed', 0)
-    channels['total_strobe'] = int(127 + sin_time * strobe_speed * 64) if strobe_speed > 0 else 0
+    channels['total_strobe'] = int(127 + sin_time * strobe_speed * 32) if strobe_speed > 0 else 0  # Reduce strobe intensity
 
     return channels
 
