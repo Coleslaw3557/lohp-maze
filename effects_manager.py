@@ -77,16 +77,16 @@ class EffectsManager:
         lights = room_layout.get(room, [])
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
         
-        logger.info(f"Applying effect to room '{room}'")
+        logger.info(f"Applying effect '{effect_name}' to room '{room}'")
         logger.debug(f"Effect data: {effect_data}")
         logger.debug(f"Fixture IDs for room: {fixture_ids}")
         
-        self.room_effects[room] = True
+        self.room_effects[room] = effect_name
         
         tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
         await asyncio.gather(*tasks)
         
-        logger.info(f"Effect application completed in room '{room}'")
+        logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         
         self.room_effects.pop(room, None)
         
