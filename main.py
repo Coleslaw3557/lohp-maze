@@ -34,7 +34,8 @@ connected_clients = set()
 async def websocket_handler(websocket, path):
     connected_clients.add(websocket)
     try:
-        await handle_client_connected(websocket)
+        message = await websocket.recv()
+        await handle_client_connected(websocket, json.loads(message))
         async for message in websocket:
             await handle_websocket_message(websocket, json.loads(message))
     except websockets.exceptions.ConnectionClosedError as e:
