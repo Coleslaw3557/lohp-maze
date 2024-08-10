@@ -176,7 +176,7 @@ class EffectsManager:
             logger.error(f"Failed to trigger {effect_name} effect in some rooms")
         return success, f"{effect_name} effect triggered in all rooms" if success else f"Failed to trigger {effect_name} effect in some rooms"
 
-    async def apply_effect_to_room(self, room, effect_data):
+    async def apply_effect_to_room(self, room, effect_name, effect_data):
         logger.info(f"Applying effect to room: {room}")
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room, [])
