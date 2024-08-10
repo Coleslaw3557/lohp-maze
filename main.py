@@ -50,11 +50,11 @@ async def handle_client_connected(websocket):
     client_info = await websocket.recv()
     client_info = json.loads(client_info)
     unit_name = client_info.get('unit_name')
-    ip = client_info.get('ip')
     associated_rooms = client_info.get('associated_rooms', [])
-    if unit_name and ip and associated_rooms:
-        remote_host_manager.update_client_rooms(ip, associated_rooms, websocket)
-        logger.info(f"Client connected: {unit_name} ({ip}) - Associated rooms: {associated_rooms}")
+    client_ip = websocket.remote_address[0]  # Get the actual client IP
+    if unit_name and associated_rooms:
+        remote_host_manager.update_client_rooms(client_ip, associated_rooms, websocket)
+        logger.info(f"Client connected: {unit_name} ({client_ip}) - Associated rooms: {associated_rooms}")
         await websocket.send(json.dumps({"type": "connection_response", "status": "success", "message": "Connection acknowledged"}))
     else:
         logger.warning(f"Received incomplete client connection data: {client_info}")
