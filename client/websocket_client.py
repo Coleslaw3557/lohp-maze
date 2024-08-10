@@ -16,13 +16,14 @@ class WebSocketClient:
         self.websocket = None
 
     async def connect(self):
-        uri = f"ws://{self.server_ip}:{self.server_port}"
+        uri = f"ws://{self.server_ip}:{self.server_port}/ws"  # Add '/ws' to the URI
         try:
-            self.websocket = await websockets.connect(uri)
+            self.websocket = await websockets.connect(uri, subprotocols=["lohp-maze"])  # Add subprotocol
             logger.info(f"Connected to server at {uri}")
             await self.send_status_update("connected")
         except Exception as e:
             logger.error(f"Failed to connect to server: {e}")
+            self.websocket = None  # Ensure websocket is None if connection fails
 
     async def disconnect(self):
         if self.websocket:
@@ -31,14 +32,24 @@ class WebSocketClient:
 
     async def listen(self):
         while True:
+            if self.websocket is None:
+                logger.warning("No active WebSocket connection. Attempting to connect...")
+                await self.connect()
+                if self.websocket is None:
+                    await asyncio.sleep(5)
+                    continue
+
             try:
                 message = await self.websocket.recv()
                 await self.handle_message(json.loads(message))
             except websockets.exceptions.ConnectionClosed:
                 logger.warning("Connection to server closed. Attempting to reconnect...")
-                await self.connect()
+                self.websocket = None
             except Exception as e:
                 logger.error(f"Error in WebSocket communication: {e}")
+                self.websocket = None
+            
+            if self.websocket is None:
                 await asyncio.sleep(5)
 
     async def handle_message(self, message):
