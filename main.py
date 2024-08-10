@@ -103,8 +103,9 @@ dmx_output_manager.start()
 # Ensure no theme is running at startup
 effects_manager.stop_current_theme()
 
-# Initialize WebSocket connections to remote hosts
-await remote_host_manager.initialize_websocket_connections()
+async def initialize_remote_hosts():
+    # Initialize WebSocket connections to remote hosts
+    await remote_host_manager.initialize_websocket_connections()
 
 @app.route('/api/set_master_brightness', methods=['POST'])
 async def set_master_brightness():
@@ -310,6 +311,7 @@ if __name__ == '__main__':
     config.loglevel = "INFO"
 
     async def run_server():
+        await initialize_remote_hosts()
         websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
         quart_server = serve(app, config)
         await asyncio.gather(websocket_server.wait_closed(), quart_server)
