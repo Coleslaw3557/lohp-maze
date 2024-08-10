@@ -1,8 +1,0 @@
-{
-    "remote_hosts": {
-        "192.168.1.165": {
-            "name": "Cop Dodge Unit",
-            "rooms": ["Cop Dodge"]
-        }
-    }
-}
