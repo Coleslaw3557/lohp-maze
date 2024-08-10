@@ -294,4 +294,5 @@ if __name__ == '__main__':
         quart_server = serve(app, config)
         await asyncio.gather(websocket_server.wait_closed(), quart_server)
 
+    print("Starting server on http://0.0.0.0:5000")
     asyncio.run(run_server())
