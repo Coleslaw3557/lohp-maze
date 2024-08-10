@@ -31,28 +31,34 @@ app = Quart(__name__)
 app = cors(app)
 app.secret_key = SECRET_KEY
 
-@app.websocket('/ws')
+@app.websocket('/')
 async def ws():
-    ws_connection = await websocket.accept()
     while True:
         try:
-            data = await ws_connection.receive_json()
-            await handle_websocket_message(ws_connection, data)
+            data = await websocket.receive_json()
+            await handle_websocket_message(websocket, data)
         except WebSocketDisconnect:
             break
 
 async def handle_websocket_message(websocket, data):
     message_type = data.get('type')
+    
     if message_type == 'status_update':
-        logger.info(f"Status update received: {data}")
-        await websocket.send_json({"status": "received", "message": "Status update acknowledged"})
+        await handle_status_update(websocket, data)
     elif message_type == 'trigger_event':
-        logger.info(f"Trigger event received: {data}")
-        # Process the trigger event (you'll need to implement this part)
-        await websocket.send_json({"status": "received", "message": "Trigger event processed"})
+        await handle_trigger_event(websocket, data)
     else:
-        logger.info(f"Generic message received: {data}")
-        await websocket.send_json({"status": "received"})
+        logger.warning(f"Unknown message type received: {message_type}")
+        await websocket.send_json({"status": "error", "message": "Unknown message type"})
+
+async def handle_status_update(websocket, data):
+    logger.info(f"Status update received: {data}")
+    await websocket.send_json({"status": "success", "message": "Status update acknowledged"})
+
+async def handle_trigger_event(websocket, data):
+    logger.info(f"Trigger event received: {data}")
+    # TODO: Process the trigger event
+    await websocket.send_json({"status": "success", "message": "Trigger event processed"})
 
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)

@@ -16,7 +16,7 @@ class WebSocketClient:
         self.websocket = None
 
     async def connect(self):
-        uri = f"ws://{self.server_ip}:{self.server_port}/ws"
+        uri = f"ws://{self.server_ip}:{self.server_port}"
         logger.info(f"Attempting to connect to server at {uri}")
         try:
             self.websocket = await websockets.connect(
@@ -74,13 +74,6 @@ class WebSocketClient:
 
     async def listen(self):
         while True:
-            if self.websocket is None:
-                logger.warning("No active WebSocket connection. Attempting to reconnect...")
-                await self.reconnect()
-                if self.websocket is None:
-                    await asyncio.sleep(5)
-                    continue
-
             try:
                 message = await self.websocket.recv()
                 await self.handle_message(json.loads(message))
@@ -91,10 +84,6 @@ class WebSocketClient:
                 logger.error("Received invalid JSON from server")
             except Exception as e:
                 logger.error(f"Error in WebSocket communication: {e}")
-                await self.reconnect()
-            
-            if self.websocket is None:
-                await asyncio.sleep(5)
 
     async def handle_message(self, message):
         if message['type'] == 'audio_start':
