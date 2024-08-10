@@ -88,10 +88,10 @@ async def handle_client_connected(ws, data):
     Handle client connection messages.
     """
     unit_name = data.get('data', {}).get('unit_name')
-    ip = data.get('data', {}).get('ip')
     associated_rooms = data.get('data', {}).get('associated_rooms', [])
-    if unit_name and ip and associated_rooms:
-        remote_host_manager.update_client_rooms(ip, associated_rooms, ws)
+    client_ip = ws.remote_address[0]  # Get the actual client IP
+    if unit_name and associated_rooms:
+        remote_host_manager.update_client_rooms(unit_name, client_ip, associated_rooms, ws)
         logger.info(f"Client connected: {unit_name} ({ip}) - Associated rooms: {associated_rooms}")
         await ws.send(json.dumps({"type": "connection_response", "status": "success", "message": "Connection acknowledged"}))
     else:
