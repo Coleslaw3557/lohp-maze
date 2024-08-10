@@ -98,18 +98,25 @@ class WebSocketClient:
                 await self.reconnect()
 
     async def reconnect(self):
-        while True:
+        max_retries = 5
+        retry_delay = 5
+        for attempt in range(max_retries):
             try:
                 uri = f"ws://{self.server_ip}:{self.server_port}"
-                logger.info(f"Attempting to reconnect to {uri}")
+                logger.info(f"Attempting to reconnect to {uri} (Attempt {attempt + 1}/{max_retries})")
                 websocket = await websockets.connect(uri, ping_interval=20, ping_timeout=20)
                 await self.set_websocket(websocket)
                 logger.info("Reconnected to server")
-                break
+                return True
             except Exception as e:
                 logger.error(f"Failed to reconnect: {e}")
-                logger.info("Retrying in 5 seconds...")
-                await asyncio.sleep(5)  # Wait before trying again
+                if attempt < max_retries - 1:
+                    wait_time = retry_delay * (2 ** attempt)
+                    logger.info(f"Retrying in {wait_time} seconds...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error("Max retries reached. Unable to reconnect.")
+        return False
 
     async def handle_message(self, message):
         if not message:
