@@ -8,25 +8,25 @@ The Remote Unit Client is a Python-based application designed to run on Raspberr
 
 ### 2.1 WebSocket Client
 - Establishes and maintains a WebSocket connection with the central server.
-- Handles incoming messages for audio control and effect triggering.
-- Sends status updates and acknowledgments back to the server.
+- Handles incoming messages for audio control.
+- Sends status updates, trigger events, and acknowledgments back to the server.
 
 ### 2.2 Audio Manager
 - Manages local audio playback using a library like PyAudio or pygame.
 - Handles audio file caching for improved performance.
 - Controls volume and looping of audio tracks.
 
-### 2.3 Effect Handler
-- Interprets effect commands received from the server.
-- Triggers local lighting effects if the unit is equipped with controllable lights.
+### 2.3 Trigger Manager
+- Monitors and manages local triggers (e.g., buttons, sensors) connected to the Raspberry Pi.
+- Sends trigger events to the server when activated.
 
 ### 2.4 Configuration Manager
 - Loads and manages the local configuration file.
-- Stores settings such as server IP, associated rooms, and device-specific parameters.
+- Stores settings such as server IP, associated room, and device-specific parameters.
 
 ### 2.5 Synchronization Manager
 - Implements time synchronization with the server using a protocol like PTP.
-- Ensures accurate timing for effect and audio playback.
+- Ensures accurate timing for audio playback and trigger events.
 
 ## 3. Configuration File (config.json)
 
