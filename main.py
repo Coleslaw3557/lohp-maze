@@ -32,13 +32,18 @@ app.secret_key = SECRET_KEY
 
 @app.websocket('/ws')
 async def ws():
-    while True:
-        try:
-            data = await websocket.receive_json()
-            # Handle the received data
-            await websocket.send_json({"status": "received"})
-        except WebSocketDisconnect:
-            break
+    try:
+        while True:
+            try:
+                data = await websocket.receive_json()
+                # Handle the received data
+                await websocket.send_json({"status": "received"})
+            except WebSocketDisconnect:
+                break
+    except Exception as e:
+        logger.error(f"WebSocket error: {str(e)}")
+    finally:
+        logger.info("WebSocket connection closed")
 
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)

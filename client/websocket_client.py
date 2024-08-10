@@ -18,12 +18,25 @@ class WebSocketClient:
     async def connect(self):
         uri = f"ws://{self.server_ip}:{self.server_port}/ws"
         try:
-            self.websocket = await websockets.connect(uri)
+            self.websocket = await websockets.connect(uri, ping_interval=20, ping_timeout=20)
             logger.info(f"Connected to server at {uri}")
             await self.send_status_update("connected")
         except Exception as e:
             logger.error(f"Failed to connect to server: {e}")
             self.websocket = None  # Ensure websocket is None if connection fails
+        
+    async def send_status_update(self, status):
+        if self.websocket:
+            message = {
+                "type": "status_update",
+                "data": {
+                    "unit_name": self.unit_name,
+                    "status": status
+                }
+            }
+            await self.websocket.send(json.dumps(message))
+        else:
+            logger.warning("Cannot send status update: WebSocket not connected")
 
     async def disconnect(self):
         if self.websocket:
