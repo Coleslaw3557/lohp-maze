@@ -4,9 +4,10 @@
 
 This design specification outlines the server-side changes required to extend the LoHP-MazeManager Control System to support managing remote host clients and integrating audio streaming functionality. The enhancements will allow the system to:
 
-1. Manage a list of remote host clients (Raspberry Pis) connected to switches in various rooms.
-2. Handle POST requests from remote units to execute effects and themes.
+1. Manage a list of remote host clients (Raspberry Pis) connected to triggers and speakers in various rooms.
+2. Handle WebSocket messages from remote units for trigger events.
 3. Stream audio files over WebSocket connections to remote units based on triggered effects.
+4. Manage and execute lighting effects on the central server based on trigger events from remote units.
 
 ## 2. New Components
 
@@ -18,6 +19,7 @@ Responsibilities:
 - Load and maintain remote host configurations.
 - Manage WebSocket connections to remote hosts.
 - Route audio streams to appropriate remote hosts based on room associations.
+- Handle trigger events from remote hosts and initiate corresponding effects.
 
 ### 2.2 AudioManager
 
@@ -27,7 +29,7 @@ Responsibilities:
 - Manage audio file storage and retrieval.
 - Maintain associations between effects and audio files.
 - Prepare audio streams for WebSocket transmission.
-- Coordinate audio playback with lighting effects.
+- Coordinate audio playback instructions with effect triggers.
 
 ### 2.3 WebSocketHandler
 
@@ -35,8 +37,9 @@ Purpose: Manage WebSocket connections and communication with remote hosts.
 
 Responsibilities:
 - Establish and maintain WebSocket connections with remote hosts.
-- Handle incoming WebSocket messages from remote hosts.
+- Handle incoming WebSocket messages from remote hosts, including trigger events.
 - Send audio stream data and control messages to remote hosts.
+- Relay trigger events to the appropriate components for processing.
 
 ## 3. Modifications to Existing Components
 
