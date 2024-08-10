@@ -9,12 +9,14 @@ from interrupt_handler import InterruptHandler
 logger = logging.getLogger(__name__)
 
 class EffectsManager:
-    def __init__(self, config_file='effects_config.json', light_config_manager=None, dmx_state_manager=None):
+    def __init__(self, config_file='effects_config.json', light_config_manager=None, dmx_state_manager=None, remote_host_manager=None, audio_manager=None):
         self.config_file = config_file
         self.effects = self.load_config()
         self.room_effects = {}
         self.light_config_manager = light_config_manager
         self.dmx_state_manager = dmx_state_manager
+        self.remote_host_manager = remote_host_manager
+        self.audio_manager = audio_manager
         self.theme_manager = ThemeManager(dmx_state_manager, light_config_manager)
         self.interrupt_handler = InterruptHandler(dmx_state_manager, self.theme_manager)
         
@@ -192,7 +194,13 @@ class EffectsManager:
         # Pause theme for this room
         self.theme_manager.pause_theme_for_room(room)
         
+        # Apply lighting effect
         tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        
+        # Apply audio effect
+        audio_task = self._apply_audio_effect(room, effect_data['name'])
+        tasks.append(audio_task)
+        
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         success = all(isinstance(result, bool) and result for result in results)
@@ -212,6 +220,15 @@ class EffectsManager:
         self.theme_manager.resume_theme_for_room(room)
         
         return success
+
+    async def _apply_audio_effect(self, room, effect_name):
+        audio_config = self.audio_manager.get_audio_config(effect_name)
+        if audio_config:
+            audio_data = self.audio_manager.prepare_audio_stream(effect_name)
+            if audio_data:
+                await self.remote_host_manager.send_audio_command(room, 'audio_start', audio_data)
+                return True
+        return False
 
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:

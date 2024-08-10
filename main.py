@@ -9,6 +9,8 @@ from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
 from interrupt_handler import InterruptHandler
+from remote_host_manager import RemoteHostManager
+from audio_manager import AudioManager
 
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -29,7 +31,9 @@ app.secret_key = SECRET_KEY
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
 dmx_output_manager = DMXOutputManager(dmx_state_manager)
 light_config = LightConfigManager(dmx_state_manager=dmx_state_manager)
-effects_manager = EffectsManager(config_file='effects_config.json', light_config_manager=light_config, dmx_state_manager=dmx_state_manager)
+remote_host_manager = RemoteHostManager()
+audio_manager = AudioManager()
+effects_manager = EffectsManager(config_file='effects_config.json', light_config_manager=light_config, dmx_state_manager=dmx_state_manager, remote_host_manager=remote_host_manager, audio_manager=audio_manager)
 interrupt_handler = InterruptHandler(dmx_state_manager, effects_manager.theme_manager)
 effects_manager.interrupt_handler = interrupt_handler
 logger.info("InterruptHandler initialized and passed to EffectsManager")
@@ -42,6 +46,9 @@ dmx_output_manager.start()
 
 # Ensure no theme is running at startup
 effects_manager.stop_current_theme()
+
+# Initialize WebSocket connections to remote hosts
+remote_host_manager.initialize_websocket_connections()
 
 @app.route('/api/set_master_brightness', methods=['POST'])
 async def set_master_brightness():
@@ -80,6 +87,7 @@ async def run_effect():
     data = await request.json
     room = data.get('room')
     effect_name = data.get('effect_name')
+    audio_params = data.get('audio', {})
     
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
@@ -89,6 +97,9 @@ async def run_effect():
     if not effect_data:
         logger.error(f"Effect not found: {effect_name}")
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
+    
+    # Add audio parameters to effect data
+    effect_data['audio'] = audio_params
     
     try:
         success = await effects_manager.apply_effect_to_room(room, effect_data)
