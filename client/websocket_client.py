@@ -86,6 +86,8 @@ class WebSocketClient:
             logger.warning("Received empty message")
             return
 
+        logger.info(f"Received message: {message}")
+
         handlers = {
             'audio_start': self.audio_manager.start_audio,
             'audio_stop': self.audio_manager.stop_audio,
@@ -97,6 +99,7 @@ class WebSocketClient:
         handler = handlers.get(message_type)
 
         if handler:
+            logger.info(f"Handling message type: {message_type}")
             await handler(message.get('data'))
         else:
             logger.warning(f"Unknown message type received: {message_type}")
