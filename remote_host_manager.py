@@ -59,11 +59,11 @@ class RemoteHostManager:
         if websocket:
             logger.info(f"Sending {command} command to room {room}")
             try:
-                if not websocket.open:
-                    logger.warning(f"WebSocket for room {room} is not open. Attempting to reconnect.")
+                if not isinstance(websocket, websockets.WebSocketClientProtocol) or not websocket.open:
+                    logger.warning(f"WebSocket for room {room} is not valid or not open. Attempting to reconnect.")
                     await self.reconnect_websocket(room)
                     websocket = self.get_host_by_room(room)
-                    if not websocket or not websocket.open:
+                    if not isinstance(websocket, websockets.WebSocketClientProtocol) or not websocket.open:
                         logger.error(f"Failed to reconnect WebSocket for room {room}")
                         return False
 
@@ -82,9 +82,6 @@ class RemoteHostManager:
                     await websocket.send(json.dumps(message))
                 logger.info(f"Successfully sent {command} command to room {room}")
                 return True
-            except AttributeError:
-                logger.error(f"WebSocket for room {room} is not a valid WebSocket object")
-                return False
             except Exception as e:
                 logger.error(f"Error sending {command} command to room {room}: {str(e)}")
                 return False
@@ -137,6 +134,10 @@ class RemoteHostManager:
         # self.effect_manager.trigger_effect(room, trigger)
 
     async def stream_audio_to_room(self, room, audio_file):
+        if not audio_file:
+            logger.error(f"No audio file provided for room {room}")
+            return
+
         host = self.get_host_by_room(room)
         if host:
             logger.info(f"Streaming audio file to room {room}")
@@ -157,7 +158,10 @@ class RemoteHostManager:
                 logger.error(f"Error reading audio file: {str(e)}")
             except Exception as e:
                 logger.error(f"Error streaming audio to room {room}: {str(e)}")
-                await self.reconnect_and_retry(host, 'audio_start', audio_data)
+                if isinstance(host, websockets.WebSocketClientProtocol):
+                    await self.reconnect_and_retry(host, 'audio_start', audio_data)
+                else:
+                    logger.error(f"Invalid host object for room {room}: {type(host)}")
         else:
             logger.warning(f"No remote host found for room: {room}. Cannot stream audio.")
 
