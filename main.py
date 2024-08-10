@@ -54,7 +54,7 @@ async def handle_client_connected(websocket, data):
     associated_rooms = data.get('data', {}).get('associated_rooms', [])
     client_ip = websocket.remote_address[0]  # Get the actual client IP
     if unit_name and associated_rooms:
-        remote_host_manager.update_client_rooms(unit_name, client_ip, associated_rooms, websocket)
+        remote_host_manager.update_client_rooms(unit_name, client_ip, associated_rooms, websocket, client_ip)
         logger.info(f"Client connected: {unit_name} ({client_ip}) - Associated rooms: {associated_rooms}")
         await websocket.send(json.dumps({"type": "connection_response", "status": "success", "message": "Connection acknowledged"}))
     else:
