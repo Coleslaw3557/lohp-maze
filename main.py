@@ -196,7 +196,8 @@ def stop_test():
 
 @app.route('/api/run_effect_all_rooms', methods=['POST'])
 async def run_effect_all_rooms():
-    effect_name = request.json.get('effect_name')
+    data = await request.json
+    effect_name = data.get('effect_name')
     if not effect_name:
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
 
