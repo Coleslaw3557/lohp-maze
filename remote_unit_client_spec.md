@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-The Remote Unit Client is a Python-based application designed to run on Raspberry Pi units distributed throughout the maze. It will communicate with the central LoHP-MazeManager Control System server, handle audio playback, and manage local lighting effects if applicable.
+The Remote Unit Client is a Python-based application designed to run on Raspberry Pi units distributed throughout the maze. It will communicate with the central LoHP-MazeManager Control System server, handle audio playback, and manage local triggers (e.g., buttons, sensors).
 
 ## 2. Key Components
 
@@ -35,9 +35,20 @@ The Remote Unit Client is a Python-based application designed to run on Raspberr
   "server_ip": "192.168.1.100",
   "server_port": 5000,
   "unit_name": "RPi-Unit-1",
-  "associated_rooms": ["Entrance", "Cop Dodge"],
+  "associated_room": "Entrance",
   "audio_output_device": "default",
-  "has_local_lighting": false,
+  "triggers": [
+    {
+      "name": "Button1",
+      "type": "gpio",
+      "pin": 17
+    },
+    {
+      "name": "Sensor1",
+      "type": "gpio",
+      "pin": 18
+    }
+  ],
   "cache_dir": "/home/pi/lohp_cache"
 }
 ```
