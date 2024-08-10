@@ -22,7 +22,11 @@ class WebSocketClient:
                 uri,
                 ping_interval=20,
                 ping_timeout=20,
-                extra_headers={"Client-Type": "RemoteUnit"},
+                extra_headers={
+                    "Client-Type": "RemoteUnit",
+                    "Connection": "Upgrade",
+                    "Upgrade": "websocket",
+                },
                 max_size=None  # Allow unlimited message size
             )
             logger.info(f"Connected to server at {uri}")

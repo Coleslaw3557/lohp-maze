@@ -60,6 +60,12 @@ async def ws():
     finally:
         logger.info(f"WebSocket connection closed for {websocket.remote_addr}")
 
+# Add this function to handle WebSocket upgrades
+@app.before_request
+async def handle_websocket_upgrade():
+    if request.headers.get('Upgrade', '').lower() == 'websocket':
+        return await websocket()
+
 async def handle_remote_unit_message(websocket, data):
     # Handle messages specific to RemoteUnit clients
     if data.get('type') == 'status_update':
