@@ -170,6 +170,7 @@ class RemoteHostManager:
                     'loop': audio_params.get('loop', False)
                 })
                 if success:
+                    await asyncio.sleep(0.1)  # Add a small delay before sending audio data
                     await self.send_audio_command(room, 'audio_data', audio_data)
                     logger.info(f"Successfully streamed audio to room {room}")
                 else:
