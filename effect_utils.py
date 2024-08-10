@@ -32,18 +32,18 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
 
     # Variable speed factor
     speed_variation = math.sin(current_time * 0.1) * 0.5 + 1.5  # Varies between 1 and 2
-    time_factor = current_time * transition_speed * 0.1 * speed_variation
+    time_factor = current_time * transition_speed * speed_variation
 
     sin_time = math.sin(time_factor)
     sin_time_slow = math.sin(time_factor * 0.1)
     sin_time_medium = math.sin(time_factor * 0.2)
 
     if 'blue_green_balance' in theme_data:  # Ocean theme
-        hue = 0.5 + sin_time_slow * 0.1  # Increase hue variation
+        hue = (0.5 + sin_time_slow * 0.2) % 1  # Increase hue variation
         blue_green_balance = theme_data.get('blue_green_balance', 0.8)
         saturation = 0.7 + sin_time_medium * 0.3 * color_variation  # Increase saturation variation
     elif 'green_blue_balance' in theme_data:  # Jungle theme
-        hue = 0.3 + sin_time_slow * 0.1  # Increase hue variation
+        hue = (0.3 + sin_time_slow * 0.2) % 1  # Increase hue variation
         green_blue_balance = theme_data.get('green_blue_balance', 0.9)
         saturation = 0.8 + sin_time_medium * 0.2 * color_variation  # Increase saturation variation
     elif 'color_wheel_speed' in theme_data:  # MazeMadness theme
@@ -53,7 +53,7 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
         hue = (time_factor * color_wheel_speed + room_offset) % 1  # Color wheel effect
         saturation = 0.8 + sin_time_medium * 0.2 * color_variation
     else:
-        hue = 0.5 + sin_time_slow * 0.2  # Increase hue variation
+        hue = (time_factor * 0.1) % 1  # Full color wheel rotation
         saturation = 0.7 + sin_time_medium * 0.3 * color_variation  # Increase saturation variation
 
     value = overall_brightness * (0.7 + sin_time * intensity_fluctuation * 0.3)  # Increase intensity fluctuation
