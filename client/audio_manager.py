@@ -16,15 +16,13 @@ class AudioManager:
         self.current_audio = None
         self.stop_event = threading.Event()
 
-    async def start_audio(self, audio_data):
-        file_name = audio_data['file'].lower()  # Convert to lowercase
-        file_path = os.path.join('sound-effects', file_name)
+    async def start_audio(self, audio_data, audio_file):
+        file_name = audio_data['file_name'].lower()
+        file_path = os.path.join(self.cache_dir, file_name)
         
-        if not os.path.exists(file_path):
-            logger.error(f"Audio file not found: {file_path}")
-            return
-        
-        self.stop_audio()
+        # Save the received audio file
+        with open(file_path, 'wb') as f:
+            f.write(audio_file)
         
         self.stop_audio()
         
