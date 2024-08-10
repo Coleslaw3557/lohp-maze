@@ -20,6 +20,7 @@ class RemoteHostManager:
         self.client_rooms[client_ip] = rooms
         self.connected_clients[client_ip] = websocket  # Store the WebSocket object
         self.remote_hosts[client_ip] = {"name": unit_name, "rooms": rooms}
+        self.save_config()
         logger.info(f"Updated associated rooms for client {unit_name} ({client_ip}): {rooms}")
         for room in rooms:
             logger.info(f"Associating room {room} with client {unit_name} ({client_ip})")
