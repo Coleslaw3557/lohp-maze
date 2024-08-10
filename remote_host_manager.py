@@ -156,9 +156,6 @@ class RemoteHostManager:
                     file_name = os.path.basename(audio_file)
                 elif isinstance(audio_file, bytes):
                     audio_data = audio_file
-                elif isinstance(audio_file, bool):
-                    logger.warning(f"Received boolean instead of audio file for room {room}. Skipping audio streaming.")
-                    return
                 else:
                     logger.error(f"Invalid audio_file parameter: {type(audio_file)}")
                     return
@@ -167,8 +164,13 @@ class RemoteHostManager:
                     logger.error(f"No valid audio data for room {room}")
                     return
 
-                success = await self.send_audio_command(room, 'audio_start', audio_data)
+                success = await self.send_audio_command(room, 'audio_start', {
+                    'file_name': file_name,
+                    'volume': audio_params.get('volume', 1.0),
+                    'loop': audio_params.get('loop', False)
+                })
                 if success:
+                    await self.send_audio_command(room, 'audio_data', audio_data)
                     logger.info(f"Successfully streamed audio to room {room}")
                 else:
                     logger.error(f"Failed to send audio command to room {room}")
