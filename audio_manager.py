@@ -18,7 +18,6 @@ class AudioManager:
                 'volume': 1.0,
                 'loop': False
             }
-            self.save_config()
 
     def load_config(self):
         try:
@@ -59,3 +58,11 @@ class AudioManager:
                 return f.read()
         logger.error(f"Failed to prepare audio stream for effect: {effect_name}")
         return None
+
+    def save_config(self):
+        try:
+            with open(self.config_file, 'w') as f:
+                json.dump(self.audio_config, f, indent=4)
+            logger.info(f"Audio configuration saved to {self.config_file}")
+        except IOError:
+            logger.error(f"Error writing to {self.config_file}")
