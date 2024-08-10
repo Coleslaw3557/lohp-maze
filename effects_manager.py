@@ -191,7 +191,7 @@ class EffectsManager:
             await self.interrupt_handler.interrupt_fixture(
                 fixture_id,
                 effect_data['duration'],
-                self._get_effect_step_values(effect_data)
+                get_effect_step_values(effect_data)
             )
             logger.debug(f"Effect applied to fixture {fixture_id}")
         except Exception as e:
