@@ -60,7 +60,7 @@ def set_theme():
         return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
 
 @app.route('/api/run_effect', methods=['POST'])
-def run_effect():
+async def run_effect():
     room = request.json.get('room')
     effect_name = request.json.get('effect_name')
     
@@ -71,10 +71,7 @@ def run_effect():
     if not effect_data:
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    success = loop.run_until_complete(effects_manager.apply_effect_to_room(room, effect_data))
-    loop.close()
+    success = await effects_manager.apply_effect_to_room(room, effect_data)
     
     if success:
         return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
@@ -109,17 +106,17 @@ def get_light_models():
 # This route has been removed as it was a duplicate
 
 @app.route('/api/run_test', methods=['POST'])
-def run_test():
+async def run_test():
     test_type = request.json['testType']
     rooms = request.json['rooms']
     
     try:
         if test_type == 'channel':
             channel_values = request.json['channelValues']
-            return run_channel_test(rooms, channel_values)
+            return await run_channel_test(rooms, channel_values)
         elif test_type == 'effect':
             effect_name = request.json['effectName']
-            return run_effect_test(rooms, effect_name)
+            return await run_effect_test(rooms, effect_name)
         else:
             return jsonify({"error": "Invalid test type"}), 400
     except Exception as e:
@@ -144,14 +141,14 @@ def run_channel_test(rooms, channel_values):
         logger.exception(f"Error in channel test for rooms: {', '.join(rooms)}")
         return jsonify({"error": str(e)}), 500
 
-def run_effect_test(rooms, effect_name):
+async def run_effect_test(rooms, effect_name):
     try:
         effect_data = effects_manager.get_effect(effect_name)
         if not effect_data:
             return jsonify({"error": f"Effect '{effect_name}' not found"}), 404
         
         for room in rooms:
-            success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
+            success = await effects_manager.apply_effect_to_room(room, effect_data)
             if not success:
                 return jsonify({"error": f"Failed to apply effect to room {room}"}), 500
         
