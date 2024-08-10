@@ -42,6 +42,13 @@ class AudioManager:
                 return full_path
             else:
                 logger.error(f"Audio file not found at path: {full_path}")
+                # Try lowercase filename as fallback
+                lowercase_path = os.path.join(self.audio_dir, audio_file.lower())
+                if os.path.exists(lowercase_path):
+                    logger.info(f"Found audio file with lowercase name: {lowercase_path}")
+                    return lowercase_path
+                else:
+                    logger.error(f"Audio file not found with lowercase name either: {lowercase_path}")
         else:
             logger.warning(f"No audio file configured for effect: {effect_name}")
         return None

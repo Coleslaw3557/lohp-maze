@@ -287,13 +287,19 @@ class EffectsManager:
         audio_config = self.audio_manager.get_audio_config(effect_name)
         if audio_config:
             logger.debug(f"Audio configuration found for effect '{effect_name}': {audio_config}")
-            audio_data = self.audio_manager.prepare_audio_stream(effect_name)
-            if audio_data:
-                logger.info(f"Audio stream prepared for effect '{effect_name}'. Sending to room '{room}'")
-                await self.remote_host_manager.send_audio_command(room, 'audio_start', audio_data)
-                return True
+            audio_file = self.audio_manager.get_audio_file(effect_name)
+            if audio_file:
+                logger.info(f"Audio file found for effect '{effect_name}': {audio_file}")
+                try:
+                    with open(audio_file, 'rb') as f:
+                        audio_data = f.read()
+                    logger.info(f"Audio stream prepared for effect '{effect_name}'. Sending to room '{room}'")
+                    await self.remote_host_manager.send_audio_command(room, 'audio_start', audio_data)
+                    return True
+                except IOError as e:
+                    logger.error(f"Error reading audio file for effect '{effect_name}': {str(e)}")
             else:
-                logger.warning(f"Failed to prepare audio stream for effect '{effect_name}'")
+                logger.error(f"Audio file not found for effect '{effect_name}'")
         else:
             logger.warning(f"No audio configuration found for effect '{effect_name}'")
         return False
