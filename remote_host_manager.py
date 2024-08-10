@@ -73,6 +73,9 @@ class RemoteHostManager:
                     await websocket.send(json.dumps(message))
                 logger.info(f"Successfully sent {command} command to room {room}")
                 return True
+            except AttributeError:
+                logger.error(f"WebSocket for room {room} is not a valid WebSocket object")
+                return False
             except Exception as e:
                 logger.error(f"Error sending {command} command to room {room}: {str(e)}")
                 return False
@@ -110,7 +113,7 @@ class RemoteHostManager:
     async def stream_audio_to_room(self, room, audio_file):
         host = self.get_host_by_room(room)
         if host:
-            logger.info(f"Streaming audio file {audio_file} to room {room}")
+            logger.info(f"Streaming audio file to room {room}")
             try:
                 if isinstance(audio_file, str):
                     with open(audio_file, 'rb') as f:
@@ -125,7 +128,7 @@ class RemoteHostManager:
                 if not success:
                     logger.error(f"Failed to send audio command to room {room}")
             except IOError as e:
-                logger.error(f"Error reading audio file {audio_file}: {str(e)}")
+                logger.error(f"Error reading audio file: {str(e)}")
             except Exception as e:
                 logger.error(f"Error streaming audio to room {room}: {str(e)}")
                 await self.reconnect_and_retry(host, 'audio_start', audio_data)
