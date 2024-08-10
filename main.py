@@ -27,6 +27,16 @@ app = Quart(__name__)
 app = cors(app)
 app.secret_key = SECRET_KEY
 
+@app.websocket('/ws')
+async def ws():
+    while True:
+        try:
+            data = await websocket.receive_json()
+            # Handle the received data
+            await websocket.send_json({"status": "received"})
+        except WebSocketDisconnect:
+            break
+
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
 dmx_output_manager = DMXOutputManager(dmx_state_manager)

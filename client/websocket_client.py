@@ -16,9 +16,9 @@ class WebSocketClient:
         self.websocket = None
 
     async def connect(self):
-        uri = f"ws://{self.server_ip}:{self.server_port}/ws"  # Add '/ws' to the URI
+        uri = f"ws://{self.server_ip}:{self.server_port}/ws"
         try:
-            self.websocket = await websockets.connect(uri, subprotocols=["lohp-maze"])  # Add subprotocol
+            self.websocket = await websockets.connect(uri)
             logger.info(f"Connected to server at {uri}")
             await self.send_status_update("connected")
         except Exception as e:
