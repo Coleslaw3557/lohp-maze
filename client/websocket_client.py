@@ -23,24 +23,15 @@ class WebSocketClient:
                 uri,
                 ping_interval=20,
                 ping_timeout=20,
-                extra_headers={
-                    "Client-Type": "RemoteUnit",
-                },
                 max_size=None  # Allow unlimited message size
             )
             logger.info(f"Successfully connected to server at {uri}")
             await self.send_status_update("connected")
-        except websockets.exceptions.InvalidStatusCode as e:
-            logger.error(f"Failed to connect to server: Invalid status code {e.status_code}")
-            self.websocket = None
+            return True
         except Exception as e:
             logger.error(f"Failed to connect to server: {e}")
-            self.websocket = None  # Ensure websocket is None if connection fails
-        
-        if self.websocket is None:
-            logger.error("WebSocket connection failed")
+            self.websocket = None
             return False
-        return True
         
     async def reconnect(self):
         logger.info("Attempting to reconnect...")
