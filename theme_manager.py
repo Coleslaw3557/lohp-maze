@@ -1,6 +1,7 @@
 import logging
 import time
 import threading
+import asyncio
 from effect_utils import generate_theme_values
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,31 @@ class ThemeManager:
         else:
             logger.warning(f"Theme not found: {theme_name}")
             return False
+
+    async def set_current_theme_async(self, theme_name):
+        if theme_name in self.themes:
+            with self.theme_lock:
+                old_theme = self.current_theme
+                await self.stop_current_theme_async()
+                self.current_theme = theme_name
+                self.stop_theme.clear()
+                self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
+                self.theme_thread.start()
+            logger.info(f"Theme changing from {old_theme} to: {theme_name}")
+            return True
+        else:
+            logger.warning(f"Theme not found: {theme_name}")
+            return False
+
+    async def stop_current_theme_async(self):
+        with self.theme_lock:
+            if self.current_theme:
+                self.stop_theme.set()
+                if self.theme_thread and self.theme_thread.is_alive():
+                    await asyncio.to_thread(self.theme_thread.join, timeout=5)
+                self.current_theme = None
+                self._reset_all_lights()
+                logger.info("Current theme stopped and all lights reset")
 
     def stop_current_theme(self):
         with self.theme_lock:
