@@ -21,6 +21,8 @@ class RemoteHostManager:
         self.remote_hosts[ip] = {"name": f"Unit-{ip}", "rooms": rooms}
         self.save_config()
         logger.info(f"Updated associated rooms for client {ip}: {rooms}")
+        for room in rooms:
+            logger.info(f"Associating room {room} with client {ip}")
 
     def load_config(self):
         try:

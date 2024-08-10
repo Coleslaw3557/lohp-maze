@@ -66,9 +66,9 @@ async def handle_client_connected(ws, data):
     """
     Handle client connection messages.
     """
-    unit_name = data.get('unit_name')
-    ip = data.get('ip')
-    associated_rooms = data.get('associated_rooms', [])
+    unit_name = data.get('data', {}).get('unit_name')
+    ip = data.get('data', {}).get('ip')
+    associated_rooms = data.get('data', {}).get('associated_rooms', [])
     if unit_name and ip and associated_rooms:
         remote_host_manager.connected_clients[ip] = ws
         remote_host_manager.update_client_rooms(ip, associated_rooms)
