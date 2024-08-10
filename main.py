@@ -51,7 +51,8 @@ async def handle_websocket_message(ws, data):
     message_type = data.get('type')
     handlers = {
         'status_update': handle_status_update,
-        'trigger_event': handle_trigger_event
+        'trigger_event': handle_trigger_event,
+        'client_connected': handle_client_connected
     }
     
     handler = handlers.get(message_type)
@@ -60,6 +61,20 @@ async def handle_websocket_message(ws, data):
     else:
         logger.warning(f"Unknown message type received: {message_type}")
         await ws.send(json.dumps({"status": "error", "message": "Unknown message type"}))
+
+async def handle_client_connected(ws, data):
+    """
+    Handle client connection messages.
+    """
+    unit_name = data.get('unit_name')
+    ip = data.get('ip')
+    if unit_name and ip:
+        remote_host_manager.connected_clients[ip] = ws
+        logger.info(f"Client connected: {unit_name} ({ip})")
+        await ws.send(json.dumps({"status": "success", "message": "Connection acknowledged"}))
+    else:
+        logger.warning("Received incomplete client connection data")
+        await ws.send(json.dumps({"status": "error", "message": "Incomplete connection data"}))
 
 async def handle_status_update(ws, data):
     """

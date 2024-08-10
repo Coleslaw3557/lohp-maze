@@ -10,7 +10,7 @@ class RemoteHostManager:
     def __init__(self, config_file='remote_host_config.json'):
         self.config_file = config_file
         self.remote_hosts = {}
-        self.websocket_handlers = {}
+        self.connected_clients = {}
         self.load_config()
         logger.info("RemoteHostManager initialized")
 
@@ -28,35 +28,32 @@ class RemoteHostManager:
             self.remote_hosts = {}
 
     async def initialize_websocket_connections(self):
-        logger.info("Initializing WebSocket connections")
-        for ip, host_info in self.remote_hosts.items():
-            self.websocket_handlers[ip] = WebSocketHandler(ip, host_info['name'])
-            await self.websocket_handlers[ip].connect()
-            logger.debug(f"WebSocket handler created and connected for {host_info['name']} ({ip})")
-        logger.info(f"WebSocket connections initialized for {len(self.websocket_handlers)} hosts")
+        logger.info("WebSocket connections will be initialized when clients connect")
 
     def get_host_by_room(self, room):
         for ip, host_info in self.remote_hosts.items():
             if room.lower() in [r.lower() for r in host_info['rooms']]:
                 logger.debug(f"Found host for room {room}: {host_info['name']} ({ip})")
-                return self.websocket_handlers[ip]
+                return self.connected_clients.get(ip)
         logger.warning(f"No host found for room: {room}")
         return None
 
     async def send_audio_command(self, room, command, audio_data=None):
-        host = self.get_host_by_room(room)
-        if host:
+        websocket = self.get_host_by_room(room)
+        if websocket:
             logger.info(f"Sending {command} command to room {room}")
             try:
-                success = await host.send_audio_command(command, audio_data)
-                if not success:
-                    logger.error(f"Failed to send {command} command to room {room}")
-                return success
+                message = {
+                    "type": command,
+                    "data": audio_data.decode('utf-8') if audio_data else None
+                }
+                await websocket.send(json.dumps(message))
+                return True
             except Exception as e:
                 logger.error(f"Error sending {command} command to room {room}: {str(e)}")
-                return await self.reconnect_and_retry(host, command, audio_data)
+                return False
         else:
-            logger.warning(f"No remote host found for room: {room}. Cannot send {command} command.")
+            logger.warning(f"No connected client found for room: {room}. Cannot send {command} command.")
             return False
 
     async def reconnect_and_retry(self, host, command, audio_data):

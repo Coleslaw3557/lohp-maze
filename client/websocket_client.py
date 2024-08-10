@@ -17,7 +17,18 @@ class WebSocketClient:
 
     async def set_websocket(self, websocket):
         self.websocket = websocket
+        await self.send_client_connected()
         await self.send_status_update("connected")
+
+    async def send_client_connected(self):
+        message = {
+            "type": "client_connected",
+            "data": {
+                "unit_name": self.unit_name,
+                "ip": self.server_ip
+            }
+        }
+        await self.send_message(message)
 
     async def send_message(self, message):
         if self.websocket:
