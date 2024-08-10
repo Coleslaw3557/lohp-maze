@@ -3,7 +3,7 @@ import logging
 import asyncio
 from flask import Flask, request, jsonify
 from quart import Quart
-from flask_cors import CORS
+from quart_cors import cors
 from werkzeug.urls import uri_to_iri, iri_to_uri
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Quart(__name__)
-CORS(app)
+app = cors(app)
 app.secret_key = SECRET_KEY
 
 # Initialize components
@@ -52,7 +52,8 @@ def set_master_brightness():
 
 @app.route('/api/set_theme', methods=['POST'])
 async def set_theme():
-    theme_name = request.json.get('theme_name')
+    data = await request.get_json()
+    theme_name = data.get('theme_name')
     if not theme_name:
         return jsonify({'status': 'error', 'message': 'Theme name is required'}), 400
 
