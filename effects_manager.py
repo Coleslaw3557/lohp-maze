@@ -99,7 +99,10 @@ class EffectsManager:
         return True, audio_file if audio_file else None
 
     def get_audio_file(self, effect_name):
-        audio_file = f"sound-effects/{effect_name.lower()}.mp3"
+        if effect_name.lower() == 'lightning':
+            audio_file = "audio_files/lightning.mp3"
+        else:
+            audio_file = f"sound-effects/{effect_name.lower()}.mp3"
         if os.path.exists(audio_file):
             return audio_file
         return None
