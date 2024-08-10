@@ -36,14 +36,13 @@ async def ws():
     logger.info(f"WebSocket connection attempt from {request.remote_addr}")
     logger.debug(f"Request headers: {request.headers}")
     try:
-        await websocket.accept()
-        client_type = websocket.headers.get("Client-Type")
-        logger.info(f"WebSocket connection established with {websocket.remote_addr}, Client-Type: {client_type}")
+        client_type = request.headers.get("Client-Type")
+        logger.info(f"WebSocket connection established with {request.remote_addr}, Client-Type: {client_type}")
         
         while True:
             try:
                 data = await websocket.receive_json()
-                logger.info(f"Received data from {websocket.remote_addr}: {data}")
+                logger.info(f"Received data from {request.remote_addr}: {data}")
                 
                 # Handle the received data based on client type
                 if client_type == "RemoteUnit":
@@ -52,22 +51,18 @@ async def ws():
                     await handle_generic_message(websocket, data)
                 
             except WebSocketDisconnect:
-                logger.info(f"WebSocket disconnected from {websocket.remote_addr}")
+                logger.info(f"WebSocket disconnected from {request.remote_addr}")
                 break
             except json.JSONDecodeError:
-                logger.error(f"Invalid JSON received from {websocket.remote_addr}")
+                logger.error(f"Invalid JSON received from {request.remote_addr}")
                 await websocket.send_json({"status": "error", "message": "Invalid JSON"})
     except Exception as e:
-        logger.error(f"WebSocket error for {websocket.remote_addr}: {str(e)}")
+        logger.error(f"WebSocket error for {request.remote_addr}: {str(e)}")
         logger.debug(f"Exception details: {type(e).__name__}: {str(e)}", exc_info=True)
     finally:
-        logger.info(f"WebSocket connection closed for {websocket.remote_addr}")
+        logger.info(f"WebSocket connection closed for {request.remote_addr}")
 
-# Add this function to handle WebSocket upgrades
-@app.before_request
-async def handle_websocket_upgrade():
-    if request.headers.get('Upgrade', '').lower() == 'websocket':
-        return await websocket()
+# Remove this function as it's not needed with Quart's built-in WebSocket handling
 
 async def handle_remote_unit_message(websocket, data):
     # Handle messages specific to RemoteUnit clients

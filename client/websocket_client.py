@@ -19,15 +19,13 @@ class WebSocketClient:
         uri = f"ws://{self.server_ip}:{self.server_port}/ws"
         logger.info(f"Attempting to connect to server at {uri}")
         try:
-            logger.debug(f"WebSocket connection parameters: ping_interval=20, ping_timeout=20, extra_headers={{'Client-Type': 'RemoteUnit', 'Connection': 'Upgrade', 'Upgrade': 'websocket'}}")
+            logger.debug(f"WebSocket connection parameters: ping_interval=20, ping_timeout=20, extra_headers={{'Client-Type': 'RemoteUnit'}}")
             self.websocket = await websockets.connect(
                 uri,
                 ping_interval=20,
                 ping_timeout=20,
                 extra_headers={
                     "Client-Type": "RemoteUnit",
-                    "Connection": "Upgrade",
-                    "Upgrade": "websocket",
                 },
                 max_size=None  # Allow unlimited message size
             )
