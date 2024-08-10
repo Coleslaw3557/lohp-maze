@@ -21,7 +21,7 @@ class WebSocketClient:
         """
         Establish a WebSocket connection to the server.
         """
-        uri = f"ws://{self.server_ip}:{self.server_port}/ws"
+        uri = f"ws://{self.server_ip}:{self.server_port}"
         logger.info(f"Attempting to connect to server at {uri}")
         try:
             self.websocket = await websockets.connect(

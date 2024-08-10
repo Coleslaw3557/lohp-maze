@@ -1,6 +1,6 @@
 {
   "server_ip": "192.168.1.238",
-  "server_port": 5000,
+  "server_port": 8765,
   "unit_name": "RPi-Unit-1",
   "associated_rooms": ["Cop Dodge", "Gate", "Guy Line Climb", "Spark Pony Room", "Porto Room"],
   "audio_output_device": "default",
