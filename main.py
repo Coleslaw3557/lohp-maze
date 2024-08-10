@@ -172,13 +172,13 @@ def stop_test():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/run_effect_all_rooms', methods=['POST'])
-def run_effect_all_rooms():
+async def run_effect_all_rooms():
     effect_name = request.json.get('effect_name')
     if not effect_name:
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
 
     try:
-        success, message = effects_manager.apply_effect_to_all_rooms(effect_name)
+        success, message = await effects_manager.apply_effect_to_all_rooms(effect_name)
         if success:
             return jsonify({"message": f"{effect_name} effect triggered in all rooms"}), 200
         else:
@@ -188,5 +188,11 @@ def run_effect_all_rooms():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Effects are now initialized in the EffectsManager constructor
-    app.run(host='0.0.0.0', port=5000, debug=DEBUG)
+    import asyncio
+    from hypercorn.config import Config
+    from hypercorn.asyncio import serve
+
+    config = Config()
+    config.bind = ["0.0.0.0:5000"]
+    config.use_reloader = DEBUG
+    asyncio.run(serve(app, config))
