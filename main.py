@@ -2,7 +2,7 @@ import os
 import logging
 import asyncio
 import json
-from quart import Quart, request, jsonify
+from quart import Quart, request, jsonify, Response
 from quart_cors import cors
 from werkzeug.urls import uri_to_iri, iri_to_uri
 from dmx_state_manager import DMXStateManager
@@ -45,7 +45,7 @@ async def ws():
         # Check if the client type is valid
         if client_type not in ["RemoteUnit", "WebInterface"]:
             logger.warning(f"Invalid Client-Type: {client_type}")
-            return quart.Response("Invalid Client-Type", status=400)
+            return Response("Invalid Client-Type", status=400)
         
         # Explicitly accept the WebSocket connection
         await websocket.accept()
@@ -71,7 +71,7 @@ async def ws():
     except Exception as e:
         logger.error(f"WebSocket error for {request.remote_addr}: {str(e)}")
         logger.debug(f"Exception details: {type(e).__name__}: {str(e)}", exc_info=True)
-        return quart.Response(f"WebSocket error: {str(e)}", status=400)
+        return Response(f"WebSocket error: {str(e)}", status=400)
     finally:
         logger.info(f"WebSocket connection closed for {request.remote_addr}")
 
