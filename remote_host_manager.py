@@ -58,11 +58,15 @@ class RemoteHostManager:
         if websocket:
             logger.info(f"Sending {command} command to room {room}")
             try:
-                message = {
-                    "type": command,
-                    "data": audio_data.decode('utf-8') if audio_data else None
-                }
-                await websocket.send(json.dumps(message))
+                if command == 'audio_start':
+                    await websocket.send(json.dumps({"type": command}))
+                    await websocket.send(audio_data)
+                else:
+                    message = {
+                        "type": command,
+                        "data": audio_data
+                    }
+                    await websocket.send(json.dumps(message))
                 logger.info(f"Successfully sent {command} command to room {room}")
                 return True
             except Exception as e:
@@ -107,11 +111,11 @@ class RemoteHostManager:
                 if isinstance(audio_file, str):
                     with open(audio_file, 'rb') as f:
                         audio_data = f.read()
-                elif isinstance(audio_file, bool):
-                    logger.error(f"Invalid audio_file parameter: {audio_file}")
-                    return
-                else:
+                elif isinstance(audio_file, bytes):
                     audio_data = audio_file
+                else:
+                    logger.error(f"Invalid audio_file parameter: {type(audio_file)}")
+                    return
                 
                 success = await self.send_audio_command(room, 'audio_start', audio_data)
                 if not success:
