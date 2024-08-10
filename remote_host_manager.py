@@ -47,15 +47,26 @@ class RemoteHostManager:
                 websocket = self.connected_clients[client_ip]
                 logger.info(f"Sending {command} command for room {room} to client {client_ip}")
                 try:
-                    message = {
-                        "type": command,
-                        "room": room,
-                        "data": audio_data if isinstance(audio_data, (str, dict)) else None
-                    }
-                    await websocket.send(json.dumps(message))
-                    
-                    if command == 'audio_start' and isinstance(audio_data, bytes):
-                        await websocket.send(audio_data)
+                    if command == 'audio_start':
+                        message = {
+                            "type": command,
+                            "room": room,
+                            "data": {
+                                "file_name": "audio.mp3",
+                                "volume": 1.0,
+                                "loop": False
+                            }
+                        }
+                        await websocket.send(json.dumps(message))
+                        if isinstance(audio_data, bytes):
+                            await websocket.send(audio_data)
+                    else:
+                        message = {
+                            "type": command,
+                            "room": room,
+                            "data": audio_data
+                        }
+                        await websocket.send(json.dumps(message))
                     
                     logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
                     return True
@@ -65,9 +76,6 @@ class RemoteHostManager:
                 logger.error(f"Client {client_ip} for room {room} is not connected. Cannot send {command} command.")
         else:
             logger.error(f"No client IP found for room: {room}. Cannot send {command} command.")
-        logger.info(f"Connected clients: {list(self.connected_clients.keys())}")
-        logger.info(f"Remote hosts configuration: {self.remote_hosts}")
-        logger.info(f"Client rooms: {self.client_rooms}")
         return False
 
     def update_client_rooms(self, unit_name, ip, rooms, websocket):
@@ -159,20 +167,8 @@ class RemoteHostManager:
                     logger.error(f"No valid audio data for room {room}")
                     return
 
-                # Prepare audio command with parameters
-                audio_command = {
-                    'type': 'audio_start',
-                    'room': room,
-                    'data': {
-                        'file_name': file_name,
-                        'volume': audio_params.get('volume', 1.0),
-                        'loop': audio_params.get('loop', False)
-                    }
-                }
-                
-                success = await self.send_audio_command(room, 'audio_start', audio_command)
+                success = await self.send_audio_command(room, 'audio_start', audio_data)
                 if success:
-                    await self.send_audio_command(room, 'audio_data', audio_data)
                     logger.info(f"Successfully streamed audio to room {room}")
                 else:
                     logger.error(f"Failed to send audio command to room {room}")
