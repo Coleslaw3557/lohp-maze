@@ -153,7 +153,7 @@ async def run_effect():
     # Add audio parameters to effect data
     effect_data['audio'] = audio_params
     
-    logger.debug(f"Effect data: {effect_data}")  # Add this line to log effect_data
+    logger.debug(f"Effect data: {effect_data}")
     
     try:
         success = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
@@ -167,6 +167,20 @@ async def run_effect():
             return jsonify({'status': 'error', 'message': error_message}), 500
     except Exception as e:
         error_message = f"Error applying effect {effect_name} to room {room}: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        return jsonify({'status': 'error', 'message': error_message}), 500
+
+@app.route('/api/stop_effect', methods=['POST'])
+async def stop_effect():
+    data = await request.json
+    room = data.get('room')
+    
+    try:
+        await effects_manager.stop_current_effect(room)
+        message = f"Effect stopped in room: {room}" if room else "Effects stopped in all rooms"
+        return jsonify({'status': 'success', 'message': message})
+    except Exception as e:
+        error_message = f"Error stopping effect: {str(e)}"
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
 

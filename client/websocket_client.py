@@ -55,9 +55,22 @@ class WebSocketClient:
                 await self.handle_message(json.loads(message))
             except json.JSONDecodeError:
                 logger.error("Received invalid JSON from server")
+            except websockets.exceptions.ConnectionClosed:
+                logger.error("WebSocket connection closed. Attempting to reconnect...")
+                await self.reconnect()
             except Exception as e:
                 logger.error(f"Error in WebSocket communication: {e}")
+                await self.reconnect()
+
+    async def reconnect(self):
+        while True:
+            try:
+                await self.set_websocket(await websockets.connect(f"ws://{self.server_ip}:{self.server_port}"))
+                logger.info("Reconnected to server")
                 break
+            except Exception as e:
+                logger.error(f"Failed to reconnect: {e}")
+                await asyncio.sleep(5)  # Wait before trying again
 
     async def handle_message(self, message):
         handlers = {

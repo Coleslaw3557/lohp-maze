@@ -83,8 +83,14 @@ class EffectsManager:
         
         self.room_effects[room] = effect_name
         
-        tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
-        await asyncio.gather(*tasks)
+        # Prepare audio task
+        audio_task = self._apply_audio_effect(room, effect_name)
+        
+        # Prepare lighting tasks
+        lighting_tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        
+        # Run audio and lighting tasks concurrently
+        await asyncio.gather(audio_task, *lighting_tasks)
         
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         
@@ -175,6 +181,39 @@ class EffectsManager:
         else:
             logger.error(f"Failed to trigger {effect_name} effect in some rooms")
         return success, f"{effect_name} effect triggered in all rooms" if success else f"Failed to trigger {effect_name} effect in some rooms"
+
+    async def stop_current_effect(self, room=None):
+        """
+        Stop the current effect in a specific room or all rooms.
+        
+        :param room: The room to stop the effect in. If None, stop in all rooms.
+        """
+        if room:
+            rooms = [room]
+        else:
+            rooms = self.light_config_manager.get_room_layout().keys()
+        
+        for r in rooms:
+            if r in self.room_effects:
+                logger.info(f"Stopping effect in room: {r}")
+                await self._stop_effect_in_room(r)
+                self.room_effects.pop(r, None)
+            else:
+                logger.info(f"No active effect in room: {r}")
+        
+        logger.info("All specified effects stopped")
+
+    async def _stop_effect_in_room(self, room):
+        # Stop lighting effect
+        room_layout = self.light_config_manager.get_room_layout()
+        lights = room_layout.get(room, [])
+        fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+        
+        for fixture_id in fixture_ids:
+            self.dmx_state_manager.reset_fixture(fixture_id)
+        
+        # Stop audio
+        await self.remote_host_manager.send_audio_command(room, 'audio_stop')
 
     async def apply_effect_to_room(self, room, effect_name, effect_data):
         logger.info(f"Applying effect to room: {room}")
