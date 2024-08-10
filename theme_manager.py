@@ -24,20 +24,24 @@ class ThemeManager:
         # Load themes from a JSON file or database
         self.themes = {
             "Ocean": {
-                "duration": 120,
-                "transition_speed": 0.2,
-                "color_variation": 0.5,
-                "intensity_fluctuation": 0.4,
+                "duration": 300,  # 5 minutes
+                "transition_speed": 0.05,
+                "color_variation": 0.8,
+                "intensity_fluctuation": 0.3,
                 "overall_brightness": 0.7,
-                "blue_green_balance": 0.9
+                "blue_green_balance": 0.9,
+                "room_transition_speed": 0.02,
+                "color_wheel_speed": 0.08
             },
             "Jungle": {
-                "duration": 60,
-                "transition_speed": 0.4,
-                "color_variation": 0.5,
-                "intensity_fluctuation": 0.3,
+                "duration": 300,  # 5 minutes
+                "transition_speed": 0.05,
+                "color_variation": 0.9,
+                "intensity_fluctuation": 0.4,
                 "overall_brightness": 0.6,
-                "green_blue_balance": 0.3
+                "green_blue_balance": 0.3,
+                "room_transition_speed": 0.02,
+                "color_wheel_speed": 0.09
             },
             "MazeMadness": {
                 "duration": 300,  # 5 minutes
