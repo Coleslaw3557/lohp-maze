@@ -38,6 +38,7 @@ async def ws():
             data = await websocket.receive_json()
             await handle_websocket_message(websocket, data)
         except WebSocketDisconnect:
+            logger.info("WebSocket client disconnected")
             break
 
 async def handle_websocket_message(websocket, data):

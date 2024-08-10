@@ -35,11 +35,12 @@ class WebSocketClient:
         
     async def reconnect(self):
         logger.info("Attempting to reconnect...")
-        await self.connect()
-        if self.websocket:
+        connected = await self.connect()
+        if connected:
             logger.info("Reconnected successfully")
         else:
             logger.error("Reconnection failed")
+            await asyncio.sleep(5)  # Wait before next reconnect attempt
         
     async def send_status_update(self, status):
         if self.websocket:
@@ -74,16 +75,22 @@ class WebSocketClient:
 
     async def listen(self):
         while True:
+            if not self.websocket or self.websocket.closed:
+                logger.warning("No active WebSocket connection. Attempting to reconnect...")
+                await self.reconnect()
+                continue
+            
             try:
                 message = await self.websocket.recv()
                 await self.handle_message(json.loads(message))
             except websockets.exceptions.ConnectionClosed:
                 logger.warning("Connection to server closed. Attempting to reconnect...")
-                await self.reconnect()
+                self.websocket = None
             except json.JSONDecodeError:
                 logger.error("Received invalid JSON from server")
             except Exception as e:
                 logger.error(f"Error in WebSocket communication: {e}")
+                self.websocket = None
 
     async def handle_message(self, message):
         if message['type'] == 'audio_start':
