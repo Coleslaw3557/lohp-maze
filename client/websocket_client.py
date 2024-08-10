@@ -106,7 +106,9 @@ class WebSocketClient:
             'audio_start': self.audio_manager.start_audio,
             'audio_stop': self.audio_manager.stop_audio,
             'sync_time': self.sync_manager.sync_time,
-            'effect_trigger': self.handle_effect_trigger
+            'effect_trigger': self.handle_effect_trigger,
+            'connection_response': self.handle_connection_response,
+            'status_update': self.handle_status_update
         }
 
         message_type = message.get('type')
@@ -117,6 +119,12 @@ class WebSocketClient:
             await handler(message.get('data'))
         else:
             logger.warning(f"Unknown message type received: {message_type}")
+
+    async def handle_connection_response(self, data):
+        logger.info(f"Received connection response: {data}")
+
+    async def handle_status_update(self, data):
+        logger.info(f"Received status update: {data}")
 
     async def handle_effect_trigger(self, data):
         logger.info(f"Received effect trigger: {data}")

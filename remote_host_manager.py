@@ -67,19 +67,15 @@ class RemoteHostManager:
                         logger.error(f"Failed to reconnect WebSocket for room {room}")
                         return False
 
-                if command == 'audio_start':
-                    await websocket.send(json.dumps({"type": command}))
-                    if isinstance(audio_data, bytes):
-                        await websocket.send(audio_data)
-                    else:
-                        logger.error(f"Invalid audio_data type for room {room}: {type(audio_data)}")
-                        return False
-                else:
-                    message = {
-                        "type": command,
-                        "data": audio_data
-                    }
-                    await websocket.send(json.dumps(message))
+                message = {
+                    "type": command,
+                    "data": audio_data if isinstance(audio_data, (str, dict)) else None
+                }
+                await websocket.send(json.dumps(message))
+                
+                if command == 'audio_start' and isinstance(audio_data, bytes):
+                    await websocket.send(audio_data)
+                
                 logger.info(f"Successfully sent {command} command to room {room}")
                 return True
             except Exception as e:
@@ -158,10 +154,7 @@ class RemoteHostManager:
                 logger.error(f"Error reading audio file: {str(e)}")
             except Exception as e:
                 logger.error(f"Error streaming audio to room {room}: {str(e)}")
-                if isinstance(host, websockets.WebSocketClientProtocol):
-                    await self.reconnect_and_retry(host, 'audio_start', audio_data)
-                else:
-                    logger.error(f"Invalid host object for room {room}: {type(host)}")
+                await self.reconnect_and_retry(room, 'audio_start', audio_data)
         else:
             logger.warning(f"No remote host found for room: {room}. Cannot stream audio.")
 
