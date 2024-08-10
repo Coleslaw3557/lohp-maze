@@ -42,6 +42,11 @@ async def ws():
         client_type = request.headers.get("Client-Type")
         logger.info(f"WebSocket connection attempt with {request.remote_addr}, Client-Type: {client_type}")
         
+        # Check if the client type is valid
+        if client_type not in ["RemoteUnit", "WebInterface"]:
+            logger.warning(f"Invalid Client-Type: {client_type}")
+            return quart.Response("Invalid Client-Type", status=400)
+        
         # Explicitly accept the WebSocket connection
         await websocket.accept()
         logger.info(f"WebSocket connection accepted for {request.remote_addr}")
@@ -66,6 +71,7 @@ async def ws():
     except Exception as e:
         logger.error(f"WebSocket error for {request.remote_addr}: {str(e)}")
         logger.debug(f"Exception details: {type(e).__name__}: {str(e)}", exc_info=True)
+        return quart.Response(f"WebSocket error: {str(e)}", status=400)
     finally:
         logger.info(f"WebSocket connection closed for {request.remote_addr}")
 

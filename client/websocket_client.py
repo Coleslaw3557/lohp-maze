@@ -35,6 +35,11 @@ class WebSocketClient:
             logger.error(f"Failed to connect to server: Invalid status code {e.status_code}")
             logger.debug(f"Server response headers: {e.headers}")
             logger.debug(f"Exception details: {str(e)}")
+            try:
+                response_text = await e.response.text()
+                logger.debug(f"Server response body: {response_text}")
+            except Exception as text_error:
+                logger.debug(f"Unable to get response text: {str(text_error)}")
             self.websocket = None
         except Exception as e:
             logger.error(f"Failed to connect to server: {e}")
