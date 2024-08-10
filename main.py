@@ -102,7 +102,7 @@ async def run_effect():
     effect_data['audio'] = audio_params
     
     try:
-        success = await effects_manager.apply_effect_to_room(room, effect_data)
+        success = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
         
         if success:
             logger.info(f"Effect {effect_name} applied successfully to room {room}")

@@ -72,7 +72,7 @@ class EffectsManager:
         else:
             logger.warning(f"No effect found: {effect_name}")
 
-    async def apply_effect_to_room(self, room, effect_data):
+    async def apply_effect_to_room(self, room, effect_name, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room, [])
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
@@ -198,7 +198,7 @@ class EffectsManager:
         tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
         
         # Apply audio effect
-        audio_task = self._apply_audio_effect(room, effect_data['name'])
+        audio_task = self._apply_audio_effect(room, effect_name)
         tasks.append(audio_task)
         
         results = await asyncio.gather(*tasks, return_exceptions=True)
