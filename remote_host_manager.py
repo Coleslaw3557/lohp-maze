@@ -35,7 +35,7 @@ class RemoteHostManager:
 
     def get_host_by_room(self, room):
         for ip, host_info in self.remote_hosts.items():
-            if room in host_info['rooms']:
+            if room.lower() in [r.lower() for r in host_info['rooms']]:
                 logger.debug(f"Found host for room {room}: {host_info['name']} ({ip})")
                 return self.websocket_handlers[ip]
         logger.warning(f"No host found for room: {room}")
