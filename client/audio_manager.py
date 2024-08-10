@@ -17,10 +17,14 @@ class AudioManager:
         self.stop_event = threading.Event()
 
     async def start_audio(self, audio_data):
-        file_path = os.path.join(self.cache_dir, audio_data['file'])
+        file_name = audio_data['file'].lower()  # Convert to lowercase
+        file_path = os.path.join('sound-effects', file_name)
         
         if not os.path.exists(file_path):
-            await self.cache_audio(audio_data['file'], audio_data['data'])
+            logger.error(f"Audio file not found: {file_path}")
+            return
+        
+        self.stop_audio()
         
         self.stop_audio()
         
@@ -29,13 +33,13 @@ class AudioManager:
         volume = audio_data.get('volume', 1.0)
         audio = audio + (20 * math.log10(volume))  # Adjust volume (pydub uses dB)
         
-        self.current_audio = audio_data['file']
+        self.current_audio = file_name
         self.stop_event.clear()
         
         # Start playback in a separate thread
         threading.Thread(target=self._play_audio, args=(audio, audio_data.get('loop', False))).start()
         
-        logger.info(f"Started playing audio: {audio_data['file']} (volume: {volume}, loop: {audio_data.get('loop', False)})")
+        logger.info(f"Started playing audio: {file_name} (volume: {volume}, loop: {audio_data.get('loop', False)})")
 
     def stop_audio(self):
         if self.current_audio:
