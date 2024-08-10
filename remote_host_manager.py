@@ -56,34 +56,38 @@ class RemoteHostManager:
 
     async def send_audio_command(self, room, command, audio_data=None):
         client_ip = self.get_client_ip_by_room(room)
-        if client_ip and client_ip in self.connected_clients:
-            websocket = self.connected_clients[client_ip]
-            logger.info(f"Sending {command} command for room {room} to client {client_ip}")
-            try:
-                message = {
-                    "type": command,
-                    "room": room,
-                    "data": audio_data if isinstance(audio_data, (str, dict)) else None
-                }
-                await websocket.send(json.dumps(message))
-                
-                if command == 'audio_start' and isinstance(audio_data, bytes):
-                    await websocket.send(audio_data)
-                
-                logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
-                return True
-            except Exception as e:
-                logger.error(f"Error sending {command} command for room {room} to client {client_ip}: {str(e)}")
+        if client_ip:
+            if client_ip in self.connected_clients:
+                websocket = self.connected_clients[client_ip]
+                logger.info(f"Sending {command} command for room {room} to client {client_ip}")
+                try:
+                    message = {
+                        "type": command,
+                        "room": room,
+                        "data": audio_data if isinstance(audio_data, (str, dict)) else None
+                    }
+                    await websocket.send(json.dumps(message))
+                    
+                    if command == 'audio_start' and isinstance(audio_data, bytes):
+                        await websocket.send(audio_data)
+                    
+                    logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
+                    return True
+                except Exception as e:
+                    logger.error(f"Error sending {command} command for room {room} to client {client_ip}: {str(e)}")
+            else:
+                logger.error(f"Client {client_ip} for room {room} is not connected. Cannot send {command} command.")
         else:
-            logger.error(f"No connected client found for room: {room}. Cannot send {command} command.")
-            logger.info(f"Connected clients: {list(self.connected_clients.keys())}")
-            logger.info(f"Remote hosts configuration: {self.remote_hosts}")
+            logger.error(f"No client IP found for room: {room}. Cannot send {command} command.")
+        logger.info(f"Connected clients: {list(self.connected_clients.keys())}")
+        logger.info(f"Remote hosts configuration: {self.remote_hosts}")
         return False
 
     def get_client_ip_by_room(self, room):
         for ip, data in self.remote_hosts.items():
-            if room in data.get('rooms', []):
+            if room.lower() in [r.lower() for r in data.get('rooms', [])]:
                 return ip
+        logger.warning(f"No client IP found for room: {room}")
         return None
 
     async def reconnect_websocket(self, room):
