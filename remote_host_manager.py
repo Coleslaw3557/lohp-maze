@@ -142,45 +142,54 @@ class RemoteHostManager:
     async def stream_audio_to_room(self, room, audio_file, audio_params):
         if not audio_file:
             logger.error(f"No audio file provided for room {room}")
-            return
+            return False
 
         client_ip = self.get_client_ip_by_room(room)
-        if client_ip:
-            logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
-            try:
-                audio_data = None
-                file_name = 'stream.mp3'
-                if isinstance(audio_file, str):
-                    with open(audio_file, 'rb') as f:
-                        audio_data = f.read()
-                    file_name = os.path.basename(audio_file)
-                elif isinstance(audio_file, bytes):
-                    audio_data = audio_file
-                else:
-                    logger.error(f"Invalid audio_file parameter: {type(audio_file)}")
-                    return
-                
-                if audio_data is None:
-                    logger.error(f"No valid audio data for room {room}")
-                    return
+        if not client_ip:
+            logger.warning(f"No client IP found for room: {room}. Cannot stream audio.")
+            return False
 
-                success = await self.send_audio_command(room, 'audio_start', {
-                    'file_name': file_name,
-                    'volume': audio_params.get('volume', 1.0),
-                    'loop': audio_params.get('loop', False)
-                })
-                if success:
-                    await asyncio.sleep(0.1)  # Add a small delay before sending audio data
-                    await self.send_audio_command(room, 'audio_data', audio_data)
-                    logger.info(f"Successfully streamed audio to room {room}")
-                else:
-                    logger.error(f"Failed to send audio command to room {room}")
+        logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
+        try:
+            audio_data = await self._get_audio_data(audio_file)
+            if not audio_data:
+                return False
+
+            file_name = self._get_file_name(audio_file)
+            success = await self.send_audio_command(room, 'audio_start', {
+                'file_name': file_name,
+                'volume': audio_params.get('volume', 1.0),
+                'loop': audio_params.get('loop', False)
+            })
+            if success:
+                await asyncio.sleep(0.1)  # Add a small delay before sending audio data
+                await self.send_audio_command(room, 'audio_data', audio_data)
+                logger.info(f"Successfully streamed audio to room {room}")
+                return True
+            else:
+                logger.error(f"Failed to send audio command to room {room}")
+                return False
+        except Exception as e:
+            logger.error(f"Error streaming audio to room {room}: {str(e)}")
+            return False
+
+    async def _get_audio_data(self, audio_file):
+        if isinstance(audio_file, str):
+            try:
+                async with aiofiles.open(audio_file, 'rb') as f:
+                    return await f.read()
             except IOError as e:
                 logger.error(f"Error reading audio file: {str(e)}")
-            except Exception as e:
-                logger.error(f"Error streaming audio to room {room}: {str(e)}")
+        elif isinstance(audio_file, bytes):
+            return audio_file
         else:
-            logger.warning(f"No client IP found for room: {room}. Cannot stream audio.")
+            logger.error(f"Invalid audio_file parameter: {type(audio_file)}")
+        return None
+
+    def _get_file_name(self, audio_file):
+        if isinstance(audio_file, str):
+            return os.path.basename(audio_file)
+        return 'stream.mp3'
 
     async def send_audio_command(self, room, command, data):
         client_ip = self.get_client_ip_by_room(room)

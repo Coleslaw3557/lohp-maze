@@ -268,18 +268,23 @@ class EffectsManager:
         audio_file = None
         if isinstance(audio_result, Exception):
             logger.error(f"Error applying audio effect in room '{room}': {str(audio_result)}")
-        elif not audio_result:
-            logger.warning(f"Audio effect not applied or not configured for room '{room}'")
-        else:
+        elif audio_result:
             logger.info(f"Audio effect applied successfully in room '{room}'")
             audio_file = audio_result
+        else:
+            logger.warning(f"Audio effect not applied or not configured for room '{room}'")
         
         self.room_effects.pop(room, None)
         
         # Resume theme for this room
         self.theme_manager.resume_theme_for_room(room)
         
-        # Return True if lighting was successful, and the audio file (if any)
+        # Stream audio if available
+        if audio_file:
+            audio_params = effect_data.get('audio', {})
+            await self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params)
+        
+        # Return True if lighting was successful
         return lighting_success, audio_file
 
     async def _apply_audio_effect(self, room, effect_name):
