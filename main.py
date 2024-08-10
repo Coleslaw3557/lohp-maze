@@ -200,7 +200,7 @@ async def run_effect():
         if success:
             logger.info(f"Effect {effect_name} applied successfully to room {room}")
             if audio_file:
-                await remote_host_manager.stream_audio_to_room(room, audio_file)
+                await remote_host_manager.stream_audio_to_room(room, audio_file, audio_params)
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
         else:
             error_message = f"Failed to apply effect {effect_name} to room {room}. Check server logs for details."
