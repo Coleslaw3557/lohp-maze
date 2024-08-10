@@ -26,13 +26,13 @@ class AudioManager:
         volume = audio_data.get('volume', 1.0)
         audio = audio + (20 * math.log10(volume))  # Adjust volume (pydub uses dB)
         
-        self.current_audio = file_name
+        self.current_audio = audio_file_path
         self.stop_event.clear()
         
         # Start playback in a separate thread
         threading.Thread(target=self._play_audio, args=(audio, audio_data.get('loop', False))).start()
         
-        logger.info(f"Started playing audio: {file_name} (volume: {volume}, loop: {audio_data.get('loop', False)})")
+        logger.info(f"Started playing audio: {audio_file_path} (volume: {volume}, loop: {audio_data.get('loop', False)})")
 
     def stop_audio(self):
         if self.current_audio:
