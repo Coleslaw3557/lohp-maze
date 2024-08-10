@@ -219,4 +219,7 @@ if __name__ == '__main__':
     config = Config()
     config.bind = ["0.0.0.0:5000"]
     config.use_reloader = DEBUG
+    config.accesslog = "-"  # Log to stdout
+    config.errorlog = "-"  # Log to stderr
+    config.loglevel = "INFO"
     asyncio.run(serve(app, config))
