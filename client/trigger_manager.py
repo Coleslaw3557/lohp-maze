@@ -1,5 +1,4 @@
 import asyncio
-import RPi.GPIO as GPIO
 import logging
 
 logger = logging.getLogger(__name__)
@@ -7,25 +6,15 @@ logger = logging.getLogger(__name__)
 class TriggerManager:
     def __init__(self, triggers_config):
         self.triggers = triggers_config
-        GPIO.setmode(GPIO.BCM)
-        self.setup_triggers()
+        logger.warning("GPIO functionality is not available in this environment")
 
     def setup_triggers(self):
-        for trigger in self.triggers:
-            if trigger['type'] == 'gpio':
-                GPIO.setup(trigger['pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                logger.info(f"Set up GPIO trigger on pin {trigger['pin']}")
+        logger.info("Trigger setup skipped (no GPIO available)")
 
     async def monitor_triggers(self, callback):
+        logger.info("Trigger monitoring skipped (no GPIO available)")
         while True:
-            for trigger in self.triggers:
-                if trigger['type'] == 'gpio':
-                    if GPIO.input(trigger['pin']) == GPIO.LOW:
-                        logger.info(f"Trigger activated: {trigger['name']}")
-                        await callback(trigger['name'])
-                        await asyncio.sleep(0.5)  # Debounce
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(60)  # Sleep to keep the coroutine running
 
     def cleanup(self):
-        GPIO.cleanup()
-        logger.info("Cleaned up GPIO")
+        logger.info("No GPIO cleanup needed")
