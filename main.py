@@ -36,6 +36,10 @@ async def websocket_handler(websocket, path):
     try:
         async for message in websocket:
             await handle_websocket_message(websocket, json.loads(message))
+    except websockets.exceptions.ConnectionClosedError as e:
+        logger.info(f"WebSocket connection closed: {e}")
+    except Exception as e:
+        logger.error(f"Error in WebSocket handler: {e}")
     finally:
         connected_clients.remove(websocket)
         logger.info("WebSocket client disconnected")
