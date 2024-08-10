@@ -31,6 +31,7 @@ class WebSocketClient:
             }
         }
         await self.send_message(message)
+        logger.info(f"Sent client_connected message: {message}")
 
     async def send_message(self, message):
         if self.websocket:
