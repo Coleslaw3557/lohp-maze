@@ -17,7 +17,9 @@ class RemoteHostManager:
 
     def update_client_rooms(self, ip, rooms):
         self.client_rooms[ip] = rooms
-        self.connected_clients[ip] = True  # Mark the client as connected
+        self.connected_clients[ip] = ip  # Store the IP as the WebSocket connection
+        self.remote_hosts[ip] = {"name": f"Unit-{ip}", "rooms": rooms}
+        self.save_config()
         logger.info(f"Updated associated rooms for client {ip}: {rooms}")
 
     def load_config(self):
@@ -41,8 +43,8 @@ class RemoteHostManager:
         for ip, rooms in self.client_rooms.items():
             if room.lower() in [r.lower() for r in rooms]:
                 logger.debug(f"Found host for room {room}: {ip}")
-                if ip in self.connected_clients and self.connected_clients[ip]:
-                    return ip
+                if ip in self.connected_clients:
+                    return self.connected_clients[ip]
                 else:
                     logger.warning(f"Host found for room {room}, but not connected: {ip}")
                     return None
