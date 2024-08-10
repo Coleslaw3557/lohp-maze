@@ -13,6 +13,7 @@ class RemoteHostManager:
         self.remote_hosts = {}
         self.connected_clients = {}
         self.client_rooms = {}
+        self.audio_sent_to_clients = set()
         logger.info("RemoteHostManager initialized")
 
     def update_client_rooms(self, unit_name, ip, rooms, websocket, path):
@@ -162,21 +163,28 @@ class RemoteHostManager:
                 return False
 
             file_name = self._get_file_name(audio_file)
-            success = await self.send_audio_command(room, 'audio_start', {
+            
+            # Check if this client has already received the audio
+            if client_ip in self.audio_sent_to_clients:
+                logger.info(f"Audio already sent to client {client_ip}. Skipping.")
+                return True
+
+            success = await self.send_audio_command(client_ip, 'audio_start', {
                 'file_name': file_name,
                 'volume': audio_params.get('volume', 1.0),
                 'loop': audio_params.get('loop', False)
             })
             if success:
                 await asyncio.sleep(0.1)  # Add a small delay before sending audio data
-                await self.send_audio_command(room, 'audio_data', audio_data)
-                logger.info(f"Successfully streamed audio to room {room}")
+                await self.send_audio_command(client_ip, 'audio_data', audio_data)
+                logger.info(f"Successfully streamed audio to client {client_ip}")
+                self.audio_sent_to_clients.add(client_ip)
                 return True
             else:
-                logger.error(f"Failed to send audio command to room {room}")
+                logger.error(f"Failed to send audio command to client {client_ip}")
                 return False
         except Exception as e:
-            logger.error(f"Error streaming audio to room {room}: {str(e)}")
+            logger.error(f"Error streaming audio to client {client_ip}: {str(e)}")
             return False
 
     async def _get_audio_data(self, audio_file):
