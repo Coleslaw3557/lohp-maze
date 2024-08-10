@@ -155,30 +155,42 @@ class RemoteHostManager:
         if client_ip:
             logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
             try:
+                audio_data = None
+                file_name = 'stream.mp3'
                 if isinstance(audio_file, str):
                     with open(audio_file, 'rb') as f:
                         audio_data = f.read()
+                    file_name = os.path.basename(audio_file)
                 elif isinstance(audio_file, bytes):
                     audio_data = audio_file
+                elif isinstance(audio_file, bool):
+                    logger.warning(f"Received boolean instead of audio file for room {room}. Skipping audio streaming.")
+                    return
                 else:
                     logger.error(f"Invalid audio_file parameter: {type(audio_file)}")
                     return
                 
+                if audio_data is None:
+                    logger.error(f"No valid audio data for room {room}")
+                    return
+
                 # Prepare audio command with parameters
                 audio_command = {
                     'type': 'audio_start',
+                    'room': room,
                     'data': {
-                        'file_name': os.path.basename(audio_file) if isinstance(audio_file, str) else 'stream.mp3',
+                        'file_name': file_name,
                         'volume': audio_params.get('volume', 1.0),
                         'loop': audio_params.get('loop', False)
                     }
                 }
                 
-                success = await self.send_audio_command(room, audio_command, audio_data)
-                if not success:
-                    logger.error(f"Failed to send audio command to room {room}")
-                else:
+                success = await self.send_audio_command(room, 'audio_start', audio_command)
+                if success:
+                    await self.send_audio_command(room, 'audio_data', audio_data)
                     logger.info(f"Successfully streamed audio to room {room}")
+                else:
+                    logger.error(f"Failed to send audio command to room {room}")
             except IOError as e:
                 logger.error(f"Error reading audio file: {str(e)}")
             except Exception as e:
@@ -186,21 +198,27 @@ class RemoteHostManager:
         else:
             logger.warning(f"No client IP found for room: {room}. Cannot stream audio.")
 
-    async def send_audio_command(self, room, command, audio_data=None):
+    async def send_audio_command(self, room, command, data):
         client_ip = self.get_client_ip_by_room(room)
         if client_ip:
             if client_ip in self.connected_clients:
                 websocket = self.connected_clients[client_ip]
-                logger.info(f"Sending audio command for room {room} to client {client_ip}")
+                logger.info(f"Sending {command} command for room {room} to client {client_ip}")
                 try:
-                    message = {
-                        "type": command,
-                        "room": room,
-                        "data": audio_data if isinstance(audio_data, dict) else {}
-                    }
+                    if command == 'audio_start':
+                        message = data
+                    elif command == 'audio_data':
+                        await websocket.send(data)
+                        logger.info(f"Sent audio data for room {room} to client {client_ip}")
+                        return True
+                    else:
+                        message = {
+                            "type": command,
+                            "room": room,
+                            "data": data
+                        }
+                    
                     await websocket.send(json.dumps(message))
-                    if command == 'audio_start' and isinstance(audio_data, bytes):
-                        await websocket.send(audio_data)
                     logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
                     return True
                 except Exception as e:
