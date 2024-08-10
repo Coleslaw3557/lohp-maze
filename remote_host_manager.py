@@ -75,11 +75,20 @@ class RemoteHostManager:
         if host:
             logger.info(f"Streaming audio file {audio_file} to room {room}")
             try:
-                with open(audio_file, 'rb') as f:
-                    audio_data = f.read()
+                if isinstance(audio_file, str):
+                    with open(audio_file, 'rb') as f:
+                        audio_data = f.read()
+                elif isinstance(audio_file, bool):
+                    logger.error(f"Invalid audio_file parameter: {audio_file}")
+                    return
+                else:
+                    audio_data = audio_file
+                
                 await self.send_audio_command(room, 'audio_start', audio_data)
             except IOError as e:
                 logger.error(f"Error reading audio file {audio_file}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error streaming audio to room {room}: {str(e)}")
         else:
             logger.warning(f"No remote host found for room: {room}. Cannot stream audio.")
 
