@@ -1,6 +1,7 @@
 import json
 import logging
 import asyncio
+import os
 from effects import *
 from theme_manager import ThemeManager
 from effect_utils import get_effect_step_values
