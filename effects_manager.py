@@ -232,7 +232,8 @@ class EffectsManager:
         # Resume theme for this room
         self.theme_manager.resume_theme_for_room(room)
         
-        return lighting_success and (audio_result if isinstance(audio_result, bool) else True)
+        # Return True if lighting was successful, regardless of audio result
+        return lighting_success
 
     async def _apply_audio_effect(self, room, effect_name):
         logger.info(f"Applying audio effect '{effect_name}' to room '{room}'")
