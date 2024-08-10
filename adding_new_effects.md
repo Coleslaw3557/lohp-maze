@@ -52,7 +52,7 @@ from .strobe import create_strobe_effect
 3. In `effects_manager.py`, add to the `initialize_effects()` method:
 
 ```python
-self.add_effect("Strobe", create_strobe_effect())
+("Strobe", create_strobe_effect()),
 ```
 
 4. In `api-examples.md`, add:
@@ -88,5 +88,7 @@ curl -X POST http://$CONTROLLER_IP:5000/api/run_effect \
 4. Document any special requirements or considerations for each effect in comments.
 5. When updating effects, consider backwards compatibility with existing configurations.
 6. Regularly review and optimize effects for performance.
+7. Use the `effect_utils.py` file for common utility functions that can be shared across multiple effects.
+8. When creating new effects, consider how they might interact with the theme system and ensure compatibility.
 
-Remember to test all changes in a development environment before deploying to production.
+Remember to test all changes in a development environment before deploying to production. Use the `test_api.py` script to verify that new or modified effects work correctly with the API.
