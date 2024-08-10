@@ -60,6 +60,12 @@ class RemoteHostManager:
                         await websocket.send(json.dumps(message))
                         if isinstance(audio_data, bytes):
                             await websocket.send(audio_data)
+                    elif command == 'audio_data':
+                        if isinstance(audio_data, bytes):
+                            await websocket.send(audio_data)
+                        else:
+                            logger.error(f"Invalid audio data type for {command} command")
+                            return False
                     else:
                         message = {
                             "type": command,

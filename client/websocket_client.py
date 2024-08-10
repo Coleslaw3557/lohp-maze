@@ -119,6 +119,13 @@ class WebSocketClient:
         return False
 
     async def handle_message(self, message):
+        if isinstance(message, str):
+            try:
+                message = json.loads(message)
+            except json.JSONDecodeError:
+                logger.error("Received invalid JSON message")
+                return
+
         if not message:
             logger.warning("Received empty message")
             return
@@ -148,13 +155,32 @@ class WebSocketClient:
     async def handle_audio_start(self, message):
         audio_data = message.get('data')
         if audio_data:
-            audio_file = audio_data.get('audio_file')
-            if audio_file:
-                await self.audio_manager.start_audio(audio_data, audio_file)
+            file_name = audio_data.get('file_name')
+            volume = audio_data.get('volume', 1.0)
+            loop = audio_data.get('loop', False)
+            if file_name:
+                self.audio_manager.prepare_audio(file_name, volume, loop)
             else:
-                logger.warning("Received audio_start without audio_file")
+                logger.warning("Received audio_start without file_name")
         else:
             logger.warning("Received audio_start without data")
+
+    async def listen(self):
+        while True:
+            try:
+                message = await self.websocket.recv()
+                if isinstance(message, str):
+                    await self.handle_message(json.loads(message))
+                elif isinstance(message, bytes):
+                    await self.audio_manager.receive_audio_data(message)
+                else:
+                    logger.warning(f"Received unknown message type: {type(message)}")
+            except websockets.exceptions.ConnectionClosed:
+                logger.error("WebSocket connection closed. Attempting to reconnect...")
+                await self.reconnect()
+            except Exception as e:
+                logger.error(f"Error in WebSocket communication: {e}")
+                await self.reconnect()
 
     async def handle_audio_stop(self, message):
         room = message.get('room')
