@@ -103,8 +103,8 @@ class WebSocketClient:
         logger.info(f"Received message: {message}")
 
         handlers = {
-            'audio_start': self.audio_manager.start_audio,
-            'audio_stop': self.audio_manager.stop_audio,
+            'audio_start': self.handle_audio_start,
+            'audio_stop': self.handle_audio_stop,
             'sync_time': self.sync_manager.sync_time,
             'effect_trigger': self.handle_effect_trigger,
             'connection_response': self.handle_connection_response,
@@ -116,9 +116,23 @@ class WebSocketClient:
 
         if handler:
             logger.info(f"Handling message type: {message_type}")
-            await handler(message.get('data'))
+            await handler(message)
         else:
             logger.warning(f"Unknown message type received: {message_type}")
+
+    async def handle_audio_start(self, message):
+        room = message.get('room')
+        if room in self.config.get('associated_rooms', []):
+            await self.audio_manager.start_audio(message.get('data'))
+        else:
+            logger.warning(f"Received audio_start for unassociated room: {room}")
+
+    async def handle_audio_stop(self, message):
+        room = message.get('room')
+        if room in self.config.get('associated_rooms', []):
+            await self.audio_manager.stop_audio()
+        else:
+            logger.warning(f"Received audio_stop for unassociated room: {room}")
 
     async def handle_connection_response(self, data):
         logger.info(f"Received connection response: {data}")

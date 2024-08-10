@@ -55,12 +55,14 @@ class RemoteHostManager:
         return None
 
     async def send_audio_command(self, room, command, audio_data=None):
-        websocket = self.get_host_by_room(room)
-        if websocket:
-            logger.info(f"Sending {command} command to room {room}")
+        client_ip = self.get_client_ip_by_room(room)
+        if client_ip and client_ip in self.connected_clients:
+            websocket = self.connected_clients[client_ip]
+            logger.info(f"Sending {command} command for room {room} to client {client_ip}")
             try:
                 message = {
                     "type": command,
+                    "room": room,
                     "data": audio_data if isinstance(audio_data, (str, dict)) else None
                 }
                 await websocket.send(json.dumps(message))
@@ -68,15 +70,21 @@ class RemoteHostManager:
                 if command == 'audio_start' and isinstance(audio_data, bytes):
                     await websocket.send(audio_data)
                 
-                logger.info(f"Successfully sent {command} command to room {room}")
+                logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
                 return True
             except Exception as e:
-                logger.error(f"Error sending {command} command to room {room}: {str(e)}")
+                logger.error(f"Error sending {command} command for room {room} to client {client_ip}: {str(e)}")
         else:
             logger.error(f"No connected client found for room: {room}. Cannot send {command} command.")
             logger.info(f"Connected clients: {list(self.connected_clients.keys())}")
             logger.info(f"Remote hosts configuration: {self.remote_hosts}")
         return False
+
+    def get_client_ip_by_room(self, room):
+        for ip, data in self.remote_hosts.items():
+            if room in data.get('rooms', []):
+                return ip
+        return None
 
     async def reconnect_websocket(self, room):
         ip = self.get_ip_by_room(room)
