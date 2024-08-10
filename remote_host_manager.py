@@ -182,6 +182,9 @@ class RemoteHostManager:
                 logger.error(f"Error reading audio file: {str(e)}")
         elif isinstance(audio_file, bytes):
             return audio_file
+        elif audio_file is True:  # Handle the case where audio_file is a boolean
+            logger.warning("Audio file is True, but no actual file provided")
+            return None
         else:
             logger.error(f"Invalid audio_file parameter: {type(audio_file)}")
         return None

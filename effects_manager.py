@@ -283,6 +283,8 @@ class EffectsManager:
         if audio_file:
             audio_params = effect_data.get('audio', {})
             await self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params)
+        else:
+            logger.warning(f"No audio file available for effect '{effect_name}' in room '{room}'")
         
         # Return True if lighting was successful
         return lighting_success, audio_file
