@@ -2,6 +2,7 @@ import os
 import logging
 import asyncio
 import json
+import websockets
 from quart import Quart, request, jsonify, Response
 from quart_cors import cors
 from werkzeug.urls import uri_to_iri, iri_to_uri
@@ -24,27 +25,19 @@ logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-from quart import websocket
-from websockets.exceptions import ConnectionClosed
-
 app = Quart(__name__)
 app = cors(app)
 app.secret_key = SECRET_KEY
 
 connected_clients = set()
 
-@app.websocket('/ws')
-async def ws():
-    connected_clients.add(websocket._get_current_object())
+async def websocket_handler(websocket, path):
+    connected_clients.add(websocket)
     try:
-        while True:
-            try:
-                data = await websocket.receive_json()
-                await handle_websocket_message(websocket, data)
-            except ConnectionClosed:
-                break
+        async for message in websocket:
+            await handle_websocket_message(websocket, json.loads(message))
     finally:
-        connected_clients.remove(websocket._get_current_object())
+        connected_clients.remove(websocket)
         logger.info("WebSocket client disconnected")
 
 async def handle_websocket_message(ws, data):
@@ -62,14 +55,14 @@ async def handle_websocket_message(ws, data):
         await handler(ws, data)
     else:
         logger.warning(f"Unknown message type received: {message_type}")
-        await ws.send_json({"status": "error", "message": "Unknown message type"})
+        await ws.send(json.dumps({"status": "error", "message": "Unknown message type"}))
 
 async def handle_status_update(ws, data):
     """
     Handle status update messages from clients.
     """
     logger.info(f"Status update received: {data}")
-    await ws.send_json({"status": "success", "message": "Status update acknowledged"})
+    await ws.send(json.dumps({"status": "success", "message": "Status update acknowledged"}))
 
 async def handle_trigger_event(ws, data):
     """
@@ -77,17 +70,14 @@ async def handle_trigger_event(ws, data):
     """
     logger.info(f"Trigger event received: {data}")
     # TODO: Process the trigger event
-    await ws.send_json({"status": "success", "message": "Trigger event processed"})
+    await ws.send(json.dumps({"status": "success", "message": "Trigger event processed"}))
 
 async def broadcast_message(message):
     """
     Broadcast a message to all connected clients.
     """
-    for client in connected_clients:
-        try:
-            await client.send_json(message)
-        except Exception as e:
-            logger.error(f"Error broadcasting message to client: {e}")
+    if connected_clients:
+        await asyncio.wait([client.send(json.dumps(message)) for client in connected_clients])
 
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
@@ -298,4 +288,10 @@ if __name__ == '__main__':
     config.accesslog = "-"  # Log to stdout
     config.errorlog = "-"  # Log to stderr
     config.loglevel = "INFO"
-    asyncio.run(serve(app, config))
+
+    async def run_server():
+        websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
+        quart_server = serve(app, config)
+        await asyncio.gather(websocket_server.wait_closed(), quart_server)
+
+    asyncio.run(run_server())

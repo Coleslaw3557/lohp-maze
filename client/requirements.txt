@@ -1,3 +1,6 @@
 websockets==10.4
 aiofiles==23.1.0
 RPi.GPIO==0.7.0
+quart==0.18.3
+quart-cors==0.6.0
+hypercorn==0.14.3
