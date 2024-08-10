@@ -104,7 +104,9 @@ class EffectsManager:
         else:
             audio_file = f"sound-effects/{effect_name.lower()}.mp3"
         if os.path.exists(audio_file):
+            logger.info(f"Audio file found for effect '{effect_name}': {audio_file}")
             return audio_file
+        logger.warning(f"Audio file not found for effect '{effect_name}': {audio_file}")
         return None
 
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):
@@ -283,6 +285,7 @@ class EffectsManager:
         self.theme_manager.resume_theme_for_room(room)
         
         # Stream audio if available
+        audio_file = self.get_audio_file(effect_name)
         if audio_file:
             audio_params = effect_data.get('audio', {})
             await self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params)
