@@ -1,7 +1,8 @@
+Flask
+Werkzeug
 Quart==0.18.3
 quart-cors==0.6.0
 pyftdi==0.54.0
 fastapi==0.95.2
 hypercorn==0.14.3
 pydantic==1.10.7
-Werkzeug

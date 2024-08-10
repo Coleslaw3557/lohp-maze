@@ -4,6 +4,7 @@ import asyncio
 from flask import Flask, request, jsonify
 from quart import Quart
 from flask_cors import CORS
+from werkzeug.urls import uri_to_iri, iri_to_uri
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
