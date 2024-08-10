@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
 logger = logging.getLogger(__name__)
 
 from quart import websocket
-from websockets.exceptions import WebSocketDisconnect
+from websockets.exceptions import ConnectionClosed as WebSocketDisconnect
 
 app = Quart(__name__)
 app = cors(app)
