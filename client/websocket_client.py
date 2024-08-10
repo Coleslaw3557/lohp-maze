@@ -37,6 +37,11 @@ class WebSocketClient:
             logger.error(f"Failed to connect to server: {e}")
             self.websocket = None  # Ensure websocket is None if connection fails
         
+        if self.websocket is None:
+            logger.error("WebSocket connection failed")
+            return False
+        return True
+        
     async def reconnect(self):
         logger.info("Attempting to reconnect...")
         await self.connect()

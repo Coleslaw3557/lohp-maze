@@ -34,19 +34,27 @@ app.secret_key = SECRET_KEY
 @app.websocket('/ws')
 async def ws():
     logger.info(f"WebSocket connection attempt from {request.remote_addr}")
-    logger.debug(f"Request headers: {request.headers}")
     try:
-        # Log the entire request object for debugging
-        logger.debug(f"Full request object: {request}")
-        
-        client_type = request.headers.get("Client-Type")
-        logger.info(f"WebSocket connection attempt with {request.remote_addr}, Client-Type: {client_type}")
-        
-        # Remove the client type check
-        
-        # Explicitly accept the WebSocket connection
-        await websocket.accept()
+        websocket = await websocket.accept()
         logger.info(f"WebSocket connection accepted for {request.remote_addr}")
+        
+        while True:
+            try:
+                data = await websocket.receive_json()
+                logger.info(f"Received data from {request.remote_addr}: {data}")
+                
+                # Handle the received data
+                await handle_websocket_message(websocket, data)
+                
+            except WebSocketDisconnect:
+                logger.info(f"WebSocket disconnected from {request.remote_addr}")
+                break
+            except json.JSONDecodeError:
+                logger.error(f"Invalid JSON received from {request.remote_addr}")
+                await websocket.send_json({"status": "error", "message": "Invalid JSON"})
+    except Exception as e:
+        logger.error(f"WebSocket error for {request.remote_addr}: {str(e)}")
+        return Response(f"WebSocket error: {str(e)}", status=400)
         
         while True:
             try:
