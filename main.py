@@ -71,7 +71,10 @@ def run_effect():
     if not effect_data:
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    success = asyncio.run(effects_manager.apply_effect_to_room(room, effect_data))
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    success = loop.run_until_complete(effects_manager.apply_effect_to_room(room, effect_data))
+    loop.close()
     
     if success:
         return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})

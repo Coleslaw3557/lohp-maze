@@ -653,51 +653,42 @@ class EffectsManager:
         intensity_fluctuation = theme_data.get('intensity_fluctuation', 0.5)
         transition_speed = theme_data.get('transition_speed', 0.5)
 
-        # Use time-based oscillation for smooth transitions
         time_factor = current_time * transition_speed
+        sin_time = math.sin(time_factor)
+        sin_time_slow = math.sin(time_factor * 0.1)
+        sin_time_medium = math.sin(time_factor * 0.2)
 
-        # Generate base colors using HSV color space for smoother transitions
         if 'blue_green_balance' in theme_data:  # Ocean theme
-            hue = 0.5 + (math.sin(time_factor * 0.1) * 0.1)  # Oscillate around blue (0.5)
+            hue = 0.5 + sin_time_slow * 0.1
             blue_green_balance = theme_data.get('blue_green_balance', 0.8)
-            saturation = 0.8 + (math.sin(time_factor * 0.2) * 0.2 * color_variation)
+            saturation = 0.8 + sin_time_medium * 0.2 * color_variation
         elif 'green_blue_balance' in theme_data:  # Jungle theme
-            hue = 0.3 + (math.sin(time_factor * 0.1) * 0.1)  # Oscillate around green (0.3)
-            green_blue_balance = theme_data.get('green_blue_balance', 0.9)  # Increase green dominance
-            saturation = 0.9 + (math.sin(time_factor * 0.2) * 0.1 * color_variation)  # Increase overall saturation
+            hue = 0.3 + sin_time_slow * 0.1
+            green_blue_balance = theme_data.get('green_blue_balance', 0.9)
+            saturation = 0.9 + sin_time_medium * 0.1 * color_variation
         else:
-            hue = (math.sin(time_factor * 0.1) + 1) / 2
+            hue = (sin_time_slow + 1) * 0.5
             saturation = color_variation
 
-        value = overall_brightness * (1 + math.sin(time_factor * 2) * intensity_fluctuation)
-
+        value = overall_brightness * (1 + sin_time * intensity_fluctuation)
         r, g, b = self._hsv_to_rgb(hue, saturation, value)
 
-        # Apply theme-specific color balance
         if 'blue_green_balance' in theme_data:  # Ocean theme
-            b = b * blue_green_balance
-            g = g * (1 - blue_green_balance)
+            b *= blue_green_balance
+            g *= (1 - blue_green_balance)
         elif 'green_blue_balance' in theme_data:  # Jungle theme
-            g = g * green_blue_balance
-            b = b * (1 - green_blue_balance)
+            g *= green_blue_balance
+            b *= (1 - green_blue_balance)
 
-        # Convert to 8-bit color values
         channels['total_dimming'] = int(value * 255)
         channels['r_dimming'] = int(r * 255)
         channels['g_dimming'] = int(g * 255)
         channels['b_dimming'] = int(b * 255)
+        channels['w_dimming'] = int(min(r, g, b) * 12.75)  # 255 * 0.05 = 12.75
 
-        # Add white channel for RGBW fixtures
-        channels['w_dimming'] = int(min(r, g, b) * 255 * 0.05)  # Significantly reduce white intensity for Jungle theme
-
-        # Add strobe effect
         strobe_speed = theme_data.get('strobe_speed', 0)
-        if strobe_speed > 0:
-            channels['total_strobe'] = int(127 + (math.sin(time_factor * strobe_speed) + 1) * 64)
-        else:
-            channels['total_strobe'] = 0
+        channels['total_strobe'] = int(127 + sin_time * strobe_speed * 64) if strobe_speed > 0 else 0
 
-        logger.debug(f"Generated room channels: {channels}")
         return channels
 
     def set_master_brightness(self, brightness):

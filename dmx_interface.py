@@ -45,7 +45,7 @@ class DMXOutputManager(threading.Thread):
     def send_dmx_data(self):
         try:
             state = self.dmx_state_manager.get_full_state()
-            self.data[1:] = state
+            self.data[1:] = bytearray(state)
             self.port.set_break(True)
             time.sleep(self.BREAK_TIME)
             self.port.set_break(False)
