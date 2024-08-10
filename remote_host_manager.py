@@ -1,5 +1,7 @@
 import json
 import logging
+import asyncio
+import aiofiles
 from websocket_handler import WebSocketHandler
 
 logger = logging.getLogger(__name__)
@@ -52,3 +54,13 @@ class RemoteHostManager:
         # Add logic to handle the trigger event (e.g., start an effect)
         # For example:
         # self.effect_manager.trigger_effect(room, trigger)
+
+    async def stream_audio_to_room(self, room, audio_file):
+        host = self.get_host_by_room(room)
+        if host:
+            logger.info(f"Streaming audio file {audio_file} to room {room}")
+            async with aiofiles.open(audio_file, 'rb') as f:
+                audio_data = await f.read()
+            await host.send_audio_command('audio_start', audio_data)
+        else:
+            logger.warning(f"No remote host found for room: {room}. Cannot stream audio.")

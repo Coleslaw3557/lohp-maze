@@ -83,20 +83,26 @@ class EffectsManager:
         
         self.room_effects[room] = effect_name
         
-        # Prepare audio task
-        audio_task = self._apply_audio_effect(room, effect_name)
+        # Check for associated audio file
+        audio_file = self.get_audio_file(effect_name)
         
         # Prepare lighting tasks
         lighting_tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
         
-        # Run audio and lighting tasks concurrently
-        await asyncio.gather(audio_task, *lighting_tasks)
+        # Run lighting tasks
+        await asyncio.gather(*lighting_tasks)
         
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         
         self.room_effects.pop(room, None)
         
-        return True
+        return True, audio_file
+
+    def get_audio_file(self, effect_name):
+        audio_file = f"sound-effects/{effect_name.lower()}.mp3"
+        if os.path.exists(audio_file):
+            return audio_file
+        return None
 
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:
