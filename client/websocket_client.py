@@ -123,9 +123,14 @@ class WebSocketClient:
     async def handle_audio_start(self, message):
         room = message.get('room')
         if room in self.config.get('associated_rooms', []):
-            audio_data = message.get('data', {})
-            audio_file = await self.websocket.recv()  # Receive the audio file data
-            await self.audio_manager.start_audio(audio_data, audio_file)
+            audio_data = message.get('data') or {}
+            try:
+                audio_file = await asyncio.wait_for(self.websocket.recv(), timeout=5.0)  # Receive the audio file data with a timeout
+                await self.audio_manager.start_audio(audio_data, audio_file)
+            except asyncio.TimeoutError:
+                logger.error("Timeout while waiting for audio file data")
+            except Exception as e:
+                logger.error(f"Error processing audio start: {e}")
         else:
             logger.warning(f"Received audio_start for unassociated room: {room}")
 
