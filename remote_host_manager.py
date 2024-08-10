@@ -89,8 +89,24 @@ class RemoteHostManager:
                 logger.error(f"Error reading audio file {audio_file}: {str(e)}")
             except Exception as e:
                 logger.error(f"Error streaming audio to room {room}: {str(e)}")
+                await self.reconnect_and_retry(host, 'audio_start', audio_data)
         else:
             logger.warning(f"No remote host found for room: {room}. Cannot stream audio.")
+
+    async def reconnect_and_retry(self, host, command, audio_data):
+        max_retries = 3
+        for attempt in range(max_retries):
+            logger.info(f"Attempting to reconnect to {host.host_name} (Attempt {attempt + 1}/{max_retries})")
+            await host.connect()
+            if host.websocket:
+                logger.info(f"Reconnected to {host.host_name}. Retrying command.")
+                try:
+                    await host.send_audio_command(command, audio_data)
+                    return
+                except Exception as e:
+                    logger.error(f"Failed to send command after reconnection: {str(e)}")
+            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+        logger.error(f"Failed to reconnect to {host.host_name} after {max_retries} attempts")
 
     def save_config(self):
         try:

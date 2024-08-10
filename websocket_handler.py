@@ -15,15 +15,24 @@ class WebSocketHandler:
 
     async def connect(self):
         try:
-            self.websocket = await websockets.connect(f"ws://{self.host_ip}:{self.port}")
+            self.websocket = await asyncio.wait_for(
+                websockets.connect(f"ws://{self.host_ip}:{self.port}"),
+                timeout=5.0
+            )
             logger.info(f"Connected to remote host: {self.host_name} ({self.host_ip})")
+            return True
+        except asyncio.TimeoutError:
+            logger.error(f"Connection timeout to {self.host_name} ({self.host_ip})")
         except Exception as e:
             logger.error(f"Failed to connect to {self.host_name} ({self.host_ip}): {str(e)}")
+        return False
 
     async def send_audio_command(self, command, audio_data=None):
         if not self.websocket:
             logger.info(f"No active connection. Attempting to connect to {self.host_name}")
-            await self.connect()
+            if not await self.connect():
+                logger.error(f"Failed to establish connection to {self.host_name}")
+                return False
         
         try:
             if command == 'audio_start':
@@ -36,8 +45,13 @@ class WebSocketHandler:
                 }
                 await self.websocket.send(json.dumps(message))
             logger.info(f"Sent {command} command to {self.host_name}")
+            return True
+        except websockets.exceptions.ConnectionClosed:
+            logger.error(f"Connection closed while sending {command} command to {self.host_name}")
+            self.websocket = None
         except Exception as e:
             logger.error(f"Failed to send {command} command to {self.host_name}: {str(e)}")
+        return False
 
     async def receive_messages(self):
         while True:
