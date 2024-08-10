@@ -34,10 +34,13 @@ connected_clients = set()
 async def websocket_handler(websocket, path):
     connected_clients.add(websocket)
     try:
-        message = await websocket.recv()
-        await handle_client_connected(websocket, json.loads(message))
         async for message in websocket:
-            await handle_websocket_message(websocket, json.loads(message))
+            data = json.loads(message)
+            message_type = data.get('type')
+            if message_type == 'client_connected':
+                await handle_client_connected(websocket, data)
+            else:
+                await handle_websocket_message(websocket, data)
     except websockets.exceptions.ConnectionClosedError as e:
         logger.info(f"WebSocket connection closed: {e}")
     except Exception as e:
@@ -46,18 +49,16 @@ async def websocket_handler(websocket, path):
         connected_clients.remove(websocket)
         logger.info("WebSocket client disconnected")
 
-async def handle_client_connected(websocket):
-    client_info = await websocket.recv()
-    client_info = json.loads(client_info)
-    unit_name = client_info.get('unit_name')
-    associated_rooms = client_info.get('associated_rooms', [])
+async def handle_client_connected(websocket, data):
+    unit_name = data.get('data', {}).get('unit_name')
+    associated_rooms = data.get('data', {}).get('associated_rooms', [])
     client_ip = websocket.remote_address[0]  # Get the actual client IP
     if unit_name and associated_rooms:
         remote_host_manager.update_client_rooms(client_ip, associated_rooms, websocket)
         logger.info(f"Client connected: {unit_name} ({client_ip}) - Associated rooms: {associated_rooms}")
         await websocket.send(json.dumps({"type": "connection_response", "status": "success", "message": "Connection acknowledged"}))
     else:
-        logger.warning(f"Received incomplete client connection data: {client_info}")
+        logger.warning(f"Received incomplete client connection data: {data}")
         await websocket.send(json.dumps({"type": "connection_response", "status": "error", "message": "Incomplete connection data"}))
 
 async def handle_websocket_message(ws, data):
