@@ -123,7 +123,9 @@ class WebSocketClient:
     async def handle_audio_start(self, message):
         room = message.get('room')
         if room in self.config.get('associated_rooms', []):
-            await self.audio_manager.start_audio(message.get('data'))
+            audio_data = message.get('data', {})
+            audio_file = await self.websocket.recv()  # Receive the audio file data
+            await self.audio_manager.start_audio(audio_data, audio_file)
         else:
             logger.warning(f"Received audio_start for unassociated room: {room}")
 
