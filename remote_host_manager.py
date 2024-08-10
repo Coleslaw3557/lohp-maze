@@ -17,12 +17,14 @@ class RemoteHostManager:
 
     def update_client_rooms(self, ip, rooms):
         self.client_rooms[ip] = rooms
+        self.connected_clients[ip] = True  # Mark the client as connected
         logger.info(f"Updated associated rooms for client {ip}: {rooms}")
 
     def load_config(self):
         try:
             with open(self.config_file, 'r') as f:
-                self.remote_hosts = json.load(f)['remote_hosts']
+                config = json.load(f)
+                self.remote_hosts = config.get('remote_hosts', {})
             logger.info(f"Successfully loaded configuration from {self.config_file}")
             logger.info(f"Remote hosts configuration: {self.remote_hosts}")
         except FileNotFoundError:
@@ -39,8 +41,8 @@ class RemoteHostManager:
         for ip, rooms in self.client_rooms.items():
             if room.lower() in [r.lower() for r in rooms]:
                 logger.debug(f"Found host for room {room}: {ip}")
-                if ip in self.connected_clients:
-                    return self.connected_clients[ip]
+                if ip in self.connected_clients and self.connected_clients[ip]:
+                    return ip
                 else:
                     logger.warning(f"Host found for room {room}, but not connected: {ip}")
                     return None

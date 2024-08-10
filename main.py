@@ -77,6 +77,13 @@ async def handle_client_connected(ws, data):
     else:
         logger.warning(f"Received incomplete client connection data: {data}")
         await ws.send(json.dumps({"type": "connection_response", "status": "error", "message": "Incomplete connection data"}))
+    
+    # Update the remote_hosts configuration with the new client information
+    remote_host_manager.remote_hosts[ip] = {
+        "name": unit_name,
+        "rooms": associated_rooms
+    }
+    remote_host_manager.save_config()
 
 async def handle_status_update(ws, data):
     """
