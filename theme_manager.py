@@ -40,12 +40,13 @@ class ThemeManager:
                 "green_blue_balance": 0.3
             },
             "MazeMadness": {
-                "duration": 180,
-                "transition_speed": 0.1,
-                "color_variation": 0.7,
-                "intensity_fluctuation": 0.3,
-                "overall_brightness": 0.6,
-                "room_transition_speed": 0.05
+                "duration": 300,  # 5 minutes
+                "transition_speed": 0.05,
+                "color_variation": 1.0,
+                "intensity_fluctuation": 0.2,
+                "overall_brightness": 0.8,
+                "room_transition_speed": 0.02,
+                "color_wheel_speed": 0.1
             }
         }
 

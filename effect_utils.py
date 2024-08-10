@@ -43,11 +43,12 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
         hue = 0.3 + sin_time_slow * 0.05  # Reduce hue variation
         green_blue_balance = theme_data.get('green_blue_balance', 0.9)
         saturation = 0.9 + sin_time_medium * 0.05 * color_variation  # Reduce saturation variation
-    elif 'room_transition_speed' in theme_data:  # MazeMadness theme
-        room_transition_speed = theme_data.get('room_transition_speed', 0.05)
+    elif 'color_wheel_speed' in theme_data:  # MazeMadness theme
+        color_wheel_speed = theme_data.get('color_wheel_speed', 0.1)
+        room_transition_speed = theme_data.get('room_transition_speed', 0.02)
         room_offset = (room_index / total_rooms + time_factor * room_transition_speed) % 1
-        hue = (room_offset + sin_time_slow * 0.1) % 1  # Smooth color transition across rooms
-        saturation = 0.8 + sin_time_medium * 0.2 * color_variation
+        hue = (time_factor * color_wheel_speed + room_offset) % 1  # Color wheel effect
+        saturation = 0.9 + sin_time_medium * 0.1 * color_variation
     else:
         hue = 0.5 + sin_time_slow * 0.1  # Reduce hue variation
         saturation = 0.8 + sin_time_medium * 0.1 * color_variation  # Reduce saturation variation
