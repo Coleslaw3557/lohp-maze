@@ -50,9 +50,11 @@ def set_master_brightness():
     effects_manager.set_master_brightness(brightness)
     return jsonify({"status": "success", "master_brightness": brightness})
 
+from quart import request
+
 @app.route('/api/set_theme', methods=['POST'])
 async def set_theme():
-    data = await request.get_json()
+    data = await request.json
     theme_name = data.get('theme_name')
     if not theme_name:
         return jsonify({'status': 'error', 'message': 'Theme name is required'}), 400
