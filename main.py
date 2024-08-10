@@ -33,6 +33,8 @@ app.secret_key = SECRET_KEY
 
 @app.websocket('/ws')
 async def ws():
+    logger.info(f"WebSocket connection attempt from {request.remote_addr}")
+    logger.debug(f"Request headers: {request.headers}")
     try:
         await websocket.accept()
         client_type = websocket.headers.get("Client-Type")
@@ -57,6 +59,7 @@ async def ws():
                 await websocket.send_json({"status": "error", "message": "Invalid JSON"})
     except Exception as e:
         logger.error(f"WebSocket error for {websocket.remote_addr}: {str(e)}")
+        logger.debug(f"Exception details: {type(e).__name__}: {str(e)}", exc_info=True)
     finally:
         logger.info(f"WebSocket connection closed for {websocket.remote_addr}")
 

@@ -17,7 +17,9 @@ class WebSocketClient:
 
     async def connect(self):
         uri = f"ws://{self.server_ip}:{self.server_port}/ws"
+        logger.info(f"Attempting to connect to server at {uri}")
         try:
+            logger.debug(f"WebSocket connection parameters: ping_interval=20, ping_timeout=20, extra_headers={{'Client-Type': 'RemoteUnit', 'Connection': 'Upgrade', 'Upgrade': 'websocket'}}")
             self.websocket = await websockets.connect(
                 uri,
                 ping_interval=20,
@@ -29,10 +31,15 @@ class WebSocketClient:
                 },
                 max_size=None  # Allow unlimited message size
             )
-            logger.info(f"Connected to server at {uri}")
+            logger.info(f"Successfully connected to server at {uri}")
             await self.send_status_update("connected")
+        except websockets.exceptions.InvalidStatusCode as e:
+            logger.error(f"Failed to connect to server: Invalid status code {e.status_code}")
+            logger.debug(f"Server response headers: {e.headers}")
+            self.websocket = None
         except Exception as e:
             logger.error(f"Failed to connect to server: {e}")
+            logger.debug(f"Exception details: {type(e).__name__}: {str(e)}")
             self.websocket = None  # Ensure websocket is None if connection fails
         
     async def reconnect(self):
