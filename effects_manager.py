@@ -96,7 +96,7 @@ class EffectsManager:
         
         self.room_effects.pop(room, None)
         
-        return True, audio_file
+        return True, audio_file if audio_file else None
 
     def get_audio_file(self, effect_name):
         audio_file = f"sound-effects/{effect_name.lower()}.mp3"

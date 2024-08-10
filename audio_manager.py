@@ -10,6 +10,15 @@ class AudioManager:
         self.audio_dir = audio_dir
         self.audio_config = self.load_config()
         logger.info("AudioManager initialized")
+        
+        # Add default configuration for Lightning effect
+        if 'Lightning' not in self.audio_config['effects']:
+            self.audio_config['effects']['Lightning'] = {
+                'audio_file': 'lightning.mp3',
+                'volume': 1.0,
+                'loop': False
+            }
+            self.save_config()
 
     def load_config(self):
         try:
