@@ -136,7 +136,7 @@ class RemoteHostManager:
         # For example:
         # self.effect_manager.trigger_effect(room, trigger)
 
-    async def stream_audio_to_room(self, room, audio_file):
+    async def stream_audio_to_room(self, room, audio_file, audio_params):
         if not audio_file:
             logger.error(f"No audio file provided for room {room}")
             return
@@ -154,7 +154,17 @@ class RemoteHostManager:
                     logger.error(f"Invalid audio_file parameter: {type(audio_file)}")
                     return
                 
-                success = await self.send_audio_command(room, 'audio_start', audio_data)
+                # Prepare audio command with parameters
+                audio_command = {
+                    'type': 'audio_start',
+                    'data': {
+                        'file_name': os.path.basename(audio_file) if isinstance(audio_file, str) else 'stream.mp3',
+                        'volume': audio_params.get('volume', 1.0),
+                        'loop': audio_params.get('loop', False)
+                    }
+                }
+                
+                success = await self.send_audio_command(room, audio_command, audio_data)
                 if not success:
                     logger.error(f"Failed to send audio command to room {room}")
                 else:
@@ -165,6 +175,26 @@ class RemoteHostManager:
                 logger.error(f"Error streaming audio to room {room}: {str(e)}")
         else:
             logger.warning(f"No client IP found for room: {room}. Cannot stream audio.")
+
+    async def send_audio_command(self, room, command, audio_data=None):
+        client_ip = self.get_client_ip_by_room(room)
+        if client_ip:
+            if client_ip in self.connected_clients:
+                websocket = self.connected_clients[client_ip]
+                logger.info(f"Sending audio command for room {room} to client {client_ip}")
+                try:
+                    await websocket.send(json.dumps(command))
+                    if audio_data:
+                        await websocket.send(audio_data)
+                    logger.info(f"Successfully sent audio command for room {room} to client {client_ip}")
+                    return True
+                except Exception as e:
+                    logger.error(f"Error sending audio command for room {room} to client {client_ip}: {str(e)}")
+            else:
+                logger.error(f"Client {client_ip} for room {room} is not connected. Cannot send audio command.")
+        else:
+            logger.error(f"No client IP found for room: {room}. Cannot send audio command.")
+        return False
 
     async def reconnect_and_retry(self, host, command, audio_data):
         max_retries = 3
