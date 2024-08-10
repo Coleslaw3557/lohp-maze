@@ -25,7 +25,7 @@ async def main():
         sync_manager
     )
 
-    uri = f"ws://{config.get('server_ip')}:{config.get('server_port')}/ws"
+    uri = f"ws://{config.get('server_ip')}:8765"
     
     try:
         async with websockets.connect(uri) as websocket:
