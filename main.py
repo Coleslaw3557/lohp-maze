@@ -30,7 +30,7 @@ dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
 dmx_output_manager = DMXOutputManager(dmx_state_manager)
 light_config = LightConfigManager(dmx_state_manager=dmx_state_manager)
 effects_manager = EffectsManager(config_file='effects_config.json', light_config_manager=light_config, dmx_state_manager=dmx_state_manager)
-interrupt_handler = InterruptHandler(dmx_state_manager)
+interrupt_handler = InterruptHandler(dmx_state_manager, effects_manager.theme_manager)
 effects_manager.interrupt_handler = interrupt_handler
 logger.info("InterruptHandler initialized and passed to EffectsManager")
 
