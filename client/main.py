@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import websockets
 from websocket_client import WebSocketClient
 from audio_manager import AudioManager
 from trigger_manager import TriggerManager
@@ -24,13 +25,18 @@ async def main():
         sync_manager
     )
 
-    await ws_client.connect()
+    uri = f"ws://{config.get('server_ip')}:{config.get('server_port')}/ws"
     
     try:
-        await asyncio.gather(
-            ws_client.listen(),
-            trigger_manager.monitor_triggers(ws_client.send_trigger_event)
-        )
+        async with websockets.connect(uri) as websocket:
+            logger.info(f"Connected to WebSocket server at {uri}")
+            await ws_client.set_websocket(websocket)
+            await asyncio.gather(
+                ws_client.listen(),
+                trigger_manager.monitor_triggers(ws_client.send_trigger_event)
+            )
+    except websockets.exceptions.WebSocketException as e:
+        logger.error(f"WebSocket connection error: {e}")
     except KeyboardInterrupt:
         logger.info("Shutting down client...")
     finally:
