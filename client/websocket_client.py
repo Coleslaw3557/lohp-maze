@@ -75,6 +75,10 @@ class WebSocketClient:
                 await asyncio.sleep(5)  # Wait before trying again
 
     async def handle_message(self, message):
+        if not message:
+            logger.warning("Received empty message")
+            return
+
         handlers = {
             'audio_start': self.audio_manager.start_audio,
             'audio_stop': self.audio_manager.stop_audio,

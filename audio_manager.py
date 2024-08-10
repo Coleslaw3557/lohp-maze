@@ -38,8 +38,12 @@ class AudioManager:
         if audio_file:
             full_path = os.path.join(self.audio_dir, audio_file)
             logger.debug(f"Audio file for effect '{effect_name}': {full_path}")
-            return full_path
-        logger.warning(f"No audio file found for effect: {effect_name}")
+            if os.path.exists(full_path):
+                return full_path
+            else:
+                logger.error(f"Audio file not found at path: {full_path}")
+        else:
+            logger.warning(f"No audio file configured for effect: {effect_name}")
         return None
 
     def get_audio_config(self, effect_name):
