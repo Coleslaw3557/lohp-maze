@@ -109,6 +109,7 @@ Structure:
 Modifications:
 - Accept additional parameters for audio control (e.g., volume, loop).
 - Trigger audio streaming to relevant remote hosts.
+- Add option to run effect on all rooms concurrently.
 
 Example request body:
 ```json
@@ -118,11 +119,27 @@ Example request body:
   "audio": {
     "volume": 0.8,
     "loop": false
+  },
+  "all_rooms": false
+}
+```
+
+### 5.2 POST /api/run_effect_all_rooms
+
+New endpoint to trigger an effect on all rooms concurrently.
+
+Example request body:
+```json
+{
+  "effect_name": "Lightning",
+  "audio": {
+    "volume": 0.8,
+    "loop": false
   }
 }
 ```
 
-### 5.2 GET /api/remote_hosts
+### 5.3 GET /api/remote_hosts
 
 New endpoint to retrieve information about connected remote hosts.
 
@@ -145,6 +162,48 @@ Example response:
   ]
 }
 ```
+
+## 6. Synchronization Mechanism
+
+To ensure synchronized audio and light effects across all remote units without relying on Internet access for time synchronization:
+
+1. Time Synchronization:
+   - Implement a simple Network Time Protocol (NTP) server on the main control server.
+   - Have all remote units synchronize their clocks with the main server at regular intervals.
+
+2. Effect Scheduling:
+   - When triggering an effect on all rooms, include a future timestamp for execution.
+   - This timestamp should be far enough in the future to allow for network latency and processing time (e.g., 500ms).
+
+3. Precise Timing:
+   - Use high-resolution timers on both the main server and remote units to schedule and execute effects with microsecond precision.
+
+4. WebSocket Protocol Extension:
+   - Add a new message type for scheduled effects:
+     ```json
+     {
+       "type": "scheduled_effect",
+       "data": {
+         "effect_name": "Lightning",
+         "audio_file": "lightning.mp3",
+         "execute_at": 1234567890.123456
+       }
+     }
+     ```
+
+5. Buffering and Pre-loading:
+   - Pre-load audio files on remote units to minimize playback delay.
+   - Buffer the first few seconds of audio on remote units before the scheduled start time.
+
+6. Drift Correction:
+   - Implement a mechanism to detect and correct timing drift between the main server and remote units.
+   - Periodically send ping messages to measure and account for network latency.
+
+7. Fault Tolerance:
+   - Implement a fallback mechanism for remote units that miss the synchronization window.
+   - Allow for catch-up or graceful degradation of the experience if perfect sync cannot be achieved.
+
+By implementing these mechanisms, we can ensure that audio playback and light effects are synchronized across all remote units, even without Internet access for external time synchronization.
 
 ## 6. WebSocket Protocol
 
