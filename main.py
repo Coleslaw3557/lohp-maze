@@ -1,15 +1,12 @@
 import os
 import logging
-import json
-import asyncio
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
 from interrupt_handler import InterruptHandler
-from sequence_runner import SequenceRunner
 
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -26,10 +23,6 @@ app = Flask(__name__)
 CORS(app)
 app.secret_key = SECRET_KEY
 
-# Create an event loop
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
 dmx_output_manager = DMXOutputManager(dmx_state_manager)
@@ -40,18 +33,13 @@ effects_manager.interrupt_handler = interrupt_handler
 logger.info("InterruptHandler initialized and passed to EffectsManager")
 
 # Reset all lights to off
-for fixture_id in range(NUM_FIXTURES):
-    dmx_state_manager.reset_fixture(fixture_id)
+dmx_state_manager.reset_all_fixtures()
 
 # Start threads
 dmx_output_manager.start()
 
 # Ensure no theme is running at startup
 effects_manager.stop_current_theme()
-
-def set_verbose_logging(enabled):
-    logging.getLogger().setLevel(logging.DEBUG if enabled else logging.INFO)
-    logger.log(logging.DEBUG if enabled else logging.INFO, f"Verbose logging {'enabled' if enabled else 'disabled'}")
 
 @app.route('/api/set_master_brightness', methods=['POST'])
 def set_master_brightness():
