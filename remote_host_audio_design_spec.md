@@ -205,9 +205,6 @@ To ensure synchronized audio and light effects across all remote units with fast
     - Use a low-latency audio codec (e.g., Opus) for audio streaming.
     - Implement adaptive bitrate streaming to adjust audio quality based on network conditions.
 
-11. Local Fallback:
-    - Implement a local fallback mode on remote units that can operate independently if connection to the main server is lost.
-
 By implementing these optimizations, we can significantly reduce latency and ensure more consistent and rapid execution of effects across all remote units, even in challenging network conditions.
 
 ## 6. WebSocket Protocol
