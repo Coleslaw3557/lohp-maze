@@ -1,15 +1,14 @@
 import os
 import logging
-import json
 import asyncio
-from flask import Flask, request, jsonify, abort
-from flask_cors import CORS
+from quart import Quart, request, jsonify
+from quart_cors import cors
+from werkzeug.urls import uri_to_iri, iri_to_uri
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
 from interrupt_handler import InterruptHandler
-from sequence_runner import SequenceRunner
 
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -22,26 +21,21 @@ logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
-CORS(app)
+app = Quart(__name__)
+app = cors(app)
 app.secret_key = SECRET_KEY
-
-# Create an event loop
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
 
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
 dmx_output_manager = DMXOutputManager(dmx_state_manager)
 light_config = LightConfigManager(dmx_state_manager=dmx_state_manager)
 effects_manager = EffectsManager(config_file='effects_config.json', light_config_manager=light_config, dmx_state_manager=dmx_state_manager)
-interrupt_handler = InterruptHandler(dmx_state_manager)
+interrupt_handler = InterruptHandler(dmx_state_manager, effects_manager.theme_manager)
 effects_manager.interrupt_handler = interrupt_handler
 logger.info("InterruptHandler initialized and passed to EffectsManager")
 
 # Reset all lights to off
-for fixture_id in range(NUM_FIXTURES):
-    dmx_state_manager.reset_fixture(fixture_id)
+dmx_state_manager.reset_all_fixtures()
 
 # Start threads
 dmx_output_manager.start()
@@ -49,45 +43,67 @@ dmx_output_manager.start()
 # Ensure no theme is running at startup
 effects_manager.stop_current_theme()
 
-def set_verbose_logging(enabled):
-    logging.getLogger().setLevel(logging.DEBUG if enabled else logging.INFO)
-    logger.log(logging.DEBUG if enabled else logging.INFO, f"Verbose logging {'enabled' if enabled else 'disabled'}")
-
 @app.route('/api/set_master_brightness', methods=['POST'])
-def set_master_brightness():
-    brightness = float(request.json.get('brightness', 1.0))
+async def set_master_brightness():
+    data = await request.json
+    brightness = float(data.get('brightness', 1.0))
     effects_manager.set_master_brightness(brightness)
     return jsonify({"status": "success", "master_brightness": brightness})
 
+from quart import request
+
 @app.route('/api/set_theme', methods=['POST'])
-def set_theme():
-    theme_name = request.json.get('theme_name')
+async def set_theme():
+    data = await request.json
+    theme_name = data.get('theme_name')
     if not theme_name:
         return jsonify({'status': 'error', 'message': 'Theme name is required'}), 400
 
-    if effects_manager.set_current_theme(theme_name):
-        return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
-    else:
-        return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+    try:
+        logger.info(f"Setting theme to: {theme_name}")
+        success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=10.0)
+        if success:
+            logger.info(f"Theme set successfully to: {theme_name}")
+            return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+        else:
+            logger.error(f"Failed to set theme to: {theme_name}")
+            return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+    except asyncio.TimeoutError:
+        logger.error(f"Timeout while setting theme to: {theme_name}")
+        return jsonify({'status': 'error', 'message': f'Timeout while setting theme to {theme_name}'}), 504
+    except Exception as e:
+        logger.error(f"Error setting theme: {str(e)}")
+        return jsonify({'status': 'error', 'message': f'An error occurred while setting the theme: {str(e)}'}), 500
 
 @app.route('/api/run_effect', methods=['POST'])
-def run_effect():
-    room = request.json.get('room')
-    effect_name = request.json.get('effect_name')
+async def run_effect():
+    data = await request.json
+    room = data.get('room')
+    effect_name = data.get('effect_name')
     
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
     
+    logger.info(f"Running effect: {effect_name} in room: {room}")
     effect_data = effects_manager.get_effect(effect_name)
     if not effect_data:
+        logger.error(f"Effect not found: {effect_name}")
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    success = asyncio.run(effects_manager.apply_effect_to_room(room, effect_data))
-    
-    if success:
-        return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
-    else:
-        return jsonify({'status': 'error', 'message': f'Failed to apply effect {effect_name} to room {room}'}), 500
+    try:
+        success = await effects_manager.apply_effect_to_room(room, effect_data)
+        
+        if success:
+            logger.info(f"Effect {effect_name} applied successfully to room {room}")
+            return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
+        else:
+            error_message = f"Failed to apply effect {effect_name} to room {room}. Check server logs for details."
+            logger.error(error_message)
+            return jsonify({'status': 'error', 'message': error_message}), 500
+    except Exception as e:
+        error_message = f"Error applying effect {effect_name} to room {room}: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        return jsonify({'status': 'error', 'message': error_message}), 500
 
 @app.route('/api/rooms', methods=['GET'])
 def get_rooms():
@@ -117,17 +133,17 @@ def get_light_models():
 # This route has been removed as it was a duplicate
 
 @app.route('/api/run_test', methods=['POST'])
-def run_test():
+async def run_test():
     test_type = request.json['testType']
     rooms = request.json['rooms']
     
     try:
         if test_type == 'channel':
             channel_values = request.json['channelValues']
-            return run_channel_test(rooms, channel_values)
+            return await run_channel_test(rooms, channel_values)
         elif test_type == 'effect':
             effect_name = request.json['effectName']
-            return run_effect_test(rooms, effect_name)
+            return await run_effect_test(rooms, effect_name)
         else:
             return jsonify({"error": "Invalid test type"}), 400
     except Exception as e:
@@ -152,14 +168,14 @@ def run_channel_test(rooms, channel_values):
         logger.exception(f"Error in channel test for rooms: {', '.join(rooms)}")
         return jsonify({"error": str(e)}), 500
 
-def run_effect_test(rooms, effect_name):
+async def run_effect_test(rooms, effect_name):
     try:
         effect_data = effects_manager.get_effect(effect_name)
         if not effect_data:
             return jsonify({"error": f"Effect '{effect_name}' not found"}), 404
         
         for room in rooms:
-            success, log_messages = effects_manager.apply_effect_to_room(room, effect_data)
+            success = await effects_manager.apply_effect_to_room(room, effect_data)
             if not success:
                 return jsonify({"error": f"Failed to apply effect to room {room}"}), 500
         
@@ -180,13 +196,14 @@ def stop_test():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/run_effect_all_rooms', methods=['POST'])
-def run_effect_all_rooms():
-    effect_name = request.json.get('effect_name')
+async def run_effect_all_rooms():
+    data = await request.json
+    effect_name = data.get('effect_name')
     if not effect_name:
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
 
     try:
-        success, message = effects_manager.apply_effect_to_all_rooms(effect_name)
+        success, message = await effects_manager.apply_effect_to_all_rooms(effect_name)
         if success:
             return jsonify({"message": f"{effect_name} effect triggered in all rooms"}), 200
         else:
@@ -196,5 +213,14 @@ def run_effect_all_rooms():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Effects are now initialized in the EffectsManager constructor
-    app.run(host='0.0.0.0', port=5000, debug=DEBUG)
+    import asyncio
+    from hypercorn.config import Config
+    from hypercorn.asyncio import serve
+
+    config = Config()
+    config.bind = ["0.0.0.0:5000"]
+    config.use_reloader = DEBUG
+    config.accesslog = "-"  # Log to stdout
+    config.errorlog = "-"  # Log to stderr
+    config.loglevel = "INFO"
+    asyncio.run(serve(app, config))

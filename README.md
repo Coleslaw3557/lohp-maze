@@ -8,13 +8,13 @@ This project is the control system for the interactive art maze of the Burning M
 
 The system consists of several key components:
 
-1. **Flask Web Application**: The main control interface and backend logic.
+1. **Quart Web Application**: The main control interface and backend logic, using asynchronous programming.
 2. **DMX Interface**: Manages communication with the lighting fixtures.
 3. **Light Configuration Manager**: Handles the setup and management of light models and room layouts.
 4. **Effects Manager**: Controls the creation and execution of lighting effects and themes.
 5. **Interrupt Handler**: Manages interruptions for specific fixtures and coordinates transitions.
 6. **DMX State Manager**: Maintains the current state of all DMX channels and provides thread-safe access.
-7. **Sequence Runner**: Runs sequences of lighting changes.
+7. **Theme Manager**: Manages and applies continuous theme effects across all rooms.
 
 ### Hardware Setup
 
@@ -23,11 +23,12 @@ The system consists of several key components:
 
 ## Software Components
 
-### 1. Flask Web Application (`main.py`)
+### 1. Quart Web Application (`main.py`)
 
 The core of the control system, providing:
 - RESTful API endpoints for real-time control
 - Integration of all other components
+- Asynchronous request handling
 
 Key features:
 - Dynamic theme management
@@ -77,21 +78,22 @@ Maintains the current state of all DMX channels:
 - Provides thread-safe access to channel values
 - Implements locking mechanism to prevent race conditions
 
-### 7. Sequence Runner (`sequence_runner.py`)
+### 7. Theme Manager (`theme_manager.py`)
 
-Runs sequences of lighting changes:
-- Executes the main lighting sequence (slow morphing color changes)
-- Runs in a separate thread to allow for non-blocking operation
+Manages and applies continuous theme effects:
+- Supports multiple themes (e.g., Ocean, Jungle, MazeMadness)
+- Generates dynamic color changes based on theme parameters
+- Allows for smooth transitions between themes
 
 ## Key Files
 
-- `main.py`: Main Flask application and control logic
+- `main.py`: Main Quart application and control logic
 - `dmx_interface.py`: DMX communication layer
 - `light_config_manager.py`: Light and room configuration management
 - `effects_manager.py`: Effect and theme management
 - `interrupt_handler.py`: Manages fixture interruptions
 - `dmx_state_manager.py`: Maintains DMX channel states
-- `sequence_runner.py`: Runs lighting sequences
+- `theme_manager.py`: Manages continuous theme effects
 - `light_config.json`: Configuration file for light models and room layouts
 
 ## Setup and Installation
@@ -150,7 +152,7 @@ This will start the application and make it accessible at `http://localhost:5000
 ## Technical Considerations
 
 - The system uses a fixed 44Hz update rate for DMX communication to ensure smooth transitions and effects.
-- Thread-safe operations are implemented throughout to handle concurrent access to the DMX interface and state management.
+- Asynchronous programming is used throughout to handle concurrent operations efficiently.
 - The Effects Manager uses a sophisticated algorithm to generate dynamic themes based on parameters like color variation, intensity fluctuation, and overall brightness.
 - The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence, supporting both asynchronous and synchronous interruption methods.
 - Error handling and logging are implemented at multiple levels for robust operation and debugging.
