@@ -8,19 +8,16 @@ from effect_utils import get_effect_step_values
 logger = logging.getLogger(__name__)
 
 class EffectsManager:
-    def __init__(self, config_file='effects_config.json', light_config_manager=None, dmx_state_manager=None, interrupt_handler=None):
+    def __init__(self, config_file='effects_config.json', light_config_manager=None, dmx_state_manager=None):
         self.config_file = config_file
         self.effects = self.load_config()
         self.room_effects = {}
         self.light_config_manager = light_config_manager
         self.dmx_state_manager = dmx_state_manager
-        self.interrupt_handler = interrupt_handler
         self.theme_manager = ThemeManager(dmx_state_manager, light_config_manager)
+        self.interrupt_handler = InterruptHandler(dmx_state_manager, self.theme_manager)
         
-        if self.interrupt_handler is None:
-            logger.warning("InterruptHandler not provided. Some features may not work correctly.")
-        else:
-            logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
+        logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
         
         # Initialize all effects
         self.initialize_effects()
@@ -306,14 +303,17 @@ class EffectsManager:
             start_address = light['start_address']
             light_model = self.light_config_manager.get_light_config(light['model'])
             fixture_id = (start_address - 1) // 8
-            fixture_values = [0] * 8
-            logger.debug(f"Applying theme to room {room}, light model {light['model']}")
-            for channel, value in room_channels.items():
-                if channel in light_model['channels']:
-                    channel_offset = light_model['channels'][channel]
-                    fixture_values[channel_offset] = value
-                    logger.debug(f"  Setting channel {channel} (offset {channel_offset}) to value {value}")
-                else:
-                    logger.debug(f"  Channel {channel} not found in light model, skipping")
-            self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
-            logger.debug(f"  Final fixture values: {fixture_values}")
+            if not self.interrupt_handler.is_fixture_interrupted(fixture_id):
+                fixture_values = [0] * 8
+                logger.debug(f"Applying theme to room {room}, light model {light['model']}")
+                for channel, value in room_channels.items():
+                    if channel in light_model['channels']:
+                        channel_offset = light_model['channels'][channel]
+                        fixture_values[channel_offset] = value
+                        logger.debug(f"  Setting channel {channel} (offset {channel_offset}) to value {value}")
+                    else:
+                        logger.debug(f"  Channel {channel} not found in light model, skipping")
+                self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+                logger.debug(f"  Final fixture values: {fixture_values}")
+            else:
+                logger.debug(f"Skipping theme application for interrupted fixture {fixture_id} in room {room}")
