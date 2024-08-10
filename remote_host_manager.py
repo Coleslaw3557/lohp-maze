@@ -85,9 +85,9 @@ class RemoteHostManager:
         logger.info(f"Client rooms: {self.client_rooms}")
         return False
 
-    def update_client_rooms(self, ip, rooms):
+    def update_client_rooms(self, ip, rooms, websocket):
         self.client_rooms[ip] = rooms
-        self.connected_clients[ip] = ip  # Store the IP as the WebSocket connection
+        self.connected_clients[ip] = websocket  # Store the WebSocket object
         self.remote_hosts[ip] = {"name": f"Unit-{ip}", "rooms": rooms}
         self.save_config()
         logger.info(f"Updated associated rooms for client {ip}: {rooms}")
