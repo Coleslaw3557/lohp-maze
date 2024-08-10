@@ -56,36 +56,48 @@ async def set_theme():
     data = await request.json
     theme_name = data.get('theme_name')
     if not theme_name:
-        return await jsonify({'status': 'error', 'message': 'Theme name is required'}), 400
+        return jsonify({'status': 'error', 'message': 'Theme name is required'}), 400
 
     try:
+        logger.info(f"Setting theme to: {theme_name}")
         success = await effects_manager.set_current_theme_async(theme_name)
         if success:
-            return await jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+            logger.info(f"Theme set successfully to: {theme_name}")
+            return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
         else:
-            return await jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+            logger.error(f"Failed to set theme to: {theme_name}")
+            return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
     except Exception as e:
         logger.error(f"Error setting theme: {str(e)}")
-        return await jsonify({'status': 'error', 'message': f'An error occurred while setting the theme: {str(e)}'}), 500
+        return jsonify({'status': 'error', 'message': f'An error occurred while setting the theme: {str(e)}'}), 500
 
 @app.route('/api/run_effect', methods=['POST'])
 async def run_effect():
-    room = request.json.get('room')
-    effect_name = request.json.get('effect_name')
+    data = await request.json
+    room = data.get('room')
+    effect_name = data.get('effect_name')
     
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
     
+    logger.info(f"Running effect: {effect_name} in room: {room}")
     effect_data = effects_manager.get_effect(effect_name)
     if not effect_data:
+        logger.error(f"Effect not found: {effect_name}")
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    success = await effects_manager.apply_effect_to_room(room, effect_data)
-    
-    if success:
-        return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
-    else:
-        return jsonify({'status': 'error', 'message': f'Failed to apply effect {effect_name} to room {room}'}), 500
+    try:
+        success = await effects_manager.apply_effect_to_room(room, effect_data)
+        
+        if success:
+            logger.info(f"Effect {effect_name} applied successfully to room {room}")
+            return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
+        else:
+            logger.error(f"Failed to apply effect {effect_name} to room {room}")
+            return jsonify({'status': 'error', 'message': f'Failed to apply effect {effect_name} to room {room}'}), 500
+    except Exception as e:
+        logger.error(f"Error applying effect {effect_name} to room {room}: {str(e)}")
+        return jsonify({'status': 'error', 'message': f'An error occurred while applying the effect: {str(e)}'}), 500
 
 @app.route('/api/rooms', methods=['GET'])
 def get_rooms():

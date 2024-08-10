@@ -114,18 +114,25 @@ class EffectsManager:
         self.theme_manager.set_master_brightness(brightness)
 
     async def set_current_theme_async(self, theme_name):
-        return await self.theme_manager.set_current_theme_async(theme_name)
+        logger.info(f"Setting current theme to: {theme_name}")
+        result = await self.theme_manager.set_current_theme_async(theme_name)
+        logger.info(f"Theme set result: {result}")
+        return result
 
     async def set_current_theme(self, theme_name):
+        logger.info(f"Setting current theme to: {theme_name}")
         return await self.set_current_theme_async(theme_name)
 
     def stop_current_theme(self):
+        logger.info("Stopping current theme")
         self.theme_manager.stop_current_theme()
 
     def get_all_themes(self):
+        logger.info("Getting all themes")
         return self.theme_manager.get_all_themes()
 
     def get_theme(self, theme_name):
+        logger.info(f"Getting theme: {theme_name}")
         return self.theme_manager.get_theme(theme_name)
 
     def initialize_effects(self):
@@ -151,6 +158,7 @@ class EffectsManager:
         logger.info(f"Initialized {len(effects)} effects")
 
     async def apply_effect_to_all_rooms(self, effect_name):
+        logger.info(f"Applying effect {effect_name} to all rooms")
         effect_data = self.get_effect(effect_name)
         if not effect_data:
             logger.error(f"{effect_name} effect not found")
@@ -159,10 +167,52 @@ class EffectsManager:
         room_layout = self.light_config_manager.get_room_layout()
         
         tasks = [self.apply_effect_to_room(room, effect_data) for room in room_layout.keys()]
-        await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks)
         
-        logger.info(f"{effect_name} effect triggered in all rooms")
-        return True, f"{effect_name} effect triggered in all rooms"
+        success = all(results)
+        if success:
+            logger.info(f"{effect_name} effect triggered in all rooms")
+        else:
+            logger.error(f"Failed to trigger {effect_name} effect in some rooms")
+        return success, f"{effect_name} effect triggered in all rooms" if success else f"Failed to trigger {effect_name} effect in some rooms"
+
+    async def apply_effect_to_room(self, room, effect_data):
+        logger.info(f"Applying effect to room: {room}")
+        room_layout = self.light_config_manager.get_room_layout()
+        lights = room_layout.get(room, [])
+        fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+        
+        logger.debug(f"Effect data: {effect_data}")
+        logger.debug(f"Fixture IDs for room: {fixture_ids}")
+        
+        self.room_effects[room] = True
+        
+        tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        results = await asyncio.gather(*tasks)
+        
+        success = all(results)
+        if success:
+            logger.info(f"Effect application completed in room '{room}'")
+        else:
+            logger.error(f"Failed to apply effect in room '{room}'")
+        
+        self.room_effects.pop(room, None)
+        
+        return success
+
+    async def _apply_effect_to_fixture(self, fixture_id, effect_data):
+        try:
+            logger.debug(f"Applying effect to fixture {fixture_id}")
+            await self.interrupt_handler.interrupt_fixture(
+                fixture_id,
+                effect_data['duration'],
+                get_effect_step_values(effect_data)
+            )
+            logger.debug(f"Effect applied to fixture {fixture_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error applying effect to fixture {fixture_id}: {str(e)}")
+            return False
     async def _fade_to_black(self, room, fixture_ids, duration):
         start_time = time.time()
         while time.time() - start_time < duration:
