@@ -166,7 +166,7 @@ class EffectsManager:
 
         room_layout = self.light_config_manager.get_room_layout()
         
-        tasks = [self.apply_effect_to_room(room, effect_data) for room in room_layout.keys()]
+        tasks = [self.apply_effect_to_room(room, effect_name, effect_data) for room in room_layout.keys()]
         results = await asyncio.gather(*tasks)
         
         success = all(results)
