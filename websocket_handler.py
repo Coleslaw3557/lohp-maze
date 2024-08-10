@@ -25,13 +25,16 @@ class WebSocketHandler:
             logger.info(f"No active connection. Attempting to connect to {self.host_name}")
             await self.connect()
         
-        message = {
-            "type": command,
-            "data": audio_data
-        }
-        
         try:
-            await self.websocket.send(json.dumps(message))
+            if command == 'audio_start':
+                await self.websocket.send(json.dumps({"type": command}))
+                await self.websocket.send(audio_data)
+            else:
+                message = {
+                    "type": command,
+                    "data": audio_data
+                }
+                await self.websocket.send(json.dumps(message))
             logger.info(f"Sent {command} command to {self.host_name}")
         except Exception as e:
             logger.error(f"Failed to send {command} command to {self.host_name}: {str(e)}")
