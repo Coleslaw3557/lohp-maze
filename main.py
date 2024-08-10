@@ -33,12 +33,16 @@ app.secret_key = SECRET_KEY
 @app.websocket('/ws')
 async def ws():
     try:
+        await websocket.accept()
+        logger.info(f"WebSocket connection established with {websocket.remote_addr}")
         while True:
             try:
                 data = await websocket.receive_json()
+                logger.info(f"Received data: {data}")
                 # Handle the received data
                 await websocket.send_json({"status": "received"})
             except WebSocketDisconnect:
+                logger.info(f"WebSocket disconnected from {websocket.remote_addr}")
                 break
     except Exception as e:
         logger.error(f"WebSocket error: {str(e)}")
