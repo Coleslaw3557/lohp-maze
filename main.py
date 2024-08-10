@@ -33,30 +33,13 @@ app.secret_key = SECRET_KEY
 
 @app.websocket('/ws')
 async def ws():
-    logger.info(f"WebSocket connection attempt from {request.remote_addr}")
-    try:
-        ws_connection = await websocket.accept()
-        logger.info(f"WebSocket connection accepted for {request.remote_addr}")
-        
-        while True:
-            try:
-                data = await ws_connection.receive_json()
-                logger.info(f"Received data from {request.remote_addr}: {data}")
-                
-                # Handle the received data
-                await handle_websocket_message(ws_connection, data)
-                
-            except WebSocketDisconnect:
-                logger.info(f"WebSocket disconnected from {request.remote_addr}")
-                break
-            except json.JSONDecodeError:
-                logger.error(f"Invalid JSON received from {request.remote_addr}")
-                await ws_connection.send_json({"status": "error", "message": "Invalid JSON"})
-    except Exception as e:
-        logger.error(f"WebSocket error for {request.remote_addr}: {str(e)}")
-        logger.debug(f"Exception details: {type(e).__name__}: {str(e)}", exc_info=True)
-    finally:
-        logger.info(f"WebSocket connection closed for {request.remote_addr}")
+    ws_connection = await websocket.accept()
+    while True:
+        try:
+            data = await ws_connection.receive_json()
+            await handle_websocket_message(ws_connection, data)
+        except WebSocketDisconnect:
+            break
 
 async def handle_websocket_message(websocket, data):
     message_type = data.get('type')
