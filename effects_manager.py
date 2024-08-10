@@ -113,8 +113,11 @@ class EffectsManager:
     def set_master_brightness(self, brightness):
         self.theme_manager.set_master_brightness(brightness)
 
-    async def set_current_theme(self, theme_name):
+    async def set_current_theme_async(self, theme_name):
         return await self.theme_manager.set_current_theme_async(theme_name)
+
+    async def set_current_theme(self, theme_name):
+        return await self.set_current_theme_async(theme_name)
 
     def stop_current_theme(self):
         self.theme_manager.stop_current_theme()
