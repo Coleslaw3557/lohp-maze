@@ -54,7 +54,9 @@ async def ws():
                 await websocket.send_json({"status": "error", "message": "Invalid JSON"})
     except Exception as e:
         logger.error(f"WebSocket error for {request.remote_addr}: {str(e)}")
-        return Response(f"WebSocket error: {str(e)}", status=400)
+        logger.debug(f"Exception details: {type(e).__name__}: {str(e)}", exc_info=True)
+    finally:
+        logger.info(f"WebSocket connection closed for {request.remote_addr}")
 
 async def handle_websocket_message(websocket, data):
     client_type = data.get('client_type')
@@ -62,14 +64,8 @@ async def handle_websocket_message(websocket, data):
         await handle_remote_unit_message(websocket, data)
     else:
         await handle_generic_message(websocket, data)
-    except Exception as e:
-        logger.error(f"WebSocket error for {request.remote_addr}: {str(e)}")
-        logger.debug(f"Exception details: {type(e).__name__}: {str(e)}", exc_info=True)
-        return Response(f"WebSocket error: {str(e)}", status=400)
-    finally:
-        logger.info(f"WebSocket connection closed for {request.remote_addr}")
 
-# Remove this function as it's not needed with Quart's built-in WebSocket handling
+# Exception handling is moved to the ws() function
 
 async def handle_remote_unit_message(websocket, data):
     # Handle messages specific to RemoteUnit clients
