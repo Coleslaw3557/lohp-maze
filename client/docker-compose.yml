@@ -6,7 +6,6 @@ services:
       - "/dev/snd:/dev/snd"
     privileged: true
     volumes:
-      - ./config.json:/app/config.json
-      - ./cache:/app/cache
+      - ./:/app
     environment:
       - PYTHONUNBUFFERED=1
