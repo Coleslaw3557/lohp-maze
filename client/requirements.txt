@@ -5,3 +5,4 @@ quart==0.18.3
 quart-cors==0.6.0
 hypercorn==0.14.3
 pydub==0.25.1
+ffmpeg-python==0.2.0
