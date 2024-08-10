@@ -44,8 +44,9 @@ dmx_output_manager.start()
 effects_manager.stop_current_theme()
 
 @app.route('/api/set_master_brightness', methods=['POST'])
-def set_master_brightness():
-    brightness = float(request.json.get('brightness', 1.0))
+async def set_master_brightness():
+    data = await request.json
+    brightness = float(data.get('brightness', 1.0))
     effects_manager.set_master_brightness(brightness)
     return jsonify({"status": "success", "master_brightness": brightness})
 
