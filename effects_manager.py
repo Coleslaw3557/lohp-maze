@@ -222,12 +222,19 @@ class EffectsManager:
         return success
 
     async def _apply_audio_effect(self, room, effect_name):
+        logger.info(f"Applying audio effect '{effect_name}' to room '{room}'")
         audio_config = self.audio_manager.get_audio_config(effect_name)
         if audio_config:
+            logger.debug(f"Audio configuration found for effect '{effect_name}': {audio_config}")
             audio_data = self.audio_manager.prepare_audio_stream(effect_name)
             if audio_data:
+                logger.info(f"Audio stream prepared for effect '{effect_name}'. Sending to room '{room}'")
                 await self.remote_host_manager.send_audio_command(room, 'audio_start', audio_data)
                 return True
+            else:
+                logger.warning(f"Failed to prepare audio stream for effect '{effect_name}'")
+        else:
+            logger.warning(f"No audio configuration found for effect '{effect_name}'")
         return False
 
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):

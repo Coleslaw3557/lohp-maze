@@ -11,6 +11,7 @@ class WebSocketHandler:
         self.host_name = host_name
         self.port = port
         self.websocket = None
+        logger.info(f"WebSocketHandler initialized for {host_name} ({host_ip})")
 
     async def connect(self):
         try:
@@ -21,6 +22,7 @@ class WebSocketHandler:
 
     async def send_audio_command(self, command, audio_data=None):
         if not self.websocket:
+            logger.info(f"No active connection. Attempting to connect to {self.host_name}")
             await self.connect()
         
         message = {
@@ -32,7 +34,7 @@ class WebSocketHandler:
             await self.websocket.send(json.dumps(message))
             logger.info(f"Sent {command} command to {self.host_name}")
         except Exception as e:
-            logger.error(f"Failed to send command to {self.host_name}: {str(e)}")
+            logger.error(f"Failed to send {command} command to {self.host_name}: {str(e)}")
 
     async def receive_messages(self):
         while True:
@@ -40,10 +42,24 @@ class WebSocketHandler:
                 message = await self.websocket.recv()
                 data = json.loads(message)
                 if data['type'] == 'trigger_event':
-                    # Handle trigger event
                     logger.info(f"Received trigger event from {self.host_name}: {data['data']}")
                     # Add logic to process the trigger event
+                    # For example:
+                    # await self.process_trigger_event(data['data'])
+                else:
+                    logger.warning(f"Received unknown message type from {self.host_name}: {data['type']}")
+            except websockets.exceptions.ConnectionClosed:
+                logger.error(f"WebSocket connection closed for {self.host_name}. Attempting to reconnect...")
+                await asyncio.sleep(5)  # Wait before trying to reconnect
+                await self.connect()
+            except json.JSONDecodeError:
+                logger.error(f"Received invalid JSON from {self.host_name}")
             except Exception as e:
                 logger.error(f"Error receiving message from {self.host_name}: {str(e)}")
                 await asyncio.sleep(5)  # Wait before trying to reconnect
                 await self.connect()
+
+    async def process_trigger_event(self, event_data):
+        # Implement the logic to process trigger events
+        logger.info(f"Processing trigger event from {self.host_name}: {event_data}")
+        # Add your event processing logic here
