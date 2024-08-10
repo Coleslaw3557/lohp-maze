@@ -42,10 +42,7 @@ async def ws():
         client_type = request.headers.get("Client-Type")
         logger.info(f"WebSocket connection attempt with {request.remote_addr}, Client-Type: {client_type}")
         
-        # Check if the client type is valid
-        if client_type not in ["RemoteUnit", "WebInterface"]:
-            logger.warning(f"Invalid Client-Type: {client_type}")
-            return Response("Invalid Client-Type", status=400)
+        # Remove the client type check
         
         # Explicitly accept the WebSocket connection
         await websocket.accept()

@@ -19,7 +19,6 @@ class WebSocketClient:
         uri = f"ws://{self.server_ip}:{self.server_port}/ws"
         logger.info(f"Attempting to connect to server at {uri}")
         try:
-            logger.debug(f"WebSocket connection parameters: ping_interval=20, ping_timeout=20, extra_headers={{'Client-Type': 'RemoteUnit'}}")
             self.websocket = await websockets.connect(
                 uri,
                 ping_interval=20,
@@ -33,17 +32,9 @@ class WebSocketClient:
             await self.send_status_update("connected")
         except websockets.exceptions.InvalidStatusCode as e:
             logger.error(f"Failed to connect to server: Invalid status code {e.status_code}")
-            logger.debug(f"Server response headers: {e.headers}")
-            logger.debug(f"Exception details: {str(e)}")
-            try:
-                response_text = await e.response.text()
-                logger.debug(f"Server response body: {response_text}")
-            except Exception as text_error:
-                logger.debug(f"Unable to get response text: {str(text_error)}")
             self.websocket = None
         except Exception as e:
             logger.error(f"Failed to connect to server: {e}")
-            logger.debug(f"Exception details: {type(e).__name__}: {str(e)}")
             self.websocket = None  # Ensure websocket is None if connection fails
         
     async def reconnect(self):
