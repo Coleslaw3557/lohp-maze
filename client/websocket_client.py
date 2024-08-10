@@ -6,10 +6,11 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 class WebSocketClient:
-    def __init__(self, server_ip, server_port, unit_name, audio_manager, trigger_manager, sync_manager):
-        self.server_ip = server_ip
-        self.server_port = int(server_port) if server_port is not None else 8765  # Default to 8765 if None
-        self.unit_name = unit_name
+    def __init__(self, config, audio_manager, trigger_manager, sync_manager):
+        self.config = config
+        self.server_ip = config.get('server_ip')
+        self.server_port = int(config.get('server_port', 8765))  # Default to 8765 if None
+        self.unit_name = config.get('unit_name')
         self.audio_manager = audio_manager
         self.trigger_manager = trigger_manager
         self.sync_manager = sync_manager

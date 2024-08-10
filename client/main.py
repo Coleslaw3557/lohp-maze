@@ -17,9 +17,7 @@ async def main():
     sync_manager = SyncManager()
     
     ws_client = WebSocketClient(
-        config.get('server_ip'),
-        config.get('server_port', 8765),  # Provide a default port of 8765 if not specified
-        config.get('unit_name'),
+        config,
         audio_manager,
         trigger_manager,
         sync_manager
