@@ -189,6 +189,9 @@ class EffectsManager:
         
         self.room_effects[room] = True
         
+        # Pause theme for this room
+        self.theme_manager.pause_theme_for_room(room)
+        
         tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
@@ -204,6 +207,9 @@ class EffectsManager:
                     logger.error(f"Failed to apply effect to fixture {fixture_ids[i]}")
         
         self.room_effects.pop(room, None)
+        
+        # Resume theme for this room
+        self.theme_manager.resume_theme_for_room(room)
         
         return success
 

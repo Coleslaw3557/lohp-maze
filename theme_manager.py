@@ -17,6 +17,7 @@ class ThemeManager:
         self.theme_lock = threading.Lock()
         self.master_brightness = 1.0
         self.frequency = 44  # 44 Hz update rate
+        self.paused_rooms = set()
         self.load_themes()  # Load themes when initializing
 
     def load_themes(self):
@@ -126,8 +127,17 @@ class ThemeManager:
     def _generate_and_apply_theme_step(self, theme_data, current_time):
         room_layout = self.light_config_manager.get_room_layout()
         for room, lights in room_layout.items():
-            room_channels = generate_theme_values(theme_data, current_time, self.master_brightness)
-            self._apply_room_channels(room, lights, room_channels)
+            if room not in self.paused_rooms:
+                room_channels = generate_theme_values(theme_data, current_time, self.master_brightness)
+                self._apply_room_channels(room, lights, room_channels)
+
+    def pause_theme_for_room(self, room):
+        self.paused_rooms.add(room)
+        logger.info(f"Theme paused for room: {room}")
+
+    def resume_theme_for_room(self, room):
+        self.paused_rooms.discard(room)
+        logger.info(f"Theme resumed for room: {room}")
 
     def _apply_room_channels(self, room, lights, room_channels):
         for light in lights:
