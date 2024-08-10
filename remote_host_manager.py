@@ -55,42 +55,27 @@ class RemoteHostManager:
         return None
 
     async def send_audio_command(self, room, command, audio_data=None):
-        max_retries = 3
-        for attempt in range(max_retries):
-            websocket = self.get_host_by_room(room)
-            if websocket:
-                logger.info(f"Sending {command} command to room {room} (Attempt {attempt + 1}/{max_retries})")
-                try:
-                    if not isinstance(websocket, websockets.WebSocketClientProtocol) or not websocket.open:
-                        logger.warning(f"WebSocket for room {room} is not valid or not open. Attempting to reconnect.")
-                        await self.reconnect_websocket(room)
-                        websocket = self.get_host_by_room(room)
-                        if not isinstance(websocket, websockets.WebSocketClientProtocol) or not websocket.open:
-                            logger.error(f"Failed to reconnect WebSocket for room {room}")
-                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
-                            continue
-
-                    message = {
-                        "type": command,
-                        "data": audio_data if isinstance(audio_data, (str, dict)) else None
-                    }
-                    await websocket.send(json.dumps(message))
-                    
-                    if command == 'audio_start' and isinstance(audio_data, bytes):
-                        await websocket.send(audio_data)
-                    
-                    logger.info(f"Successfully sent {command} command to room {room}")
-                    return True
-                except Exception as e:
-                    logger.error(f"Error sending {command} command to room {room}: {str(e)}")
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
-            else:
-                logger.error(f"No connected client found for room: {room}. Cannot send {command} command.")
-                logger.info(f"Connected clients: {list(self.connected_clients.keys())}")
-                logger.info(f"Remote hosts configuration: {self.remote_hosts}")
-                await asyncio.sleep(2 ** attempt)  # Exponential backoff
-
-        logger.error(f"Failed to send {command} command to room {room} after {max_retries} attempts")
+        websocket = self.get_host_by_room(room)
+        if websocket:
+            logger.info(f"Sending {command} command to room {room}")
+            try:
+                message = {
+                    "type": command,
+                    "data": audio_data if isinstance(audio_data, (str, dict)) else None
+                }
+                await websocket.send(json.dumps(message))
+                
+                if command == 'audio_start' and isinstance(audio_data, bytes):
+                    await websocket.send(audio_data)
+                
+                logger.info(f"Successfully sent {command} command to room {room}")
+                return True
+            except Exception as e:
+                logger.error(f"Error sending {command} command to room {room}: {str(e)}")
+        else:
+            logger.error(f"No connected client found for room: {room}. Cannot send {command} command.")
+            logger.info(f"Connected clients: {list(self.connected_clients.keys())}")
+            logger.info(f"Remote hosts configuration: {self.remote_hosts}")
         return False
 
     async def reconnect_websocket(self, room):

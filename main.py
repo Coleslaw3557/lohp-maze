@@ -34,6 +34,7 @@ connected_clients = set()
 async def websocket_handler(websocket, path):
     connected_clients.add(websocket)
     try:
+        await handle_client_connected(websocket)
         async for message in websocket:
             await handle_websocket_message(websocket, json.loads(message))
     except websockets.exceptions.ConnectionClosedError as e:
@@ -43,6 +44,21 @@ async def websocket_handler(websocket, path):
     finally:
         connected_clients.remove(websocket)
         logger.info("WebSocket client disconnected")
+
+async def handle_client_connected(websocket):
+    client_info = await websocket.recv()
+    client_info = json.loads(client_info)
+    unit_name = client_info.get('unit_name')
+    ip = client_info.get('ip')
+    associated_rooms = client_info.get('associated_rooms', [])
+    if unit_name and ip and associated_rooms:
+        remote_host_manager.connected_clients[ip] = websocket
+        remote_host_manager.update_client_rooms(ip, associated_rooms)
+        logger.info(f"Client connected: {unit_name} ({ip}) - Associated rooms: {associated_rooms}")
+        await websocket.send(json.dumps({"type": "connection_response", "status": "success", "message": "Connection acknowledged"}))
+    else:
+        logger.warning(f"Received incomplete client connection data: {client_info}")
+        await websocket.send(json.dumps({"type": "connection_response", "status": "error", "message": "Incomplete connection data"}))
 
 async def handle_websocket_message(ws, data):
     """
