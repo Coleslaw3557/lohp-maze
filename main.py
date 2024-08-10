@@ -36,8 +36,15 @@ async def ws():
     logger.info(f"WebSocket connection attempt from {request.remote_addr}")
     logger.debug(f"Request headers: {request.headers}")
     try:
+        # Log the entire request object for debugging
+        logger.debug(f"Full request object: {request}")
+        
         client_type = request.headers.get("Client-Type")
-        logger.info(f"WebSocket connection established with {request.remote_addr}, Client-Type: {client_type}")
+        logger.info(f"WebSocket connection attempt with {request.remote_addr}, Client-Type: {client_type}")
+        
+        # Explicitly accept the WebSocket connection
+        await websocket.accept()
+        logger.info(f"WebSocket connection accepted for {request.remote_addr}")
         
         while True:
             try:
