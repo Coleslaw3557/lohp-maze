@@ -32,7 +32,8 @@ app = cors(app)
 app.secret_key = SECRET_KEY
 
 @app.websocket('/')
-async def websocket():
+async def ws():
+    websocket = await request.accept()
     while True:
         try:
             data = await websocket.receive_json()
