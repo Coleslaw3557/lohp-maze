@@ -81,11 +81,15 @@ class RemoteHostManager:
             logger.error(f"No client IP found for room: {room}. Cannot send {command} command.")
         logger.info(f"Connected clients: {list(self.connected_clients.keys())}")
         logger.info(f"Remote hosts configuration: {self.remote_hosts}")
+        logger.info(f"Client rooms: {self.client_rooms}")
         return False
 
     def get_client_ip_by_room(self, room):
         for ip, data in self.remote_hosts.items():
             if room.lower() in [r.lower() for r in data.get('rooms', [])]:
+                return ip
+        for ip, rooms in self.client_rooms.items():
+            if room.lower() in [r.lower() for r in rooms]:
                 return ip
         logger.warning(f"No client IP found for room: {room}")
         return None
