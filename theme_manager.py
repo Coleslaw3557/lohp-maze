@@ -16,6 +16,7 @@ class ThemeManager:
         self.theme_lock = threading.Lock()
         self.master_brightness = 1.0
         self.frequency = 44  # 44 Hz update rate
+        self.load_themes()  # Load themes when initializing
 
     def load_themes(self):
         # Load themes from a JSON file or database
