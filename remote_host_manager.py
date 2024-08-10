@@ -9,12 +9,10 @@ from websocket_handler import WebSocketHandler
 logger = logging.getLogger(__name__)
 
 class RemoteHostManager:
-    def __init__(self, config_file='remote_host_config.json'):
-        self.config_file = config_file
+    def __init__(self):
         self.remote_hosts = {}
         self.connected_clients = {}
         self.client_rooms = {}
-        self.load_config()
         logger.info("RemoteHostManager initialized")
 
     def update_client_rooms(self, ip, rooms, websocket):
@@ -22,24 +20,9 @@ class RemoteHostManager:
         self.client_rooms[client_ip] = rooms
         self.connected_clients[client_ip] = websocket  # Store the WebSocket object
         self.remote_hosts[client_ip] = {"name": f"Unit-{client_ip}", "rooms": rooms}
-        self.save_config()
         logger.info(f"Updated associated rooms for client {client_ip}: {rooms}")
         for room in rooms:
             logger.info(f"Associating room {room} with client {client_ip}")
-
-    def load_config(self):
-        try:
-            with open(self.config_file, 'r') as f:
-                config = json.load(f)
-                self.remote_hosts = config.get('remote_hosts', {})
-            logger.info(f"Successfully loaded configuration from {self.config_file}")
-            logger.info(f"Remote hosts configuration: {self.remote_hosts}")
-        except FileNotFoundError:
-            logger.error(f"Configuration file {self.config_file} not found.")
-            self.remote_hosts = {}
-        except json.JSONDecodeError:
-            logger.error(f"Error decoding JSON from {self.config_file}.")
-            self.remote_hosts = {}
 
     async def initialize_websocket_connections(self):
         logger.info("WebSocket connections will be initialized when clients connect")
@@ -246,10 +229,4 @@ class RemoteHostManager:
             await asyncio.sleep(2 ** attempt)  # Exponential backoff
         logger.error(f"Failed to reconnect to {host.host_name} after {max_retries} attempts")
 
-    def save_config(self):
-        try:
-            with open(self.config_file, 'w') as f:
-                json.dump({"remote_hosts": self.remote_hosts}, f, indent=4)
-            logger.info(f"Configuration saved to {self.config_file}")
-        except IOError:
-            logger.error(f"Error writing to {self.config_file}")
+    # Configuration is now managed in memory, no need for save_config method
