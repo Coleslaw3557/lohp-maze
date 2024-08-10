@@ -15,7 +15,7 @@ class RemoteHostManager:
         self.client_rooms = {}
         logger.info("RemoteHostManager initialized")
 
-    def update_client_rooms(self, unit_name, ip, rooms, websocket):
+    def update_client_rooms(self, unit_name, ip, rooms, websocket, path):
         client_ip = websocket.remote_address[0]  # Get the actual client IP
         self.client_rooms[client_ip] = rooms
         self.connected_clients[client_ip] = websocket  # Store the WebSocket object
@@ -23,6 +23,7 @@ class RemoteHostManager:
         logger.info(f"Updated associated rooms for client {unit_name} ({client_ip}): {rooms}")
         for room in rooms:
             logger.info(f"Associating room {room} with client {unit_name} ({client_ip})")
+        logger.debug(f"WebSocket path: {path}")  # Log the path for debugging
 
     async def initialize_websocket_connections(self):
         logger.info("WebSocket connections will be initialized when clients connect")

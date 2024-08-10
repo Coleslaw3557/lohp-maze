@@ -38,7 +38,7 @@ async def websocket_handler(websocket, path):
             data = json.loads(message)
             message_type = data.get('type')
             if message_type == 'client_connected':
-                await handle_client_connected(websocket, data)
+                await handle_client_connected(websocket, path, data)
             else:
                 await handle_websocket_message(websocket, data)
     except websockets.exceptions.ConnectionClosedError as e:
@@ -49,11 +49,11 @@ async def websocket_handler(websocket, path):
         connected_clients.remove(websocket)
         logger.info("WebSocket client disconnected")
 
-async def handle_client_connected(websocket, data):
+async def handle_client_connected(websocket, path, data):
     unit_name = data.get('data', {}).get('unit_name')
     associated_rooms = data.get('data', {}).get('associated_rooms', [])
     if unit_name and associated_rooms:
-        remote_host_manager.update_client_rooms(unit_name, websocket.remote_address[0], associated_rooms, websocket)
+        remote_host_manager.update_client_rooms(unit_name, websocket.remote_address[0], associated_rooms, websocket, path)
         logger.info(f"Client connected: {unit_name} ({websocket.remote_address[0]}) - Associated rooms: {associated_rooms}")
         await websocket.send(json.dumps({"type": "connection_response", "status": "success", "message": "Connection acknowledged"}))
     else:
