@@ -55,24 +55,13 @@ async def ws():
     except Exception as e:
         logger.error(f"WebSocket error for {request.remote_addr}: {str(e)}")
         return Response(f"WebSocket error: {str(e)}", status=400)
-        
-        while True:
-            try:
-                data = await websocket.receive_json()
-                logger.info(f"Received data from {request.remote_addr}: {data}")
-                
-                # Handle the received data based on client type
-                if client_type == "RemoteUnit":
-                    await handle_remote_unit_message(websocket, data)
-                else:
-                    await handle_generic_message(websocket, data)
-                
-            except WebSocketDisconnect:
-                logger.info(f"WebSocket disconnected from {request.remote_addr}")
-                break
-            except json.JSONDecodeError:
-                logger.error(f"Invalid JSON received from {request.remote_addr}")
-                await websocket.send_json({"status": "error", "message": "Invalid JSON"})
+
+async def handle_websocket_message(websocket, data):
+    client_type = data.get('client_type')
+    if client_type == "RemoteUnit":
+        await handle_remote_unit_message(websocket, data)
+    else:
+        await handle_generic_message(websocket, data)
     except Exception as e:
         logger.error(f"WebSocket error for {request.remote_addr}: {str(e)}")
         logger.debug(f"Exception details: {type(e).__name__}: {str(e)}", exc_info=True)
