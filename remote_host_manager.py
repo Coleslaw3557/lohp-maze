@@ -196,19 +196,19 @@ class RemoteHostManager:
                     message = {
                         "type": command,
                         "room": room,
-                        "data": audio_data if isinstance(audio_data, dict) else None
+                        "data": audio_data if isinstance(audio_data, dict) else {}
                     }
                     await websocket.send(json.dumps(message))
-                    if isinstance(audio_data, bytes):
+                    if command == 'audio_start' and isinstance(audio_data, bytes):
                         await websocket.send(audio_data)
-                    logger.info(f"Successfully sent audio command for room {room} to client {client_ip}")
+                    logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
                     return True
                 except Exception as e:
-                    logger.error(f"Error sending audio command for room {room} to client {client_ip}: {str(e)}")
+                    logger.error(f"Error sending {command} command for room {room} to client {client_ip}: {str(e)}")
             else:
-                logger.error(f"Client {client_ip} for room {room} is not connected. Cannot send audio command.")
+                logger.error(f"Client {client_ip} for room {room} is not connected. Cannot send {command} command.")
         else:
-            logger.error(f"No client IP found for room: {room}. Cannot send audio command.")
+            logger.error(f"No client IP found for room: {room}. Cannot send {command} command.")
         return False
 
     async def reconnect_and_retry(self, host, command, audio_data):
