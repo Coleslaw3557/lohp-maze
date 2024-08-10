@@ -48,21 +48,35 @@ class RemoteHostManager:
         if host:
             logger.info(f"Sending {command} command to room {room}")
             try:
-                await host.send_audio_command(command, audio_data)
+                success = await host.send_audio_command(command, audio_data)
+                if not success:
+                    logger.error(f"Failed to send {command} command to room {room}")
+                return success
             except Exception as e:
                 logger.error(f"Error sending {command} command to room {room}: {str(e)}")
-                await self.reconnect_and_retry(host, command, audio_data)
+                return await self.reconnect_and_retry(host, command, audio_data)
         else:
             logger.warning(f"No remote host found for room: {room}. Cannot send {command} command.")
+            return False
 
     async def reconnect_and_retry(self, host, command, audio_data):
-        logger.info(f"Attempting to reconnect to {host.host_name}")
-        await host.connect()
-        if host.websocket:
-            logger.info(f"Reconnected to {host.host_name}. Retrying command.")
-            await host.send_audio_command(command, audio_data)
-        else:
-            logger.error(f"Failed to reconnect to {host.host_name}")
+        max_retries = 3
+        for attempt in range(max_retries):
+            logger.info(f"Attempting to reconnect to {host.host_name} (Attempt {attempt + 1}/{max_retries})")
+            await host.connect()
+            if host.websocket:
+                logger.info(f"Reconnected to {host.host_name}. Retrying command.")
+                try:
+                    success = await host.send_audio_command(command, audio_data)
+                    if success:
+                        return True
+                    else:
+                        logger.error(f"Failed to send command after reconnection (Attempt {attempt + 1}/{max_retries})")
+                except Exception as e:
+                    logger.error(f"Error sending command after reconnection: {str(e)}")
+            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+        logger.error(f"Failed to reconnect to {host.host_name} after {max_retries} attempts")
+        return False
 
     def handle_trigger_event(self, room, trigger):
         logger.info(f"Trigger event received from room {room}: {trigger}")
@@ -84,7 +98,9 @@ class RemoteHostManager:
                 else:
                     audio_data = audio_file
                 
-                await self.send_audio_command(room, 'audio_start', audio_data)
+                success = await self.send_audio_command(room, 'audio_start', audio_data)
+                if not success:
+                    logger.error(f"Failed to send audio command to room {room}")
             except IOError as e:
                 logger.error(f"Error reading audio file {audio_file}: {str(e)}")
             except Exception as e:
