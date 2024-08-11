@@ -214,20 +214,44 @@ class EffectsManager:
 
         room_layout = self.light_config_manager.get_room_layout()
         
+        # Step 1: Prepare all rooms
+        for room in room_layout.keys():
+            await self.prepare_effect_for_room(room, effect_name, effect_data)
+        
+        # Step 2: Notify clients to prepare
+        effect_id = f"{effect_name}_{int(time.time())}"
+        clients_ready = await self.remote_host_manager.notify_clients_of_execution(effect_id)
+        
+        if not clients_ready:
+            logger.error("Not all clients are ready for execution")
+            return False, "Not all clients are ready for execution"
+        
+        # Step 3: Execute the effect in all rooms
         tasks = []
         for room in room_layout.keys():
-            task = self.apply_effect_to_room(room, effect_name, effect_data)
+            task = self.execute_effect_in_room(room, effect_name, effect_data)
             tasks.append(task)
         
         results = await asyncio.gather(*tasks)
         
-        success = all(result[0] for result in results)
+        success = all(result for result in results)
         if success:
             logger.info(f"{effect_name} effect triggered in all rooms")
         else:
             logger.error(f"Failed to trigger {effect_name} effect in some rooms")
         
         return success, f"{effect_name} effect triggered in all rooms" if success else f"Failed to trigger {effect_name} effect in some rooms"
+
+    async def prepare_effect_for_room(self, room, effect_name, effect_data):
+        # Prepare the effect for a specific room (e.g., load audio, prepare lighting sequences)
+        logger.info(f"Preparing effect {effect_name} for room {room}")
+        # Add your preparation logic here
+        pass
+
+    async def execute_effect_in_room(self, room, effect_name, effect_data):
+        logger.info(f"Executing effect {effect_name} in room {room}")
+        success, _ = await self.apply_effect_to_room(room, effect_name, effect_data)
+        return success
 
     async def stop_current_effect(self, room=None):
         """
