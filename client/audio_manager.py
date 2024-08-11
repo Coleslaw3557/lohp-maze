@@ -52,6 +52,11 @@ class AudioManager:
         logger.info(f"Prepared audio for effect: {effect_name}")
         return True
 
+    def get_prepared_audio(self):
+        if self.prepared_audio:
+            return next(iter(self.prepared_audio.values()))
+        return None
+
     async def play_effect_audio(self, effect_name):
         if effect_name not in self.prepared_audio:
             logger.error(f"No prepared audio found for effect: {effect_name}")

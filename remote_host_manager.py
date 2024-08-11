@@ -76,7 +76,7 @@ class RemoteHostManager:
     async def play_prepared_audio(self, room):
         client_ip = self.get_client_ip_by_room(room)
         if client_ip and client_ip in self.prepared_audio:
-            success = await self.send_audio_command(room, 'play_audio', {})
+            success = await self.send_audio_command(room, 'play_audio', self.prepared_audio[client_ip])
             if success:
                 del self.prepared_audio[client_ip]
             return success

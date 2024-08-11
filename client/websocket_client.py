@@ -198,7 +198,13 @@ class WebSocketClient:
             await self.audio_manager.play_effect_audio(effect_name)
             logger.info(f"Playing audio for effect: {effect_name}")
         else:
-            logger.warning("Received play_audio message without effect_name")
+            # If effect_name is not in the message, try to use the prepared audio
+            prepared_audio = self.audio_manager.get_prepared_audio()
+            if prepared_audio:
+                await self.audio_manager.play_effect_audio(prepared_audio['effect_name'])
+                logger.info(f"Playing prepared audio for effect: {prepared_audio['effect_name']}")
+            else:
+                logger.warning("Received play_audio message without effect_name and no prepared audio available")
 
     async def handle_prepare_effect(self, message):
         effect_id = message.get('effect_id')
