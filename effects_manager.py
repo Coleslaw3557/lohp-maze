@@ -244,9 +244,20 @@ class EffectsManager:
             'room': room,
             'effect_name': effect_name,
             'effect_data': effect_data,
-            'ready': False
+            'ready': False,
+            'buffered_at': time.time()
         }
+        # Clean up old buffered effects
+        await self._clean_effect_buffer()
         return effect_id
+
+    async def _clean_effect_buffer(self):
+        current_time = time.time()
+        expired_effects = [eid for eid, effect in self.effect_buffer.items() 
+                           if current_time - effect['buffered_at'] > 300]  # 5 minutes expiration
+        for eid in expired_effects:
+            del self.effect_buffer[eid]
+            logger.info(f"Removed expired effect {eid} from buffer")
 
     async def prepare_effect(self, effect_id):
         effect = self.effect_buffer[effect_id]

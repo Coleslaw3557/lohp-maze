@@ -221,12 +221,16 @@ async def run_effect():
         return jsonify({'status': 'error', 'message': error_message}), 500
 
 async def schedule_effect_execution(effect_id, execution_time):
-    await asyncio.sleep(execution_time - time.time())
-    success = await effects_manager.execute_effect(effect_id)
-    if success:
-        logger.info(f"Effect {effect_id} executed successfully")
-    else:
-        logger.error(f"Failed to execute effect {effect_id}")
+    delay = max(0, execution_time - time.time())
+    await asyncio.sleep(delay)
+    try:
+        success = await effects_manager.execute_effect(effect_id)
+        if success:
+            logger.info(f"Effect {effect_id} executed successfully")
+        else:
+            logger.error(f"Failed to execute effect {effect_id}")
+    except Exception as e:
+        logger.error(f"Error executing effect {effect_id}: {str(e)}")
 
 @app.route('/api/stop_effect', methods=['POST'])
 async def stop_effect():

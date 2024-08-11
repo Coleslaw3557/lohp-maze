@@ -214,11 +214,14 @@ class WebSocketClient:
 
     async def schedule_effect_execution(self, effect_id, execution_time):
         current_time = time.time()
-        delay = execution_time - current_time
+        delay = max(0, execution_time - current_time)
         if delay > 0:
             logger.info(f"Scheduling effect {effect_id} to execute in {delay:.2f} seconds")
             await asyncio.sleep(delay)
-        await self.execute_effect(effect_id)
+        try:
+            await self.execute_effect(effect_id)
+        except Exception as e:
+            logger.error(f"Error executing effect {effect_id}: {str(e)}")
 
     async def execute_effect(self, effect_id):
         logger.info(f"Executing effect: {effect_id}")
