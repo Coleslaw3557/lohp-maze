@@ -1,15 +1,9 @@
 import json
 import logging
 import os
+from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
-
-try:
-    from pydub import AudioSegment
-    PYDUB_AVAILABLE = True
-except ImportError:
-    PYDUB_AVAILABLE = False
-    logger.warning("pydub module not found. Some audio functionality may be limited.")
 
 class AudioManager:
     def __init__(self, config_file='audio_config.json', audio_dir='audio_files'):
