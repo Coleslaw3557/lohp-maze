@@ -158,6 +158,8 @@ class EffectsManager:
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         return True, f"{effect_name} effect applied to room {room}"
 
+    # Remove the _apply_audio_effect method as it's no longer needed
+
     async def _run_effect(self, room, fixture_ids, effect_data, audio_file, audio_params, effect_name):
         try:
             # Prepare and play audio
