@@ -26,14 +26,15 @@ class RemoteHostManager:
         self.audio_sent_to_clients.clear()
         logger.info("Cleared audio sent to clients tracking")
 
-    async def notify_clients_of_execution(self, effect_id):
+    async def notify_clients_of_execution(self, effect_id, execution_time):
         connected_clients = [client for client in self.connected_clients if self.is_client_connected(client)]
         self.client_ready_status[effect_id] = {client: False for client in connected_clients}
         
         # Step 1: Send prepare message
         prepare_message = {
             "type": "prepare_effect",
-            "effect_id": effect_id
+            "effect_id": effect_id,
+            "execution_time": execution_time
         }
         await self.broadcast_message(prepare_message)
         
@@ -48,7 +49,8 @@ class RemoteHostManager:
         # Step 2: Send execute message
         execute_message = {
             "type": "execute_effect",
-            "effect_id": effect_id
+            "effect_id": effect_id,
+            "execution_time": execution_time
         }
         await self.broadcast_message(execute_message)
         
