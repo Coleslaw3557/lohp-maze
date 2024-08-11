@@ -10,9 +10,9 @@ Retrieves the list of rooms.
 curl -X GET http://192.168.1.238:5000/api/rooms
 ```
 
-## Get Effects
+## Get Effects Details
 
-Retrieves the list of available effects.
+Retrieves the detailed list of available effects.
 
 ```bash
 curl -X GET http://192.168.1.238:5000/api/effects_details
@@ -50,6 +50,26 @@ Sets the current theme.
 curl -X POST http://192.168.1.238:5000/api/set_theme \
      -H "Content-Type: application/json" \
      -d '{"theme_name": "Ocean"}'
+```
+
+## Set Next Theme
+
+Sets the next theme in the list.
+
+```bash
+curl -X POST http://192.168.1.238:5000/api/set_theme \
+     -H "Content-Type: application/json" \
+     -d '{"next_theme": true}'
+```
+
+## Turn Off Theme
+
+Turns off the current theme.
+
+```bash
+curl -X POST http://192.168.1.238:5000/api/set_theme \
+     -H "Content-Type: application/json" \
+     -d '{"theme_name": "notheme"}'
 ```
 
 ## Run Effect
@@ -114,6 +134,24 @@ Runs an effect in all rooms simultaneously.
 curl -X POST http://192.168.1.238:5000/api/run_effect_all_rooms \
      -H "Content-Type: application/json" \
      -d '{"effect_name": "Lightning"}'
+```
+
+## Stop Effect
+
+Stops the current effect in a specific room or all rooms.
+
+```bash
+curl -X POST http://192.168.1.238:5000/api/stop_effect \
+     -H "Content-Type: application/json" \
+     -d '{"room": "Entrance"}'
+```
+
+To stop effects in all rooms, omit the "room" parameter:
+
+```bash
+curl -X POST http://192.168.1.238:5000/api/stop_effect \
+     -H "Content-Type: application/json" \
+     -d '{}'
 ```
 
 These curl commands cover all the API endpoints available in the current implementation. You can use these for easy copy and pasting when interacting with the API.
