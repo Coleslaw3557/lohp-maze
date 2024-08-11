@@ -127,12 +127,16 @@ class EffectsManager:
         # Use the interrupt system to apply the effect
         tasks = [self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data)) for fixture_id in fixture_ids]
         
-        # Always create an audio task, even if it's silent
-        audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
+        # Create an audio task only if an audio file is found
+        if audio_file:
+            audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
+            tasks.append(audio_task)
+        else:
+            logger.info(f"No audio file found for effect '{effect_name}'. Skipping audio playback.")
         
         try:
             # Run all tasks concurrently
-            await asyncio.gather(*tasks, audio_task)
+            await asyncio.gather(*tasks)
         except Exception as e:
             logger.error(f"Error applying effect '{effect_name}' to room '{room}': {str(e)}", exc_info=True)
             return False, f"Error applying {effect_name} effect to room {room}"

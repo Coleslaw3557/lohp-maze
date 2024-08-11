@@ -69,8 +69,6 @@ class AudioManager:
                     return full_path
         
         logger.warning(f"No audio file found for effect: {effect_name}")
-        
-        # If no audio file is found, return None instead of a silent file
         return None
 
     def create_silent_mp3(self, file_path):
