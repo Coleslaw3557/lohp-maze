@@ -174,3 +174,14 @@ class ThemeManager:
 
     def get_theme(self, theme_name):
         return self.themes.get(theme_name)
+
+    async def apply_theme_to_room(self, room):
+        if self.current_theme:
+            theme_data = self.themes[self.current_theme]
+            room_layout = self.light_config_manager.get_room_layout()
+            lights = room_layout.get(room, [])
+            current_time = time.time()
+            room_channels = generate_theme_values(theme_data, current_time, self.master_brightness)
+            self._apply_room_channels(room, lights, room_channels)
+        else:
+            logger.warning(f"No current theme to apply to room {room}")
