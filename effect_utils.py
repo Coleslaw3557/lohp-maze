@@ -58,6 +58,19 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
         room_offset = (room_index / total_rooms + time_factor * room_transition_speed) % 1
         hue = (time_factor * color_wheel_speed + room_offset) % 1  # Color wheel effect
         saturation = 0.8 + sin_time_medium * 0.2 * color_variation
+    elif 'joy_factor' in theme_data:  # TimsFav theme
+        color_wheel_speed = theme_data.get('color_wheel_speed', 0.15) * speed_variation
+        room_transition_speed = theme_data.get('room_transition_speed', 0.03) * speed_variation
+        room_offset = (room_index / total_rooms + time_factor * room_transition_speed) % 1
+        hue = (time_factor * color_wheel_speed + room_offset) % 1  # Full color wheel rotation
+        saturation = 0.9 + sin_time_medium * 0.1 * color_variation  # High saturation for vibrant colors
+        joy_factor = theme_data.get('joy_factor', 0.8)
+        excitement_factor = theme_data.get('excitement_factor', 0.9)
+        ecstasy_factor = theme_data.get('ecstasy_factor', 0.7)
+        # Modify the color based on emotional factors
+        hue = (hue + 0.1 * math.sin(time_factor * joy_factor) + 
+               0.1 * math.cos(time_factor * excitement_factor) + 
+               0.1 * math.sin(2 * time_factor * ecstasy_factor)) % 1
     else:
         hue = (time_factor * 0.1) % 1  # Full color wheel rotation
         saturation = 0.7 + sin_time_medium * 0.3 * color_variation  # Increase saturation variation
@@ -71,6 +84,11 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
     elif 'green_blue_balance' in theme_data:  # Jungle theme
         g *= green_blue_balance
         b *= (1 - green_blue_balance)
+    elif 'joy_factor' in theme_data:  # TimsFav theme
+        # Enhance colors based on emotional factors
+        r = min(255, r * (1 + 0.2 * math.sin(time_factor * theme_data.get('joy_factor', 0.8))))
+        g = min(255, g * (1 + 0.2 * math.sin(time_factor * theme_data.get('excitement_factor', 0.9))))
+        b = min(255, b * (1 + 0.2 * math.sin(time_factor * theme_data.get('ecstasy_factor', 0.7))))
 
     channels['total_dimming'] = int(value * 255)
     channels['r_dimming'] = int(r * 255)

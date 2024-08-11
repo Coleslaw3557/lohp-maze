@@ -52,6 +52,18 @@ class ThemeManager:
                 "overall_brightness": 0.8,
                 "room_transition_speed": 0.02,
                 "color_wheel_speed": 0.1
+            },
+            "TimsFav": {
+                "duration": 300,  # 5 minutes
+                "transition_speed": 0.07,  # Medium speed
+                "color_variation": 1.0,  # Full color variation
+                "intensity_fluctuation": 0.5,  # Medium intensity fluctuation
+                "overall_brightness": 0.9,  # High brightness for excitement
+                "room_transition_speed": 0.03,  # Slightly faster room transitions
+                "color_wheel_speed": 0.15,  # Faster color wheel rotation
+                "joy_factor": 0.8,  # High joy factor
+                "excitement_factor": 0.9,  # High excitement factor
+                "ecstasy_factor": 0.7  # Medium-high ecstasy factor
             }
         }
 
