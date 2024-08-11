@@ -190,7 +190,7 @@ async def run_effect():
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
     
-    logger.info(f"Running effect: {effect_name} in room: {room}")
+    logger.info(f"Preparing effect: {effect_name} for room: {room}")
     effect_data = effects_manager.get_effect(effect_name)
     if not effect_data:
         logger.error(f"Effect not found: {effect_name}")
@@ -199,24 +199,32 @@ async def run_effect():
     # Add audio parameters to effect data
     effect_data['audio'] = audio_params
     
-    logger.debug(f"Effect data: {effect_data}")
-    
     try:
-        success, audio_file = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
+        effect_id = await effects_manager.buffer_effect(room, effect_name, effect_data)
+        await effects_manager.prepare_effect(effect_id)
         
-        if success:
-            logger.info(f"Effect {effect_name} applied successfully to room {room}")
-            if audio_file:
-                await remote_host_manager.stream_audio_to_room(room, audio_file, audio_params)
-            return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
-        else:
-            error_message = f"Failed to apply effect {effect_name} to room {room}. Check server logs for details."
-            logger.error(error_message)
-            return jsonify({'status': 'error', 'message': error_message}), 500
+        # Synchronize execution time
+        execution_time = time.time() + 1  # Schedule execution 1 second in the future
+        
+        # Notify all clients to prepare for synchronized execution
+        await remote_host_manager.notify_clients_of_execution(execution_time)
+        
+        # Schedule the effect execution
+        asyncio.create_task(schedule_effect_execution(effect_id, execution_time))
+        
+        return jsonify({'status': 'success', 'message': f'Effect {effect_name} scheduled for room {room}', 'effect_id': effect_id})
     except Exception as e:
-        error_message = f"Error applying effect {effect_name} to room {room}: {str(e)}"
+        error_message = f"Error scheduling effect {effect_name} for room {room}: {str(e)}"
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
+
+async def schedule_effect_execution(effect_id, execution_time):
+    await asyncio.sleep(execution_time - time.time())
+    success = await effects_manager.execute_effect(effect_id)
+    if success:
+        logger.info(f"Effect {effect_id} executed successfully")
+    else:
+        logger.error(f"Failed to execute effect {effect_id}")
 
 @app.route('/api/stop_effect', methods=['POST'])
 async def stop_effect():

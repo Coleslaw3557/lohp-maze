@@ -13,12 +13,32 @@ class RemoteHostManager:
         self.remote_hosts = {}
         self.connected_clients = {}
         self.client_rooms = {}
-        self.audio_sent_to_clients = {}
+        self.prepared_audio = {}
+        self.sync_manager = SyncManager()
         logger.info("RemoteHostManager initialized")
 
-    def clear_audio_sent_to_clients(self):
-        self.audio_sent_to_clients.clear()
-        logger.info("Cleared audio_sent_to_clients")
+    async def prepare_audio_stream(self, room, audio_file, audio_params, effect_name):
+        client_ip = self.get_client_ip_by_room(room)
+        if client_ip:
+            self.prepared_audio[client_ip] = {
+                'file': audio_file,
+                'params': audio_params,
+                'effect_name': effect_name
+            }
+            await self.send_audio_command(room, 'prepare_audio', self.prepared_audio[client_ip])
+        else:
+            logger.error(f"No client IP found for room: {room}")
+
+    async def play_prepared_audio(self, room):
+        client_ip = self.get_client_ip_by_room(room)
+        if client_ip and client_ip in self.prepared_audio:
+            success = await self.send_audio_command(room, 'play_audio', {})
+            if success:
+                del self.prepared_audio[client_ip]
+            return success
+        else:
+            logger.error(f"No prepared audio found for room: {room}")
+            return False
 
     def update_client_rooms(self, unit_name, ip, rooms, websocket, path):
         client_ip = websocket.remote_address[0]  # Get the actual client IP

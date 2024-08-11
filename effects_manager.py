@@ -20,6 +20,8 @@ class EffectsManager:
         self.audio_manager = audio_manager
         self.theme_manager = ThemeManager(dmx_state_manager, light_config_manager)
         self.interrupt_handler = InterruptHandler(dmx_state_manager, self.theme_manager)
+        self.effect_buffer = {}
+        self.sync_manager = SyncManager()
         
         logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
         
@@ -235,37 +237,60 @@ class EffectsManager:
         # Stop audio
         await self.remote_host_manager.send_audio_command(room, 'audio_stop')
 
-    async def apply_effect_to_room(self, room, effect_name, effect_data):
-        logger.info(f"Applying effect to room: {room}")
+    async def buffer_effect(self, room, effect_name, effect_data):
+        logger.info(f"Buffering effect for room: {room}")
+        effect_id = self.sync_manager.generate_effect_id()
+        self.effect_buffer[effect_id] = {
+            'room': room,
+            'effect_name': effect_name,
+            'effect_data': effect_data,
+            'ready': False
+        }
+        return effect_id
+
+    async def prepare_effect(self, effect_id):
+        effect = self.effect_buffer[effect_id]
+        room, effect_name, effect_data = effect['room'], effect['effect_name'], effect['effect_data']
+        
+        # Prepare lighting effect
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room, [])
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
         
-        logger.debug(f"Effect data: {effect_data}")
-        logger.debug(f"Fixture IDs for room: {fixture_ids}")
+        # Prepare audio effect
+        audio_file = self.get_audio_file(effect_name)
+        if audio_file:
+            audio_params = effect_data.get('audio', {})
+            await self.remote_host_manager.prepare_audio_stream(room, audio_file, audio_params, effect_name)
         
-        if not fixture_ids:
-            logger.error(f"No fixtures found for room: {room}")
-            return False, None
+        effect['ready'] = True
+        logger.info(f"Effect {effect_id} prepared for room {room}")
+
+    async def execute_effect(self, effect_id):
+        effect = self.effect_buffer[effect_id]
+        room, effect_name, effect_data = effect['room'], effect['effect_name'], effect['effect_data']
         
-        self.room_effects[room] = True
+        if not effect['ready']:
+            logger.error(f"Effect {effect_id} not ready for execution")
+            return False
+
+        # Execute lighting effect
+        lighting_success = await self._apply_lighting_effect(room, effect_data)
         
-        # Pause theme for this room
-        self.theme_manager.pause_theme_for_room(room)
+        # Execute audio effect
+        audio_success = await self.remote_host_manager.play_prepared_audio(room)
         
-        # Apply lighting effect
+        del self.effect_buffer[effect_id]
+        
+        return lighting_success and audio_success
+
+    async def _apply_lighting_effect(self, room, effect_data):
+        room_layout = self.light_config_manager.get_room_layout()
+        lights = room_layout.get(room, [])
+        fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+        
         lighting_tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
-        
-        # Apply audio effect
-        audio_task = self._apply_audio_effect(room, effect_name)
-        
-        # Gather all tasks
-        all_tasks = lighting_tasks + [audio_task]
-        results = await asyncio.gather(*all_tasks, return_exceptions=True)
-        
-        # Check results
-        lighting_results = results[:len(lighting_tasks)]
-        audio_result = results[-1]
+        lighting_results = await asyncio.gather(*lighting_tasks, return_exceptions=True)
         
         lighting_success = all(isinstance(result, bool) and result for result in lighting_results)
         
@@ -279,30 +304,7 @@ class EffectsManager:
                 elif not result:
                     logger.error(f"Failed to apply effect to fixture {fixture_ids[i]}")
         
-        audio_file = None
-        if isinstance(audio_result, Exception):
-            logger.error(f"Error applying audio effect in room '{room}': {str(audio_result)}")
-        elif audio_result:
-            logger.info(f"Audio effect applied successfully in room '{room}'")
-            audio_file = audio_result
-        else:
-            logger.warning(f"Audio effect not applied or not configured for room '{room}'")
-        
-        self.room_effects.pop(room, None)
-        
-        # Resume theme for this room
-        self.theme_manager.resume_theme_for_room(room)
-        
-        # Stream audio if available
-        audio_file = self.get_audio_file(effect_name)
-        if audio_file:
-            audio_params = effect_data.get('audio', {})
-            await self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
-        else:
-            logger.warning(f"No audio file available for effect '{effect_name}' in room '{room}'")
-        
-        # Return True if lighting was successful
-        return lighting_success, audio_file
+        return lighting_success
 
     async def _apply_audio_effect(self, room, effect_name):
         logger.info(f"Applying audio effect '{effect_name}' to room '{room}'")
