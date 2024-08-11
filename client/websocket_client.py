@@ -172,8 +172,12 @@ class WebSocketClient:
         await self.send_message(ready_message)
         logger.info(f"Sent client_ready message: {ready_message}")
         
-        # Wait for execution time
-        await self.wait_for_execution(execution_time)
+        # Add a small buffer time (e.g., 100ms) to account for network latency and processing differences
+        buffer_time = 0.1
+        adjusted_execution_time = execution_time + buffer_time
+        
+        # Wait for adjusted execution time
+        await self.wait_for_execution(adjusted_execution_time)
 
     async def prepare_effect(self, effect_id):
         # Implement effect preparation logic here
