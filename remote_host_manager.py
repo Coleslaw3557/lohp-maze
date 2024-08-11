@@ -169,21 +169,29 @@ class RemoteHostManager:
 
             file_name = self._get_file_name(audio_file)
 
-            success = await self.send_audio_command(room, 'audio_start', {
-                'file_name': file_name,
-                'volume': audio_params.get('volume', 1.0),
-                'loop': audio_params.get('loop', False)
-            })
-            if success:
+            # Send audio_start command only if it hasn't been sent before
+            if effect_name not in self.audio_sent_to_clients.get(client_ip, set()):
+                success = await self.send_audio_command(room, 'audio_start', {
+                    'file_name': file_name,
+                    'volume': audio_params.get('volume', 1.0),
+                    'loop': audio_params.get('loop', False)
+                })
+                if not success:
+                    logger.error(f"Failed to send audio_start command to client {client_ip} for room {room}")
+                    return False
+
                 await asyncio.sleep(0.1)  # Add a small delay before sending audio data
-                await self.send_audio_command(room, 'audio_data', audio_data)
+
+            # Send audio data
+            success = await self.send_audio_command(room, 'audio_data', audio_data)
+            if success:
                 logger.info(f"Successfully streamed audio to client {client_ip} for room {room}")
                 if client_ip not in self.audio_sent_to_clients:
                     self.audio_sent_to_clients[client_ip] = set()
                 self.audio_sent_to_clients[client_ip].add(effect_name)
                 return True
             else:
-                logger.error(f"Failed to send audio command to client {client_ip} for room {room}")
+                logger.error(f"Failed to send audio data to client {client_ip} for room {room}")
                 return False
         except Exception as e:
             logger.error(f"Error streaming audio to client {client_ip} for room {room}: {str(e)}")

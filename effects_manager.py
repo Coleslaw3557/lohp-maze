@@ -199,6 +199,10 @@ class EffectsManager:
             logger.info(f"{effect_name} effect triggered in all rooms")
         else:
             logger.error(f"Failed to trigger {effect_name} effect in some rooms")
+        
+        # Clear the audio_sent_to_clients dict after applying the effect to all rooms
+        self.remote_host_manager.audio_sent_to_clients.clear()
+        
         return success, f"{effect_name} effect triggered in all rooms" if success else f"Failed to trigger {effect_name} effect in some rooms"
 
     async def stop_current_effect(self, room=None):
