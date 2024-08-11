@@ -193,18 +193,13 @@ class WebSocketClient:
     async def handle_play_audio(self, message):
         audio_data = message.get('data', {})
         effect_name = audio_data.get('effect_name')
+        file_name = audio_data.get('file')
         
-        if effect_name:
-            await self.audio_manager.play_effect_audio(effect_name)
-            logger.info(f"Playing audio for effect: {effect_name}")
+        if effect_name and file_name:
+            await self.audio_manager.play_effect_audio(effect_name, file_name)
+            logger.info(f"Playing audio for effect: {effect_name}, file: {file_name}")
         else:
-            # If effect_name is not in the message, try to use the prepared audio
-            prepared_audio = self.audio_manager.get_prepared_audio()
-            if prepared_audio:
-                await self.audio_manager.play_effect_audio(prepared_audio['effect_name'])
-                logger.info(f"Playing prepared audio for effect: {prepared_audio['effect_name']}")
-            else:
-                logger.warning("Received play_audio message without effect_name and no prepared audio available")
+            logger.warning(f"Received incomplete play_audio message: effect_name={effect_name}, file={file_name}")
 
     async def handle_prepare_effect(self, message):
         effect_id = message.get('effect_id')

@@ -57,24 +57,22 @@ class AudioManager:
             return next(iter(self.prepared_audio.values()))
         return None
 
-    async def play_effect_audio(self, effect_name):
-        if effect_name not in self.prepared_audio:
-            logger.error(f"No prepared audio found for effect: {effect_name}")
-            return False
+    async def play_effect_audio(self, effect_name, file_name):
+        full_path = os.path.join(self.cache_dir, 'audio_files', os.path.basename(file_name))
         
-        audio_info = self.prepared_audio[effect_name]
-        full_path = audio_info['file_name']
+        if not os.path.exists(full_path):
+            logger.error(f"Audio file not found: {full_path}")
+            return False
         
         self.stop_audio()
         try:
             audio = AudioSegment.from_mp3(full_path)
-            audio = audio + (20 * math.log10(audio_info['volume']))  # Adjust volume
             self.current_audio = full_path
             self.stop_event.clear()
             
-            await asyncio.to_thread(self._play_audio, audio, audio_info['loop'])
+            await asyncio.to_thread(self._play_audio, audio, False)  # Assuming no loop by default
             
-            logger.info(f"Started playing audio for effect: {effect_name}")
+            logger.info(f"Started playing audio for effect: {effect_name}, file: {file_name}")
             return True
         except Exception as e:
             logger.error(f"Error playing audio for effect {effect_name}: {str(e)}", exc_info=True)
