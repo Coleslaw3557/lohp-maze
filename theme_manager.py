@@ -172,8 +172,13 @@ class ThemeManager:
 
         self.current_theme_index = (self.current_theme_index + 1) % len(self.theme_list)
         next_theme = self.theme_list[self.current_theme_index]
-        await self.set_current_theme_async(next_theme)
-        return next_theme
+        success = await self.set_current_theme_async(next_theme)
+        if success:
+            logger.info(f"Successfully set next theme to: {next_theme}")
+            return next_theme
+        else:
+            logger.error(f"Failed to set next theme: {next_theme}")
+            return None
 
     def stop_current_theme(self):
         with self.theme_lock:
