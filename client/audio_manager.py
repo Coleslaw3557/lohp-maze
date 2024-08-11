@@ -144,6 +144,25 @@ class AudioManager:
         else:
             logger.warning(f"No prepared audio found for: {file_name}")
 
+    async def play_cached_audio(self, effect_name, volume=1.0, loop=False):
+        file_path = os.path.join(self.cache_dir, 'audio_files', f"{effect_name.lower()}.mp3")
+        if os.path.exists(file_path):
+            self.stop_audio()
+            try:
+                audio = AudioSegment.from_mp3(file_path)
+                audio = audio + (20 * math.log10(volume))
+                
+                self.current_audio = file_path
+                self.stop_event.clear()
+                
+                threading.Thread(target=self._play_audio, args=(audio, loop)).start()
+                
+                logger.info(f"Started playing cached audio: {file_path} (volume: {volume}, loop: {loop})")
+            except Exception as e:
+                logger.error(f"Error playing cached audio: {str(e)}", exc_info=True)
+        else:
+            logger.error(f"Cached audio file not found: {file_path}")
+
     async def receive_audio_data(self, audio_data):
         if self.prepared_audio:
             file_path = os.path.join(self.cache_dir, self.prepared_audio['file_name'])
