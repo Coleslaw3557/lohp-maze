@@ -101,7 +101,7 @@ class EffectsManager:
         else:
             logger.info(f"No active effect to stop in room: {room}")
 
-    async def apply_effect_to_room(self, room, effect_name, effect_data=None, audio_file=None):
+    async def apply_effect_to_room(self, room, effect_name, effect_data=None):
         if effect_data is None:
             effect_data = self.get_effect(effect_name)
         if not effect_data:
@@ -117,6 +117,7 @@ class EffectsManager:
         self.room_effects[room] = effect_name
         
         audio_params = effect_data.get('audio_params', {})
+        audio_file = self.audio_manager.get_audio_file(effect_name)
 
         # Use the interrupt system to apply the effect
         tasks = [self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data)) for fixture_id in fixture_ids]
