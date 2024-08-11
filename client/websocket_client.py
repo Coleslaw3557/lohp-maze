@@ -190,6 +190,14 @@ class WebSocketClient:
         await self.audio_manager.prepare_audio_for_effect(effect_id)
         # Add any other preparation steps here
 
+    async def handle_prepare_effect(self, message):
+        effect_id = message.get('effect_id')
+        if effect_id:
+            await self.prepare_effect(effect_id)
+            logger.info(f"Prepared effect: {effect_id}")
+        else:
+            logger.warning("Received prepare_effect message without effect_id")
+
     async def handle_execute_effect(self, message):
         effect_id = message['effect_id']
         
