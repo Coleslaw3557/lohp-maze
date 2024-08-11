@@ -210,25 +210,13 @@ class WebSocketClient:
         # Add any other effect execution steps here
         logger.info(f"Executed effect: {effect_id}")
 
-    async def handle_prepare_audio(self, message):
-        audio_data = message.get('data', {})
-        file_name = audio_data.get('file')
-        if file_name:
-            await self.audio_manager.prepare_audio(file_name, audio_data.get('params', {}))
-        else:
-            logger.warning("Received prepare_audio without file name")
-
-    async def handle_play_audio(self, message):
+    async def handle_play_effect_audio(self, message):
         room = message.get('room')
-        if room in self.config.get('associated_rooms', []):
-            prepared_audio = self.audio_manager.prepared_audio
-            if prepared_audio:
-                file_name = next(iter(prepared_audio))
-                await self.audio_manager.play_prepared_audio(file_name)
-            else:
-                logger.warning("No prepared audio found for playback")
+        effect_name = message.get('data', {}).get('effect_name')
+        if room in self.config.get('associated_rooms', []) and effect_name:
+            await self.audio_manager.play_effect_audio(effect_name)
         else:
-            logger.warning(f"Received play_audio command for unassociated room: {room}")
+            logger.warning(f"Received play_effect_audio command for unassociated room or missing effect name: {room}, {effect_name}")
 
     async def handle_sync_time(self, message):
         server_time = message.get('server_time')
