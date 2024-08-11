@@ -44,7 +44,7 @@ class AudioManager:
                 except Exception as e:
                     logger.error(f"Error playing audio: {str(e)}", exc_info=True)
             else:
-                logger.error(f"Prepared audio file not found: {file_path}")
+                logger.error(f"Prepared audio file not found: {self.prepared_audio['file_name']}")
             self.prepared_audio = None
         else:
             logger.warning("No prepared audio to play")
