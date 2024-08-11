@@ -158,12 +158,13 @@ class ThemeManager:
             start_address = light['start_address']
             light_model = self.light_config_manager.get_light_config(light['model'])
             fixture_id = (start_address - 1) // 8
-            fixture_values = [0] * 8
-            for channel, value in room_channels.items():
-                if channel in light_model['channels']:
-                    channel_offset = light_model['channels'][channel]
-                    fixture_values[channel_offset] = value
-            self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+            if fixture_id not in self.interrupt_handler.interrupted_fixtures:
+                fixture_values = [0] * 8
+                for channel, value in room_channels.items():
+                    if channel in light_model['channels']:
+                        channel_offset = light_model['channels'][channel]
+                        fixture_values[channel_offset] = value
+                self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
 
     def set_master_brightness(self, brightness):
         self.master_brightness = max(0.0, min(1.0, brightness))

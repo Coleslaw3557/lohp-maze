@@ -125,8 +125,16 @@ class EffectsManager:
         # Create a task for audio playback
         audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
         
-        # Run all tasks concurrently
-        await asyncio.gather(*tasks, audio_task)
+        try:
+            # Run all tasks concurrently
+            await asyncio.gather(*tasks, audio_task)
+        except Exception as e:
+            logger.error(f"Error applying effect '{effect_name}' to room '{room}': {str(e)}")
+            return False, f"Error applying {effect_name} effect to room {room}"
+        finally:
+            # Ensure the room effect is cleared even if an exception occurs
+            if room in self.room_effects:
+                del self.room_effects[room]
         
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         return True, f"{effect_name} effect applied to room {room}"

@@ -9,9 +9,17 @@ class InterruptHandler:
         self.dmx_state_manager = dmx_state_manager
         self.theme_manager = theme_manager
         self.active_interrupts = {}
+        self.interrupted_fixtures = set()
+        self.original_states = {}
 
     async def interrupt_fixture(self, fixture_id, duration, interrupt_sequence):
         logger.info(f"Starting effect on fixture {fixture_id} for {duration} seconds")
+        
+        # Store the original state
+        self.original_states[fixture_id] = self.dmx_state_manager.get_fixture_state(fixture_id)
+        
+        # Mark the fixture as interrupted
+        self.interrupted_fixtures.add(fixture_id)
         
         # Create a unique identifier for this interrupt
         interrupt_id = id(interrupt_sequence)
@@ -48,6 +56,12 @@ class InterruptHandler:
         finally:
             if self.active_interrupts.get(fixture_id, {}).get('id') == interrupt_id:
                 del self.active_interrupts[fixture_id]
+            
+            # Remove the fixture from interrupted set and restore original state
+            self.interrupted_fixtures.remove(fixture_id)
+            if fixture_id in self.original_states:
+                self.dmx_state_manager.update_fixture(fixture_id, self.original_states[fixture_id], override=True)
+                del self.original_states[fixture_id]
 
         logger.info(f"Effect completed for fixture {fixture_id}.")
         logger.debug(f"Completed {step_count} steps for fixture {fixture_id} over {duration} seconds")
