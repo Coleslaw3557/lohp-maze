@@ -8,7 +8,7 @@ from trigger_manager import TriggerManager
 from config_manager import ConfigManager
 from sync_manager import SyncManager
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 async def main():
