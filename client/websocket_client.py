@@ -147,7 +147,8 @@ class WebSocketClient:
             'prepare_effect': self.handle_prepare_effect,
             'execute_effect': self.handle_execute_effect,
             'run_effect_all_rooms': self.handle_run_effect_all_rooms,
-            'play_effect_audio': self.handle_play_effect_audio  # Add this line
+            'play_effect_audio': self.handle_play_effect_audio,
+            'audio_files_to_download': self.handle_audio_files_to_download  # Add this line
         }
 
         message_type = message.get('type')
@@ -161,6 +162,11 @@ class WebSocketClient:
             await self.handle_typeless_message(message)
         else:
             logger.warning(f"Unknown message type received: {message_type}")
+
+    async def handle_audio_files_to_download(self, message):
+        audio_files = message.get('data', [])
+        logger.info(f"Received list of audio files to download: {audio_files}")
+        await self.audio_manager.download_audio_files(audio_files)
 
     async def handle_typeless_message(self, message):
         """
