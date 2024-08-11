@@ -26,13 +26,18 @@ class AudioManager:
             if not success:
                 logger.error(f"Failed to prepare audio: {file_name}")
                 return False
-        self.prepared_audio = {
-            'file_name': full_path,
-            'volume': params.get('volume', 1.0),
-            'loop': params.get('loop', False)
-        }
-        logger.info(f"Prepared audio: {full_path} (volume: {self.prepared_audio['volume']}, loop: {self.prepared_audio['loop']})")
-        return True
+        
+        if os.path.exists(full_path):
+            self.prepared_audio = {
+                'file_name': full_path,
+                'volume': params.get('volume', 1.0),
+                'loop': params.get('loop', False)
+            }
+            logger.info(f"Prepared audio: {full_path} (volume: {self.prepared_audio['volume']}, loop: {self.prepared_audio['loop']})")
+            return True
+        else:
+            logger.error(f"Audio file not found after download attempt: {full_path}")
+            return False
 
     async def download_audio(self, file_name):
         server_url = f"http://{self.config.get('server_ip')}:5000/api/audio/{file_name}"
@@ -47,6 +52,9 @@ class AudioManager:
                             await f.write(content)
                         logger.info(f"Downloaded audio file: {file_name}")
                         return True
+                    elif response.status == 404:
+                        logger.error(f"Audio file not found on server: {file_name}")
+                        return False
                     else:
                         logger.error(f"Failed to download audio file: {file_name}. Status code: {response.status}")
                         logger.error(f"Response content: {await response.text()}")
