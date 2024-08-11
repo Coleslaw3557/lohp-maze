@@ -53,6 +53,9 @@ class RemoteHostManager:
         else:
             logger.warning(f"Received ready status for unknown client {client_ip} or effect {effect_id}")
 
+    async def play_prepared_audio(self, room):
+        return await self.trigger_audio_playback(room, None)
+
     async def trigger_audio_playback(self, room, effect_name):
         client_ip = self.get_client_ip_by_room(room)
         if client_ip:

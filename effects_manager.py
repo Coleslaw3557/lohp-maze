@@ -322,7 +322,9 @@ class EffectsManager:
             return False
 
         # Execute audio effect first
-        audio_success = await self.remote_host_manager.play_prepared_audio(room)
+        audio_file = effect_data.get('audio_file')
+        audio_params = effect_data.get('audio_params', {})
+        audio_success = await self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
         
         # Add a small delay to allow audio to start playing
         await asyncio.sleep(0.1)
