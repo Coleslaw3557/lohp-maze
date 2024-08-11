@@ -77,7 +77,12 @@ class EffectsManager:
         else:
             logger.warning(f"No effect found: {effect_name}")
 
-    async def apply_effect_to_room(self, room, effect_name, effect_data):
+    async def apply_effect_to_room(self, room, effect_name):
+        effect_data = self.get_effect(effect_name)
+        if not effect_data:
+            logger.error(f"{effect_name} effect not found")
+            return False, f"{effect_name} effect not found"
+
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room, [])
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
@@ -86,8 +91,11 @@ class EffectsManager:
         
         self.room_effects[room] = effect_name
         
-        # Trigger audio playback on remote units
-        audio_task = self.remote_host_manager.trigger_audio_playback(room, effect_name)
+        audio_file = effect_data.get('audio_file')
+        audio_params = effect_data.get('audio_params', {})
+
+        # Prepare and play audio
+        audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
         
         # Apply lighting effect
         lighting_task = self._apply_lighting_effect(fixture_ids, effect_data)
@@ -99,7 +107,7 @@ class EffectsManager:
         
         self.room_effects.pop(room, None)
         
-        return True
+        return True, f"{effect_name} effect applied to room {room}"
 
     async def _apply_lighting_effect(self, fixture_ids, effect_data):
         tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
