@@ -128,13 +128,13 @@ class EffectsManager:
         
         tasks = []
         
+        # Instruct the client to play the audio
+        await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
+        
         # Use the interrupt system to apply the effect
         for fixture_id in fixture_ids:
             task = self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data))
             tasks.append(task)
-        
-        # Instruct the client to play the audio
-        await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
         
         try:
             # Run all lighting tasks concurrently
