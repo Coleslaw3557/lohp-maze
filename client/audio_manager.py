@@ -30,23 +30,30 @@ class AudioManager:
             file_path = os.path.join(self.cache_dir, self.prepared_audio['file_name'])
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             
+            logger.info(f"Saving audio data to: {file_path}")
             async with aiofiles.open(file_path, 'wb') as f:
                 await f.write(audio_data)
             
             self.stop_audio()
             
-            # Decode and play the MP3 file
-            audio = AudioSegment.from_mp3(file_path)
-            volume = self.prepared_audio['volume']
-            audio = audio + (20 * math.log10(volume))  # Adjust volume (pydub uses dB)
+            try:
+                # Decode and play the MP3 file
+                logger.info(f"Decoding MP3 file: {file_path}")
+                audio = AudioSegment.from_mp3(file_path)
+                volume = self.prepared_audio['volume']
+                audio = audio + (20 * math.log10(volume))  # Adjust volume (pydub uses dB)
+                
+                self.current_audio = self.prepared_audio['file_name']
+                self.stop_event.clear()
+                
+                # Start playback in a separate thread
+                logger.info(f"Starting audio playback: {self.current_audio}")
+                threading.Thread(target=self._play_audio, args=(audio, self.prepared_audio['loop'])).start()
+                
+                logger.info(f"Started playing audio: {self.prepared_audio['file_name']} (volume: {volume}, loop: {self.prepared_audio['loop']})")
+            except Exception as e:
+                logger.error(f"Error playing audio: {str(e)}", exc_info=True)
             
-            self.current_audio = self.prepared_audio['file_name']
-            self.stop_event.clear()
-            
-            # Start playback in a separate thread
-            threading.Thread(target=self._play_audio, args=(audio, self.prepared_audio['loop'])).start()
-            
-            logger.info(f"Started playing audio: {self.prepared_audio['file_name']} (volume: {volume}, loop: {self.prepared_audio['loop']})")
             self.prepared_audio = None
         else:
             logger.warning("Received audio data without preparation")
