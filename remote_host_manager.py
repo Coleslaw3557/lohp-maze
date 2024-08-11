@@ -227,13 +227,18 @@ class RemoteHostManager:
             await asyncio.sleep(0.1)  # Add a small delay before sending audio data
 
             # Send audio data
-            success = await self.send_audio_command(room, 'audio_data', audio_data)
-            if success:
-                logger.info(f"Successfully streamed audio data ({len(audio_data)} bytes) to client {client_ip} for room {room}")
-                self.audio_sent_to_clients[room].add(effect_name)
-                return True
+            websocket = self.connected_clients.get(client_ip)
+            if websocket:
+                try:
+                    await websocket.send(audio_data)
+                    logger.info(f"Successfully streamed audio data ({len(audio_data)} bytes) to client {client_ip} for room {room}")
+                    self.audio_sent_to_clients[room].add(effect_name)
+                    return True
+                except Exception as e:
+                    logger.error(f"Failed to send audio data to client {client_ip} for room {room}: {str(e)}")
+                    return False
             else:
-                logger.error(f"Failed to send audio data to client {client_ip} for room {room}")
+                logger.error(f"No WebSocket connection found for client {client_ip}")
                 return False
         except Exception as e:
             logger.error(f"Error streaming audio to client {client_ip} for room {room}: {str(e)}")

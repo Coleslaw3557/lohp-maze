@@ -185,8 +185,13 @@ class WebSocketClient:
             try:
                 message = await self.websocket.recv()
                 if isinstance(message, str):
-                    await self.handle_message(json.loads(message))
+                    try:
+                        data = json.loads(message)
+                        await self.handle_message(data)
+                    except json.JSONDecodeError:
+                        logger.error("Received invalid JSON message")
                 elif isinstance(message, bytes):
+                    logger.info(f"Received audio data: {len(message)} bytes")
                     await self.audio_manager.receive_audio_data(message)
                 else:
                     logger.warning(f"Received unknown message type: {type(message)}")
