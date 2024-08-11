@@ -360,8 +360,8 @@ async def run_effect_all_rooms():
         # Prepare audio for all rooms
         await effects_manager.prepare_audio_for_all_rooms(effect_name)
         
-        # Schedule the effect execution with a delay
-        execution_time = time.time() + 5  # 5 seconds delay for better synchronization
+        # Schedule the effect execution with a longer delay
+        execution_time = time.time() + 10  # 10 seconds delay for better synchronization
         
         # Notify clients to prepare for synchronized execution
         clients_ready = await remote_host_manager.notify_clients_of_execution(effect_name, execution_time)
@@ -371,6 +371,9 @@ async def run_effect_all_rooms():
         
         # Schedule the effect execution
         asyncio.create_task(schedule_effect_execution_all_rooms(effect_name, execution_time))
+        
+        # Add a small delay before returning the response
+        await asyncio.sleep(0.1)
         
         return jsonify({"message": f"{effect_name} effect scheduled for all rooms", "execution_time": execution_time}), 200
     except Exception as e:
