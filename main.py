@@ -212,11 +212,8 @@ async def run_effect():
     effect_data['audio'] = audio_params
     
     try:
-        effect_id = await effects_manager.buffer_effect(room, effect_name, effect_data)
-        await effects_manager.prepare_effect(effect_id)
-        
         # Execute the effect immediately
-        success = await effects_manager.execute_effect(effect_id)
+        success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
         
         if success:
             # Trigger audio playback
@@ -224,10 +221,10 @@ async def run_effect():
             if audio_file:
                 await remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
             
-            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}', 'effect_id': effect_id})
+            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}'})
         else:
-            logger.error(f"Failed to execute effect {effect_name} in room {room}")
-            return jsonify({'status': 'error', 'message': f'Failed to execute effect {effect_name} in room {room}'}), 500
+            logger.error(f"Failed to execute effect {effect_name} in room {room}: {message}")
+            return jsonify({'status': 'error', 'message': message}), 500
     except Exception as e:
         error_message = f"Error executing effect {effect_name} for room {room}: {str(e)}"
         logger.error(error_message, exc_info=True)
