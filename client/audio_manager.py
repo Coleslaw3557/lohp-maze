@@ -18,20 +18,20 @@ class AudioManager:
         self.prepared_audio = None
 
     async def prepare_audio(self, file_name, params):
+        full_path = os.path.join(self.cache_dir, file_name)
         self.prepared_audio = {
-            'file_name': file_name,
+            'file_name': full_path,
             'volume': params.get('volume', 1.0),
             'loop': params.get('loop', False)
         }
-        logger.info(f"Prepared audio: {file_name} (volume: {self.prepared_audio['volume']}, loop: {self.prepared_audio['loop']})")
+        logger.info(f"Prepared audio: {full_path} (volume: {self.prepared_audio['volume']}, loop: {self.prepared_audio['loop']})")
 
     async def play_prepared_audio(self):
         if self.prepared_audio:
-            file_path = os.path.join(self.cache_dir, self.prepared_audio['file_name'])
-            if os.path.exists(file_path):
+            if os.path.exists(self.prepared_audio['file_name']):
                 self.stop_audio()
                 try:
-                    audio = AudioSegment.from_mp3(file_path)
+                    audio = AudioSegment.from_mp3(self.prepared_audio['file_name'])
                     volume = self.prepared_audio['volume']
                     audio = audio + (20 * math.log10(volume))
                     
