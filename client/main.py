@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 async def main():
     config = ConfigManager('config.json')
-    audio_manager = AudioManager(config.get('cache_dir'))
+    audio_manager = AudioManager(config.get('cache_dir'), config)
     trigger_manager = TriggerManager(config.get('triggers'))
     sync_manager = SyncManager()
     

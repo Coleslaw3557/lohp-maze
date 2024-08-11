@@ -11,20 +11,37 @@ import math
 logger = logging.getLogger(__name__)
 
 class AudioManager:
-    def __init__(self, cache_dir):
+    def __init__(self, cache_dir, config):
         self.cache_dir = cache_dir
+        self.config = config
         self.current_audio = None
         self.stop_event = threading.Event()
         self.prepared_audio = None
 
     async def prepare_audio(self, file_name, params):
         full_path = os.path.join(self.cache_dir, file_name)
+        if not os.path.exists(full_path):
+            await self.download_audio(file_name)
         self.prepared_audio = {
             'file_name': full_path,
             'volume': params.get('volume', 1.0),
             'loop': params.get('loop', False)
         }
         logger.info(f"Prepared audio: {full_path} (volume: {self.prepared_audio['volume']}, loop: {self.prepared_audio['loop']})")
+
+    async def download_audio(self, file_name):
+        server_url = f"http://{self.config.get('server_ip')}:5000/api/audio/{file_name}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(server_url) as response:
+                if response.status == 200:
+                    content = await response.read()
+                    full_path = os.path.join(self.cache_dir, file_name)
+                    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                    async with aiofiles.open(full_path, 'wb') as f:
+                        await f.write(content)
+                    logger.info(f"Downloaded audio file: {file_name}")
+                else:
+                    logger.error(f"Failed to download audio file: {file_name}")
 
     async def play_prepared_audio(self):
         if self.prepared_audio:
