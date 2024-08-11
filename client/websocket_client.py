@@ -146,7 +146,8 @@ class WebSocketClient:
             'prepare_execution': self.handle_prepare_execution,
             'prepare_effect': self.handle_prepare_effect,
             'execute_effect': self.handle_execute_effect,
-            'run_effect_all_rooms': self.handle_run_effect_all_rooms
+            'run_effect_all_rooms': self.handle_run_effect_all_rooms,
+            'play_effect_audio': self.handle_play_effect_audio  # Add this line
         }
 
         message_type = message.get('type')
@@ -236,7 +237,8 @@ class WebSocketClient:
         room = message.get('room')
         effect_name = message.get('data', {}).get('effect_name')
         if room in self.config.get('associated_rooms', []) and effect_name:
-            await self.audio_manager.play_effect_audio(effect_name)
+            await self.audio_manager.play_effect_audio(effect_name, f"{effect_name.lower()}.mp3")
+            logger.info(f"Playing effect audio for '{effect_name}' in room '{room}'")
         else:
             logger.warning(f"Received play_effect_audio command for unassociated room or missing effect name: {room}, {effect_name}")
 
