@@ -198,11 +198,16 @@ class WebSocketClient:
             logger.warning("Received prepare_audio without file name")
 
     async def handle_play_audio(self, message):
-        file_name = message.get('data', {}).get('file')
-        if file_name:
-            await self.audio_manager.play_prepared_audio(file_name)
+        room = message.get('room')
+        if room in self.config.get('associated_rooms', []):
+            prepared_audio = self.audio_manager.prepared_audio
+            if prepared_audio:
+                file_name = next(iter(prepared_audio))
+                await self.audio_manager.play_prepared_audio(file_name)
+            else:
+                logger.warning("No prepared audio found for playback")
         else:
-            logger.warning("Received play_audio command without file name")
+            logger.warning(f"Received play_audio command for unassociated room: {room}")
 
     async def handle_sync_time(self, message):
         server_time = message.get('server_time')
