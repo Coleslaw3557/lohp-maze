@@ -23,7 +23,7 @@ class AudioManager:
             'Lightning', 'PoliceLights', 'GateInspection', 'GateGreeters',
             'WrongAnswer', 'CorrectAnswer', 'Entrance', 'GuyLineClimb',
             'SparkPony', 'PortoStandBy', 'PortoHit', 'CuddlePuddle',
-            'PhotoBomb-BG', 'PhotoBomb-Spot', 'DeepPlaya-BG'
+            'PhotoBomb-BG', 'PhotoBomb-Spot', 'DeepPlaya-BG', 'ImageEnhancement'
         ]
         
         for effect in default_effects:
