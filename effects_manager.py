@@ -109,9 +109,31 @@ class EffectsManager:
         
         return True, f"{effect_name} effect applied to room {room}"
 
-    async def _apply_lighting_effect(self, fixture_ids, effect_data):
-        tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
-        await asyncio.gather(*tasks)
+    async def _apply_lighting_effect(self, room, effect_data):
+        room_layout = self.light_config_manager.get_room_layout()
+        lights = room_layout.get(room, [])
+        if not lights:
+            logger.warning(f"No lights found for room: {room}")
+            return True  # Return True to not fail the overall effect
+
+        fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+        
+        lighting_tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        lighting_results = await asyncio.gather(*lighting_tasks, return_exceptions=True)
+        
+        lighting_success = all(isinstance(result, bool) and result for result in lighting_results)
+        
+        if lighting_success:
+            logger.info(f"Lighting effect application completed successfully in room '{room}'")
+        else:
+            logger.error(f"Failed to apply lighting effect in room '{room}'")
+            for i, result in enumerate(lighting_results):
+                if isinstance(result, Exception):
+                    logger.error(f"Error applying effect to fixture {fixture_ids[i]}: {str(result)}")
+                elif not result:
+                    logger.error(f"Failed to apply effect to fixture {fixture_ids[i]}")
+        
+        return lighting_success
 
     def get_audio_file(self, effect_name):
         audio_file = f"audio_files/{effect_name.lower()}.mp3"
@@ -219,11 +241,15 @@ class EffectsManager:
         if not audio_file:
             logger.warning(f"No audio file found for effect {effect_name}")
         
-        # Execute the effect in all rooms simultaneously
-        execute_tasks = [self.apply_effect_to_room(room, effect_name, effect_data, audio_file) for room in room_layout.keys()]
-        results = await asyncio.gather(*execute_tasks)
+        # Stream audio to all rooms first
+        audio_tasks = [self.remote_host_manager.stream_audio_to_room(room, audio_file, effect_data.get('audio', {}), effect_name) for room in room_layout.keys()]
+        await asyncio.gather(*audio_tasks)
         
-        success = all(result[0] for result in results)
+        # Then execute the lighting effect in all rooms simultaneously
+        lighting_tasks = [self._apply_lighting_effect(room, effect_data) for room in room_layout.keys()]
+        lighting_results = await asyncio.gather(*lighting_tasks)
+        
+        success = all(lighting_results)
         if success:
             logger.info(f"{effect_name} effect triggered in all rooms")
         else:
