@@ -24,11 +24,17 @@ class AudioManager:
         ]
 
     async def initialize(self):
+        logger.info("Initializing AudioManager")
         await self.download_all_audio_files()
+        logger.info("AudioManager initialization complete")
 
     async def download_all_audio_files(self):
+        logger.info(f"Starting download of {len(self.audio_files)} audio files")
         for audio_file in self.audio_files:
-            await self.download_audio(audio_file)
+            success = await self.download_audio(audio_file)
+            if not success:
+                logger.error(f"Failed to download {audio_file}")
+        logger.info("Finished attempting to download all audio files")
 
     async def prepare_audio(self, file_name, params):
         full_path = os.path.join(self.cache_dir, file_name)
@@ -52,6 +58,7 @@ class AudioManager:
 
     async def download_audio(self, file_name):
         server_url = f"http://{self.config.get('server_ip')}:5000/api/audio/{file_name}"
+        logger.info(f"Attempting to download audio file from: {server_url}")
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(server_url) as response:
@@ -61,14 +68,15 @@ class AudioManager:
                         os.makedirs(os.path.dirname(full_path), exist_ok=True)
                         async with aiofiles.open(full_path, 'wb') as f:
                             await f.write(content)
-                        logger.info(f"Downloaded audio file: {file_name}")
+                        logger.info(f"Successfully downloaded audio file: {file_name}")
                         return True
                     elif response.status == 404:
                         logger.error(f"Audio file not found on server: {file_name}")
+                        logger.error(f"Server response: {await response.text()}")
                         return False
                     else:
                         logger.error(f"Failed to download audio file: {file_name}. Status code: {response.status}")
-                        logger.error(f"Response content: {await response.text()}")
+                        logger.error(f"Server response: {await response.text()}")
                         return False
         except aiohttp.ClientError as e:
             logger.error(f"Network error while downloading {file_name}: {str(e)}")
@@ -76,6 +84,7 @@ class AudioManager:
             logger.error(f"IO error while saving {file_name}: {str(e)}")
         except Exception as e:
             logger.error(f"Unexpected error while downloading {file_name}: {str(e)}")
+        logger.error(f"Failed to download {file_name}")
         return False
 
     async def play_prepared_audio(self):
