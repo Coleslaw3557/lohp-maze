@@ -111,6 +111,10 @@ class EffectsManager:
 
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room, [])
+        if not lights:
+            logger.error(f"No lights found for room: {room}")
+            return False, f"No lights found for room: {room}"
+
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
         
         logger.info(f"Applying effect '{effect_name}' to room '{room}'")
@@ -123,23 +127,12 @@ class EffectsManager:
         # Use the interrupt system to apply the effect
         tasks = [self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data)) for fixture_id in fixture_ids]
         
-        # Create a task for audio playback only if audio file exists
-        audio_task = None
-        if audio_file:
-            audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
-        else:
-            logger.warning(f"No audio file found for effect '{effect_name}'. Skipping audio playback.")
+        # Always create an audio task, even if it's silent
+        audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
         
         try:
             # Run all tasks concurrently
-            if audio_task:
-                await asyncio.gather(*tasks, audio_task)
-            else:
-                await asyncio.gather(*tasks)
-            
-            # If no audio file was found, still send a command to play the effect without audio
-            if not audio_file:
-                await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
+            await asyncio.gather(*tasks, audio_task)
         except Exception as e:
             logger.error(f"Error applying effect '{effect_name}' to room '{room}': {str(e)}", exc_info=True)
             return False, f"Error applying {effect_name} effect to room {room}"

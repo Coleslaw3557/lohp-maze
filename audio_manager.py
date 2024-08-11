@@ -61,6 +61,14 @@ class AudioManager:
                     logger.warning(f"Audio file not found with lowercase name either: {lowercase_path}")
         else:
             logger.warning(f"No audio file configured for effect: {effect_name}")
+        
+        # If no audio file is found, return a default "silent" audio file
+        default_silent_file = os.path.join(self.audio_dir, "silent.mp3")
+        if os.path.exists(default_silent_file):
+            logger.info(f"Using default silent audio file for effect: {effect_name}")
+            return default_silent_file
+        else:
+            logger.error(f"Default silent audio file not found: {default_silent_file}")
         return None
 
     def get_audio_config(self, effect_name):
