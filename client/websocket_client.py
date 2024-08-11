@@ -256,12 +256,13 @@ class WebSocketClient:
         audio_data = message.get('data')
         if audio_data:
             file_name = audio_data.get('file_name')
+            effect_name = audio_data.get('effect_name')
             volume = audio_data.get('volume', 1.0)
             loop = audio_data.get('loop', False)
-            if file_name:
-                self.audio_manager.prepare_audio(file_name, volume, loop)
+            if file_name and effect_name:
+                await self.audio_manager.prepare_audio(file_name, effect_name, volume, loop)
             else:
-                logger.warning("Received audio_start without file_name")
+                logger.warning("Received audio_start without file_name or effect_name")
         else:
             logger.warning("Received audio_start without data")
 
