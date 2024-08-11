@@ -215,17 +215,17 @@ async def run_effect():
         effect_id = await effects_manager.buffer_effect(room, effect_name, effect_data)
         await effects_manager.prepare_effect(effect_id)
         
-        # Synchronize execution time
-        execution_time = time.time() + 3  # Schedule execution 3 seconds in the future
+        # Generate a unique identifier for this effect execution
+        effect_execution_id = f"{effect_id}_{int(time.time())}"
         
         # Notify all clients to prepare for synchronized execution
-        clients_ready = await remote_host_manager.notify_clients_of_execution(effect_id, execution_time)
+        clients_ready = await remote_host_manager.notify_clients_of_execution(effect_execution_id)
         
         if not clients_ready:
             return jsonify({'status': 'error', 'message': 'Not all clients are ready'}), 500
         
         # Schedule the effect execution
-        asyncio.create_task(schedule_effect_execution(effect_id, execution_time))
+        asyncio.create_task(schedule_effect_execution(effect_execution_id))
         
         return jsonify({'status': 'success', 'message': f'Effect {effect_name} scheduled for room {room}', 'effect_id': effect_id})
     except Exception as e:
@@ -233,17 +233,30 @@ async def run_effect():
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
 
-async def schedule_effect_execution(effect_id, execution_time):
-    delay = max(0, execution_time - time.time())
-    await asyncio.sleep(delay)
+async def schedule_effect_execution(effect_execution_id):
+    # Send a "prepare" message to all clients
+    await remote_host_manager.broadcast_message({
+        "type": "prepare_effect",
+        "effect_execution_id": effect_execution_id
+    })
+    
+    # Wait for a short time to ensure all clients have received the prepare message
+    await asyncio.sleep(0.5)
+    
+    # Send an "execute" message to all clients
+    await remote_host_manager.broadcast_message({
+        "type": "execute_effect",
+        "effect_execution_id": effect_execution_id
+    })
+    
     try:
-        success = await effects_manager.execute_effect(effect_id)
+        success = await effects_manager.execute_effect(effect_execution_id)
         if success:
-            logger.info(f"Effect {effect_id} executed successfully")
+            logger.info(f"Effect {effect_execution_id} executed successfully")
         else:
-            logger.error(f"Failed to execute effect {effect_id}")
+            logger.error(f"Failed to execute effect {effect_execution_id}")
     except Exception as e:
-        logger.error(f"Error executing effect {effect_id}: {str(e)}")
+        logger.error(f"Error executing effect {effect_execution_id}: {str(e)}")
 
 @app.route('/api/stop_effect', methods=['POST'])
 async def stop_effect():
