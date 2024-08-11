@@ -102,9 +102,6 @@ class EffectsManager:
             logger.info(f"No active effect to stop in room: {room}")
 
     async def apply_effect_to_room(self, room, effect_name, effect_data=None, audio_file=None):
-        # Stop any existing effect in the room
-        await self.stop_effect_in_room(room)
-
         if effect_data is None:
             effect_data = self.get_effect(effect_name)
         if not effect_data:
@@ -121,12 +118,16 @@ class EffectsManager:
         
         audio_params = effect_data.get('audio_params', {})
 
-        # Create a task for the effect
-        effect_task = asyncio.create_task(self._run_effect(room, fixture_ids, effect_data, audio_file, audio_params, effect_name))
+        # Use the interrupt system to apply the effect
+        tasks = [self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data)) for fixture_id in fixture_ids]
         
-        # Store the task in active_effects
-        self.active_effects[room] = effect_task
+        # Create a task for audio playback
+        audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
         
+        # Run all tasks concurrently
+        await asyncio.gather(*tasks, audio_task)
+        
+        logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         return True, f"{effect_name} effect applied to room {room}"
 
     async def _run_effect(self, room, fixture_ids, effect_data, audio_file, audio_params, effect_name):
@@ -440,20 +441,29 @@ class EffectsManager:
         # Execute audio effect for all rooms simultaneously
         audio_file = self.get_audio_file(effect_name)
         audio_params = effect_data.get('audio', {})
-        audio_success = True
-        if audio_file:
-            audio_success = await self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
-        else:
-            logger.info(f"No audio file found for effect {effect_name}. Skipping audio playback.")
+        audio_task = self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
 
-        # Execute lighting effect for all rooms simultaneously
-        lighting_tasks = [self._apply_lighting_effect(room, effect_data) for room in rooms]
-        lighting_results = await asyncio.gather(*lighting_tasks)
-        lighting_success = all(lighting_results)
+        # Execute lighting effect for all rooms simultaneously using the interrupt system
+        lighting_tasks = []
+        for room in rooms:
+            room_layout = self.light_config_manager.get_room_layout()
+            lights = room_layout.get(room, [])
+            fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+            for fixture_id in fixture_ids:
+                lighting_tasks.append(self.interrupt_handler.interrupt_fixture(
+                    fixture_id,
+                    effect_data['duration'],
+                    get_effect_step_values(effect_data)
+                ))
+
+        # Run all tasks concurrently
+        results = await asyncio.gather(audio_task, *lighting_tasks, return_exceptions=True)
+        
+        success = all(isinstance(result, bool) and result for result in results)
 
         del self.effect_buffer[effect_id]
 
-        return lighting_success
+        return success
 
     async def _apply_lighting_effect(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
