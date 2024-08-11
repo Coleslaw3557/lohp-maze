@@ -30,6 +30,11 @@ class InterruptHandler:
                 logger.debug(f"Step {step_count}: Fixture {fixture_id}, Elapsed time: {elapsed_time:.3f}s, New values: {new_values}")
                 await asyncio.sleep(1 / 44)  # 44Hz update rate
                 step_count += 1
+            
+            # Ensure we run for the full duration
+            remaining_time = end_time - time.time()
+            if remaining_time > 0:
+                await asyncio.sleep(remaining_time)
         finally:
             self.active_interrupts.discard(fixture_id)
 
