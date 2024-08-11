@@ -155,8 +155,20 @@ class WebSocketClient:
             await handler(message)
         elif message_type is None:
             logger.warning("Received message without 'type' field")
+            await self.handle_typeless_message(message)
         else:
             logger.warning(f"Unknown message type received: {message_type}")
+
+    async def handle_typeless_message(self, message):
+        """
+        Handle messages without a 'type' field.
+        """
+        logger.info(f"Handling typeless message: {message}")
+        # Add any specific handling for typeless messages here
+        if 'status' in message and 'message' in message:
+            logger.info(f"Received status update: {message['status']} - {message['message']}")
+        else:
+            logger.warning("Unrecognized typeless message format")
 
     async def handle_prepare_execution(self, message):
         effect_id = message['effect_id']
