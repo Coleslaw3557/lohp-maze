@@ -251,12 +251,12 @@ class RemoteHostManager:
 
         logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
         try:
-            # Check if this room has already received the audio for this effect
-            if room not in self.audio_sent_to_clients:
-                self.audio_sent_to_clients[room] = set()
+            # Check if this client has already received the audio for this effect
+            if client_ip not in self.audio_sent_to_clients:
+                self.audio_sent_to_clients[client_ip] = set()
             
-            if effect_name in self.audio_sent_to_clients[room]:
-                logger.info(f"Audio for effect '{effect_name}' already sent to room {room}. Instructing client to play cached audio.")
+            if effect_name in self.audio_sent_to_clients[client_ip]:
+                logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Instructing client to play cached audio.")
                 return await self.send_audio_command(room, 'play_cached_audio', {
                     'effect_name': effect_name,
                     'volume': audio_params.get('volume', 1.0),
@@ -290,7 +290,7 @@ class RemoteHostManager:
                 try:
                     await websocket.send(audio_data)
                     logger.info(f"Successfully streamed audio data ({len(audio_data)} bytes) to client {client_ip} for room {room}")
-                    self.audio_sent_to_clients[room].add(effect_name)
+                    self.audio_sent_to_clients[client_ip].add(effect_name)
                     return True
                 except Exception as e:
                     logger.error(f"Failed to send audio data to client {client_ip} for room {room}: {str(e)}")
