@@ -77,7 +77,7 @@ class EffectsManager:
         else:
             logger.warning(f"No effect found: {effect_name}")
 
-    async def apply_effect_to_room(self, room, effect_name, effect_data=None):
+    async def apply_effect_to_room(self, room, effect_name, effect_data=None, audio_file=None):
         if effect_data is None:
             effect_data = self.get_effect(effect_name)
         if not effect_data:
@@ -92,7 +92,6 @@ class EffectsManager:
         
         self.room_effects[room] = effect_name
         
-        audio_file = effect_data.get('audio_file')
         audio_params = effect_data.get('audio_params', {})
 
         # Prepare and play audio
@@ -215,8 +214,13 @@ class EffectsManager:
 
         room_layout = self.light_config_manager.get_room_layout()
         
+        # Get the audio file for the effect
+        audio_file = self.get_audio_file(effect_name)
+        if not audio_file:
+            logger.warning(f"No audio file found for effect {effect_name}")
+        
         # Execute the effect in all rooms simultaneously
-        execute_tasks = [self.execute_effect_in_room(room, effect_name, effect_data) for room in room_layout.keys()]
+        execute_tasks = [self.execute_effect_in_room(room, effect_name, effect_data, audio_file) for room in room_layout.keys()]
         results = await asyncio.gather(*execute_tasks)
         
         success = all(results)
@@ -233,9 +237,9 @@ class EffectsManager:
         # Add your preparation logic here
         pass
 
-    async def execute_effect_in_room(self, room, effect_name, effect_data):
+    async def execute_effect_in_room(self, room, effect_name, effect_data, audio_file):
         logger.info(f"Executing effect {effect_name} in room {room}")
-        success, _ = await self.apply_effect_to_room(room, effect_name, effect_data)
+        success, _ = await self.apply_effect_to_room(room, effect_name, effect_data, audio_file)
         return success
 
     async def stop_current_effect(self, room=None):
