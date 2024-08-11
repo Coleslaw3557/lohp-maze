@@ -22,6 +22,7 @@ class AudioManager:
             "lightning.mp3",
             # Add other audio files here
         ]
+        self.current_effect_audio = None
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
@@ -58,6 +59,46 @@ class AudioManager:
         else:
             logger.error(f"Audio file not found after download attempt: {full_path}")
             return False
+
+    async def prepare_audio_for_effect(self, effect_id):
+        # Here you would determine which audio file to use based on the effect_id
+        # For now, let's assume we're using a default file
+        file_name = "default_effect_audio.mp3"
+        params = {'volume': 1.0, 'loop': False}
+        success = await self.prepare_audio(file_name, params)
+        if success:
+            self.current_effect_audio = file_name
+        return success
+
+    async def play_prepared_audio(self):
+        if self.current_effect_audio:
+            await self._play_prepared_audio(self.current_effect_audio)
+            self.current_effect_audio = None
+        else:
+            logger.warning("No prepared audio for current effect")
+
+    async def _play_prepared_audio(self, file_name):
+        if file_name in self.prepared_audio:
+            audio_info = self.prepared_audio[file_name]
+            if os.path.exists(audio_info['file_name']):
+                self.stop_audio()
+                try:
+                    audio = AudioSegment.from_mp3(audio_info['file_name'])
+                    volume = audio_info['volume']
+                    audio = audio + (20 * math.log10(volume))
+                    
+                    self.current_audio = audio_info['file_name']
+                    self.stop_event.clear()
+                    
+                    await asyncio.to_thread(self._play_audio, audio, audio_info['loop'])
+                    
+                    logger.info(f"Started playing audio: {audio_info['file_name']} (volume: {volume}, loop: {audio_info['loop']})")
+                except Exception as e:
+                    logger.error(f"Error playing audio: {str(e)}", exc_info=True)
+            else:
+                logger.error(f"Prepared audio file not found: {audio_info['file_name']}")
+        else:
+            logger.warning(f"No prepared audio found for: {file_name}")
 
     async def download_audio(self, file_name):
         # Remove 'audio_files/' prefix if present
