@@ -83,32 +83,27 @@ class EffectsManager:
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
         
         logger.info(f"Applying effect '{effect_name}' to room '{room}'")
-        logger.debug(f"Effect data: {effect_data}")
-        logger.debug(f"Fixture IDs for room: {fixture_ids}")
         
         self.room_effects[room] = effect_name
         
-        # Check for associated audio file
-        audio_file = self.get_audio_file(effect_name)
+        # Trigger audio playback on remote units
+        audio_task = self.remote_host_manager.trigger_audio_playback(room, effect_name)
         
-        # Prepare lighting tasks
-        lighting_tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        # Apply lighting effect
+        lighting_task = self._apply_lighting_effect(fixture_ids, effect_data)
         
-        # Prepare audio streaming
-        audio_task = None
-        if audio_file:
-            await self.remote_host_manager.prepare_audio_stream(room, audio_file, effect_data.get('audio', {}), effect_name)
-            audio_task = self.remote_host_manager.play_prepared_audio(room)
-        
-        # Run lighting tasks and audio playback concurrently
-        tasks = lighting_tasks + ([audio_task] if audio_task else [])
-        await asyncio.gather(*tasks)
+        # Run lighting and audio tasks concurrently
+        await asyncio.gather(lighting_task, audio_task)
         
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         
         self.room_effects.pop(room, None)
         
-        return True, audio_file if audio_file else None
+        return True
+
+    async def _apply_lighting_effect(self, fixture_ids, effect_data):
+        tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
+        await asyncio.gather(*tasks)
 
     def get_audio_file(self, effect_name):
         if effect_name.lower() == 'lightning':
