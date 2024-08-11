@@ -17,13 +17,37 @@ class AudioManager:
         self.stop_event = threading.Event()
         self.prepared_audio = None
 
-    def prepare_audio(self, file_name, volume, loop):
+    async def prepare_audio(self, file_name, params):
         self.prepared_audio = {
             'file_name': file_name,
-            'volume': volume,
-            'loop': loop
+            'volume': params.get('volume', 1.0),
+            'loop': params.get('loop', False)
         }
-        logger.info(f"Prepared audio: {file_name} (volume: {volume}, loop: {loop})")
+        logger.info(f"Prepared audio: {file_name} (volume: {self.prepared_audio['volume']}, loop: {self.prepared_audio['loop']})")
+
+    async def play_prepared_audio(self):
+        if self.prepared_audio:
+            file_path = os.path.join(self.cache_dir, self.prepared_audio['file_name'])
+            if os.path.exists(file_path):
+                self.stop_audio()
+                try:
+                    audio = AudioSegment.from_mp3(file_path)
+                    volume = self.prepared_audio['volume']
+                    audio = audio + (20 * math.log10(volume))
+                    
+                    self.current_audio = self.prepared_audio['file_name']
+                    self.stop_event.clear()
+                    
+                    threading.Thread(target=self._play_audio, args=(audio, self.prepared_audio['loop'])).start()
+                    
+                    logger.info(f"Started playing audio: {self.prepared_audio['file_name']} (volume: {volume}, loop: {self.prepared_audio['loop']})")
+                except Exception as e:
+                    logger.error(f"Error playing audio: {str(e)}", exc_info=True)
+            else:
+                logger.error(f"Prepared audio file not found: {file_path}")
+            self.prepared_audio = None
+        else:
+            logger.warning("No prepared audio to play")
 
     async def receive_audio_data(self, audio_data):
         if self.prepared_audio:
