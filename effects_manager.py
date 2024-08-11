@@ -237,9 +237,17 @@ class EffectsManager:
         logger.info(f"Setting current theme to: {theme_name}")
         return await self.set_current_theme_async(theme_name)
 
+    async def stop_current_theme_async(self):
+        logger.info("Stopping current theme asynchronously")
+        await self.theme_manager.stop_current_theme_async()
+
     def stop_current_theme(self):
         logger.info("Stopping current theme")
         self.theme_manager.stop_current_theme()
+
+    async def set_next_theme_async(self):
+        logger.info("Setting next theme")
+        return await self.theme_manager.set_next_theme_async()
 
     def get_all_themes(self):
         logger.info("Getting all themes")

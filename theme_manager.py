@@ -19,6 +19,8 @@ class ThemeManager:
         self.master_brightness = 1.0
         self.frequency = 44  # 44 Hz update rate
         self.paused_rooms = set()
+        self.theme_list = []
+        self.current_theme_index = -1
         self.load_themes()  # Load themes when initializing
 
     def load_themes(self):
@@ -105,6 +107,7 @@ class ThemeManager:
                 "hue_range": 0.1  # Hue varies from 0 to 0.2 (red to yellow-orange)
             }
         }
+        self.theme_list = list(self.themes.keys())
 
     def set_current_theme(self, theme_name):
         if theme_name in self.themes:
@@ -154,11 +157,23 @@ class ThemeManager:
                         logger.warning("Theme thread join timed out after 5 seconds")
                         self.theme_thread = None  # Abandon the thread if it doesn't join in time
                 self.current_theme = None
+                self.current_theme_index = -1
                 logger.info("Resetting all lights")
                 await asyncio.to_thread(self._reset_all_lights)
                 logger.info("Current theme stopped and all lights reset")
             else:
                 logger.info("No current theme to stop")
+
+    async def set_next_theme_async(self):
+        logger.info("Setting next theme")
+        if not self.theme_list:
+            logger.warning("No themes available")
+            return None
+
+        self.current_theme_index = (self.current_theme_index + 1) % len(self.theme_list)
+        next_theme = self.theme_list[self.current_theme_index]
+        await self.set_current_theme_async(next_theme)
+        return next_theme
 
     def stop_current_theme(self):
         with self.theme_lock:
