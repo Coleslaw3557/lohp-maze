@@ -155,6 +155,9 @@ class EffectsManager:
             if room in self.room_effects:
                 del self.room_effects[room]
         
+        # Remove the redundant audio playback
+        # await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
+        
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         return True, f"{effect_name} effect applied to room {room}"
 
