@@ -215,23 +215,8 @@ async def run_effect():
         effect_id = await effects_manager.buffer_effect(room, effect_name, effect_data)
         await effects_manager.prepare_effect(effect_id)
         
-        # Generate a unique identifier for this effect execution
-        effect_execution_id = f"{effect_id}_{int(time.time())}"
-        
-        # Notify all clients to prepare for immediate execution
-        try:
-            clients_ready = await asyncio.wait_for(
-                remote_host_manager.notify_clients_of_execution(effect_execution_id),
-                timeout=5.0
-            )
-        except asyncio.TimeoutError:
-            return jsonify({'status': 'error', 'message': "Timeout waiting for clients to be ready"}), 504
-        
-        if not clients_ready:
-            return jsonify({'status': 'error', 'message': "Not all clients are ready"}), 500
-        
         # Execute the effect immediately
-        success = await effects_manager.execute_effect(effect_execution_id)
+        success = await effects_manager.execute_effect(effect_id)
         
         if success:
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}', 'effect_id': effect_id})
