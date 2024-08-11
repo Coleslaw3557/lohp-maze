@@ -444,6 +444,7 @@ class EffectsManager:
         if audio_file:
             audio_task = self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
         else:
+            logger.warning(f"No audio file found for effect {effect_name}. Skipping audio playback.")
             audio_task = asyncio.create_task(asyncio.sleep(0))  # Dummy task if no audio file
 
         # Execute lighting effect for all rooms simultaneously using the interrupt system
