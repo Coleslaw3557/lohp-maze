@@ -126,9 +126,6 @@ class EffectsManager:
         
         self.room_effects[room] = effect_name
         
-        audio_params = effect_data.get('audio_params', {})
-        audio_file = self.audio_manager.get_audio_file(effect_name)
-
         tasks = []
         
         # Use the interrupt system to apply the effect
@@ -136,15 +133,11 @@ class EffectsManager:
             task = self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data))
             tasks.append(task)
         
-        # Create an audio task only if an audio file is found
-        if audio_file:
-            audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
-            tasks.append(audio_task)
-        else:
-            logger.info(f"No audio file found for effect '{effect_name}'. Skipping audio playback.")
+        # Instruct the client to play the audio
+        await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
         
         try:
-            # Run all tasks concurrently
+            # Run all lighting tasks concurrently
             await asyncio.gather(*tasks)
         except Exception as e:
             error_message = f"Error applying effect '{effect_name}' to room '{room}': {str(e)}"
@@ -154,9 +147,6 @@ class EffectsManager:
             # Ensure the room effect is cleared even if an exception occurs
             if room in self.room_effects:
                 del self.room_effects[room]
-        
-        # Remove the redundant audio playback
-        # await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
         
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         return True, f"{effect_name} effect applied to room {room}"
