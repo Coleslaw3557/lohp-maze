@@ -126,7 +126,7 @@ class EffectsManager:
         
         self.room_effects[room] = effect_name
         
-        # Instruct the client to play the audio
+        # Instruct the client to play the audio only once at the beginning
         await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
         
         tasks = []
@@ -148,6 +148,7 @@ class EffectsManager:
                 del self.room_effects[room]
         
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
+        # Remove the second audio command here
         return True, f"{effect_name} effect applied to room {room}"
 
     # Remove the _apply_audio_effect method as it's no longer needed
