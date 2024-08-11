@@ -13,12 +13,16 @@ class InterruptHandler:
     async def interrupt_fixture(self, fixture_id, duration, interrupt_sequence):
         logger.info(f"Starting effect on fixture {fixture_id} for {duration} seconds")
         
+        if fixture_id in self.active_interrupts:
+            logger.warning(f"Fixture {fixture_id} is already interrupted. Skipping new effect.")
+            return False
+
         self.active_interrupts.add(fixture_id)
         start_time = time.time()
         end_time = start_time + duration
         step_count = 0
         try:
-            while time.time() < end_time:
+            while time.time() < end_time and fixture_id in self.active_interrupts:
                 elapsed_time = time.time() - start_time
                 new_values = interrupt_sequence(elapsed_time)
                 self.dmx_state_manager.update_fixture(fixture_id, new_values, override=True)
@@ -26,10 +30,11 @@ class InterruptHandler:
                 await asyncio.sleep(1 / 44)  # 44Hz update rate
                 step_count += 1
         finally:
-            self.active_interrupts.remove(fixture_id)
+            self.active_interrupts.discard(fixture_id)
 
         logger.info(f"Effect completed for fixture {fixture_id}.")
         logger.debug(f"Completed {step_count} steps for fixture {fixture_id} over {duration} seconds")
+        return True
 
     def interrupt_fixture_sync(self, fixture_id, duration, interrupt_sequence):
         logger.info(f"Starting effect on fixture {fixture_id} for {duration} seconds")
