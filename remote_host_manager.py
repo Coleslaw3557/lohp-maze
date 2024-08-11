@@ -17,7 +17,12 @@ class RemoteHostManager:
         self.client_rooms = {}
         self.prepared_audio = {}
         self.sync_manager = SyncManager()
+        self.audio_sent_to_clients = {}
         logger.info("RemoteHostManager initialized")
+
+    def clear_audio_sent_to_clients(self):
+        self.audio_sent_to_clients.clear()
+        logger.info("Cleared audio sent to clients tracking")
 
     async def prepare_audio_stream(self, room, audio_file, audio_params, effect_name):
         client_ip = self.get_client_ip_by_room(room)
