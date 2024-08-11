@@ -334,11 +334,14 @@ class EffectsManager:
             logger.error(f"Effect {effect_id} not ready for execution")
             return False
 
+        # Execute audio effect first
+        audio_success = await self.remote_host_manager.play_prepared_audio(room)
+        
+        # Add a small delay to allow audio to start playing
+        await asyncio.sleep(0.1)
+        
         # Execute lighting effect
         lighting_success = await self._apply_lighting_effect(room, effect_data)
-        
-        # Execute audio effect
-        audio_success = await self.remote_host_manager.play_prepared_audio(room)
         
         del self.effect_buffer[effect_id]
         
