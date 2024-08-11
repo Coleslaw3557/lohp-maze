@@ -219,13 +219,19 @@ async def run_effect():
         effect_execution_id = f"{effect_id}_{int(time.time())}"
         
         # Notify all clients to prepare for synchronized execution
-        clients_ready = await remote_host_manager.notify_clients_of_execution(effect_execution_id)
+        try:
+            clients_ready = await asyncio.wait_for(
+                remote_host_manager.notify_clients_of_execution(effect_execution_id),
+                timeout=5.0
+            )
+        except asyncio.TimeoutError:
+            return False, "Timeout waiting for clients to be ready"
         
         if not clients_ready:
-            return jsonify({'status': 'error', 'message': 'Not all clients are ready'}), 500
+            return False, "Not all clients are ready"
         
         # Schedule the effect execution
-        asyncio.create_task(schedule_effect_execution(effect_execution_id))
+        asyncio.create_task(self.schedule_effect_execution(effect_execution_id))
         
         return jsonify({'status': 'success', 'message': f'Effect {effect_name} scheduled for room {room}', 'effect_id': effect_id})
     except Exception as e:
