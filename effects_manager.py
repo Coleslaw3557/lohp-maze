@@ -336,6 +336,9 @@ class EffectsManager:
 
     async def _apply_lighting_effect(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
+        if isinstance(room, list):
+            logger.warning(f"Room is a list: {room}. Using the first room.")
+            room = room[0]
         lights = room_layout.get(room, [])
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
         
