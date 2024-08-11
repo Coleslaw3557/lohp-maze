@@ -194,6 +194,9 @@ class RemoteHostManager:
         logger.warning(f"No client IP found for room: {room}")
         return None
 
+    def is_client_connected(self, client):
+        return client in self.connected_clients and self.connected_clients[client].open
+
     async def reconnect_websocket(self, room):
         ip = self.get_ip_by_room(room)
         if ip:
