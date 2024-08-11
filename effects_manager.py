@@ -187,10 +187,14 @@ class EffectsManager:
         # Clear the audio_sent_to_clients dict before applying the effect
         self.remote_host_manager.audio_sent_to_clients.clear()
         
-        tasks = [self.apply_effect_to_room(room, effect_name, effect_data) for room in room_layout.keys()]
+        tasks = []
+        for room in room_layout.keys():
+            task = self.apply_effect_to_room(room, effect_name, effect_data)
+            tasks.append(task)
+        
         results = await asyncio.gather(*tasks)
         
-        success = all(results)
+        success = all(result[0] for result in results)
         if success:
             logger.info(f"{effect_name} effect triggered in all rooms")
         else:

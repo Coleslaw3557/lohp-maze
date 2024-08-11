@@ -160,7 +160,7 @@ class RemoteHostManager:
         try:
             # Check if this client has already received the audio for this effect
             if effect_name in self.audio_sent_to_clients.get(client_ip, set()):
-                logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Skipping.")
+                logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Skipping audio streaming.")
                 return True
 
             audio_data = await self._get_audio_data(audio_file)
@@ -169,24 +169,24 @@ class RemoteHostManager:
 
             file_name = self._get_file_name(audio_file)
 
-            success = await self.send_audio_command(client_ip, 'audio_start', {
+            success = await self.send_audio_command(room, 'audio_start', {
                 'file_name': file_name,
                 'volume': audio_params.get('volume', 1.0),
                 'loop': audio_params.get('loop', False)
             })
             if success:
                 await asyncio.sleep(0.1)  # Add a small delay before sending audio data
-                await self.send_audio_command(client_ip, 'audio_data', audio_data)
-                logger.info(f"Successfully streamed audio to client {client_ip}")
+                await self.send_audio_command(room, 'audio_data', audio_data)
+                logger.info(f"Successfully streamed audio to client {client_ip} for room {room}")
                 if client_ip not in self.audio_sent_to_clients:
                     self.audio_sent_to_clients[client_ip] = set()
                 self.audio_sent_to_clients[client_ip].add(effect_name)
                 return True
             else:
-                logger.error(f"Failed to send audio command to client {client_ip}")
+                logger.error(f"Failed to send audio command to client {client_ip} for room {room}")
                 return False
         except Exception as e:
-            logger.error(f"Error streaming audio to client {client_ip}: {str(e)}")
+            logger.error(f"Error streaming audio to client {client_ip} for room {room}: {str(e)}")
             return False
 
     async def _get_audio_data(self, audio_file):
