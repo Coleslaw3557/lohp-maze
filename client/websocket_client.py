@@ -197,4 +197,28 @@ class WebSocketClient:
 
     async def handle_effect_trigger(self, data):
         logger.info(f"Received effect trigger: {data}")
-        # TODO: Implement effect trigger handling
+        effect_id = data.get('effect_id')
+        execution_time = data.get('execution_time')
+        
+        if effect_id and execution_time:
+            await self.prepare_effect(effect_id)
+            await self.schedule_effect_execution(effect_id, execution_time)
+        else:
+            logger.warning("Received incomplete effect trigger data")
+
+    async def prepare_effect(self, effect_id):
+        # Prepare the effect (e.g., load audio, prepare lighting sequences)
+        logger.info(f"Preparing effect: {effect_id}")
+        # TODO: Implement effect preparation
+
+    async def schedule_effect_execution(self, effect_id, execution_time):
+        current_time = time.time()
+        delay = execution_time - current_time
+        if delay > 0:
+            logger.info(f"Scheduling effect {effect_id} to execute in {delay:.2f} seconds")
+            await asyncio.sleep(delay)
+        await self.execute_effect(effect_id)
+
+    async def execute_effect(self, effect_id):
+        logger.info(f"Executing effect: {effect_id}")
+        # TODO: Implement effect execution
