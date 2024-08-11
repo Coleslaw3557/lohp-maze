@@ -114,10 +114,7 @@ class EffectsManager:
         await asyncio.gather(*tasks)
 
     def get_audio_file(self, effect_name):
-        if effect_name.lower() == 'lightning':
-            audio_file = "audio_files/lightning.mp3"
-        else:
-            audio_file = f"sound-effects/{effect_name.lower()}.mp3"
+        audio_file = f"audio_files/{effect_name.lower()}.mp3"
         if os.path.exists(audio_file):
             logger.info(f"Audio file found for effect '{effect_name}': {audio_file}")
             return audio_file
@@ -322,8 +319,8 @@ class EffectsManager:
             return False
 
         # Execute audio effect first
-        audio_file = effect_data.get('audio_file')
-        audio_params = effect_data.get('audio_params', {})
+        audio_file = self.get_audio_file(effect_name)
+        audio_params = effect_data.get('audio', {})
         audio_success = await self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
         
         # Add a small delay to allow audio to start playing
