@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 from sync_manager import SyncManager
 
 class RemoteHostManager:
-    def __init__(self):
+    def __init__(self, audio_manager=None):
         self.remote_hosts = {}
         self.connected_clients = {}
         self.client_rooms = {}
@@ -20,6 +20,7 @@ class RemoteHostManager:
         self.sync_manager = SyncManager()
         self.audio_sent_to_clients = {}
         self.client_ready_status = {}
+        self.audio_manager = audio_manager
         logger.info("RemoteHostManager initialized")
 
     def clear_audio_sent_to_clients(self):
