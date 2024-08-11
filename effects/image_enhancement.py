@@ -7,6 +7,7 @@ def create_image_enhancement_effect():
     image_enhancement_effect = {
         "duration": 15.0,
         "description": "Quick fade up to orange for image enhancement effect",
+        "audio_file": "image-enhancement.mp3",
         "steps": []
     }
     
