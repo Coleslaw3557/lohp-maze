@@ -28,7 +28,7 @@ class RemoteHostManager:
 
     async def notify_clients_of_execution(self, effect_id, execution_time):
         connected_clients = [client for client in self.connected_clients if self.is_client_connected(client)]
-        self.client_ready_status[effect_id] = {client: False for client in connected_clients}
+        self.client_ready_status[effect_id] = {client: asyncio.Event() for client in connected_clients}
         
         # Step 1: Send prepare message with execution time
         prepare_message = {
@@ -38,16 +38,17 @@ class RemoteHostManager:
         }
         await self.broadcast_message(prepare_message)
         
-        # Wait for all connected clients to be ready or timeout after 10 seconds
-        start_time = time.time()
-        while not all(self.client_ready_status[effect_id].values()):
-            if time.time() - start_time > 10:
-                logger.warning("Timeout waiting for connected clients to be ready")
-                return False
-            await asyncio.sleep(0.1)
-        
-        logger.info(f"All clients ready for effect {effect_id}")
-        return True
+        # Wait for all connected clients to be ready or timeout after 5 seconds
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*(event.wait() for event in self.client_ready_status[effect_id].values())),
+                timeout=5.0
+            )
+            logger.info(f"All clients ready for effect {effect_id}")
+            return True
+        except asyncio.TimeoutError:
+            logger.warning("Timeout waiting for connected clients to be ready")
+            return False
 
     def is_client_connected(self, client):
         return client in self.connected_clients and self.connected_clients[client].open
@@ -58,7 +59,7 @@ class RemoteHostManager:
 
     def set_client_ready(self, effect_id, client_ip):
         if effect_id in self.client_ready_status and client_ip in self.client_ready_status[effect_id]:
-            self.client_ready_status[effect_id][client_ip] = True
+            self.client_ready_status[effect_id][client_ip].set()
             logger.info(f"Client {client_ip} ready for effect {effect_id}")
         else:
             logger.warning(f"Received ready status for unknown client {client_ip} or effect {effect_id}")
