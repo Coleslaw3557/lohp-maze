@@ -3,7 +3,7 @@ import logging
 import asyncio
 import json
 import websockets
-from quart import Quart, request, jsonify, Response
+from quart import Quart, request, jsonify, Response, send_from_directory
 from quart_cors import cors
 from werkzeug.urls import uri_to_iri, iri_to_uri
 from dmx_state_manager import DMXStateManager
@@ -352,6 +352,11 @@ async def run_effect_all_rooms():
     except Exception as e:
         logger.exception(f"Error triggering {effect_name} effect in all rooms")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/audio/<path:filename>')
+async def serve_audio(filename):
+    audio_dir = os.path.join(os.path.dirname(__file__), 'audio_files')
+    return await send_from_directory(audio_dir, filename)
 
 if __name__ == '__main__':
     import asyncio
