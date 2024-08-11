@@ -16,6 +16,7 @@ class WebSocketClient:
         self.trigger_manager = trigger_manager
         self.sync_manager = sync_manager
         self.websocket = None
+        self.time_offset = 0  # Time offset between client and server
 
     async def set_websocket(self, websocket):
         self.websocket = websocket
@@ -159,7 +160,7 @@ class WebSocketClient:
 
     async def handle_prepare_execution(self, message):
         effect_id = message['effect_id']
-        execution_time = message['execution_time']
+        server_execution_time = message['execution_time']
         
         # Prepare for execution (e.g., load audio, prepare lighting sequences)
         await self.prepare_effect(effect_id)
@@ -172,9 +173,12 @@ class WebSocketClient:
         await self.send_message(ready_message)
         logger.info(f"Sent client_ready message: {ready_message}")
         
-        # Add a small buffer time (e.g., 100ms) to account for network latency and processing differences
-        buffer_time = 0.1
-        adjusted_execution_time = execution_time + buffer_time
+        # Calculate the local execution time
+        local_execution_time = server_execution_time - self.time_offset
+        
+        # Add a small buffer time (e.g., 50ms) to account for processing differences
+        buffer_time = 0.05
+        adjusted_execution_time = local_execution_time + buffer_time
         
         # Wait for adjusted execution time
         await self.wait_for_execution(adjusted_execution_time)
@@ -212,7 +216,10 @@ class WebSocketClient:
     async def handle_sync_time(self, message):
         server_time = message.get('server_time')
         if server_time is not None:
+            client_time = time.time()
+            self.time_offset = server_time - client_time
             self.sync_manager.sync_time(server_time)
+            logger.info(f"Time synchronized. Offset: {self.time_offset:.6f} seconds")
         else:
             logger.warning("Received sync_time message without server_time")
 
