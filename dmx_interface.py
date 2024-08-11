@@ -45,7 +45,7 @@ class DMXOutputManager(threading.Thread):
     def send_dmx_data(self):
         try:
             state = self.dmx_state_manager.get_full_state()
-            self.data[1:] = bytearray(state)
+            self.data[1:] = bytearray(self._constrain_dmx_values(state))
             self.port.set_break(True)
             time.sleep(self.BREAK_TIME)
             self.port.set_break(False)
@@ -56,9 +56,12 @@ class DMXOutputManager(threading.Thread):
             logger.error(f"Error sending DMX frame: {str(e)}", exc_info=True)
             self._handle_port_error()
 
+    def _constrain_dmx_values(self, values):
+        return [max(0, min(255, int(value))) for value in values]
+
     def _handle_port_error(self):
-        if not self.port.is_open:
-            logger.error("DMX port is closed. Attempting to reopen.")
+        if not self.port.is_connected:
+            logger.error("DMX port is not connected. Attempting to reopen.")
             try:
                 self._initialize_port()
             except Exception as e:
@@ -66,7 +69,6 @@ class DMXOutputManager(threading.Thread):
 
     def stop(self):
         self.running = False
-
 
     def __del__(self):
         self.stop()
