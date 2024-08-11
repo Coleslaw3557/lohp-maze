@@ -221,9 +221,10 @@ async def run_effect():
         if success:
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}', 'effect_id': effect_id})
         else:
+            logger.error(f"Failed to execute effect {effect_name} in room {room}")
             return jsonify({'status': 'error', 'message': f'Failed to execute effect {effect_name} in room {room}'}), 500
     except Exception as e:
-        error_message = f"Error scheduling effect {effect_name} for room {room}: {str(e)}"
+        error_message = f"Error executing effect {effect_name} for room {room}: {str(e)}"
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
 

@@ -438,36 +438,45 @@ class EffectsManager:
         effect_name = effect['effect_name']
         effect_data = effect['effect_data']
 
-        # Execute audio effect for all rooms simultaneously
-        audio_file = self.get_audio_file(effect_name)
-        audio_params = effect_data.get('audio', {})
-        if audio_file:
-            audio_task = self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
-        else:
-            logger.warning(f"No audio file found for effect {effect_name}. Skipping audio playback.")
-            audio_task = asyncio.create_task(asyncio.sleep(0))  # Dummy task if no audio file
+        try:
+            # Execute audio effect for all rooms simultaneously
+            audio_file = self.get_audio_file(effect_name)
+            audio_params = effect_data.get('audio', {})
+            if audio_file:
+                audio_task = self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
+            else:
+                logger.warning(f"No audio file found for effect {effect_name}. Skipping audio playback.")
+                audio_task = asyncio.create_task(asyncio.sleep(0))  # Dummy task if no audio file
 
-        # Execute lighting effect for all rooms simultaneously using the interrupt system
-        lighting_tasks = []
-        for room in rooms:
-            room_layout = self.light_config_manager.get_room_layout()
-            lights = room_layout.get(room, [])
-            fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
-            for fixture_id in fixture_ids:
-                lighting_tasks.append(self.interrupt_handler.interrupt_fixture(
-                    fixture_id,
-                    effect_data['duration'],
-                    get_effect_step_values(effect_data)
-                ))
+            # Execute lighting effect for all rooms simultaneously using the interrupt system
+            lighting_tasks = []
+            for room in rooms:
+                room_layout = self.light_config_manager.get_room_layout()
+                lights = room_layout.get(room, [])
+                fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+                for fixture_id in fixture_ids:
+                    lighting_tasks.append(self.interrupt_handler.interrupt_fixture(
+                        fixture_id,
+                        effect_data['duration'],
+                        get_effect_step_values(effect_data)
+                    ))
 
-        # Run all tasks concurrently
-        results = await asyncio.gather(audio_task, *lighting_tasks, return_exceptions=True)
-        
-        success = all(isinstance(result, bool) and result for result in results)
+            # Run all tasks concurrently
+            results = await asyncio.gather(audio_task, *lighting_tasks, return_exceptions=True)
+            
+            success = all(not isinstance(result, Exception) for result in results)
 
-        del self.effect_buffer[effect_id]
+            if not success:
+                for result in results:
+                    if isinstance(result, Exception):
+                        logger.error(f"Error during effect execution: {str(result)}")
 
-        return success
+            del self.effect_buffer[effect_id]
+
+            return success
+        except Exception as e:
+            logger.error(f"Unexpected error during effect execution: {str(e)}", exc_info=True)
+            return False
 
     async def _apply_lighting_effect(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
