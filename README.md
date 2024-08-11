@@ -1,209 +1,125 @@
-# Legends of the Hidden Playa - Maze Control System
+# LoHP-MazeManager Control System
 
-## Overview
+## Project Overview
 
-This project is the control system for the interactive art maze of the Burning Man camp "Legends of the Hidden Playa". It manages the lighting and effects throughout the maze, providing a dynamic and immersive experience for participants.
+The LoHP-MazeManager Control System is a sophisticated lighting and audio control system designed for interactive maze environments. It consists of a central server application and distributed client applications running on Raspberry Pi units throughout the maze.
+
+### Key Features:
+
+1. Centralized control of lighting effects and audio playback
+2. Real-time synchronization of effects across multiple rooms
+3. Theme-based ambient lighting with smooth transitions
+4. Trigger-based effect activation
+5. WebSocket-based communication between server and clients
+6. DMX512 protocol support for lighting control
+7. Customizable effects and themes
 
 ## System Architecture
 
-The system consists of several key components:
+### Server Application
 
-1. **Quart Web Application**: The main control interface and backend logic, using asynchronous programming.
-2. **DMX Interface**: Manages communication with the lighting fixtures.
-3. **Light Configuration Manager**: Handles the setup and management of light models and room layouts.
-4. **Effects Manager**: Controls the creation and execution of lighting effects and themes.
-5. **Interrupt Handler**: Manages interruptions for specific fixtures and coordinates transitions.
-6. **DMX State Manager**: Maintains the current state of all DMX channels and provides thread-safe access.
-7. **Theme Manager**: Manages and applies continuous theme effects across all rooms.
+The server application is the central control unit of the system. It manages the overall state of the maze, coordinates effects across rooms, and communicates with client units.
 
-### Hardware Setup
+Key components:
+- DMX State Manager: Manages the state of all DMX fixtures
+- Effects Manager: Handles the creation and execution of lighting effects
+- Theme Manager: Manages ambient lighting themes
+- Remote Host Manager: Coordinates communication with client units
+- WebSocket Handler: Manages real-time communication with clients
 
-- **DMX Interface**: FTDI-based USB to DMX adapter
-- **Lighting**: Various DMX-controlled LED fixtures (see `light_config.json` for specific models)
+### Client Application
 
-## Software Components
+The client application runs on Raspberry Pi units distributed throughout the maze. It handles local audio playback, monitors triggers, and executes lighting commands received from the server.
 
-### 1. Quart Web Application (`main.py`)
-
-The core of the control system, providing:
-- RESTful API endpoints for real-time control
-- Integration of all other components
-- Asynchronous request handling
-
-Key features:
-- Dynamic theme management
-- Real-time effect testing
-- Master brightness control
-- Interrupt system for specific fixture control
-
-### 2. DMX Interface (`dmx_interface.py`)
-
-Handles low-level communication with DMX fixtures:
-- Uses pyftdi for FTDI chip communication
-- Implements DMX512 protocol timing
-- Provides thread-safe operations for concurrent access
-
-Technical specs:
-- DMX refresh rate: 44Hz (fixed as per DMX512 standard)
-- 512 DMX channels supported
-- Automatic error recovery and port management
-
-### 3. Light Configuration Manager (`light_config_manager.py`)
-
-Manages the physical layout and configuration of lights:
-- JSON-based configuration storage (`light_config.json`)
-- Dynamic management of room layouts and light models
-- Provides an abstraction layer between logical rooms and physical DMX addresses
-
-### 4. Effects Manager (`effects_manager.py`)
-
-Handles the creation, storage, and execution of lighting effects and themes:
-- JSON-based effect and theme storage
-- Real-time theme generation and execution
-- Supports complex, multi-room lighting sequences
-- Integrates with the Interrupt Handler for seamless effect transitions
-- Implements master brightness control
-- Supports both asynchronous and synchronous effect execution
-
-### 5. Interrupt Handler (`interrupt_handler.py`)
-
-Manages interruptions for specific fixtures:
-- Coordinates transitions between main sequence and interrupted states
-- Allows for precise control of individual fixtures during effects
-- Supports both asynchronous and synchronous interruption methods
-
-### 6. DMX State Manager (`dmx_state_manager.py`)
-
-Maintains the current state of all DMX channels:
-- Provides thread-safe access to channel values
-- Implements locking mechanism to prevent race conditions
-
-### 7. Theme Manager (`theme_manager.py`)
-
-Manages and applies continuous theme effects:
-- Supports multiple themes (e.g., Ocean, Jungle, MazeMadness)
-- Generates dynamic color changes based on theme parameters
-- Allows for smooth transitions between themes
-
-## Key Files
-
-- `main.py`: Main Quart application and control logic
-- `dmx_interface.py`: DMX communication layer
-- `light_config_manager.py`: Light and room configuration management
-- `effects_manager.py`: Effect and theme management
-- `interrupt_handler.py`: Manages fixture interruptions
-- `dmx_state_manager.py`: Maintains DMX channel states
-- `theme_manager.py`: Manages continuous theme effects
-- `light_config.json`: Configuration file for light models and room layouts
+Key components:
+- WebSocket Client: Maintains connection with the server
+- Audio Manager: Handles local audio playback and caching
+- Trigger Manager: Monitors GPIO pins for trigger events
 
 ## Setup and Installation
 
-1. Install dependencies: `pip install -r requirements.txt`
-2. Configure `light_config.json` with your specific light models and room layout
-3. Run the application: `python main.py`
+### Server Setup
 
-## Usage
+1. Clone the repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Configure `light_config.json` with your DMX fixture layout
+4. Run the server: `python main.py`
 
-Access the API endpoints at `http://localhost:5000`
+### Client Setup
 
-Key functionalities:
-- Effects: Create and trigger lighting effects (both asynchronously and synchronously)
-- Themes: Set and control overarching lighting themes
-- Test Mode: Real-time testing of individual fixtures and effects
-- Synchronous Effect Execution: Run effects in a blocking manner for precise timing control
+1. Copy the `client/` folder to your Raspberry Pi
+2. Install dependencies: `pip install -r client/requirements.txt`
+3. Configure `client/config.json` with server IP and associated rooms
+4. Run the client: `python client/main.py`
 
-### API Examples
+## Adding New Effects
 
-For a comprehensive list of API examples, please refer to the `api-examples.md` file in the project root directory. This file contains detailed examples of how to use each API endpoint, including:
+To add a new effect:
 
-- Retrieving room layouts
-- Listing available effects and themes
-- Setting themes
-- Running effects in specific rooms
-- Adjusting master brightness
-- Triggering special effects like lightning
+1. Create a new Python file in the `effects/` directory (e.g., `new_effect.py`)
+2. Define a function that returns a dictionary with the effect configuration:
 
-To view the API examples:
-
-```bash
-cat api-examples.md
+```python
+def create_new_effect():
+    return {
+        "duration": 5.0,
+        "description": "Description of the new effect",
+        "steps": [
+            {"time": 0.0, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0}},
+            {"time": 2.5, "channels": {"total_dimming": 255, "r_dimming": 255, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0}},
+            {"time": 5.0, "channels": {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0, "w_dimming": 0}}
+        ]
+    }
 ```
 
-For the most up-to-date API documentation, always refer to the `api-examples.md` file.
+3. Import the new effect in `effects/__init__.py`
+4. Add the effect to the `initialize_effects()` method in `effects_manager.py`
 
-### Adding New Effects
+## Adding New Themes
 
-For instructions on how to add new effects to the system, please refer to the `adding_new_effects.md` file. This document provides a step-by-step guide on creating and integrating new lighting effects into the LoHP-MazeManager Control System.
+To add a new theme:
 
-### Docker Usage
+1. Open `theme_manager.py`
+2. Add a new theme configuration to the `load_themes()` method:
 
-To run the application using Docker:
-
-1. Ensure Docker and Docker Compose are installed on your system.
-2. Navigate to the project root directory.
-3. Build and start the containers:
-
-```bash
-docker-compose up --build
+```python
+"NewTheme": {
+    "duration": 300,
+    "transition_speed": 0.05,
+    "color_variation": 0.8,
+    "intensity_fluctuation": 0.3,
+    "overall_brightness": 0.7,
+    "room_transition_speed": 0.02,
+    "color_wheel_speed": 0.08
+}
 ```
 
-This will start the application and make it accessible at `http://localhost:5000`.
-
-## Technical Considerations
-
-- The system uses a fixed 44Hz update rate for DMX communication to ensure smooth transitions and effects.
-- Asynchronous programming is used throughout to handle concurrent operations efficiently.
-- The Effects Manager uses a sophisticated algorithm to generate dynamic themes based on parameters like color variation, intensity fluctuation, and overall brightness.
-- The Interrupt Handler allows for precise control of individual fixtures without disrupting the overall lighting sequence, supporting both asynchronous and synchronous interruption methods.
-- Error handling and logging are implemented at multiple levels for robust operation and debugging.
-- Master brightness control affects all lighting outputs, allowing for global intensity adjustment without altering individual effect or theme designs.
+3. Adjust the parameters to create the desired ambient lighting effect
 
 ## API Endpoints
 
-- `GET /api/rooms`: Get all configured rooms
-- `GET /api/effects_details`: Get detailed information about all available effects
-- `GET /api/effects_list`: Get a simple list of all available effects
+The server provides several API endpoints for control and monitoring:
+
+- `GET /api/rooms`: Get all rooms in the maze
+- `GET /api/effects`: Get all available effects
 - `GET /api/themes`: Get all available themes
-- `GET /api/light_models`: Get all configured light models
 - `POST /api/set_theme`: Set the current theme
 - `POST /api/run_effect`: Run an effect in a specific room
-- `POST /api/set_master_brightness`: Set the master brightness
-- `POST /api/run_test`: Run a channel or effect test
-- `POST /api/stop_test`: Stop the current test and reset lights
-- `POST /api/run_effect_all_rooms`: Run an effect in all rooms
+- `POST /api/set_master_brightness`: Set the master brightness for all lights
 
-For detailed API usage, refer to the `api-examples.md` file.
-
-## Testing
-
-1. Use the `test_api.py` script to run automated tests:
-   ```
-   python test_api.py
-   ```
-
-2. Use the web interface (if available) to manually test effects and themes.
+For full API documentation, refer to the `api-examples.md` file.
 
 ## Troubleshooting
 
-- Check the logs for detailed error messages.
-- Ensure the FTDI device is properly connected and recognized by the system.
-- Verify that the DMX addresses in `light_config.json` match your physical setup.
-- If effects are not working as expected, double-check the effect definitions in the `EffectsManager`.
+- Check the server and client logs for error messages
+- Ensure all Raspberry Pi units are connected to the same network as the server
+- Verify that the correct IP addresses and port numbers are configured in `client/config.json`
+- Check that all DMX fixtures are properly connected and addressed according to `light_config.json`
 
-For more detailed information about the system design, refer to `dmx-controller-design-spec.md` and `dmx-controller-design-spec-additional-info.md`.
+## Contributing
 
-## Adding and Maintaining Effects
+Contributions to the LoHP-MazeManager Control System are welcome! Please submit pull requests with any enhancements, bug fixes, or documentation improvements.
 
-For detailed instructions on how to add new effects or maintain existing ones, please refer to the `adding_new_effects.md` file in the project root directory. This file contains step-by-step guidelines for:
+## License
 
-- Creating new effects
-- Updating existing effects
-- Best practices for effect management
-
-To view the instructions:
-
-```bash
-cat adding_new_effects.md
-```
-
-Always refer to this document when working with effects to ensure consistency and proper integration with the system.
+This project is licensed under the MIT License. See the LICENSE file for details.
