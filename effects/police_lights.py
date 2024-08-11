@@ -6,6 +6,7 @@ def create_police_lights_effect():
     police_lights_effect = {
         "duration": 15.0,
         "description": "Alternating red and blue flashes simulating police lights",
+        "audio_file": "policelights.mp3",
         "steps": []
     }
     for i in range(15):  # 15 cycles to fill 15 seconds
