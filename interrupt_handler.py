@@ -8,7 +8,7 @@ class InterruptHandler:
     def __init__(self, dmx_state_manager, theme_manager):
         self.dmx_state_manager = dmx_state_manager
         self.theme_manager = theme_manager
-        self.active_interrupts = set()
+        self.active_interrupts = {}
 
     async def interrupt_fixture(self, fixture_id, duration, interrupt_sequence):
         logger.info(f"Starting effect on fixture {fixture_id} for {duration} seconds")
@@ -56,7 +56,7 @@ class InterruptHandler:
     def interrupt_fixture_sync(self, fixture_id, duration, interrupt_sequence):
         logger.info(f"Starting effect on fixture {fixture_id} for {duration} seconds")
         
-        self.active_interrupts.add(fixture_id)
+        self.active_interrupts[fixture_id] = {'active': True}
         start_time = time.time()
         end_time = start_time + duration
         step_count = 0
@@ -69,7 +69,8 @@ class InterruptHandler:
                 time.sleep(1 / 44)  # 44Hz update rate
                 step_count += 1
         finally:
-            self.active_interrupts.remove(fixture_id)
+            if fixture_id in self.active_interrupts:
+                del self.active_interrupts[fixture_id]
 
         logger.info(f"Effect completed for fixture {fixture_id}.")
         logger.debug(f"Completed {step_count} steps for fixture {fixture_id} over {duration} seconds")
