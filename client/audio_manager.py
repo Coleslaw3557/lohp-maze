@@ -10,6 +10,7 @@ import math
 import aiohttp
 import simpleaudio as sa
 import time
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class AudioManager:
         ]
         self.current_effect_audio = None
         self.preloaded_audio = {}
+        self.glitch_intensity = 0.0
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
@@ -242,6 +244,34 @@ class AudioManager:
             self._wait_for_completion(play_obj)
         play_obj.stop()
         self.current_audio = None
+
+    def apply_glitch_effect(self, audio):
+        if self.glitch_intensity == 0:
+            return audio
+
+        glitched_audio = AudioSegment.empty()
+        segment_length = 50  # ms
+        for i in range(0, len(audio), segment_length):
+            segment = audio[i:i+segment_length]
+            if random.random() < self.glitch_intensity:
+                # Apply random glitch effects
+                effect = random.choice(['reverse', 'repeat', 'silence', 'pitch_shift'])
+                if effect == 'reverse':
+                    segment = segment.reverse()
+                elif effect == 'repeat':
+                    segment = segment * 2
+                elif effect == 'silence':
+                    segment = AudioSegment.silent(duration=segment_length)
+                elif effect == 'pitch_shift':
+                    octaves = random.uniform(-1, 1)
+                    new_sample_rate = int(segment.frame_rate * (2.0 ** octaves))
+                    segment = segment._spawn(segment.raw_data, overrides={'frame_rate': new_sample_rate})
+            glitched_audio += segment
+
+        return glitched_audio
+
+    def set_glitch_intensity(self, intensity):
+        self.glitch_intensity = max(0.0, min(1.0, intensity))
 
     async def cache_audio(self, file_name, audio_data):
         file_path = os.path.join(self.cache_dir, file_name)
