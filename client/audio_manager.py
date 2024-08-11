@@ -57,6 +57,10 @@ class AudioManager:
             return False
 
     async def download_audio(self, file_name):
+        # Remove 'audio_files/' prefix if present
+        if file_name.startswith('audio_files/'):
+            file_name = file_name[len('audio_files/'):]
+        
         server_url = f"http://{self.config.get('server_ip')}:5000/api/audio/{file_name}"
         max_retries = 3
         retry_delay = 5
@@ -68,7 +72,7 @@ class AudioManager:
                     async with session.get(server_url) as response:
                         if response.status == 200:
                             content = await response.read()
-                            full_path = os.path.join(self.cache_dir, file_name)
+                            full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
                             os.makedirs(os.path.dirname(full_path), exist_ok=True)
                             async with aiofiles.open(full_path, 'wb') as f:
                                 await f.write(content)
