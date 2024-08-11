@@ -472,14 +472,8 @@ class EffectsManager:
             for room in rooms:
                 await self.stop_effect_in_room(room)
 
-            # Execute audio effect for all rooms simultaneously
-            audio_file = self.get_audio_file(effect_name)
-            audio_params = effect_data.get('audio', {})
-            if audio_file:
-                audio_task = self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
-            else:
-                logger.warning(f"No audio file found for effect {effect_name}. Skipping audio playback.")
-                audio_task = asyncio.create_task(asyncio.sleep(0))  # Dummy task if no audio file
+            # Execute audio effect for all rooms
+            audio_tasks = [self._apply_audio_effect(room, effect_name) for room in rooms]
 
             # Execute lighting effect for all rooms simultaneously using the interrupt system
             lighting_tasks = []
@@ -495,7 +489,7 @@ class EffectsManager:
                     ))
 
             # Run all tasks concurrently
-            results = await asyncio.gather(audio_task, *lighting_tasks, return_exceptions=True)
+            results = await asyncio.gather(*audio_tasks, *lighting_tasks, return_exceptions=True)
             
             success = all(not isinstance(result, Exception) for result in results)
 
