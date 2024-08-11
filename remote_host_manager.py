@@ -68,23 +68,35 @@ class RemoteHostManager:
                 logger.info(f"No audio file specified for effect: {effect_name}. Skipping audio playback for this room.")
                 continue
 
-            # Always send the audio file, regardless of whether it's been sent before
-            tasks.append(self.send_audio_command(room, 'audio_start', {
-                'file_name': os.path.basename(audio_file),
-                'effect_name': effect_name,
-                'volume': audio_params.get('volume', 1.0),
-                'loop': audio_params.get('loop', False)
-            }))
+            # Check if this client has already received the audio for this effect
+            if client_ip not in self.audio_sent_to_clients:
+                self.audio_sent_to_clients[client_ip] = set()
+            
+            if effect_name in self.audio_sent_to_clients[client_ip]:
+                logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Instructing client to play cached audio.")
+                tasks.append(self.send_audio_command(room, 'play_cached_audio', {
+                    'effect_name': effect_name,
+                    'volume': audio_params.get('volume', 1.0),
+                    'loop': audio_params.get('loop', False)
+                }))
+            else:
+                # Send the audio file if it hasn't been sent before
+                tasks.append(self.send_audio_command(room, 'audio_start', {
+                    'file_name': os.path.basename(audio_file),
+                    'effect_name': effect_name,
+                    'volume': audio_params.get('volume', 1.0),
+                    'loop': audio_params.get('loop', False)
+                }))
 
         if tasks:
             results = await asyncio.gather(*tasks, return_exceptions=True)
             success = all(isinstance(result, bool) and result for result in results)
 
             if success:
-                # Send the actual audio data
+                # Send the actual audio data only to clients that haven't received it
                 for room in rooms:
                     client_ip = self.get_client_ip_by_room(room)
-                    if client_ip:
+                    if client_ip and effect_name not in self.audio_sent_to_clients[client_ip]:
                         websocket = self.connected_clients.get(client_ip)
                         if websocket:
                             try:
@@ -92,6 +104,7 @@ class RemoteHostManager:
                                     audio_data = f.read()
                                 await websocket.send(audio_data)
                                 logger.info(f"Successfully streamed audio data to client {client_ip} for room {room}")
+                                self.audio_sent_to_clients[client_ip].add(effect_name)
                             except Exception as e:
                                 logger.error(f"Failed to send audio data to client {client_ip} for room {room}: {str(e)}")
                                 success = False
