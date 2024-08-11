@@ -299,21 +299,26 @@ class EffectsManager:
 
     async def prepare_effect(self, effect_id):
         effect = self.effect_buffer[effect_id]
-        room, effect_name, effect_data = effect['room'], effect['effect_name'], effect['effect_data']
+        rooms, effect_name, effect_data = effect['room'], effect['effect_name'], effect['effect_data']
+        
+        # Ensure rooms is always a list
+        if not isinstance(rooms, list):
+            rooms = [rooms]
         
         # Prepare lighting effect
         room_layout = self.light_config_manager.get_room_layout()
-        lights = room_layout.get(room, [])
-        fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+        for room in rooms:
+            lights = room_layout.get(room, [])
+            fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
         
-        # Prepare audio effect
-        audio_file = self.get_audio_file(effect_name)
-        if audio_file:
-            audio_params = effect_data.get('audio', {})
-            await self.remote_host_manager.prepare_audio_stream(room, audio_file, audio_params, effect_name)
+            # Prepare audio effect
+            audio_file = self.get_audio_file(effect_name)
+            if audio_file:
+                audio_params = effect_data.get('audio', {})
+                await self.remote_host_manager.prepare_audio_stream(room, audio_file, audio_params, effect_name)
         
         effect['ready'] = True
-        logger.info(f"Effect {effect_id} prepared for room {room}")
+        logger.info(f"Effect {effect_id} prepared for rooms {rooms}")
 
     async def execute_effect(self, effect_id):
         effect = self.effect_buffer[effect_id]
