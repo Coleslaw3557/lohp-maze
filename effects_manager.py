@@ -322,22 +322,29 @@ class EffectsManager:
 
     async def execute_effect(self, effect_id):
         effect = self.effect_buffer[effect_id]
-        room, effect_name, effect_data = effect['room'], effect['effect_name'], effect['effect_data']
+        rooms, effect_name, effect_data = effect['room'], effect['effect_name'], effect['effect_data']
         
         if not effect['ready']:
             logger.error(f"Effect {effect_id} not ready for execution")
             return False
 
+        # Ensure rooms is always a list
+        if not isinstance(rooms, list):
+            rooms = [rooms]
+
         # Execute audio effect first
         audio_file = self.get_audio_file(effect_name)
         audio_params = effect_data.get('audio', {})
-        audio_success = await self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
+        audio_success = await self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
         
         # Add a small delay to allow audio to start playing
         await asyncio.sleep(0.1)
         
-        # Execute lighting effect
-        lighting_success = await self._apply_lighting_effect(room, effect_data)
+        # Execute lighting effect for all rooms
+        lighting_success = True
+        for room in rooms:
+            room_lighting_success = await self._apply_lighting_effect(room, effect_data)
+            lighting_success = lighting_success and room_lighting_success
         
         del self.effect_buffer[effect_id]
         
@@ -345,10 +352,11 @@ class EffectsManager:
 
     async def _apply_lighting_effect(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
-        if isinstance(room, list):
-            logger.warning(f"Room is a list: {room}. Using the first room.")
-            room = room[0]
         lights = room_layout.get(room, [])
+        if not lights:
+            logger.warning(f"No lights found for room: {room}")
+            return True  # Return True to not fail the overall effect
+
         fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
         
         lighting_tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
