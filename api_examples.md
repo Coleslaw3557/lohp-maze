@@ -62,6 +62,14 @@ curl -X POST http://192.168.1.238:5000/api/set_theme \
      -d '{"next_theme": true}'
 ```
 
+## Increment to Next Theme
+
+Increments to the next theme in the list.
+
+```bash
+curl -X POST http://192.168.1.238:5000/api/set_next_theme
+```
+
 ## Turn Off Theme
 
 Turns off the current theme.
