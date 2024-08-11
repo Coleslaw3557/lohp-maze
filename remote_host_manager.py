@@ -162,6 +162,22 @@ class RemoteHostManager:
         logger.info(f"Updated associated rooms for client {unit_name} ({client_ip}): {rooms}")
         for room in rooms:
             logger.info(f"Associating room {room} with client {unit_name} ({client_ip})")
+        
+        # Send the list of audio files to download
+        self.send_audio_files_to_download(client_ip)
+
+    def send_audio_files_to_download(self, client_ip):
+        audio_files = self.audio_manager.get_audio_files_to_download()
+        message = {
+            "type": "audio_files_to_download",
+            "data": audio_files
+        }
+        websocket = self.connected_clients.get(client_ip)
+        if websocket:
+            asyncio.create_task(websocket.send(json.dumps(message)))
+            logger.info(f"Sent list of audio files to download to client {client_ip}")
+        else:
+            logger.error(f"No WebSocket connection found for client {client_ip}")
 
     def get_client_ip_by_room(self, room):
         if isinstance(room, list):

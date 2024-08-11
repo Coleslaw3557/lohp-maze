@@ -36,6 +36,21 @@ class AudioManager:
         
         self.save_config()  # Save the updated configuration
 
+    def get_audio_files_to_download(self):
+        """
+        Returns a list of audio files that should be downloaded by the client.
+        """
+        audio_files = []
+        for effect, config in self.audio_config['effects'].items():
+            audio_file = config.get('audio_file')
+            if audio_file:
+                full_path = os.path.join(self.audio_dir, audio_file)
+                if os.path.exists(full_path):
+                    audio_files.append(audio_file)
+                else:
+                    logger.warning(f"Audio file not found for effect {effect}: {full_path}")
+        return audio_files
+
     def load_config(self):
         try:
             with open(self.config_file, 'r') as f:
