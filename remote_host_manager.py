@@ -87,6 +87,8 @@ class RemoteHostManager:
                     'volume': audio_params.get('volume', 1.0),
                     'loop': audio_params.get('loop', False)
                 }))
+                # Mark the audio as sent immediately to prevent duplicate sends
+                self.audio_sent_to_clients[client_ip].add(effect_name)
 
         if tasks:
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -96,18 +98,16 @@ class RemoteHostManager:
                 # Send the actual audio data only to clients that haven't received it
                 for room in rooms:
                     client_ip = self.get_client_ip_by_room(room)
-                    if client_ip and effect_name not in self.audio_sent_to_clients[client_ip]:
-                        websocket = self.connected_clients.get(client_ip)
-                        if websocket:
-                            try:
-                                with open(audio_file, 'rb') as f:
-                                    audio_data = f.read()
-                                await websocket.send(audio_data)
-                                logger.info(f"Successfully streamed audio data to client {client_ip} for room {room}")
-                                self.audio_sent_to_clients[client_ip].add(effect_name)
-                            except Exception as e:
-                                logger.error(f"Failed to send audio data to client {client_ip} for room {room}: {str(e)}")
-                                success = False
+                    websocket = self.connected_clients.get(client_ip)
+                    if websocket and audio_file:
+                        try:
+                            with open(audio_file, 'rb') as f:
+                                audio_data = f.read()
+                            await websocket.send(audio_data)
+                            logger.info(f"Successfully streamed audio data to client {client_ip} for room {room}")
+                        except Exception as e:
+                            logger.error(f"Failed to send audio data to client {client_ip} for room {room}: {str(e)}")
+                            success = False
 
             return success
         else:
