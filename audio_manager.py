@@ -1,8 +1,10 @@
 import json
 import logging
 import os
+import warnings
 from pydub import AudioSegment
 
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work")
 logger = logging.getLogger(__name__)
 
 class AudioManager:
