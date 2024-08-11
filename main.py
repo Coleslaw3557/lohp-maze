@@ -206,10 +206,13 @@ async def run_effect():
         await effects_manager.prepare_effect(effect_id)
         
         # Synchronize execution time
-        execution_time = time.time() + 1  # Schedule execution 1 second in the future
+        execution_time = time.time() + 3  # Schedule execution 3 seconds in the future
         
         # Notify all clients to prepare for synchronized execution
-        await remote_host_manager.notify_clients_of_execution(execution_time)
+        clients_ready = await remote_host_manager.notify_clients_of_execution(effect_id, execution_time)
+        
+        if not clients_ready:
+            return jsonify({'status': 'error', 'message': 'Not all clients are ready'}), 500
         
         # Schedule the effect execution
         asyncio.create_task(schedule_effect_execution(effect_id, execution_time))

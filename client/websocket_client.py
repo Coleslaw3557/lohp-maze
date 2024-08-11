@@ -142,7 +142,8 @@ class WebSocketClient:
             'connection_response': self.handle_connection_response,
             'status_update_response': self.handle_status_update_response,
             'prepare_audio': self.handle_prepare_audio,
-            'play_audio': self.handle_play_audio
+            'play_audio': self.handle_play_audio,
+            'prepare_execution': self.handle_prepare_execution
         }
 
         message_type = message.get('type')
@@ -155,6 +156,32 @@ class WebSocketClient:
             logger.warning("Received message without 'type' field")
         else:
             logger.warning(f"Unknown message type received: {message_type}")
+
+    async def handle_prepare_execution(self, message):
+        effect_id = message['effect_id']
+        execution_time = message['execution_time']
+        
+        # Prepare for execution (e.g., load audio, prepare lighting sequences)
+        await self.prepare_effect(effect_id)
+        
+        # Send ready signal
+        await self.send_message({
+            "type": "client_ready",
+            "effect_id": effect_id
+        })
+        
+        # Wait for execution time
+        await self.wait_for_execution(execution_time)
+
+    async def prepare_effect(self, effect_id):
+        # Implement effect preparation logic here
+        pass
+
+    async def wait_for_execution(self, execution_time):
+        current_time = time.time()
+        wait_time = execution_time - current_time
+        if wait_time > 0:
+            await asyncio.sleep(wait_time)
 
     async def handle_prepare_audio(self, message):
         audio_data = message.get('data', {})

@@ -18,11 +18,40 @@ class RemoteHostManager:
         self.prepared_audio = {}
         self.sync_manager = SyncManager()
         self.audio_sent_to_clients = {}
+        self.client_ready_status = {}
         logger.info("RemoteHostManager initialized")
 
     def clear_audio_sent_to_clients(self):
         self.audio_sent_to_clients.clear()
         logger.info("Cleared audio sent to clients tracking")
+
+    async def notify_clients_of_execution(self, effect_id, execution_time):
+        self.client_ready_status[effect_id] = {client: False for client in self.connected_clients}
+        message = {
+            "type": "prepare_execution",
+            "effect_id": effect_id,
+            "execution_time": execution_time
+        }
+        await self.broadcast_message(message)
+        
+        # Wait for all clients to be ready or timeout after 2 seconds
+        start_time = time.time()
+        while not all(self.client_ready_status[effect_id].values()):
+            if time.time() - start_time > 2:
+                logger.warning("Timeout waiting for all clients to be ready")
+                return False
+            await asyncio.sleep(0.1)
+        
+        return True
+
+    async def broadcast_message(self, message):
+        for websocket in self.connected_clients.values():
+            await websocket.send(json.dumps(message))
+
+    def set_client_ready(self, effect_id, client_ip):
+        if effect_id in self.client_ready_status:
+            self.client_ready_status[effect_id][client_ip] = True
+            logger.info(f"Client {client_ip} ready for effect {effect_id}")
 
     async def prepare_audio_stream(self, room, audio_file, audio_params, effect_name):
         client_ip = self.get_client_ip_by_room(room)
