@@ -30,7 +30,7 @@ class RemoteHostManager:
         connected_clients = [client for client in self.connected_clients if self.is_client_connected(client)]
         self.client_ready_status[effect_id] = {client: False for client in connected_clients}
         
-        # Step 1: Send prepare message
+        # Step 1: Send prepare message with execution time
         prepare_message = {
             "type": "prepare_effect",
             "effect_id": effect_id,
@@ -38,22 +38,15 @@ class RemoteHostManager:
         }
         await self.broadcast_message(prepare_message)
         
-        # Wait for all connected clients to be ready or timeout after 2 seconds
+        # Wait for all connected clients to be ready or timeout after 4 seconds
         start_time = time.time()
         while not all(self.client_ready_status[effect_id].values()):
-            if time.time() - start_time > 2:
+            if time.time() - start_time > 4:
                 logger.warning("Timeout waiting for connected clients to be ready")
                 return False
             await asyncio.sleep(0.1)
         
-        # Step 2: Send execute message
-        execute_message = {
-            "type": "execute_effect",
-            "effect_id": effect_id,
-            "execution_time": execution_time
-        }
-        await self.broadcast_message(execute_message)
-        
+        logger.info(f"All clients ready for effect {effect_id}")
         return True
 
     def is_client_connected(self, client):
