@@ -145,7 +145,8 @@ class WebSocketClient:
             'play_audio': self.handle_play_audio,
             'prepare_execution': self.handle_prepare_execution,
             'prepare_effect': self.handle_prepare_effect,
-            'execute_effect': self.handle_execute_effect
+            'execute_effect': self.handle_execute_effect,
+            'run_effect_all_rooms': self.handle_run_effect_all_rooms
         }
 
         message_type = message.get('type')
@@ -220,6 +221,16 @@ class WebSocketClient:
         await self.audio_manager.play_prepared_audio()
         # Add any other effect execution steps here
         logger.info(f"Executed effect: {effect_id}")
+
+    async def handle_run_effect_all_rooms(self, message):
+        effect_name = message.get('effect_name')
+        effect_id = message.get('effect_id')
+        if effect_name and effect_id:
+            await self.prepare_effect(effect_id)
+            await self.execute_effect(effect_id)
+            logger.info(f"Executed effect '{effect_name}' (ID: {effect_id}) for all rooms")
+        else:
+            logger.warning("Received incomplete run_effect_all_rooms message")
 
     async def handle_play_effect_audio(self, message):
         room = message.get('room')

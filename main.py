@@ -341,12 +341,23 @@ async def run_effect_all_rooms():
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
 
     try:
-        # Execute the effect immediately
-        success, message = await effects_manager.apply_effect_to_all_rooms(effect_name)
+        effect_data = effects_manager.get_effect(effect_name)
+        if not effect_data:
+            return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
+
+        # Get all rooms
+        room_layout = light_config.get_room_layout()
+        all_rooms = list(room_layout.keys())
+
+        # Prepare and execute the effect for all rooms
+        effect_id = await effects_manager.buffer_effect(all_rooms, effect_name, effect_data)
+        await effects_manager.prepare_effect(effect_id)
+        success = await effects_manager.execute_effect(effect_id)
+
         if success:
-            return jsonify({"message": f"{effect_name} effect triggered in all rooms"}), 200
+            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in all rooms', 'effect_id': effect_id})
         else:
-            return jsonify({'status': 'error', 'message': message}), 500
+            return jsonify({'status': 'error', 'message': f'Failed to execute effect {effect_name} in all rooms'}), 500
     except Exception as e:
         logger.exception(f"Error executing {effect_name} effect for all rooms")
         return jsonify({"error": str(e)}), 500
