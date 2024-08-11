@@ -25,45 +25,65 @@ class ThemeManager:
         # Load themes from a JSON file or database
         self.themes = {
             "Ocean": {
-                "duration": 300,  # 5 minutes
-                "transition_speed": 0.05,
-                "color_variation": 0.8,
-                "intensity_fluctuation": 0.3,
-                "overall_brightness": 0.7,
-                "blue_green_balance": 0.9,
-                "room_transition_speed": 0.02,
-                "color_wheel_speed": 0.08
+                "duration": 600,  # 10 minutes
+                "transition_speed": 0.03,
+                "color_variation": 0.6,
+                "intensity_fluctuation": 0.2,
+                "overall_brightness": 0.5,
+                "blue_green_balance": 0.7,
+                "room_transition_speed": 0.01,
+                "color_wheel_speed": 0.05,
+                "wave_effect": 0.3,
+                "depth_illusion": 0.4
             },
             "Jungle": {
-                "duration": 300,  # 5 minutes
-                "transition_speed": 0.05,
-                "color_variation": 0.9,
-                "intensity_fluctuation": 0.4,
+                "duration": 600,  # 10 minutes
+                "transition_speed": 0.04,
+                "color_variation": 0.7,
+                "intensity_fluctuation": 0.3,
                 "overall_brightness": 0.6,
-                "green_blue_balance": 0.3,
-                "room_transition_speed": 0.02,
-                "color_wheel_speed": 0.09
+                "green_blue_balance": 0.6,
+                "room_transition_speed": 0.015,
+                "color_wheel_speed": 0.06,
+                "leaf_rustle_effect": 0.3,
+                "sunbeam_effect": 0.4
             },
             "MazeMadness": {
-                "duration": 300,  # 5 minutes
-                "transition_speed": 0.05,
-                "color_variation": 1.0,
-                "intensity_fluctuation": 0.2,
-                "overall_brightness": 0.8,
+                "duration": 600,  # 10 minutes
+                "transition_speed": 0.04,
+                "color_variation": 0.8,
+                "intensity_fluctuation": 0.25,
+                "overall_brightness": 0.55,
                 "room_transition_speed": 0.02,
-                "color_wheel_speed": 0.1
+                "color_wheel_speed": 0.07,
+                "geometric_patterns": 0.5,
+                "perspective_shift": 0.4
             },
             "TimsFav": {
-                "duration": 300,  # 5 minutes
-                "transition_speed": 0.07,  # Medium speed
-                "color_variation": 1.0,  # Full color variation
-                "intensity_fluctuation": 0.5,  # Medium intensity fluctuation
-                "overall_brightness": 0.9,  # High brightness for excitement
-                "room_transition_speed": 0.03,  # Slightly faster room transitions
-                "color_wheel_speed": 0.15,  # Faster color wheel rotation
-                "joy_factor": 0.8,  # High joy factor
-                "excitement_factor": 0.9,  # High excitement factor
-                "ecstasy_factor": 0.7  # Medium-high ecstasy factor
+                "duration": 600,  # 10 minutes
+                "transition_speed": 0.05,
+                "color_variation": 0.9,
+                "intensity_fluctuation": 0.3,
+                "overall_brightness": 0.65,
+                "room_transition_speed": 0.025,
+                "color_wheel_speed": 0.08,
+                "joy_factor": 0.6,
+                "excitement_factor": 0.7,
+                "ecstasy_factor": 0.5,
+                "kaleidoscope_effect": 0.4,
+                "fractal_patterns": 0.3
+            },
+            "DesertDream": {
+                "duration": 600,  # 10 minutes
+                "transition_speed": 0.03,
+                "color_variation": 0.5,
+                "intensity_fluctuation": 0.2,
+                "overall_brightness": 0.4,
+                "room_transition_speed": 0.01,
+                "color_wheel_speed": 0.04,
+                "sand_ripple_effect": 0.3,
+                "mirage_illusion": 0.4,
+                "heat_wave_distortion": 0.2
             }
         }
 
