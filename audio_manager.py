@@ -1,9 +1,15 @@
 import json
 import logging
 import os
-from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
+
+try:
+    from pydub import AudioSegment
+    PYDUB_AVAILABLE = True
+except ImportError:
+    PYDUB_AVAILABLE = False
+    logger.warning("pydub module not found. Some audio functionality may be limited.")
 
 class AudioManager:
     def __init__(self, config_file='audio_config.json', audio_dir='audio_files'):
@@ -76,15 +82,22 @@ class AudioManager:
             return default_silent_file
 
     def create_silent_mp3(self, file_path):
-        try:
-            from pydub import AudioSegment
-            silent_segment = AudioSegment.silent(duration=1000)  # 1 second of silence
-            silent_segment.export(file_path, format="mp3")
-            logger.info(f"Created default silent audio file: {file_path}")
-        except ImportError:
-            logger.error("pydub library not found. Unable to create silent.mp3")
-        except Exception as e:
-            logger.error(f"Error creating silent.mp3: {str(e)}")
+        if PYDUB_AVAILABLE:
+            try:
+                silent_segment = AudioSegment.silent(duration=1000)  # 1 second of silence
+                silent_segment.export(file_path, format="mp3")
+                logger.info(f"Created default silent audio file: {file_path}")
+            except Exception as e:
+                logger.error(f"Error creating silent.mp3: {str(e)}")
+        else:
+            logger.warning("pydub library not found. Unable to create silent.mp3")
+            # Create an empty file as a fallback
+            try:
+                with open(file_path, 'wb') as f:
+                    f.write(b'')
+                logger.info(f"Created empty file as fallback: {file_path}")
+            except Exception as e:
+                logger.error(f"Error creating empty file: {str(e)}")
 
     def get_audio_config(self, effect_name):
         config = self.audio_config['effects'].get(effect_name, {})
