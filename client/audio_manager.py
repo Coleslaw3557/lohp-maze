@@ -37,21 +37,37 @@ class AudioManager:
                 logger.error(f"Failed to download {audio_file}")
         logger.info("Finished attempting to download all audio files")
 
-    async def play_effect_audio(self, effect_name):
-        file_name = f"{effect_name.lower()}.mp3"
+    async def prepare_audio(self, file_name, effect_name, volume=1.0, loop=False):
         full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
         
         if not os.path.exists(full_path):
-            logger.error(f"Audio file not found for effect: {effect_name}")
+            logger.error(f"Audio file not found: {full_path}")
             return False
+        
+        self.prepared_audio[effect_name] = {
+            'file_name': full_path,
+            'volume': volume,
+            'loop': loop
+        }
+        logger.info(f"Prepared audio for effect: {effect_name}")
+        return True
+
+    async def play_effect_audio(self, effect_name):
+        if effect_name not in self.prepared_audio:
+            logger.error(f"No prepared audio found for effect: {effect_name}")
+            return False
+        
+        audio_info = self.prepared_audio[effect_name]
+        full_path = audio_info['file_name']
         
         self.stop_audio()
         try:
             audio = AudioSegment.from_mp3(full_path)
+            audio = audio + (20 * math.log10(audio_info['volume']))  # Adjust volume
             self.current_audio = full_path
             self.stop_event.clear()
             
-            await asyncio.to_thread(self._play_audio, audio, False)
+            await asyncio.to_thread(self._play_audio, audio, audio_info['loop'])
             
             logger.info(f"Started playing audio for effect: {effect_name}")
             return True

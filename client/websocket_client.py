@@ -190,6 +190,19 @@ class WebSocketClient:
         await self.audio_manager.prepare_audio_for_effect(effect_id)
         # Add any other preparation steps here
 
+    async def handle_prepare_audio(self, message):
+        audio_data = message.get('data', {})
+        file_name = audio_data.get('file_name')
+        effect_name = audio_data.get('effect_name')
+        volume = audio_data.get('volume', 1.0)
+        loop = audio_data.get('loop', False)
+        
+        if file_name and effect_name:
+            await self.audio_manager.prepare_audio(file_name, effect_name, volume, loop)
+            logger.info(f"Prepared audio for effect: {effect_name}")
+        else:
+            logger.warning("Received prepare_audio message with incomplete data")
+
     async def handle_prepare_effect(self, message):
         effect_id = message.get('effect_id')
         if effect_id:
