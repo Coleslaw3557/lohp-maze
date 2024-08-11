@@ -19,7 +19,7 @@ class AudioManager:
         self.stop_event = threading.Event()
         self.prepared_audio = None
         self.audio_files = [
-            "audio_files/lightning.mp3",
+            "lightning.mp3",
             # Add other audio files here
         ]
 
