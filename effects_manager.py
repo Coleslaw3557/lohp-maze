@@ -6,6 +6,7 @@ from effects import *
 from theme_manager import ThemeManager
 from effect_utils import get_effect_step_values
 from interrupt_handler import InterruptHandler
+from sync_manager import SyncManager
 
 logger = logging.getLogger(__name__)
 
