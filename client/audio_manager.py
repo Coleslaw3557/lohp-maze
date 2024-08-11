@@ -58,34 +58,42 @@ class AudioManager:
 
     async def download_audio(self, file_name):
         server_url = f"http://{self.config.get('server_ip')}:5000/api/audio/{file_name}"
-        logger.info(f"Attempting to download audio file from: {server_url}")
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(server_url) as response:
-                    if response.status == 200:
-                        content = await response.read()
-                        full_path = os.path.join(self.cache_dir, file_name)
-                        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                        async with aiofiles.open(full_path, 'wb') as f:
-                            await f.write(content)
-                        logger.info(f"Successfully downloaded audio file: {file_name}")
-                        return True
-                    elif response.status == 404:
-                        logger.error(f"Audio file not found on server: {file_name}")
-                        logger.error(f"Server response: {await response.text()}")
-                        return False
-                    else:
-                        logger.error(f"Failed to download audio file: {file_name}. Status code: {response.status}")
-                        logger.error(f"Server response: {await response.text()}")
-                        return False
-        except aiohttp.ClientError as e:
-            logger.error(f"Network error while downloading {file_name}: {str(e)}")
-        except IOError as e:
-            logger.error(f"IO error while saving {file_name}: {str(e)}")
-        except Exception as e:
-            logger.error(f"Unexpected error while downloading {file_name}: {str(e)}")
-        logger.error(f"Failed to download {file_name}")
-        return False
+        max_retries = 3
+        retry_delay = 5
+
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Attempting to download audio file from: {server_url} (Attempt {attempt + 1}/{max_retries})")
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(server_url) as response:
+                        if response.status == 200:
+                            content = await response.read()
+                            full_path = os.path.join(self.cache_dir, file_name)
+                            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+                            async with aiofiles.open(full_path, 'wb') as f:
+                                await f.write(content)
+                            logger.info(f"Successfully downloaded audio file: {file_name}")
+                            return True
+                        elif response.status == 404:
+                            logger.error(f"Audio file not found on server: {file_name}")
+                            logger.error(f"Server response: {await response.text()}")
+                            return False
+                        else:
+                            logger.error(f"Failed to download audio file: {file_name}. Status code: {response.status}")
+                            logger.error(f"Server response: {await response.text()}")
+            except aiohttp.ClientError as e:
+                logger.error(f"Network error while downloading {file_name}: {str(e)}")
+            except IOError as e:
+                logger.error(f"IO error while saving {file_name}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Unexpected error while downloading {file_name}: {str(e)}")
+            
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying download in {retry_delay} seconds...")
+                await asyncio.sleep(retry_delay)
+            else:
+                logger.error(f"Failed to download {file_name} after {max_retries} attempts")
+                return False
 
     async def play_prepared_audio(self):
         if self.prepared_audio:
