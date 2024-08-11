@@ -13,9 +13,10 @@ class InterruptHandler:
     async def interrupt_fixture(self, fixture_id, duration, interrupt_sequence):
         logger.info(f"Starting effect on fixture {fixture_id} for {duration} seconds")
         
+        # Cancel any existing interrupt for this fixture
         if fixture_id in self.active_interrupts:
-            logger.warning(f"Fixture {fixture_id} is already interrupted. Skipping new effect.")
-            return False
+            logger.info(f"Cancelling existing effect on fixture {fixture_id}")
+            self.active_interrupts.discard(fixture_id)
 
         self.active_interrupts.add(fixture_id)
         start_time = time.time()
