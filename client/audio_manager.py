@@ -167,20 +167,17 @@ class AudioManager:
                 audio = self.preloaded_audio[file_name]
                 audio = audio + (20 * math.log10(volume))
                 
-                # Apply glitch effect
-                glitched_audio = self.apply_glitch_effect(audio)
-                
                 self.current_audio = file_name
                 self.stop_event.clear()
                 
-                play_obj = _play_with_simpleaudio(glitched_audio)
+                play_obj = _play_with_simpleaudio(audio)
                 
                 if loop:
-                    threading.Thread(target=self._loop_audio, args=(play_obj, glitched_audio)).start()
+                    threading.Thread(target=self._loop_audio, args=(play_obj, audio)).start()
                 else:
                     threading.Thread(target=self._wait_for_completion, args=(play_obj,)).start()
                 
-                logger.info(f"Started playing cached audio with glitch effect: {file_name} (volume: {volume}, loop: {loop}, glitch intensity: {self.glitch_intensity})")
+                logger.info(f"Started playing cached audio: {file_name} (volume: {volume}, loop: {loop})")
             except Exception as e:
                 logger.error(f"Error playing cached audio: {str(e)}", exc_info=True)
         else:
