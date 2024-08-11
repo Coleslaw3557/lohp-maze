@@ -26,29 +26,18 @@ class RemoteHostManager:
         self.audio_sent_to_clients.clear()
         logger.info("Cleared audio sent to clients tracking")
 
-    async def notify_clients_of_execution(self, effect_id, execution_time):
+    async def notify_clients_of_execution(self, effect_id):
         connected_clients = [client for client in self.connected_clients if self.is_client_connected(client)]
-        self.client_ready_status[effect_id] = {client: asyncio.Event() for client in connected_clients}
         
-        # Step 1: Send prepare message with execution time
-        prepare_message = {
-            "type": "prepare_effect",
-            "effect_id": effect_id,
-            "execution_time": execution_time
+        # Send execute message immediately
+        execute_message = {
+            "type": "execute_effect",
+            "effect_id": effect_id
         }
-        await self.broadcast_message(prepare_message)
+        await self.broadcast_message(execute_message)
         
-        # Wait for all connected clients to be ready or timeout after 5 seconds
-        try:
-            await asyncio.wait_for(
-                asyncio.gather(*(event.wait() for event in self.client_ready_status[effect_id].values())),
-                timeout=5.0
-            )
-            logger.info(f"All clients ready for effect {effect_id}")
-            return True
-        except asyncio.TimeoutError:
-            logger.warning("Timeout waiting for connected clients to be ready")
-            return False
+        logger.info(f"Notified all clients to execute effect {effect_id}")
+        return True
 
     def is_client_connected(self, client):
         return client in self.connected_clients and self.connected_clients[client].open
