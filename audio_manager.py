@@ -11,13 +11,23 @@ class AudioManager:
         self.audio_config = self.load_config()
         logger.info("AudioManager initialized")
         
-        # Add default configuration for Lightning effect
-        if 'Lightning' not in self.audio_config['effects']:
-            self.audio_config['effects']['Lightning'] = {
-                'audio_file': 'lightning.mp3',
-                'volume': 1.0,
-                'loop': False
-            }
+        # Add default configurations for all effects
+        default_effects = [
+            'Lightning', 'PoliceLights', 'GateInspection', 'GateGreeters',
+            'WrongAnswer', 'CorrectAnswer', 'Entrance', 'GuyLineClimb',
+            'SparkPony', 'PortoStandBy', 'PortoHit', 'CuddlePuddle',
+            'PhotoBomb-BG', 'PhotoBomb-Spot', 'DeepPlaya-BG'
+        ]
+        
+        for effect in default_effects:
+            if effect not in self.audio_config['effects']:
+                self.audio_config['effects'][effect] = {
+                    'audio_file': f'{effect.lower().replace("-", "_")}.mp3',
+                    'volume': 1.0,
+                    'loop': False
+                }
+        
+        self.save_config()  # Save the updated configuration
 
     def load_config(self):
         try:
@@ -50,7 +60,7 @@ class AudioManager:
                 else:
                     logger.warning(f"Audio file not found with lowercase name either: {lowercase_path}")
         else:
-            logger.info(f"No audio file configured for effect: {effect_name}")
+            logger.warning(f"No audio file configured for effect: {effect_name}")
         return None
 
     def get_audio_config(self, effect_name):
