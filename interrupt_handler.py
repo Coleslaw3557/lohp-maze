@@ -13,17 +13,26 @@ class InterruptHandler:
     async def interrupt_fixture(self, fixture_id, duration, interrupt_sequence):
         logger.info(f"Starting effect on fixture {fixture_id} for {duration} seconds")
         
+        # Create a unique identifier for this interrupt
+        interrupt_id = id(interrupt_sequence)
+        
         # Cancel any existing interrupt for this fixture
         if fixture_id in self.active_interrupts:
             logger.info(f"Cancelling existing effect on fixture {fixture_id}")
-            self.active_interrupts.discard(fixture_id)
+            self.active_interrupts[fixture_id]['active'] = False
 
-        self.active_interrupts.add(fixture_id)
+        # Set up the new interrupt
+        self.active_interrupts[fixture_id] = {'id': interrupt_id, 'active': True}
+        
         start_time = time.time()
         end_time = start_time + duration
         step_count = 0
         try:
-            while time.time() < end_time and fixture_id in self.active_interrupts:
+            while time.time() < end_time and self.active_interrupts.get(fixture_id, {}).get('id') == interrupt_id:
+                if not self.active_interrupts[fixture_id]['active']:
+                    logger.info(f"Effect on fixture {fixture_id} was cancelled")
+                    break
+                
                 elapsed_time = time.time() - start_time
                 new_values = interrupt_sequence(elapsed_time)
                 self.dmx_state_manager.update_fixture(fixture_id, new_values, override=True)
@@ -31,12 +40,14 @@ class InterruptHandler:
                 await asyncio.sleep(1 / 44)  # 44Hz update rate
                 step_count += 1
             
-            # Ensure we run for the full duration
-            remaining_time = end_time - time.time()
-            if remaining_time > 0:
-                await asyncio.sleep(remaining_time)
+            # Ensure we run for the full duration if not cancelled
+            if self.active_interrupts.get(fixture_id, {}).get('id') == interrupt_id:
+                remaining_time = end_time - time.time()
+                if remaining_time > 0:
+                    await asyncio.sleep(remaining_time)
         finally:
-            self.active_interrupts.discard(fixture_id)
+            if self.active_interrupts.get(fixture_id, {}).get('id') == interrupt_id:
+                del self.active_interrupts[fixture_id]
 
         logger.info(f"Effect completed for fixture {fixture_id}.")
         logger.debug(f"Completed {step_count} steps for fixture {fixture_id} over {duration} seconds")
