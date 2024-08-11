@@ -16,6 +16,10 @@ class RemoteHostManager:
         self.audio_sent_to_clients = {}
         logger.info("RemoteHostManager initialized")
 
+    def clear_audio_sent_to_clients(self):
+        self.audio_sent_to_clients.clear()
+        logger.info("Cleared audio_sent_to_clients")
+
     def update_client_rooms(self, unit_name, ip, rooms, websocket, path):
         client_ip = websocket.remote_address[0]  # Get the actual client IP
         self.client_rooms[client_ip] = rooms
@@ -158,9 +162,12 @@ class RemoteHostManager:
 
         logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
         try:
-            # Check if this client has already received the audio for this effect
-            if client_ip in self.audio_sent_to_clients and effect_name in self.audio_sent_to_clients[client_ip]:
-                logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Skipping audio streaming.")
+            # Check if this room has already received the audio for this effect
+            if room not in self.audio_sent_to_clients:
+                self.audio_sent_to_clients[room] = set()
+            
+            if effect_name in self.audio_sent_to_clients[room]:
+                logger.info(f"Audio for effect '{effect_name}' already sent to room {room}. Skipping audio streaming.")
                 return True
 
             audio_data = await self._get_audio_data(audio_file)
@@ -185,9 +192,7 @@ class RemoteHostManager:
             success = await self.send_audio_command(room, 'audio_data', audio_data)
             if success:
                 logger.info(f"Successfully streamed audio to client {client_ip} for room {room}")
-                if client_ip not in self.audio_sent_to_clients:
-                    self.audio_sent_to_clients[client_ip] = set()
-                self.audio_sent_to_clients[client_ip].add(effect_name)
+                self.audio_sent_to_clients[room].add(effect_name)
                 return True
             else:
                 logger.error(f"Failed to send audio data to client {client_ip} for room {room}")

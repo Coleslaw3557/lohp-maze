@@ -182,6 +182,9 @@ class EffectsManager:
             logger.error(f"{effect_name} effect not found")
             return False, f"{effect_name} effect not found"
 
+        # Clear the audio sent tracking before applying to all rooms
+        self.remote_host_manager.clear_audio_sent_to_clients()
+
         room_layout = self.light_config_manager.get_room_layout()
         
         tasks = []
