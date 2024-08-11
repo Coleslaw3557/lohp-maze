@@ -291,8 +291,8 @@ class RemoteHostManager:
 
     async def stream_audio_to_room(self, room, audio_file, audio_params, effect_name):
         if not audio_file:
-            logger.error(f"No audio file provided for room {room}")
-            return False
+            logger.info(f"No audio file provided for effect {effect_name} in room {room}. Skipping audio playback.")
+            return True
 
         client_ip = self.get_client_ip_by_room(room)
         if not client_ip:

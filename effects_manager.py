@@ -440,7 +440,11 @@ class EffectsManager:
         # Execute audio effect for all rooms simultaneously
         audio_file = self.get_audio_file(effect_name)
         audio_params = effect_data.get('audio', {})
-        audio_success = await self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
+        audio_success = True
+        if audio_file:
+            audio_success = await self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
+        else:
+            logger.info(f"No audio file found for effect {effect_name}. Skipping audio playback.")
 
         # Execute lighting effect for all rooms simultaneously
         lighting_tasks = [self._apply_lighting_effect(room, effect_data) for room in rooms]
@@ -449,7 +453,7 @@ class EffectsManager:
 
         del self.effect_buffer[effect_id]
 
-        return lighting_success and audio_success
+        return lighting_success
 
     async def _apply_lighting_effect(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
