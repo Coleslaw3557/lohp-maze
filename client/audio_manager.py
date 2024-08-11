@@ -31,26 +31,35 @@ class AudioManager:
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
-        await self.download_all_audio_files()
         await self.preload_audio_files()
         logger.info("AudioManager initialization complete")
 
     async def preload_audio_files(self):
-        logger.info("Preloading audio files")
-        for audio_file in self.audio_files:
-            file_path = os.path.join(self.cache_dir, 'audio_files', audio_file)
-            if os.path.exists(file_path):
+        logger.info("Preloading existing audio files")
+        audio_files = os.listdir(os.path.join(self.cache_dir, 'audio_files'))
+        for audio_file in audio_files:
+            if audio_file.endswith('.mp3'):
+                file_path = os.path.join(self.cache_dir, 'audio_files', audio_file)
                 audio = AudioSegment.from_mp3(file_path)
                 self.preloaded_audio[audio_file] = audio
         logger.info(f"Preloaded {len(self.preloaded_audio)} audio files")
 
-    async def download_all_audio_files(self):
-        logger.info(f"Starting download of {len(self.audio_files)} audio files")
-        for audio_file in self.audio_files:
+    async def download_audio_files(self, audio_files_to_download):
+        logger.info(f"Starting download of {len(audio_files_to_download)} audio files")
+        for audio_file in audio_files_to_download:
             success = await self.download_audio(audio_file)
             if not success:
                 logger.error(f"Failed to download {audio_file}")
+            else:
+                await self.preload_single_audio_file(audio_file)
         logger.info("Finished attempting to download all audio files")
+
+    async def preload_single_audio_file(self, audio_file):
+        file_path = os.path.join(self.cache_dir, 'audio_files', audio_file)
+        if os.path.exists(file_path):
+            audio = AudioSegment.from_mp3(file_path)
+            self.preloaded_audio[audio_file] = audio
+            logger.info(f"Preloaded audio file: {audio_file}")
 
     async def prepare_audio(self, file_name, effect_name, volume=1.0, loop=False):
         full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
