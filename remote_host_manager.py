@@ -203,6 +203,7 @@ class RemoteHostManager:
 
             audio_data = await self._get_audio_data(audio_file)
             if not audio_data:
+                logger.error(f"Failed to get audio data for file: {audio_file}")
                 return False
 
             file_name = self._get_file_name(audio_file)
@@ -217,12 +218,13 @@ class RemoteHostManager:
                 logger.error(f"Failed to send audio_start command to client {client_ip} for room {room}")
                 return False
 
+            logger.info(f"Sent audio_start command for {file_name} to room {room}")
             await asyncio.sleep(0.1)  # Add a small delay before sending audio data
 
             # Send audio data
             success = await self.send_audio_command(room, 'audio_data', audio_data)
             if success:
-                logger.info(f"Successfully streamed audio to client {client_ip} for room {room}")
+                logger.info(f"Successfully streamed audio data ({len(audio_data)} bytes) to client {client_ip} for room {room}")
                 self.audio_sent_to_clients[room].add(effect_name)
                 return True
             else:
