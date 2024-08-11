@@ -37,68 +37,27 @@ class AudioManager:
                 logger.error(f"Failed to download {audio_file}")
         logger.info("Finished attempting to download all audio files")
 
-    async def prepare_audio(self, file_name, params):
-        full_path = os.path.join(self.cache_dir, file_name)
-        if not os.path.exists(full_path):
-            success = await self.download_audio(file_name)
-            if not success:
-                logger.error(f"Failed to prepare audio: {file_name}")
-                return False
+    async def play_effect_audio(self, effect_name):
+        file_name = f"{effect_name.lower()}.mp3"
+        full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
         
-        if os.path.exists(full_path):
-            if file_name not in self.prepared_audio:
-                self.prepared_audio[file_name] = {
-                    'file_name': full_path,
-                    'volume': params.get('volume', 1.0),
-                    'loop': params.get('loop', False)
-                }
-                logger.info(f"Prepared audio: {full_path} (volume: {self.prepared_audio[file_name]['volume']}, loop: {self.prepared_audio[file_name]['loop']})")
-            else:
-                logger.info(f"Audio already prepared: {full_path}")
-            return True
-        else:
-            logger.error(f"Audio file not found after download attempt: {full_path}")
+        if not os.path.exists(full_path):
+            logger.error(f"Audio file not found for effect: {effect_name}")
             return False
-
-    async def prepare_audio_for_effect(self, effect_id):
-        # Here you would determine which audio file to use based on the effect_id
-        # For now, let's assume we're using a default file
-        file_name = "default_effect_audio.mp3"
-        params = {'volume': 1.0, 'loop': False}
-        success = await self.prepare_audio(file_name, params)
-        if success:
-            self.current_effect_audio = file_name
-        return success
-
-    async def play_prepared_audio(self):
-        if self.current_effect_audio:
-            await self._play_prepared_audio(self.current_effect_audio)
-            self.current_effect_audio = None
-        else:
-            logger.warning("No prepared audio for current effect")
-
-    async def _play_prepared_audio(self, file_name):
-        if file_name in self.prepared_audio:
-            audio_info = self.prepared_audio[file_name]
-            if os.path.exists(audio_info['file_name']):
-                self.stop_audio()
-                try:
-                    audio = AudioSegment.from_mp3(audio_info['file_name'])
-                    volume = audio_info['volume']
-                    audio = audio + (20 * math.log10(volume))
-                    
-                    self.current_audio = audio_info['file_name']
-                    self.stop_event.clear()
-                    
-                    await asyncio.to_thread(self._play_audio, audio, audio_info['loop'])
-                    
-                    logger.info(f"Started playing audio: {audio_info['file_name']} (volume: {volume}, loop: {audio_info['loop']})")
-                except Exception as e:
-                    logger.error(f"Error playing audio: {str(e)}", exc_info=True)
-            else:
-                logger.error(f"Prepared audio file not found: {audio_info['file_name']}")
-        else:
-            logger.warning(f"No prepared audio found for: {file_name}")
+        
+        self.stop_audio()
+        try:
+            audio = AudioSegment.from_mp3(full_path)
+            self.current_audio = full_path
+            self.stop_event.clear()
+            
+            await asyncio.to_thread(self._play_audio, audio, False)
+            
+            logger.info(f"Started playing audio for effect: {effect_name}")
+            return True
+        except Exception as e:
+            logger.error(f"Error playing audio for effect {effect_name}: {str(e)}", exc_info=True)
+            return False
 
     async def download_audio(self, file_name):
         # Remove 'audio_files/' prefix if present
