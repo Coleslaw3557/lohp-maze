@@ -70,34 +70,17 @@ class AudioManager:
         
         logger.warning(f"No audio file found for effect: {effect_name}")
         
-        # If no audio file is found, return a default "silent" audio file
-        default_silent_file = os.path.join(self.audio_dir, "silent.mp3")
-        if os.path.exists(default_silent_file):
-            logger.info(f"Using default silent audio file for effect: {effect_name}")
-            return default_silent_file
-        else:
-            logger.error(f"Default silent audio file not found: {default_silent_file}")
-            # Create an empty silent.mp3 file
-            self.create_silent_mp3(default_silent_file)
-            return default_silent_file
+        # If no audio file is found, return None instead of a silent file
+        return None
 
     def create_silent_mp3(self, file_path):
-        if PYDUB_AVAILABLE:
-            try:
-                silent_segment = AudioSegment.silent(duration=1000)  # 1 second of silence
-                silent_segment.export(file_path, format="mp3")
-                logger.info(f"Created default silent audio file: {file_path}")
-            except Exception as e:
-                logger.error(f"Error creating silent.mp3: {str(e)}")
-        else:
-            logger.warning("pydub library not found. Unable to create silent.mp3")
+        try:
             # Create an empty file as a fallback
-            try:
-                with open(file_path, 'wb') as f:
-                    f.write(b'')
-                logger.info(f"Created empty file as fallback: {file_path}")
-            except Exception as e:
-                logger.error(f"Error creating empty file: {str(e)}")
+            with open(file_path, 'wb') as f:
+                f.write(b'')
+            logger.info(f"Created empty file as fallback: {file_path}")
+        except Exception as e:
+            logger.error(f"Error creating empty file: {str(e)}")
 
     def get_audio_config(self, effect_name):
         config = self.audio_config['effects'].get(effect_name, {})
