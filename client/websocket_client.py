@@ -192,7 +192,6 @@ class WebSocketClient:
 
     async def handle_prepare_effect(self, message):
         effect_id = message['effect_id']
-        execution_time = message['execution_time']
         
         # Prepare for the effect
         await self.prepare_effect(effect_id)
@@ -204,9 +203,6 @@ class WebSocketClient:
         }
         await self.send_message(ready_message)
         logger.info(f"Sent client_ready message for effect: {effect_id}")
-        
-        # Schedule the effect execution
-        await self.schedule_effect_execution(effect_id, execution_time)
 
     async def handle_execute_effect(self, message):
         effect_id = message['effect_id']
@@ -344,14 +340,10 @@ class WebSocketClient:
         logger.info(f"Preparing effect: {effect_id}")
         # TODO: Implement effect preparation
 
-    async def schedule_effect_execution(self, effect_id, execution_time):
-        current_time = time.time()
-        delay = max(0, execution_time - current_time)
-        if delay > 0:
-            logger.info(f"Scheduling effect {effect_id} to execute in {delay:.2f} seconds")
-            await asyncio.sleep(delay)
+    async def execute_effect(self, effect_id):
         try:
-            await self.execute_effect(effect_id)
+            logger.info(f"Executing effect: {effect_id}")
+            # TODO: Implement effect execution
         except Exception as e:
             logger.error(f"Error executing effect {effect_id}: {str(e)}")
 
