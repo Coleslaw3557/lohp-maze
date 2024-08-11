@@ -77,8 +77,9 @@ class EffectsManager:
         else:
             logger.warning(f"No effect found: {effect_name}")
 
-    async def apply_effect_to_room(self, room, effect_name):
-        effect_data = self.get_effect(effect_name)
+    async def apply_effect_to_room(self, room, effect_name, effect_data=None):
+        if effect_data is None:
+            effect_data = self.get_effect(effect_name)
         if not effect_data:
             logger.error(f"{effect_name} effect not found")
             return False, f"{effect_name} effect not found"
