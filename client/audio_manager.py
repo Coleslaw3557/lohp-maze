@@ -3,11 +3,12 @@ import aiofiles
 import os
 import logging
 from pydub import AudioSegment
-from pydub.playback import play
+from pydub.playback import _play_with_simpleaudio
 import io
 import threading
 import math
 import aiohttp
+import simpleaudio as sa
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,22 @@ class AudioManager:
             # Add other audio files here
         ]
         self.current_effect_audio = None
+        self.preloaded_audio = {}
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
         await self.download_all_audio_files()
+        await self.preload_audio_files()
         logger.info("AudioManager initialization complete")
+
+    async def preload_audio_files(self):
+        logger.info("Preloading audio files")
+        for audio_file in self.audio_files:
+            file_path = os.path.join(self.cache_dir, 'audio_files', audio_file)
+            if os.path.exists(file_path):
+                audio = AudioSegment.from_mp3(file_path)
+                self.preloaded_audio[audio_file] = audio
+        logger.info(f"Preloaded {len(self.preloaded_audio)} audio files")
 
     async def download_all_audio_files(self):
         logger.info(f"Starting download of {len(self.audio_files)} audio files")
@@ -145,23 +157,28 @@ class AudioManager:
             logger.warning(f"No prepared audio found for: {file_name}")
 
     async def play_cached_audio(self, effect_name, volume=1.0, loop=False):
-        file_path = os.path.join(self.cache_dir, 'audio_files', f"{effect_name.lower()}.mp3")
-        if os.path.exists(file_path):
+        file_name = f"{effect_name.lower()}.mp3"
+        if file_name in self.preloaded_audio:
             self.stop_audio()
             try:
-                audio = AudioSegment.from_mp3(file_path)
+                audio = self.preloaded_audio[file_name]
                 audio = audio + (20 * math.log10(volume))
                 
-                self.current_audio = file_path
+                self.current_audio = file_name
                 self.stop_event.clear()
                 
-                threading.Thread(target=self._play_audio, args=(audio, loop)).start()
+                play_obj = _play_with_simpleaudio(audio)
                 
-                logger.info(f"Started playing cached audio: {file_path} (volume: {volume}, loop: {loop})")
+                if loop:
+                    threading.Thread(target=self._loop_audio, args=(play_obj, audio)).start()
+                else:
+                    threading.Thread(target=self._wait_for_completion, args=(play_obj,)).start()
+                
+                logger.info(f"Started playing cached audio: {file_name} (volume: {volume}, loop: {loop})")
             except Exception as e:
                 logger.error(f"Error playing cached audio: {str(e)}", exc_info=True)
         else:
-            logger.error(f"Cached audio file not found: {file_path}")
+            logger.error(f"Preloaded audio not found for effect: {effect_name}")
 
     async def receive_audio_data(self, audio_data):
         file_name = f"temp_audio_{time.time()}.mp3"
@@ -198,12 +215,19 @@ class AudioManager:
             logger.info(f"Stopped playing audio: {self.current_audio}")
             self.current_audio = None
 
-    def _play_audio(self, audio, loop):
+    def _loop_audio(self, play_obj, audio):
         while not self.stop_event.is_set():
-            play(audio)
-            if not loop:
+            play_obj.wait_done()
+            if self.stop_event.is_set():
                 break
+            play_obj = _play_with_simpleaudio(audio)
+        play_obj.stop()
         self.current_audio = None
+
+    def _wait_for_completion(self, play_obj):
+        play_obj.wait_done()
+        if not self.stop_event.is_set():
+            self.current_audio = None
 
     async def cache_audio(self, file_name, audio_data):
         file_path = os.path.join(self.cache_dir, file_name)
