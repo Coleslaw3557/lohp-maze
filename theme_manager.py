@@ -170,14 +170,15 @@ class ThemeManager:
             logger.warning("No themes available")
             return None
 
-        start_index = self.current_theme_index
-        for _ in range(len(self.theme_list)):
-            self.current_theme_index = (self.current_theme_index + 1) % len(self.theme_list)
-            next_theme = self.theme_list[self.current_theme_index]
-            success = await self.set_current_theme_async(next_theme)
-            if success:
-                logger.info(f"Successfully set next theme to: {next_theme}")
-                return next_theme
+        current_index = self.theme_list.index(self.current_theme) if self.current_theme in self.theme_list else -1
+        for i in range(len(self.theme_list)):
+            next_index = (current_index + i + 1) % len(self.theme_list)
+            next_theme = self.theme_list[next_index]
+            if next_theme != self.current_theme:
+                success = await self.set_current_theme_async(next_theme)
+                if success:
+                    logger.info(f"Successfully set next theme to: {next_theme}")
+                    return next_theme
         
         logger.error("Failed to set any theme after trying all available themes")
         return None
