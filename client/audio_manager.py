@@ -18,6 +18,17 @@ class AudioManager:
         self.current_audio = None
         self.stop_event = threading.Event()
         self.prepared_audio = None
+        self.audio_files = [
+            "audio_files/lightning.mp3",
+            # Add other audio files here
+        ]
+
+    async def initialize(self):
+        await self.download_all_audio_files()
+
+    async def download_all_audio_files(self):
+        for audio_file in self.audio_files:
+            await self.download_audio(audio_file)
 
     async def prepare_audio(self, file_name, params):
         full_path = os.path.join(self.cache_dir, file_name)

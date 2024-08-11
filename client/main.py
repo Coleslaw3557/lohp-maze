@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 async def main():
     config = ConfigManager('config.json')
     audio_manager = AudioManager(config.get('cache_dir'), config)
+    await audio_manager.initialize()  # Initialize and download audio files
     trigger_manager = TriggerManager(config.get('triggers'))
     sync_manager = SyncManager()
     
