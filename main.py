@@ -23,18 +23,14 @@ NUM_FIXTURES = 21
 CHANNELS_PER_FIXTURE = 8
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     filename='server.log',  # Log to a file
                     filemode='a')  # Append mode
 logger = logging.getLogger(__name__)
 
-# Add a stream handler to also log to console
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG if DEBUG else logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+# Suppress pydub warnings
+logging.getLogger('pydub.converter').setLevel(logging.ERROR)
 
 app = Quart(__name__)
 app = cors(app)
