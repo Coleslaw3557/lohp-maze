@@ -180,6 +180,8 @@ async def set_theme():
         logger.error(f"Error setting theme: {str(e)}")
         return jsonify({'status': 'error', 'message': f'An error occurred while setting the theme: {str(e)}'}), 500
 
+import time
+
 @app.route('/api/run_effect', methods=['POST'])
 async def run_effect():
     data = await request.json

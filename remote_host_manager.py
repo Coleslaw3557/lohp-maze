@@ -8,6 +8,8 @@ from websocket_handler import WebSocketHandler
 
 logger = logging.getLogger(__name__)
 
+from sync_manager import SyncManager
+
 class RemoteHostManager:
     def __init__(self):
         self.remote_hosts = {}
