@@ -4,13 +4,13 @@ logger = logging.getLogger(__name__)
 
 def create_police_lights_effect():
     police_lights_effect = {
-        "duration": 15.0,
+        "duration": 10.0,
         "description": "Alternating red and blue flashes simulating police lights",
         "audio_file": "policelights.mp3",
         "steps": []
     }
-    for i in range(15):  # 15 cycles to fill 15 seconds
-        t = i * 1.0
+    for i in range(20):  # 20 cycles to fill 10 seconds
+        t = i * 0.5
         police_lights_effect["steps"].extend([
             {"time": t, "channels": {"total_dimming": 255, "r_dimming": 255, "b_dimming": 0, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}},
             {"time": t + 0.5, "channels": {"total_dimming": 255, "r_dimming": 0, "b_dimming": 255, "g_dimming": 0, "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}}
