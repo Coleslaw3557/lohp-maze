@@ -42,29 +42,28 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
     room_transition_speed = theme_data.get('room_transition_speed', 0.02) * speed_variation
     room_offset = (room_index / total_rooms + time_factor * room_transition_speed) % 1
 
+    base_hue = theme_data.get('base_hue', 0)
+    hue_range = theme_data.get('hue_range', 0.5)
+    hue = (base_hue + (math.sin(time_factor * color_wheel_speed + room_offset) * 0.5 + 0.5) * hue_range) % 1
+    saturation = 0.7 + sin_time_medium * 0.3 * color_variation
+    value = overall_brightness * (0.5 + sin_time * intensity_fluctuation * 0.5)
+
     if 'blue_green_balance' in theme_data:  # Ocean theme
-        hue = (time_factor * color_wheel_speed + room_offset + 0.5) % 1
-        saturation = 0.6 + sin_time_medium * 0.2 * color_variation
-        blue_green_balance = theme_data.get('blue_green_balance', 0.7)
         wave_effect = math.sin(time_factor * 0.5) * theme_data.get('wave_effect', 0.3)
         depth_illusion = math.sin(time_factor * 0.3) * theme_data.get('depth_illusion', 0.4)
-        value = overall_brightness * (0.8 + sin_time * intensity_fluctuation * 0.2 + wave_effect + depth_illusion)
-    elif 'green_blue_balance' in theme_data:  # Jungle theme
-        hue = (time_factor * color_wheel_speed + room_offset + 0.3) % 1
-        saturation = 0.7 + sin_time_medium * 0.2 * color_variation
-        green_blue_balance = theme_data.get('green_blue_balance', 0.6)
+        bioluminescence = math.sin(time_factor * 0.7) * theme_data.get('bioluminescence', 0.3)
+        value += wave_effect + depth_illusion + bioluminescence
+    elif 'green_yellow_balance' in theme_data:  # Jungle theme
         leaf_rustle = math.sin(time_factor * 0.7) * theme_data.get('leaf_rustle_effect', 0.3)
         sunbeam = math.sin(time_factor * 0.4) * theme_data.get('sunbeam_effect', 0.4)
-        value = overall_brightness * (0.7 + sin_time * intensity_fluctuation * 0.3 + leaf_rustle + sunbeam)
+        flower_bloom = math.sin(time_factor * 0.6) * theme_data.get('flower_bloom', 0.3)
+        value += leaf_rustle + sunbeam + flower_bloom
     elif 'geometric_patterns' in theme_data:  # MazeMadness theme
-        hue = (time_factor * color_wheel_speed + room_offset) % 1
-        saturation = 0.7 + sin_time_medium * 0.3 * color_variation
         geometric = math.sin(time_factor * 0.6) * theme_data.get('geometric_patterns', 0.5)
         perspective = math.sin(time_factor * 0.5) * theme_data.get('perspective_shift', 0.4)
-        value = overall_brightness * (0.7 + sin_time * intensity_fluctuation * 0.3 + geometric + perspective)
+        neon_glow = math.sin(time_factor * 0.8) * theme_data.get('neon_glow', 0.4)
+        value += geometric + perspective + neon_glow
     elif 'joy_factor' in theme_data:  # TimsFav theme
-        hue = (time_factor * color_wheel_speed + room_offset) % 1
-        saturation = 0.8 + sin_time_medium * 0.2 * color_variation
         joy_factor = theme_data.get('joy_factor', 0.6)
         excitement_factor = theme_data.get('excitement_factor', 0.7)
         ecstasy_factor = theme_data.get('ecstasy_factor', 0.5)
@@ -73,33 +72,23 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
         hue = (hue + 0.1 * math.sin(time_factor * joy_factor) + 
                0.1 * math.cos(time_factor * excitement_factor) + 
                0.1 * math.sin(2 * time_factor * ecstasy_factor)) % 1
-        value = overall_brightness * (0.7 + sin_time * intensity_fluctuation * 0.3 + kaleidoscope + fractal)
+        value += kaleidoscope + fractal
     elif 'sand_ripple_effect' in theme_data:  # DesertDream theme
-        hue = (time_factor * color_wheel_speed + room_offset + 0.1) % 1
-        saturation = 0.5 + sin_time_medium * 0.2 * color_variation
         sand_ripple = math.sin(time_factor * 0.6) * theme_data.get('sand_ripple_effect', 0.3)
         mirage = math.sin(time_factor * 0.3) * theme_data.get('mirage_illusion', 0.4)
         heat_wave = math.sin(time_factor * 0.5) * theme_data.get('heat_wave_distortion', 0.2)
-        value = overall_brightness * (0.6 + sin_time * intensity_fluctuation * 0.2 + sand_ripple + mirage + heat_wave)
-    else:
-        hue = (time_factor * 0.1) % 1
-        saturation = 0.6 + sin_time_medium * 0.2 * color_variation
-        value = overall_brightness * (0.7 + sin_time * intensity_fluctuation * 0.3)
+        value += sand_ripple + mirage + heat_wave
+
+    # Ensure value doesn't exceed 1.0
+    value = min(value, 1.0)
 
     r, g, b = hsv_to_rgb(hue, saturation, value)
-
-    if 'blue_green_balance' in theme_data:  # Ocean theme
-        b *= blue_green_balance
-        g *= (1 - blue_green_balance)
-    elif 'green_blue_balance' in theme_data:  # Jungle theme
-        g *= green_blue_balance
-        b *= (1 - green_blue_balance)
 
     channels['total_dimming'] = int(value * 255)
     channels['r_dimming'] = int(r * 255)
     channels['g_dimming'] = int(g * 255)
     channels['b_dimming'] = int(b * 255)
-    channels['w_dimming'] = int(min(r, g, b) * 25.5)  # Subtle white component
+    channels['w_dimming'] = 0  # Remove white component
 
     return channels
 

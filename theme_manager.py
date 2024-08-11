@@ -27,72 +27,82 @@ class ThemeManager:
             "Ocean": {
                 "duration": 600,  # 10 minutes
                 "transition_speed": 0.04,
-                "color_variation": 0.8,
-                "intensity_fluctuation": 0.3,
-                "overall_brightness": 0.7,
-                "blue_green_balance": 0.6,
-                "room_transition_speed": 0.015,
-                "color_wheel_speed": 0.06,
-                "wave_effect": 0.4,
-                "depth_illusion": 0.5,
-                "bioluminescence": 0.3,
-                "coral_glow": 0.4
+                "color_variation": 0.9,
+                "intensity_fluctuation": 0.5,
+                "overall_brightness": 0.8,
+                "blue_green_balance": 0.7,
+                "room_transition_speed": 0.02,
+                "color_wheel_speed": 0.08,
+                "wave_effect": 0.6,
+                "depth_illusion": 0.7,
+                "bioluminescence": 0.5,
+                "coral_glow": 0.6,
+                "base_hue": 0.5,  # Cyan
+                "hue_range": 0.2  # Hue varies from 0.3 to 0.7 (blue to green)
             },
             "Jungle": {
                 "duration": 600,  # 10 minutes
-                "transition_speed": 0.05,
-                "color_variation": 0.9,
-                "intensity_fluctuation": 0.4,
-                "overall_brightness": 0.8,
-                "green_red_balance": 0.7,
-                "room_transition_speed": 0.02,
-                "color_wheel_speed": 0.07,
-                "leaf_rustle_effect": 0.4,
-                "sunbeam_effect": 0.5,
-                "flower_bloom": 0.3,
-                "firefly_glow": 0.4
+                "transition_speed": 0.06,
+                "color_variation": 1.0,
+                "intensity_fluctuation": 0.6,
+                "overall_brightness": 0.7,
+                "green_yellow_balance": 0.8,
+                "room_transition_speed": 0.03,
+                "color_wheel_speed": 0.1,
+                "leaf_rustle_effect": 0.7,
+                "sunbeam_effect": 0.8,
+                "flower_bloom": 0.6,
+                "firefly_glow": 0.5,
+                "base_hue": 0.3,  # Green
+                "hue_range": 0.15  # Hue varies from 0.15 to 0.45 (yellow-green to blue-green)
             },
             "MazeMadness": {
                 "duration": 600,  # 10 minutes
-                "transition_speed": 0.06,
+                "transition_speed": 0.08,
                 "color_variation": 1.0,
-                "intensity_fluctuation": 0.35,
-                "overall_brightness": 0.75,
-                "room_transition_speed": 0.025,
-                "color_wheel_speed": 0.08,
-                "geometric_patterns": 0.6,
-                "perspective_shift": 0.5,
-                "neon_glow": 0.7,
-                "color_pulse": 0.4
+                "intensity_fluctuation": 0.7,
+                "overall_brightness": 0.9,
+                "room_transition_speed": 0.04,
+                "color_wheel_speed": 0.12,
+                "geometric_patterns": 0.8,
+                "perspective_shift": 0.7,
+                "neon_glow": 0.9,
+                "color_pulse": 0.6,
+                "base_hue": 0.8,  # Purple
+                "hue_range": 0.4  # Hue varies from 0.4 to 0.2 (red to blue, wrapping around)
             },
             "TimsFav": {
                 "duration": 600,  # 10 minutes
-                "transition_speed": 0.07,
+                "transition_speed": 0.1,
                 "color_variation": 1.0,
-                "intensity_fluctuation": 0.4,
-                "overall_brightness": 0.85,
-                "room_transition_speed": 0.03,
-                "color_wheel_speed": 0.09,
-                "joy_factor": 0.7,
-                "excitement_factor": 0.8,
-                "ecstasy_factor": 0.6,
-                "kaleidoscope_effect": 0.5,
-                "fractal_patterns": 0.4,
-                "rainbow_burst": 0.6
+                "intensity_fluctuation": 0.8,
+                "overall_brightness": 1.0,
+                "room_transition_speed": 0.05,
+                "color_wheel_speed": 0.15,
+                "joy_factor": 0.9,
+                "excitement_factor": 1.0,
+                "ecstasy_factor": 0.8,
+                "kaleidoscope_effect": 0.7,
+                "fractal_patterns": 0.6,
+                "rainbow_burst": 0.8,
+                "base_hue": 0.0,  # Red
+                "hue_range": 1.0  # Full color spectrum
             },
             "DesertDream": {
                 "duration": 600,  # 10 minutes
-                "transition_speed": 0.04,
-                "color_variation": 0.7,
-                "intensity_fluctuation": 0.3,
+                "transition_speed": 0.03,
+                "color_variation": 0.8,
+                "intensity_fluctuation": 0.4,
                 "overall_brightness": 0.6,
-                "room_transition_speed": 0.015,
+                "room_transition_speed": 0.01,
                 "color_wheel_speed": 0.05,
-                "sand_ripple_effect": 0.4,
-                "mirage_illusion": 0.5,
-                "heat_wave_distortion": 0.3,
-                "oasis_glow": 0.4,
-                "sunset_hues": 0.6
+                "sand_ripple_effect": 0.5,
+                "mirage_illusion": 0.6,
+                "heat_wave_distortion": 0.4,
+                "oasis_glow": 0.5,
+                "sunset_hues": 0.7,
+                "base_hue": 0.1,  # Orange
+                "hue_range": 0.1  # Hue varies from 0 to 0.2 (red to yellow-orange)
             }
         }
 
