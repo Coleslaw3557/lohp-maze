@@ -471,7 +471,7 @@ class EffectsManager:
                 await self.stop_effect_in_room(room)
 
             # Execute audio effect for all rooms
-            audio_tasks = [self._apply_audio_effect(room, effect_name) for room in rooms]
+            audio_tasks = [self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name}) for room in rooms]
 
             # Execute lighting effect for all rooms simultaneously using the interrupt system
             lighting_tasks = []
