@@ -220,10 +220,10 @@ class EffectsManager:
             logger.warning(f"No audio file found for effect {effect_name}")
         
         # Execute the effect in all rooms simultaneously
-        execute_tasks = [self.execute_effect_in_room(room, effect_name, effect_data, audio_file) for room in room_layout.keys()]
+        execute_tasks = [self.apply_effect_to_room(room, effect_name, effect_data, audio_file) for room in room_layout.keys()]
         results = await asyncio.gather(*execute_tasks)
         
-        success = all(results)
+        success = all(result[0] for result in results)
         if success:
             logger.info(f"{effect_name} effect triggered in all rooms")
         else:
