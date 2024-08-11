@@ -38,10 +38,10 @@ class RemoteHostManager:
         }
         await self.broadcast_message(prepare_message)
         
-        # Wait for all connected clients to be ready or timeout after 4 seconds
+        # Wait for all connected clients to be ready or timeout after 10 seconds
         start_time = time.time()
         while not all(self.client_ready_status[effect_id].values()):
-            if time.time() - start_time > 4:
+            if time.time() - start_time > 10:
                 logger.warning("Timeout waiting for connected clients to be ready")
                 return False
             await asyncio.sleep(0.1)
@@ -117,6 +117,12 @@ class RemoteHostManager:
         logger.info(f"Updated associated rooms for client {unit_name} ({client_ip}): {rooms}")
         for room in rooms:
             logger.info(f"Associating room {room} with client {unit_name} ({client_ip})")
+            # Ensure each room is associated with a client IP
+            if room not in self.room_to_client_ip:
+                self.room_to_client_ip[room] = client_ip
+            else:
+                logger.warning(f"Room {room} is already associated with another client. Updating to {client_ip}")
+                self.room_to_client_ip[room] = client_ip
         logger.debug(f"WebSocket path: {path}")  # Log the path for debugging
 
     async def initialize_websocket_connections(self):
