@@ -1,7 +1,11 @@
 import os
 import logging
 import asyncio
-from quart import Quart, request, jsonify
+import json
+import websockets
+import sys
+import traceback
+from quart import Quart, request, jsonify, Response, send_from_directory
 from quart_cors import cors
 from werkzeug.urls import uri_to_iri, iri_to_uri
 from dmx_state_manager import DMXStateManager
@@ -9,6 +13,8 @@ from dmx_interface import DMXOutputManager
 from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
 from interrupt_handler import InterruptHandler
+from remote_host_manager import RemoteHostManager
+from audio_manager import AudioManager
 
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -18,18 +24,139 @@ CHANNELS_PER_FIXTURE = 8
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    filename='server.log',  # Log to a file
+                    filemode='a')  # Append mode
 logger = logging.getLogger(__name__)
+
+# Add a stream handler to also log to console
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG if DEBUG else logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 app = Quart(__name__)
 app = cors(app)
 app.secret_key = SECRET_KEY
 
+connected_clients = set()
+
+def log_and_exit(error_message):
+    logger.critical(f"Critical error: {error_message}")
+    logger.critical(f"Traceback: {traceback.format_exc()}")
+    sys.exit(1)
+
+async def websocket_handler(websocket, path):
+    connected_clients.add(websocket)
+    try:
+        async for message in websocket:
+            data = json.loads(message)
+            message_type = data.get('type')
+            if message_type == 'client_connected':
+                await handle_client_connected(websocket, data)
+            else:
+                await handle_websocket_message(websocket, data)
+    except websockets.exceptions.ConnectionClosedError as e:
+        logger.info(f"WebSocket connection closed: {e}")
+    except Exception as e:
+        logger.error(f"Error in WebSocket handler: {e}")
+    finally:
+        connected_clients.remove(websocket)
+        logger.info("WebSocket client disconnected")
+
+async def handle_client_connected(websocket, data):
+    logger.info(f"handle_client_connected called with websocket: {websocket}, data: {data}")
+    unit_name = data.get('data', {}).get('unit_name')
+    associated_rooms = data.get('data', {}).get('associated_rooms', [])
+    if unit_name and associated_rooms:
+        remote_host_manager.update_client_rooms(unit_name, websocket.remote_address[0], associated_rooms, websocket)
+        logger.info(f"Client connected: {unit_name} ({websocket.remote_address[0]}) - Associated rooms: {associated_rooms}")
+        response = {"type": "connection_response", "status": "success", "message": "Connection acknowledged"}
+        await websocket.send(json.dumps(response))
+        logger.info(f"Sent connection response: {response}")
+    else:
+        logger.warning(f"Received incomplete client connection data: {data}")
+        response = {"type": "connection_response", "status": "error", "message": "Incomplete connection data"}
+        await websocket.send(json.dumps(response))
+        logger.info(f"Sent error response: {response}")
+
+async def handle_status_update(websocket, data):
+    logger.info(f"Status update received: {data}")
+    await websocket.send(json.dumps({"type": "status_update_response", "status": "success", "message": "Status update acknowledged"}))
+
+async def handle_websocket_message(ws, data):
+    """
+    Handle incoming WebSocket messages.
+    """
+    message_type = data.get('type')
+    handlers = {
+        'status_update': handle_status_update,
+        'trigger_event': handle_trigger_event,
+        'client_connected': handle_client_connected,
+        'client_ready': handle_client_ready
+    }
+    
+    handler = handlers.get(message_type)
+    if handler:
+        await handler(ws, data)
+    else:
+        logger.warning(f"Unknown message type received: {message_type}")
+        await ws.send(json.dumps({"status": "error", "message": "Unknown message type"}))
+
+async def handle_client_ready(ws, data):
+    """
+    Handle client ready messages.
+    """
+    effect_id = data.get('effect_id')
+    client_ip = ws.remote_address[0]
+    remote_host_manager.set_client_ready(effect_id, client_ip)
+    logger.info(f"Client {client_ip} ready for effect {effect_id}")
+
+async def handle_client_connected(ws, data):
+    """
+    Handle client connection messages.
+    """
+    unit_name = data.get('data', {}).get('unit_name')
+    associated_rooms = data.get('data', {}).get('associated_rooms', [])
+    client_ip = ws.remote_address[0]  # Get the actual client IP
+    if unit_name and associated_rooms:
+        remote_host_manager.update_client_rooms(unit_name, client_ip, associated_rooms, ws)
+        logger.info(f"Client connected: {unit_name} ({client_ip}) - Associated rooms: {associated_rooms}")
+        await ws.send(json.dumps({"type": "connection_response", "status": "success", "message": "Connection acknowledged"}))
+    else:
+        logger.warning(f"Received incomplete client connection data: {data}")
+        await ws.send(json.dumps({"type": "connection_response", "status": "error", "message": "Incomplete connection data"}))
+
+async def handle_status_update(ws, data):
+    """
+    Handle status update messages from clients.
+    """
+    logger.info(f"Status update received: {data}")
+    await ws.send(json.dumps({"status": "success", "message": "Status update acknowledged"}))
+
+async def handle_trigger_event(ws, data):
+    """
+    Handle trigger event messages from clients.
+    """
+    logger.info(f"Trigger event received: {data}")
+    # TODO: Process the trigger event
+    await ws.send(json.dumps({"status": "success", "message": "Trigger event processed"}))
+
+async def broadcast_message(message):
+    """
+    Broadcast a message to all connected clients.
+    """
+    if connected_clients:
+        await asyncio.wait([client.send(json.dumps(message)) for client in connected_clients])
+
 # Initialize components
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
 dmx_output_manager = DMXOutputManager(dmx_state_manager)
 light_config = LightConfigManager(dmx_state_manager=dmx_state_manager)
-effects_manager = EffectsManager(config_file='effects_config.json', light_config_manager=light_config, dmx_state_manager=dmx_state_manager)
+audio_manager = AudioManager()
+remote_host_manager = RemoteHostManager(audio_manager=audio_manager)
+effects_manager = EffectsManager(config_file='effects_config.json', light_config_manager=light_config, dmx_state_manager=dmx_state_manager, remote_host_manager=remote_host_manager, audio_manager=audio_manager)
 interrupt_handler = InterruptHandler(dmx_state_manager, effects_manager.theme_manager)
 effects_manager.interrupt_handler = interrupt_handler
 logger.info("InterruptHandler initialized and passed to EffectsManager")
@@ -42,6 +169,10 @@ dmx_output_manager.start()
 
 # Ensure no theme is running at startup
 effects_manager.stop_current_theme()
+
+async def initialize_remote_hosts():
+    # Initialize WebSocket connections to remote hosts
+    await remote_host_manager.initialize_websocket_connections()
 
 @app.route('/api/set_master_brightness', methods=['POST'])
 async def set_master_brightness():
@@ -75,33 +206,54 @@ async def set_theme():
         logger.error(f"Error setting theme: {str(e)}")
         return jsonify({'status': 'error', 'message': f'An error occurred while setting the theme: {str(e)}'}), 500
 
+import time
+
 @app.route('/api/run_effect', methods=['POST'])
 async def run_effect():
     data = await request.json
     room = data.get('room')
     effect_name = data.get('effect_name')
+    audio_params = data.get('audio', {})
     
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
     
-    logger.info(f"Running effect: {effect_name} in room: {room}")
+    logger.info(f"Preparing effect: {effect_name} for room: {room}")
     effect_data = effects_manager.get_effect(effect_name)
     if not effect_data:
         logger.error(f"Effect not found: {effect_name}")
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
+    # Add audio parameters to effect data
+    effect_data['audio'] = audio_params
+    
     try:
-        success = await effects_manager.apply_effect_to_room(room, effect_data)
+        # Execute the effect immediately
+        success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
         
         if success:
-            logger.info(f"Effect {effect_name} applied successfully to room {room}")
-            return jsonify({'status': 'success', 'message': f'Effect {effect_name} applied to room {room}'})
+            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}'})
         else:
-            error_message = f"Failed to apply effect {effect_name} to room {room}. Check server logs for details."
-            logger.error(error_message)
-            return jsonify({'status': 'error', 'message': error_message}), 500
+            logger.error(f"Failed to execute effect {effect_name} in room {room}: {message}")
+            return jsonify({'status': 'error', 'message': message}), 500
     except Exception as e:
-        error_message = f"Error applying effect {effect_name} to room {room}: {str(e)}"
+        error_message = f"Error executing effect {effect_name} for room {room}: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        return jsonify({'status': 'error', 'message': error_message}), 500
+
+# This function has been removed as it's no longer needed
+
+@app.route('/api/stop_effect', methods=['POST'])
+async def stop_effect():
+    data = await request.json
+    room = data.get('room')
+    
+    try:
+        await effects_manager.stop_current_effect(room)
+        message = f"Effect stopped in room: {room}" if room else "Effects stopped in all rooms"
+        return jsonify({'status': 'success', 'message': message})
+    except Exception as e:
+        error_message = f"Error stopping effect: {str(e)}"
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
 
@@ -203,14 +355,34 @@ async def run_effect_all_rooms():
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
 
     try:
+        effect_data = effects_manager.get_effect(effect_name)
+        if not effect_data:
+            return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
+
+        # Get all rooms
+        room_layout = light_config.get_room_layout()
+        all_rooms = list(room_layout.keys())
+
+        # Prepare audio for all rooms
+        audio_file = effects_manager.get_audio_file(effect_name)
+        audio_params = effect_data.get('audio', {})
+        await remote_host_manager.stream_audio_to_room(all_rooms, audio_file, audio_params, effect_name)
+
+        # Apply effect to all rooms simultaneously
         success, message = await effects_manager.apply_effect_to_all_rooms(effect_name)
+
         if success:
-            return jsonify({"message": f"{effect_name} effect triggered in all rooms"}), 200
+            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in all rooms simultaneously'})
         else:
-            return jsonify({"error": message}), 400
+            return jsonify({'status': 'error', 'message': message}), 500
     except Exception as e:
-        logger.exception(f"Error triggering {effect_name} effect in all rooms")
+        logger.exception(f"Error executing {effect_name} effect for all rooms")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/audio/<path:filename>')
+async def serve_audio(filename):
+    audio_dir = os.path.join(os.path.dirname(__file__), 'audio_files')
+    return await send_from_directory(audio_dir, filename)
 
 if __name__ == '__main__':
     import asyncio
@@ -223,4 +395,18 @@ if __name__ == '__main__':
     config.accesslog = "-"  # Log to stdout
     config.errorlog = "-"  # Log to stderr
     config.loglevel = "INFO"
-    asyncio.run(serve(app, config))
+
+    async def run_server():
+        try:
+            await initialize_remote_hosts()
+            websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
+            quart_server = serve(app, config)
+            await asyncio.gather(websocket_server.wait_closed(), quart_server)
+        except Exception as e:
+            log_and_exit(f"Server crashed: {str(e)}")
+
+    print("Starting server on http://0.0.0.0:5000")
+    try:
+        asyncio.run(run_server())
+    except Exception as e:
+        log_and_exit(f"Failed to start server: {str(e)}")

@@ -4,8 +4,10 @@ services:
     build: .
     ports:
       - "5000:5000"
+      - "8765:8765"
     devices:
       - "/dev/ttyUSB0:/dev/ttyUSB0"
+      - "/dev/snd:/dev/snd"
     privileged: true
     volumes:
       - .:/app

@@ -7,9 +7,10 @@ from effect_utils import generate_theme_values
 logger = logging.getLogger(__name__)
 
 class ThemeManager:
-    def __init__(self, dmx_state_manager, light_config_manager):
+    def __init__(self, dmx_state_manager, light_config_manager, interrupt_handler):
         self.dmx_state_manager = dmx_state_manager
         self.light_config_manager = light_config_manager
+        self.interrupt_handler = interrupt_handler
         self.themes = {}
         self.current_theme = None
         self.theme_thread = None
@@ -24,33 +25,74 @@ class ThemeManager:
         # Load themes from a JSON file or database
         self.themes = {
             "Ocean": {
-                "duration": 300,  # 5 minutes
-                "transition_speed": 0.05,
+                "duration": 600,  # 10 minutes
+                "transition_speed": 0.04,
                 "color_variation": 0.8,
                 "intensity_fluctuation": 0.3,
                 "overall_brightness": 0.7,
-                "blue_green_balance": 0.9,
-                "room_transition_speed": 0.02,
-                "color_wheel_speed": 0.08
+                "blue_green_balance": 0.6,
+                "room_transition_speed": 0.015,
+                "color_wheel_speed": 0.06,
+                "wave_effect": 0.4,
+                "depth_illusion": 0.5,
+                "bioluminescence": 0.3,
+                "coral_glow": 0.4
             },
             "Jungle": {
-                "duration": 300,  # 5 minutes
+                "duration": 600,  # 10 minutes
                 "transition_speed": 0.05,
                 "color_variation": 0.9,
                 "intensity_fluctuation": 0.4,
-                "overall_brightness": 0.6,
-                "green_blue_balance": 0.3,
+                "overall_brightness": 0.8,
+                "green_red_balance": 0.7,
                 "room_transition_speed": 0.02,
-                "color_wheel_speed": 0.09
+                "color_wheel_speed": 0.07,
+                "leaf_rustle_effect": 0.4,
+                "sunbeam_effect": 0.5,
+                "flower_bloom": 0.3,
+                "firefly_glow": 0.4
             },
             "MazeMadness": {
-                "duration": 300,  # 5 minutes
-                "transition_speed": 0.05,
+                "duration": 600,  # 10 minutes
+                "transition_speed": 0.06,
                 "color_variation": 1.0,
-                "intensity_fluctuation": 0.2,
-                "overall_brightness": 0.8,
-                "room_transition_speed": 0.02,
-                "color_wheel_speed": 0.1
+                "intensity_fluctuation": 0.35,
+                "overall_brightness": 0.75,
+                "room_transition_speed": 0.025,
+                "color_wheel_speed": 0.08,
+                "geometric_patterns": 0.6,
+                "perspective_shift": 0.5,
+                "neon_glow": 0.7,
+                "color_pulse": 0.4
+            },
+            "TimsFav": {
+                "duration": 600,  # 10 minutes
+                "transition_speed": 0.07,
+                "color_variation": 1.0,
+                "intensity_fluctuation": 0.4,
+                "overall_brightness": 0.85,
+                "room_transition_speed": 0.03,
+                "color_wheel_speed": 0.09,
+                "joy_factor": 0.7,
+                "excitement_factor": 0.8,
+                "ecstasy_factor": 0.6,
+                "kaleidoscope_effect": 0.5,
+                "fractal_patterns": 0.4,
+                "rainbow_burst": 0.6
+            },
+            "DesertDream": {
+                "duration": 600,  # 10 minutes
+                "transition_speed": 0.04,
+                "color_variation": 0.7,
+                "intensity_fluctuation": 0.3,
+                "overall_brightness": 0.6,
+                "room_transition_speed": 0.015,
+                "color_wheel_speed": 0.05,
+                "sand_ripple_effect": 0.4,
+                "mirage_illusion": 0.5,
+                "heat_wave_distortion": 0.3,
+                "oasis_glow": 0.4,
+                "sunset_hues": 0.6
             }
         }
 
@@ -158,12 +200,15 @@ class ThemeManager:
             start_address = light['start_address']
             light_model = self.light_config_manager.get_light_config(light['model'])
             fixture_id = (start_address - 1) // 8
-            fixture_values = [0] * 8
-            for channel, value in room_channels.items():
-                if channel in light_model['channels']:
-                    channel_offset = light_model['channels'][channel]
-                    fixture_values[channel_offset] = value
-            self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+            if fixture_id not in self.interrupt_handler.interrupted_fixtures:
+                fixture_values = [0] * 8
+                for channel, value in room_channels.items():
+                    if channel in light_model['channels']:
+                        channel_offset = light_model['channels'][channel]
+                        fixture_values[channel_offset] = value
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                new_values = [max(current, new) for current, new in zip(current_values, fixture_values)]
+                self.dmx_state_manager.update_fixture(fixture_id, new_values)
 
     def set_master_brightness(self, brightness):
         self.master_brightness = max(0.0, min(1.0, brightness))
@@ -174,3 +219,14 @@ class ThemeManager:
 
     def get_theme(self, theme_name):
         return self.themes.get(theme_name)
+
+    async def apply_theme_to_room(self, room):
+        if self.current_theme:
+            theme_data = self.themes[self.current_theme]
+            room_layout = self.light_config_manager.get_room_layout()
+            lights = room_layout.get(room, [])
+            current_time = time.time()
+            room_channels = generate_theme_values(theme_data, current_time, self.master_brightness)
+            self._apply_room_channels(room, lights, room_channels)
+        else:
+            logger.warning(f"No current theme to apply to room {room}")
