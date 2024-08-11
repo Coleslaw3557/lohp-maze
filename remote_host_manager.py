@@ -159,7 +159,7 @@ class RemoteHostManager:
         logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
         try:
             # Check if this client has already received the audio for this effect
-            if effect_name in self.audio_sent_to_clients.get(client_ip, set()):
+            if client_ip in self.audio_sent_to_clients and effect_name in self.audio_sent_to_clients[client_ip]:
                 logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Skipping audio streaming.")
                 return True
 
@@ -169,18 +169,17 @@ class RemoteHostManager:
 
             file_name = self._get_file_name(audio_file)
 
-            # Send audio_start command only if it hasn't been sent before
-            if effect_name not in self.audio_sent_to_clients.get(client_ip, set()):
-                success = await self.send_audio_command(room, 'audio_start', {
-                    'file_name': file_name,
-                    'volume': audio_params.get('volume', 1.0),
-                    'loop': audio_params.get('loop', False)
-                })
-                if not success:
-                    logger.error(f"Failed to send audio_start command to client {client_ip} for room {room}")
-                    return False
+            # Send audio_start command
+            success = await self.send_audio_command(room, 'audio_start', {
+                'file_name': file_name,
+                'volume': audio_params.get('volume', 1.0),
+                'loop': audio_params.get('loop', False)
+            })
+            if not success:
+                logger.error(f"Failed to send audio_start command to client {client_ip} for room {room}")
+                return False
 
-                await asyncio.sleep(0.1)  # Add a small delay before sending audio data
+            await asyncio.sleep(0.1)  # Add a small delay before sending audio data
 
             # Send audio data
             success = await self.send_audio_command(room, 'audio_data', audio_data)

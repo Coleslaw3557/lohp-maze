@@ -184,9 +184,6 @@ class EffectsManager:
 
         room_layout = self.light_config_manager.get_room_layout()
         
-        # Clear the audio_sent_to_clients dict before applying the effect
-        self.remote_host_manager.audio_sent_to_clients.clear()
-        
         tasks = []
         for room in room_layout.keys():
             task = self.apply_effect_to_room(room, effect_name, effect_data)
@@ -199,9 +196,6 @@ class EffectsManager:
             logger.info(f"{effect_name} effect triggered in all rooms")
         else:
             logger.error(f"Failed to trigger {effect_name} effect in some rooms")
-        
-        # Clear the audio_sent_to_clients dict after applying the effect to all rooms
-        self.remote_host_manager.audio_sent_to_clients.clear()
         
         return success, f"{effect_name} effect triggered in all rooms" if success else f"Failed to trigger {effect_name} effect in some rooms"
 
