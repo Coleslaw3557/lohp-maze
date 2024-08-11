@@ -127,6 +127,8 @@ class EffectsManager:
         audio_task = None
         if audio_file:
             audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
+        else:
+            logger.warning(f"No audio file found for effect '{effect_name}'. Skipping audio playback.")
         
         try:
             # Run all tasks concurrently
@@ -134,6 +136,10 @@ class EffectsManager:
                 await asyncio.gather(*tasks, audio_task)
             else:
                 await asyncio.gather(*tasks)
+            
+            # If no audio file was found, still send a command to play the effect without audio
+            if not audio_file:
+                await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
         except Exception as e:
             logger.error(f"Error applying effect '{effect_name}' to room '{room}': {str(e)}", exc_info=True)
             return False, f"Error applying {effect_name} effect to room {room}"
