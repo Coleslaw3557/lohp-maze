@@ -13,7 +13,7 @@ class RemoteHostManager:
         self.remote_hosts = {}
         self.connected_clients = {}
         self.client_rooms = {}
-        self.audio_sent_to_clients = set()
+        self.audio_sent_to_clients = {}
         logger.info("RemoteHostManager initialized")
 
     def update_client_rooms(self, unit_name, ip, rooms, websocket, path):
@@ -146,7 +146,7 @@ class RemoteHostManager:
         # For example:
         # self.effect_manager.trigger_effect(room, trigger)
 
-    async def stream_audio_to_room(self, room, audio_file, audio_params):
+    async def stream_audio_to_room(self, room, audio_file, audio_params, effect_name):
         if not audio_file:
             logger.error(f"No audio file provided for room {room}")
             return False
@@ -158,16 +158,16 @@ class RemoteHostManager:
 
         logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
         try:
+            # Check if this client has already received the audio for this effect
+            if effect_name in self.audio_sent_to_clients.get(client_ip, set()):
+                logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Skipping.")
+                return True
+
             audio_data = await self._get_audio_data(audio_file)
             if not audio_data:
                 return False
 
             file_name = self._get_file_name(audio_file)
-            
-            # Check if this client has already received the audio
-            if client_ip in self.audio_sent_to_clients:
-                logger.info(f"Audio already sent to client {client_ip}. Skipping.")
-                return True
 
             success = await self.send_audio_command(client_ip, 'audio_start', {
                 'file_name': file_name,
@@ -178,7 +178,9 @@ class RemoteHostManager:
                 await asyncio.sleep(0.1)  # Add a small delay before sending audio data
                 await self.send_audio_command(client_ip, 'audio_data', audio_data)
                 logger.info(f"Successfully streamed audio to client {client_ip}")
-                self.audio_sent_to_clients.add(client_ip)
+                if client_ip not in self.audio_sent_to_clients:
+                    self.audio_sent_to_clients[client_ip] = set()
+                self.audio_sent_to_clients[client_ip].add(effect_name)
                 return True
             else:
                 logger.error(f"Failed to send audio command to client {client_ip}")

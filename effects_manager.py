@@ -184,7 +184,7 @@ class EffectsManager:
 
         room_layout = self.light_config_manager.get_room_layout()
         
-        # Clear the audio_sent_to_clients set before applying the effect
+        # Clear the audio_sent_to_clients dict before applying the effect
         self.remote_host_manager.audio_sent_to_clients.clear()
         
         tasks = [self.apply_effect_to_room(room, effect_name, effect_data) for room in room_layout.keys()]
@@ -292,7 +292,7 @@ class EffectsManager:
         audio_file = self.get_audio_file(effect_name)
         if audio_file:
             audio_params = effect_data.get('audio', {})
-            await self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params)
+            await self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
         else:
             logger.warning(f"No audio file available for effect '{effect_name}' in room '{room}'")
         
