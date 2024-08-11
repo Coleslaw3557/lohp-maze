@@ -230,6 +230,19 @@ class AudioManager:
         if not self.stop_event.is_set():
             self.current_audio = None
 
+    def _play_audio(self, audio, loop=False):
+        play_obj = _play_with_simpleaudio(audio)
+        if loop:
+            while not self.stop_event.is_set():
+                play_obj.wait_done()
+                if self.stop_event.is_set():
+                    break
+                play_obj = _play_with_simpleaudio(audio)
+        else:
+            self._wait_for_completion(play_obj)
+        play_obj.stop()
+        self.current_audio = None
+
     async def cache_audio(self, file_name, audio_data):
         file_path = os.path.join(self.cache_dir, file_name)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
