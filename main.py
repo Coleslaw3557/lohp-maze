@@ -219,6 +219,11 @@ async def run_effect():
         success = await effects_manager.execute_effect(effect_id)
         
         if success:
+            # Trigger audio playback
+            audio_file = audio_manager.get_audio_file(effect_name)
+            if audio_file:
+                await remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
+            
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}', 'effect_id': effect_id})
         else:
             logger.error(f"Failed to execute effect {effect_name} in room {room}")
