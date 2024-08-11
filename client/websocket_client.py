@@ -172,7 +172,6 @@ class WebSocketClient:
 
     async def handle_prepare_execution(self, message):
         effect_id = message['effect_id']
-        server_execution_time = message['execution_time']
         
         # Prepare for execution (e.g., load audio, prepare lighting sequences)
         await self.prepare_effect(effect_id)
@@ -184,9 +183,18 @@ class WebSocketClient:
         }
         await self.send_message(ready_message)
         logger.info(f"Sent client_ready message: {ready_message}")
+
+    async def prepare_effect(self, effect_id):
+        # Prepare audio and lighting for the effect
+        await self.audio_manager.prepare_audio_for_effect(effect_id)
+        # Add any other preparation steps here
+
+    async def handle_execute_effect(self, message):
+        effect_id = message['effect_id']
+        server_execution_time = message['execution_time']
         
         # Calculate the local execution time
-        local_execution_time = server_execution_time - self.time_offset
+        local_execution_time = server_execution_time - self.sync_manager.get_time_offset()
         
         # Add a small buffer time (e.g., 50ms) to account for processing differences
         buffer_time = 0.05
@@ -195,13 +203,8 @@ class WebSocketClient:
         # Wait for adjusted execution time
         await self.wait_for_execution(adjusted_execution_time, effect_id)
 
-    async def prepare_effect(self, effect_id):
-        # Prepare audio and lighting for the effect
-        await self.audio_manager.prepare_audio_for_effect(effect_id)
-        # Add any other preparation steps here
-
     async def wait_for_execution(self, execution_time, effect_id):
-        current_time = time.time()
+        current_time = self.sync_manager.get_synced_time()
         wait_time = execution_time - current_time
         if wait_time > 0:
             await asyncio.sleep(wait_time)
