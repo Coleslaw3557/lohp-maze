@@ -439,9 +439,8 @@ class EffectsManager:
             return False
 
         # Execute audio effect for all rooms simultaneously
-        audio_file = self.get_audio_file(effect_name)
         audio_params = effect_data.get('audio', {})
-        audio_success = await self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
+        audio_success = await self.remote_host_manager.play_audio_in_room(rooms, effect_name, audio_params)
         
         # Execute lighting effect for all rooms simultaneously
         lighting_tasks = [self._apply_lighting_effect(room, effect_data) for room in rooms]
