@@ -209,32 +209,31 @@ class EffectsManager:
             logger.error(f"{effect_name} effect not found")
             return False, f"{effect_name} effect not found"
 
-        # Clear the audio sent tracking before applying to all rooms
         self.remote_host_manager.clear_audio_sent_to_clients()
 
         room_layout = self.light_config_manager.get_room_layout()
         
         # Step 1: Prepare all rooms
-        for room in room_layout.keys():
-            await self.prepare_effect_for_room(room, effect_name, effect_data)
+        prepare_tasks = [self.prepare_effect_for_room(room, effect_name, effect_data) for room in room_layout.keys()]
+        await asyncio.gather(*prepare_tasks)
         
-        # Step 2: Notify clients to prepare
+        # Step 2: Notify clients to prepare and wait for readiness
         effect_id = f"{effect_name}_{int(time.time())}"
-        clients_ready = await self.remote_host_manager.notify_clients_of_execution(effect_id)
+        execution_time = time.time() + 5  # Schedule execution 5 seconds in the future
+        clients_ready = await self.remote_host_manager.notify_clients_of_execution(effect_id, execution_time)
         
         if not clients_ready:
             logger.error("Not all clients are ready for execution")
             return False, "Not all clients are ready for execution"
         
-        # Step 3: Execute the effect in all rooms
-        tasks = []
-        for room in room_layout.keys():
-            task = self.execute_effect_in_room(room, effect_name, effect_data)
-            tasks.append(task)
+        # Step 3: Wait until the scheduled execution time
+        await asyncio.sleep(max(0, execution_time - time.time()))
         
-        results = await asyncio.gather(*tasks)
+        # Step 4: Execute the effect in all rooms simultaneously
+        execute_tasks = [self.execute_effect_in_room(room, effect_name, effect_data) for room in room_layout.keys()]
+        results = await asyncio.gather(*execute_tasks)
         
-        success = all(result for result in results)
+        success = all(results)
         if success:
             logger.info(f"{effect_name} effect triggered in all rooms")
         else:
