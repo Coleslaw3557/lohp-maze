@@ -325,11 +325,7 @@ class EffectsManager:
 
     async def prepare_effect(self, effect_id):
         effect = self.effect_buffer[effect_id]
-        rooms, effect_name, effect_data = effect['room'], effect['effect_name'], effect['effect_data']
-        
-        # Ensure rooms is always a list
-        if not isinstance(rooms, list):
-            rooms = [rooms]
+        rooms, effect_name, effect_data = effect['rooms'], effect['effect_name'], effect['effect_data']
         
         # Prepare lighting effect
         room_layout = self.light_config_manager.get_room_layout()
