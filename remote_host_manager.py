@@ -27,7 +27,8 @@ class RemoteHostManager:
         logger.info("Cleared audio sent to clients tracking")
 
     async def notify_clients_of_execution(self, effect_id, execution_time):
-        self.client_ready_status[effect_id] = {client: False for client in self.connected_clients}
+        connected_clients = [client for client in self.connected_clients if self.is_client_connected(client)]
+        self.client_ready_status[effect_id] = {client: False for client in connected_clients}
         message = {
             "type": "prepare_execution",
             "effect_id": effect_id,
@@ -35,24 +36,29 @@ class RemoteHostManager:
         }
         await self.broadcast_message(message)
         
-        # Wait for all clients to be ready or timeout after 2 seconds
+        # Wait for all connected clients to be ready or timeout after 2 seconds
         start_time = time.time()
         while not all(self.client_ready_status[effect_id].values()):
             if time.time() - start_time > 2:
-                logger.warning("Timeout waiting for all clients to be ready")
+                logger.warning("Timeout waiting for connected clients to be ready")
                 return False
             await asyncio.sleep(0.1)
         
         return True
+
+    def is_client_connected(self, client):
+        return client in self.connected_clients and self.connected_clients[client].open
 
     async def broadcast_message(self, message):
         for websocket in self.connected_clients.values():
             await websocket.send(json.dumps(message))
 
     def set_client_ready(self, effect_id, client_ip):
-        if effect_id in self.client_ready_status:
+        if effect_id in self.client_ready_status and client_ip in self.client_ready_status[effect_id]:
             self.client_ready_status[effect_id][client_ip] = True
             logger.info(f"Client {client_ip} ready for effect {effect_id}")
+        else:
+            logger.warning(f"Received ready status for unknown client {client_ip} or effect {effect_id}")
 
     async def prepare_audio_stream(self, room, audio_file, audio_params, effect_name):
         client_ip = self.get_client_ip_by_room(room)
