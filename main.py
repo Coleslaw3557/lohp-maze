@@ -347,14 +347,37 @@ async def run_effect_all_rooms():
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
 
     try:
+        # Prepare audio for all rooms
+        await effects_manager.prepare_audio_for_all_rooms(effect_name)
+        
+        # Schedule the effect execution with a delay
+        execution_time = time.time() + 3  # 3 seconds delay
+        
+        # Notify clients to prepare for synchronized execution
+        clients_ready = await remote_host_manager.notify_clients_of_execution(effect_name, execution_time)
+        
+        if not clients_ready:
+            return jsonify({'status': 'error', 'message': 'Not all clients are ready'}), 500
+        
+        # Schedule the effect execution
+        asyncio.create_task(schedule_effect_execution_all_rooms(effect_name, execution_time))
+        
+        return jsonify({"message": f"{effect_name} effect scheduled for all rooms"}), 200
+    except Exception as e:
+        logger.exception(f"Error scheduling {effect_name} effect for all rooms")
+        return jsonify({"error": str(e)}), 500
+
+async def schedule_effect_execution_all_rooms(effect_name, execution_time):
+    delay = max(0, execution_time - time.time())
+    await asyncio.sleep(delay)
+    try:
         success, message = await effects_manager.apply_effect_to_all_rooms(effect_name)
         if success:
-            return jsonify({"message": f"{effect_name} effect triggered in all rooms"}), 200
+            logger.info(f"{effect_name} effect triggered in all rooms")
         else:
-            return jsonify({"error": message}), 400
+            logger.error(f"Failed to trigger {effect_name} effect in all rooms: {message}")
     except Exception as e:
-        logger.exception(f"Error triggering {effect_name} effect in all rooms")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error executing {effect_name} effect in all rooms: {str(e)}")
 
 @app.route('/api/audio/<path:filename>')
 async def serve_audio(filename):

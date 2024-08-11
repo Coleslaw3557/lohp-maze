@@ -164,6 +164,23 @@ class EffectsManager:
         logger.info(f"Getting theme: {theme_name}")
         return self.theme_manager.get_theme(theme_name)
 
+    async def prepare_audio_for_all_rooms(self, effect_name):
+        logger.info(f"Preparing audio for effect {effect_name} in all rooms")
+        effect_data = self.get_effect(effect_name)
+        if not effect_data:
+            logger.error(f"{effect_name} effect not found")
+            return False
+
+        room_layout = self.light_config_manager.get_room_layout()
+        for room in room_layout.keys():
+            audio_file = self.get_audio_file(effect_name)
+            if audio_file:
+                await self.remote_host_manager.prepare_audio_stream(room, audio_file, effect_data.get('audio', {}), effect_name)
+            else:
+                logger.warning(f"No audio file found for effect {effect_name} in room {room}")
+        
+        return True
+
     def initialize_effects(self):
         effects = [
             ("Lightning", create_lightning_effect()),
