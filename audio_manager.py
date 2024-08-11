@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
 
@@ -45,22 +46,23 @@ class AudioManager:
     def get_audio_file(self, effect_name):
         effect_config = self.audio_config['effects'].get(effect_name, {})
         audio_file = effect_config.get('audio_file')
-        if audio_file:
-            full_path = os.path.join(self.audio_dir, audio_file)
-            logger.debug(f"Audio file for effect '{effect_name}': {full_path}")
-            if os.path.exists(full_path):
-                return full_path
-            else:
-                logger.warning(f"Audio file not found at path: {full_path}")
-                # Try lowercase filename as fallback
-                lowercase_path = os.path.join(self.audio_dir, audio_file.lower())
-                if os.path.exists(lowercase_path):
-                    logger.info(f"Found audio file with lowercase name: {lowercase_path}")
-                    return lowercase_path
-                else:
-                    logger.warning(f"Audio file not found with lowercase name either: {lowercase_path}")
-        else:
-            logger.warning(f"No audio file configured for effect: {effect_name}")
+        
+        possible_filenames = [
+            audio_file,
+            f"{effect_name.lower()}.mp3",
+            f"{effect_name.lower().replace(' ', '_')}.mp3",
+            f"{effect_name.lower().replace('-', '_')}.mp3"
+        ]
+        
+        for filename in possible_filenames:
+            if filename:
+                full_path = os.path.join(self.audio_dir, filename)
+                logger.debug(f"Trying audio file for effect '{effect_name}': {full_path}")
+                if os.path.exists(full_path):
+                    logger.info(f"Found audio file for effect '{effect_name}': {full_path}")
+                    return full_path
+        
+        logger.warning(f"No audio file found for effect: {effect_name}")
         
         # If no audio file is found, return a default "silent" audio file
         default_silent_file = os.path.join(self.audio_dir, "silent.mp3")
@@ -69,7 +71,20 @@ class AudioManager:
             return default_silent_file
         else:
             logger.error(f"Default silent audio file not found: {default_silent_file}")
-        return None
+            # Create an empty silent.mp3 file
+            self.create_silent_mp3(default_silent_file)
+            return default_silent_file
+
+    def create_silent_mp3(self, file_path):
+        try:
+            from pydub import AudioSegment
+            silent_segment = AudioSegment.silent(duration=1000)  # 1 second of silence
+            silent_segment.export(file_path, format="mp3")
+            logger.info(f"Created default silent audio file: {file_path}")
+        except ImportError:
+            logger.error("pydub library not found. Unable to create silent.mp3")
+        except Exception as e:
+            logger.error(f"Error creating silent.mp3: {str(e)}")
 
     def get_audio_config(self, effect_name):
         config = self.audio_config['effects'].get(effect_name, {})
