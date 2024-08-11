@@ -94,15 +94,14 @@ class EffectsManager:
         lighting_tasks = [self._apply_effect_to_fixture(fixture_id, effect_data) for fixture_id in fixture_ids]
         
         # Prepare audio streaming
+        audio_task = None
         if audio_file:
             await self.remote_host_manager.prepare_audio_stream(room, audio_file, effect_data.get('audio', {}), effect_name)
+            audio_task = self.remote_host_manager.play_prepared_audio(room)
         
-        # Run lighting tasks
-        await asyncio.gather(*lighting_tasks)
-        
-        # Start audio playback
-        if audio_file:
-            await self.remote_host_manager.play_prepared_audio(room)
+        # Run lighting tasks and audio playback concurrently
+        tasks = lighting_tasks + ([audio_task] if audio_task else [])
+        await asyncio.gather(*tasks)
         
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         
