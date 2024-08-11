@@ -17,7 +17,7 @@ class AudioManager:
         self.config = config
         self.current_audio = None
         self.stop_event = threading.Event()
-        self.prepared_audio = None
+        self.prepared_audio = {}
         self.audio_files = [
             "lightning.mp3",
             # Add other audio files here
@@ -45,12 +45,15 @@ class AudioManager:
                 return False
         
         if os.path.exists(full_path):
-            self.prepared_audio = {
-                'file_name': full_path,
-                'volume': params.get('volume', 1.0),
-                'loop': params.get('loop', False)
-            }
-            logger.info(f"Prepared audio: {full_path} (volume: {self.prepared_audio['volume']}, loop: {self.prepared_audio['loop']})")
+            if file_name not in self.prepared_audio:
+                self.prepared_audio[file_name] = {
+                    'file_name': full_path,
+                    'volume': params.get('volume', 1.0),
+                    'loop': params.get('loop', False)
+                }
+                logger.info(f"Prepared audio: {full_path} (volume: {self.prepared_audio[file_name]['volume']}, loop: {self.prepared_audio[file_name]['loop']})")
+            else:
+                logger.info(f"Audio already prepared: {full_path}")
             return True
         else:
             logger.error(f"Audio file not found after download attempt: {full_path}")
@@ -99,28 +102,28 @@ class AudioManager:
                 logger.error(f"Failed to download {file_name} after {max_retries} attempts")
                 return False
 
-    async def play_prepared_audio(self):
-        if self.prepared_audio:
-            if os.path.exists(self.prepared_audio['file_name']):
+    async def play_prepared_audio(self, file_name):
+        if file_name in self.prepared_audio:
+            audio_info = self.prepared_audio[file_name]
+            if os.path.exists(audio_info['file_name']):
                 self.stop_audio()
                 try:
-                    audio = AudioSegment.from_mp3(self.prepared_audio['file_name'])
-                    volume = self.prepared_audio['volume']
+                    audio = AudioSegment.from_mp3(audio_info['file_name'])
+                    volume = audio_info['volume']
                     audio = audio + (20 * math.log10(volume))
                     
-                    self.current_audio = self.prepared_audio['file_name']
+                    self.current_audio = audio_info['file_name']
                     self.stop_event.clear()
                     
-                    threading.Thread(target=self._play_audio, args=(audio, self.prepared_audio['loop'])).start()
+                    threading.Thread(target=self._play_audio, args=(audio, audio_info['loop'])).start()
                     
-                    logger.info(f"Started playing audio: {self.prepared_audio['file_name']} (volume: {volume}, loop: {self.prepared_audio['loop']})")
+                    logger.info(f"Started playing audio: {audio_info['file_name']} (volume: {volume}, loop: {audio_info['loop']})")
                 except Exception as e:
                     logger.error(f"Error playing audio: {str(e)}", exc_info=True)
             else:
-                logger.error(f"Prepared audio file not found: {self.prepared_audio['file_name']}")
-            self.prepared_audio = None
+                logger.error(f"Prepared audio file not found: {audio_info['file_name']}")
         else:
-            logger.warning("No prepared audio to play")
+            logger.warning(f"No prepared audio found for: {file_name}")
 
     async def receive_audio_data(self, audio_data):
         if self.prepared_audio:
