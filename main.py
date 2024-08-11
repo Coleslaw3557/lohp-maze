@@ -3,6 +3,8 @@ import logging
 import asyncio
 import json
 import websockets
+import sys
+import traceback
 from quart import Quart, request, jsonify, Response, send_from_directory
 from quart_cors import cors
 from werkzeug.urls import uri_to_iri, iri_to_uri
@@ -22,14 +24,28 @@ CHANNELS_PER_FIXTURE = 8
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    filename='server.log',  # Log to a file
+                    filemode='a')  # Append mode
 logger = logging.getLogger(__name__)
+
+# Add a stream handler to also log to console
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG if DEBUG else logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 app = Quart(__name__)
 app = cors(app)
 app.secret_key = SECRET_KEY
 
 connected_clients = set()
+
+def log_and_exit(error_message):
+    logger.critical(f"Critical error: {error_message}")
+    logger.critical(f"Traceback: {traceback.format_exc()}")
+    sys.exit(1)
 
 async def websocket_handler(websocket, path):
     connected_clients.add(websocket)
@@ -381,10 +397,16 @@ if __name__ == '__main__':
     config.loglevel = "INFO"
 
     async def run_server():
-        await initialize_remote_hosts()
-        websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
-        quart_server = serve(app, config)
-        await asyncio.gather(websocket_server.wait_closed(), quart_server)
+        try:
+            await initialize_remote_hosts()
+            websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
+            quart_server = serve(app, config)
+            await asyncio.gather(websocket_server.wait_closed(), quart_server)
+        except Exception as e:
+            log_and_exit(f"Server crashed: {str(e)}")
 
     print("Starting server on http://0.0.0.0:5000")
-    asyncio.run(run_server())
+    try:
+        asyncio.run(run_server())
+    except Exception as e:
+        log_and_exit(f"Failed to start server: {str(e)}")
