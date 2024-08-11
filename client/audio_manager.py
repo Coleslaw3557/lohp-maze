@@ -31,28 +31,33 @@ class AudioManager:
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
-        await self.preload_audio_files()
+        await self.preload_existing_audio_files()
         logger.info("AudioManager initialization complete")
 
-    async def preload_audio_files(self):
+    async def preload_existing_audio_files(self):
         logger.info("Preloading existing audio files")
-        audio_files = os.listdir(os.path.join(self.cache_dir, 'audio_files'))
-        for audio_file in audio_files:
-            if audio_file.endswith('.mp3'):
-                file_path = os.path.join(self.cache_dir, 'audio_files', audio_file)
-                audio = AudioSegment.from_mp3(file_path)
-                self.preloaded_audio[audio_file] = audio
-        logger.info(f"Preloaded {len(self.preloaded_audio)} audio files")
+        audio_dir = os.path.join(self.cache_dir, 'audio_files')
+        if os.path.exists(audio_dir):
+            audio_files = os.listdir(audio_dir)
+            for audio_file in audio_files:
+                if audio_file.endswith('.mp3'):
+                    file_path = os.path.join(audio_dir, audio_file)
+                    audio = AudioSegment.from_mp3(file_path)
+                    self.preloaded_audio[audio_file] = audio
+            logger.info(f"Preloaded {len(self.preloaded_audio)} existing audio files")
+        else:
+            logger.info("No existing audio files found")
 
     async def download_audio_files(self, audio_files_to_download):
-        logger.info(f"Starting download of {len(audio_files_to_download)} audio files")
+        logger.info(f"Received list of {len(audio_files_to_download)} audio files to download")
         for audio_file in audio_files_to_download:
-            success = await self.download_audio(audio_file)
-            if not success:
-                logger.error(f"Failed to download {audio_file}")
-            else:
-                await self.preload_single_audio_file(audio_file)
-        logger.info("Finished attempting to download all audio files")
+            if audio_file not in self.preloaded_audio:
+                success = await self.download_audio(audio_file)
+                if success:
+                    await self.preload_single_audio_file(audio_file)
+                else:
+                    logger.error(f"Failed to download {audio_file}")
+        logger.info("Finished processing audio files to download")
 
     async def preload_single_audio_file(self, audio_file):
         file_path = os.path.join(self.cache_dir, 'audio_files', audio_file)
