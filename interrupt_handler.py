@@ -15,7 +15,7 @@ class InterruptHandler:
         self.fixture_locks = {fixture_id: threading.Lock() for fixture_id in range(dmx_state_manager.num_fixtures)}
 
     async def interrupt_fixture(self, fixture_id, duration, interrupt_sequence):
-        with self.fixture_locks[fixture_id]:
+        async with asyncio.Lock():
             logger.info(f"Starting effect on fixture {fixture_id} for {duration} seconds")
             
             # Store the original state

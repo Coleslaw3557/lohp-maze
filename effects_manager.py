@@ -103,6 +103,11 @@ class EffectsManager:
             logger.info(f"No active effect to stop in room: {room}")
 
     async def apply_effect_to_room(self, room, effect_name, effect_data=None):
+        logger.info(f"Starting to apply effect '{effect_name}' to room '{room}'")
+        
+        # Stop any ongoing effect in the room
+        await self.stop_effect_in_room(room)
+        
         if effect_data is None:
             effect_data = self.get_effect(effect_name)
         if not effect_data:
@@ -124,8 +129,12 @@ class EffectsManager:
         audio_params = effect_data.get('audio_params', {})
         audio_file = self.audio_manager.get_audio_file(effect_name)
 
+        tasks = []
+        
         # Use the interrupt system to apply the effect
-        tasks = [self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data)) for fixture_id in fixture_ids]
+        for fixture_id in fixture_ids:
+            task = self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data))
+            tasks.append(task)
         
         # Create an audio task only if an audio file is found
         if audio_file:
