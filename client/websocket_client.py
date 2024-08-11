@@ -165,10 +165,12 @@ class WebSocketClient:
         await self.prepare_effect(effect_id)
         
         # Send ready signal
-        await self.send_message({
+        ready_message = {
             "type": "client_ready",
             "effect_id": effect_id
-        })
+        }
+        await self.send_message(ready_message)
+        logger.info(f"Sent client_ready message: {ready_message}")
         
         # Wait for execution time
         await self.wait_for_execution(execution_time)

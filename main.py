@@ -77,7 +77,8 @@ async def handle_websocket_message(ws, data):
     handlers = {
         'status_update': handle_status_update,
         'trigger_event': handle_trigger_event,
-        'client_connected': handle_client_connected
+        'client_connected': handle_client_connected,
+        'client_ready': handle_client_ready
     }
     
     handler = handlers.get(message_type)
@@ -86,6 +87,15 @@ async def handle_websocket_message(ws, data):
     else:
         logger.warning(f"Unknown message type received: {message_type}")
         await ws.send(json.dumps({"status": "error", "message": "Unknown message type"}))
+
+async def handle_client_ready(ws, data):
+    """
+    Handle client ready messages.
+    """
+    effect_id = data.get('effect_id')
+    client_ip = ws.remote_address[0]
+    remote_host_manager.set_client_ready(effect_id, client_ip)
+    logger.info(f"Client {client_ip} ready for effect {effect_id}")
 
 async def handle_client_connected(ws, data):
     """
