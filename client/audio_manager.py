@@ -7,6 +7,7 @@ from pydub.playback import play
 import io
 import threading
 import math
+import aiohttp
 
 logger = logging.getLogger(__name__)
 
