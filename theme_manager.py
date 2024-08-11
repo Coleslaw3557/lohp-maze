@@ -165,7 +165,9 @@ class ThemeManager:
                     if channel in light_model['channels']:
                         channel_offset = light_model['channels'][channel]
                         fixture_values[channel_offset] = value
-                self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
+                new_values = [max(current, new) for current, new in zip(current_values, fixture_values)]
+                self.dmx_state_manager.update_fixture(fixture_id, new_values)
 
     def set_master_brightness(self, brightness):
         self.master_brightness = max(0.0, min(1.0, brightness))
