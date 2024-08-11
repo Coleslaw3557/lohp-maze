@@ -76,8 +76,8 @@ class RemoteHostManager:
                 continue
 
             if not audio_file:
-                logger.warning(f"No audio file specified for effect: {effect_name}")
-                continue  # Not an error, just no audio to play
+                logger.info(f"No audio file specified for effect: {effect_name}. Skipping audio playback for this room.")
+                continue
 
             # Check if this client has already received the audio for this effect
             if client_ip not in self.audio_sent_to_clients:
@@ -99,15 +99,19 @@ class RemoteHostManager:
                     'loop': audio_params.get('loop', False)
                 }))
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        success = all(isinstance(result, bool) and result for result in results)
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            success = all(isinstance(result, bool) and result for result in results)
 
-        for room, result in zip(rooms, results):
-            client_ip = self.get_client_ip_by_room(room)
-            if isinstance(result, bool) and result:
-                self.audio_sent_to_clients[client_ip].add(effect_name)
+            for room, result in zip(rooms, results):
+                client_ip = self.get_client_ip_by_room(room)
+                if isinstance(result, bool) and result:
+                    self.audio_sent_to_clients[client_ip].add(effect_name)
 
-        return success
+            return success
+        else:
+            logger.info(f"No audio tasks to execute for effect: {effect_name}")
+            return True
 
     def update_client_rooms(self, unit_name, ip, rooms, websocket, path):
         client_ip = websocket.remote_address[0]  # Get the actual client IP
