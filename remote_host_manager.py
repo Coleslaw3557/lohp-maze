@@ -64,38 +64,46 @@ class RemoteHostManager:
             logger.error(f"No client IP found for room: {room}")
             return False
 
-    async def stream_audio_to_room(self, room, audio_file, audio_params, effect_name):
-        client_ip = self.get_client_ip_by_room(room)
-        if not client_ip:
-            logger.error(f"No client IP found for room: {room}")
-            return False
-
-        if not audio_file:
-            logger.warning(f"No audio file specified for effect: {effect_name}")
-            return True  # Not an error, just no audio to play
-
-        # Check if this client has already received the audio for this effect
-        if client_ip not in self.audio_sent_to_clients:
-            self.audio_sent_to_clients[client_ip] = set()
+    async def stream_audio_to_room(self, rooms, audio_file, audio_params, effect_name):
+        if isinstance(rooms, str):
+            rooms = [rooms]
         
-        if effect_name in self.audio_sent_to_clients[client_ip]:
-            logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Instructing client to play cached audio.")
-            return await self.send_audio_command(room, 'play_cached_audio', {
-                'effect_name': effect_name,
-                'volume': audio_params.get('volume', 1.0),
-                'loop': audio_params.get('loop', False)
-            })
+        success = True
+        for room in rooms:
+            client_ip = self.get_client_ip_by_room(room)
+            if not client_ip:
+                logger.error(f"No client IP found for room: {room}")
+                success = False
+                continue
 
-        # If not cached, send the audio file
-        success = await self.send_audio_command(room, 'play_audio', {
-            'file': audio_file,
-            'effect_name': effect_name,
-            'volume': audio_params.get('volume', 1.0),
-            'loop': audio_params.get('loop', False)
-        })
+            if not audio_file:
+                logger.warning(f"No audio file specified for effect: {effect_name}")
+                continue  # Not an error, just no audio to play
 
-        if success:
-            self.audio_sent_to_clients[client_ip].add(effect_name)
+            # Check if this client has already received the audio for this effect
+            if client_ip not in self.audio_sent_to_clients:
+                self.audio_sent_to_clients[client_ip] = set()
+            
+            if effect_name in self.audio_sent_to_clients[client_ip]:
+                logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Instructing client to play cached audio.")
+                room_success = await self.send_audio_command(room, 'play_cached_audio', {
+                    'effect_name': effect_name,
+                    'volume': audio_params.get('volume', 1.0),
+                    'loop': audio_params.get('loop', False)
+                })
+            else:
+                # If not cached, send the audio file
+                room_success = await self.send_audio_command(room, 'play_audio', {
+                    'file': audio_file,
+                    'effect_name': effect_name,
+                    'volume': audio_params.get('volume', 1.0),
+                    'loop': audio_params.get('loop', False)
+                })
+
+            if room_success:
+                self.audio_sent_to_clients[client_ip].add(effect_name)
+            else:
+                success = False
 
         return success
 
@@ -184,13 +192,20 @@ class RemoteHostManager:
             logger.info(f"Associating room {room} with client {unit_name} ({client_ip})")
 
     def get_client_ip_by_room(self, room):
-        for ip, rooms in self.client_rooms.items():
-            if room.lower() in [r.lower() for r in rooms]:
-                return ip
-        for ip, data in self.remote_hosts.items():
-            if room.lower() in [r.lower() for r in data.get('rooms', [])]:
-                return ip
-        logger.warning(f"No client IP found for room: {room}")
+        if isinstance(room, list):
+            rooms = room
+        else:
+            rooms = [room]
+        
+        for room in rooms:
+            for ip, client_rooms in self.client_rooms.items():
+                if room.lower() in [r.lower() for r in client_rooms]:
+                    return ip
+            for ip, data in self.remote_hosts.items():
+                if room.lower() in [r.lower() for r in data.get('rooms', [])]:
+                    return ip
+        
+        logger.warning(f"No client IP found for room(s): {rooms}")
         return None
 
     def is_client_connected(self, client):
