@@ -349,13 +349,14 @@ async def run_effect_all_rooms():
         room_layout = light_config.get_room_layout()
         all_rooms = list(room_layout.keys())
 
-        # Prepare and execute the effect for all rooms
-        effect_id = await effects_manager.buffer_effect(all_rooms, effect_name, effect_data)
-        await effects_manager.prepare_effect(effect_id)
-        success = await effects_manager.execute_effect(effect_id)
+        # Prepare the effect for all rooms
+        effect_id = await effects_manager.prepare_effect_all_rooms(all_rooms, effect_name, effect_data)
+
+        # Execute the effect simultaneously for all rooms
+        success = await effects_manager.execute_effect_all_rooms(effect_id)
 
         if success:
-            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in all rooms', 'effect_id': effect_id})
+            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in all rooms simultaneously', 'effect_id': effect_id})
         else:
             return jsonify({'status': 'error', 'message': f'Failed to execute effect {effect_name} in all rooms'}), 500
     except Exception as e:

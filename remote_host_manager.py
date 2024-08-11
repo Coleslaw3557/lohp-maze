@@ -68,12 +68,11 @@ class RemoteHostManager:
         if isinstance(rooms, str):
             rooms = [rooms]
         
-        success = True
+        tasks = []
         for room in rooms:
             client_ip = self.get_client_ip_by_room(room)
             if not client_ip:
                 logger.error(f"No client IP found for room: {room}")
-                success = False
                 continue
 
             if not audio_file:
@@ -86,24 +85,27 @@ class RemoteHostManager:
             
             if effect_name in self.audio_sent_to_clients[client_ip]:
                 logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Instructing client to play cached audio.")
-                room_success = await self.send_audio_command(room, 'play_cached_audio', {
+                tasks.append(self.send_audio_command(room, 'play_cached_audio', {
                     'effect_name': effect_name,
                     'volume': audio_params.get('volume', 1.0),
                     'loop': audio_params.get('loop', False)
-                })
+                }))
             else:
                 # If not cached, send the audio file
-                room_success = await self.send_audio_command(room, 'play_audio', {
+                tasks.append(self.send_audio_command(room, 'play_audio', {
                     'file': audio_file,
                     'effect_name': effect_name,
                     'volume': audio_params.get('volume', 1.0),
                     'loop': audio_params.get('loop', False)
-                })
+                }))
 
-            if room_success:
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        success = all(isinstance(result, bool) and result for result in results)
+
+        for room, result in zip(rooms, results):
+            client_ip = self.get_client_ip_by_room(room)
+            if isinstance(result, bool) and result:
                 self.audio_sent_to_clients[client_ip].add(effect_name)
-            else:
-                success = False
 
         return success
 
