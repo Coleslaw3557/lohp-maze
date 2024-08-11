@@ -20,8 +20,9 @@ class EffectsManager:
         self.dmx_state_manager = dmx_state_manager
         self.remote_host_manager = remote_host_manager
         self.audio_manager = audio_manager
-        self.theme_manager = ThemeManager(dmx_state_manager, light_config_manager)
-        self.interrupt_handler = InterruptHandler(dmx_state_manager, self.theme_manager)
+        self.interrupt_handler = InterruptHandler(dmx_state_manager, None)  # Temporarily set to None
+        self.theme_manager = ThemeManager(dmx_state_manager, light_config_manager, self.interrupt_handler)
+        self.interrupt_handler.theme_manager = self.theme_manager  # Set the theme_manager after initialization
         self.effect_buffer = {}
         self.sync_manager = SyncManager()
         self.active_effects = {}  # New dictionary to track active effects per room

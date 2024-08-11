@@ -7,9 +7,10 @@ from effect_utils import generate_theme_values
 logger = logging.getLogger(__name__)
 
 class ThemeManager:
-    def __init__(self, dmx_state_manager, light_config_manager):
+    def __init__(self, dmx_state_manager, light_config_manager, interrupt_handler):
         self.dmx_state_manager = dmx_state_manager
         self.light_config_manager = light_config_manager
+        self.interrupt_handler = interrupt_handler
         self.themes = {}
         self.current_theme = None
         self.theme_thread = None
