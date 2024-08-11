@@ -198,8 +198,12 @@ class RemoteHostManager:
                 self.audio_sent_to_clients[room] = set()
             
             if effect_name in self.audio_sent_to_clients[room]:
-                logger.info(f"Audio for effect '{effect_name}' already sent to room {room}. Skipping audio streaming.")
-                return True
+                logger.info(f"Audio for effect '{effect_name}' already sent to room {room}. Instructing client to play cached audio.")
+                return await self.send_audio_command(room, 'play_cached_audio', {
+                    'effect_name': effect_name,
+                    'volume': audio_params.get('volume', 1.0),
+                    'loop': audio_params.get('loop', False)
+                })
 
             audio_data = await self._get_audio_data(audio_file)
             if not audio_data:
@@ -211,6 +215,7 @@ class RemoteHostManager:
             # Send audio_start command
             success = await self.send_audio_command(room, 'audio_start', {
                 'file_name': file_name,
+                'effect_name': effect_name,
                 'volume': audio_params.get('volume', 1.0),
                 'loop': audio_params.get('loop', False)
             })
