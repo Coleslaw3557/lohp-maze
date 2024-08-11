@@ -441,7 +441,10 @@ class EffectsManager:
         # Execute audio effect for all rooms simultaneously
         audio_file = self.get_audio_file(effect_name)
         audio_params = effect_data.get('audio', {})
-        audio_task = self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
+        if audio_file:
+            audio_task = self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
+        else:
+            audio_task = asyncio.create_task(asyncio.sleep(0))  # Dummy task if no audio file
 
         # Execute lighting effect for all rooms simultaneously using the interrupt system
         lighting_tasks = []
