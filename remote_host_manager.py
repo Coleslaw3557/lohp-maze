@@ -384,29 +384,15 @@ class RemoteHostManager:
                 websocket = self.connected_clients[client_ip]
                 logger.info(f"Sending {command} command for room {room} to client {client_ip}")
                 try:
-                    if command == 'audio_start':
-                        message = {
-                            "type": command,
-                            "room": room,
-                            "data": {
-                                "file_name": "audio.mp3",
-                                "volume": 1.0,
-                                "loop": False
-                            }
-                        }
-                        await websocket.send(json.dumps(message))
-                        if isinstance(data, bytes):
-                            await websocket.send(data)
-                    elif command == 'audio_data':
+                    message = {
+                        "type": command,
+                        "room": room,
+                        "data": data if data is not None else {}
+                    }
+                    await websocket.send(json.dumps(message))
+                    
+                    if command == 'audio_start' and isinstance(data, bytes):
                         await websocket.send(data)
-                        logger.info(f"Sent audio data for room {room} to client {client_ip}")
-                    else:
-                        message = {
-                            "type": command,
-                            "room": room,
-                            "data": data
-                        }
-                        await websocket.send(json.dumps(message))
                     
                     logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
                     return True

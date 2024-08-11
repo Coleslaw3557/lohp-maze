@@ -336,12 +336,16 @@ class EffectsManager:
                 self.dmx_state_manager.reset_fixture(fixture_id)
             
             # Stop audio
-            await self.remote_host_manager.send_audio_command(room, 'audio_stop')
+            await self.remote_host_manager.send_audio_command(room, 'audio_stop', None)
             
             # Remove from active effects
             del self.active_effects[room]
         else:
             logger.info(f"No active effect in room: {room}")
+        
+        # Restore theme if it's running
+        if self.theme_manager.current_theme:
+            await self.theme_manager.apply_theme_to_room(room)
 
     async def buffer_effect(self, room, effect_name, effect_data):
         logger.info(f"Buffering effect for room: {room}")
