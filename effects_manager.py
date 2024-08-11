@@ -346,35 +346,51 @@ class EffectsManager:
         effect['ready'] = True
         logger.info(f"Effect {effect_id} prepared for rooms {rooms}")
 
-    async def execute_effect(self, effect_id):
+    async def prepare_effect_all_rooms(self, rooms, effect_name, effect_data):
+        effect_id = self.sync_manager.generate_effect_id()
+        self.effect_buffer[effect_id] = {
+            'rooms': rooms,
+            'effect_name': effect_name,
+            'effect_data': effect_data,
+            'ready': False,
+            'buffered_at': time.time()
+        }
+
+        # Prepare audio for all rooms
+        audio_file = self.get_audio_file(effect_name)
+        audio_params = effect_data.get('audio', {})
+        await self.remote_host_manager.prepare_audio_stream(rooms, audio_file, audio_params, effect_name)
+
+        # Mark effect as ready
+        self.effect_buffer[effect_id]['ready'] = True
+        
+        return effect_id
+
+    async def execute_effect_all_rooms(self, effect_id):
         effect = self.effect_buffer[effect_id]
-        rooms, effect_name, effect_data = effect['room'], effect['effect_name'], effect['effect_data']
+        rooms, effect_name, effect_data = effect['rooms'], effect['effect_name'], effect['effect_data']
         
         if not effect['ready']:
             logger.error(f"Effect {effect_id} not ready for execution")
             return False
 
-        # Ensure rooms is always a list
-        if not isinstance(rooms, list):
-            rooms = [rooms]
-
-        # Execute audio effect first
+        # Execute audio effect for all rooms simultaneously
         audio_file = self.get_audio_file(effect_name)
         audio_params = effect_data.get('audio', {})
         audio_success = await self.remote_host_manager.stream_audio_to_room(rooms, audio_file, audio_params, effect_name)
         
-        # Add a small delay to allow audio to start playing
-        await asyncio.sleep(0.1)
-        
-        # Execute lighting effect for all rooms
-        lighting_success = True
-        for room in rooms:
-            room_lighting_success = await self._apply_lighting_effect(room, effect_data)
-            lighting_success = lighting_success and room_lighting_success
+        # Execute lighting effect for all rooms simultaneously
+        lighting_tasks = [self._apply_lighting_effect(room, effect_data) for room in rooms]
+        lighting_results = await asyncio.gather(*lighting_tasks)
+        lighting_success = all(lighting_results)
         
         del self.effect_buffer[effect_id]
         
         return lighting_success and audio_success
+
+    async def execute_effect(self, effect_id):
+        # Keep the existing method for backward compatibility
+        return await self.execute_effect_all_rooms(effect_id)
 
     async def _apply_lighting_effect(self, room, effect_data):
         room_layout = self.light_config_manager.get_room_layout()
