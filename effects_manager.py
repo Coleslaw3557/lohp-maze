@@ -320,26 +320,28 @@ class EffectsManager:
             rooms = self.light_config_manager.get_room_layout().keys()
         
         for r in rooms:
-            if r in self.room_effects:
-                logger.info(f"Stopping effect in room: {r}")
-                await self._stop_effect_in_room(r)
-                self.room_effects.pop(r, None)
-            else:
-                logger.info(f"No active effect in room: {r}")
+            await self.stop_effect_in_room(r)
         
         logger.info("All specified effects stopped")
 
-    async def _stop_effect_in_room(self, room):
-        # Stop lighting effect
-        room_layout = self.light_config_manager.get_room_layout()
-        lights = room_layout.get(room, [])
-        fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
-        
-        for fixture_id in fixture_ids:
-            self.dmx_state_manager.reset_fixture(fixture_id)
-        
-        # Stop audio
-        await self.remote_host_manager.send_audio_command(room, 'audio_stop')
+    async def stop_effect_in_room(self, room):
+        if room in self.active_effects:
+            logger.info(f"Stopping effect in room: {room}")
+            # Stop lighting effect
+            room_layout = self.light_config_manager.get_room_layout()
+            lights = room_layout.get(room, [])
+            fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
+            
+            for fixture_id in fixture_ids:
+                self.dmx_state_manager.reset_fixture(fixture_id)
+            
+            # Stop audio
+            await self.remote_host_manager.send_audio_command(room, 'audio_stop')
+            
+            # Remove from active effects
+            del self.active_effects[room]
+        else:
+            logger.info(f"No active effect in room: {room}")
 
     async def buffer_effect(self, room, effect_name, effect_data):
         logger.info(f"Buffering effect for room: {room}")
@@ -439,6 +441,10 @@ class EffectsManager:
         effect_data = effect['effect_data']
 
         try:
+            # Stop any existing effects in the rooms
+            for room in rooms:
+                await self.stop_effect_in_room(room)
+
             # Execute audio effect for all rooms simultaneously
             audio_file = self.get_audio_file(effect_name)
             audio_params = effect_data.get('audio', {})
@@ -472,6 +478,10 @@ class EffectsManager:
                         logger.error(f"Error during effect execution: {str(result)}")
 
             del self.effect_buffer[effect_id]
+
+            # Update active effects
+            for room in rooms:
+                self.active_effects[room] = effect_id
 
             return success
         except Exception as e:
