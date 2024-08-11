@@ -147,8 +147,9 @@ class EffectsManager:
             # Run all tasks concurrently
             await asyncio.gather(*tasks)
         except Exception as e:
-            logger.error(f"Error applying effect '{effect_name}' to room '{room}': {str(e)}", exc_info=True)
-            return False, f"Error applying {effect_name} effect to room {room}"
+            error_message = f"Error applying effect '{effect_name}' to room '{room}': {str(e)}"
+            logger.error(error_message, exc_info=True)
+            return False, error_message
         finally:
             # Ensure the room effect is cleared even if an exception occurs
             if room in self.room_effects:

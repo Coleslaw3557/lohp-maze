@@ -61,7 +61,7 @@ class InterruptHandler:
                     del self.active_interrupts[fixture_id]
                 
                 # Remove the fixture from interrupted set and restore original state
-                self.interrupted_fixtures.remove(fixture_id)
+                self.interrupted_fixtures.discard(fixture_id)
                 if fixture_id in self.original_states:
                     self.dmx_state_manager.update_fixture(fixture_id, self.original_states[fixture_id], override=True)
                     del self.original_states[fixture_id]
