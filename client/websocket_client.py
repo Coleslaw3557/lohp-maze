@@ -137,7 +137,7 @@ class WebSocketClient:
             'audio_start': self.handle_audio_start,
             'audio_stop': self.handle_audio_stop,
             'play_cached_audio': self.handle_play_cached_audio,
-            'sync_time': self.sync_manager.sync_time,
+            'sync_time': self.handle_sync_time,
             'effect_trigger': self.handle_effect_trigger,
             'connection_response': self.handle_connection_response,
             'status_update_response': self.handle_status_update_response
@@ -153,6 +153,13 @@ class WebSocketClient:
             logger.warning("Received message without 'type' field")
         else:
             logger.warning(f"Unknown message type received: {message_type}")
+
+    async def handle_sync_time(self, message):
+        server_time = message.get('server_time')
+        if server_time is not None:
+            self.sync_manager.sync_time(server_time)
+        else:
+            logger.warning("Received sync_time message without server_time")
 
     async def handle_play_cached_audio(self, message):
         audio_data = message.get('data')
