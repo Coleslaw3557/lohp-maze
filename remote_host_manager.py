@@ -53,27 +53,12 @@ class RemoteHostManager:
         else:
             logger.warning(f"Received ready status for unknown client {client_ip} or effect {effect_id}")
 
-    async def prepare_audio_stream(self, room, audio_file, audio_params, effect_name):
+    async def trigger_audio_playback(self, room, effect_name):
         client_ip = self.get_client_ip_by_room(room)
         if client_ip:
-            self.prepared_audio[client_ip] = {
-                'file': audio_file,
-                'params': audio_params,
-                'effect_name': effect_name
-            }
-            await self.send_audio_command(room, 'prepare_audio', self.prepared_audio[client_ip])
+            return await self.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
         else:
             logger.error(f"No client IP found for room: {room}")
-
-    async def play_prepared_audio(self, room):
-        client_ip = self.get_client_ip_by_room(room)
-        if client_ip and client_ip in self.prepared_audio:
-            success = await self.send_audio_command(room, 'play_audio', {})
-            if success:
-                del self.prepared_audio[client_ip]
-            return success
-        else:
-            logger.error(f"No prepared audio found for room: {room}")
             return False
 
     async def prepare_audio_stream(self, room, audio_file, audio_params, effect_name):
