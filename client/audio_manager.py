@@ -56,7 +56,6 @@ class AudioManager:
             play_obj.set_volume(volume)
             
             if loop:
-                play_obj.wait_done()
                 while loop and not self.stop_event.is_set():
                     play_obj = wave_obj.play()
                     play_obj.set_volume(volume)
