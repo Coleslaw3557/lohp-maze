@@ -215,20 +215,27 @@ class ThemeManager:
             while not self.stop_theme.is_set():
                 current_time = time.time() - start_time
                 logger.debug(f"Generating and applying theme step for {theme_name} at time {current_time}")
-                self._generate_and_apply_theme_step(theme_data, current_time)
+                theme_values = self._generate_and_apply_theme_step(theme_data, current_time)
+                logger.debug(f"Generated theme values: {theme_values}")
                 time.sleep(1 / self.frequency)
         except Exception as e:
-            logger.error(f"Error in theme {theme_name}: {str(e)}")
+            logger.error(f"Error in theme {theme_name}: {str(e)}", exc_info=True)
         finally:
             logger.info(f"Theme {theme_name} stopped")
 
     def _generate_and_apply_theme_step(self, theme_data, current_time):
         room_layout = self.light_config_manager.get_room_layout()
         total_rooms = len(room_layout)
+        all_room_channels = {}
         for room_index, (room, lights) in enumerate(room_layout.items()):
             if room not in self.paused_rooms:
                 room_channels = generate_theme_values(theme_data, current_time, self.master_brightness, room_index, total_rooms)
+                all_room_channels[room] = room_channels
+                logger.debug(f"Generated channels for room {room}: {room_channels}")
                 self._apply_room_channels(room, lights, room_channels)
+            else:
+                logger.debug(f"Room {room} is paused, skipping theme application")
+        return all_room_channels
 
     def pause_theme_for_room(self, room):
         self.paused_rooms.add(room)
@@ -251,7 +258,10 @@ class ThemeManager:
                         fixture_values[channel_offset] = value
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 new_values = [max(current, new) for current, new in zip(current_values, fixture_values)]
+                logger.debug(f"Updating fixture {fixture_id} in room {room}: Current values: {current_values}, New values: {new_values}")
                 self.dmx_state_manager.update_fixture(fixture_id, new_values)
+            else:
+                logger.debug(f"Fixture {fixture_id} in room {room} is interrupted, skipping update")
 
     def set_master_brightness(self, brightness):
         self.master_brightness = max(0.0, min(1.0, brightness))
