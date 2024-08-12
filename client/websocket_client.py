@@ -297,13 +297,6 @@ class WebSocketClient:
             await self.audio_manager.play_effect_audio(file_name, volume, loop)
         else:
             logger.warning("Received play_effect_audio without file_name")
-                        'loop': loop
-                    }
-                })
-            else:
-                logger.warning(f"No audio file found for effect: {effect_name}")
-        else:
-            logger.warning("Received play_effect_audio without effect_name")
 
     async def handle_audio_start(self, message):
         audio_data = message.get('data')
