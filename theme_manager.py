@@ -260,11 +260,13 @@ class ThemeManager:
         logger.info(f"Theme resumed for room: {room}")
 
     def _apply_room_channels(self, room, lights, room_channels):
+        current_time = time.time()
         for light in lights:
             start_address = light['start_address']
             light_model = self.light_config_manager.get_light_config(light['model'])
             fixture_id = (start_address - 1) // 8
-            if fixture_id not in self.interrupt_handler.interrupted_fixtures:
+            if fixture_id not in self.interrupt_handler.interrupted_fixtures or \
+               (fixture_id in self.interrupt_handler.interrupt_end_times and current_time >= self.interrupt_handler.interrupt_end_times[fixture_id]):
                 fixture_values = [0] * 8
                 for channel, value in room_channels.items():
                     if channel in light_model['channels']:
