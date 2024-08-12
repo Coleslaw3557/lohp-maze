@@ -23,7 +23,7 @@ NUM_FIXTURES = 21
 CHANNELS_PER_FIXTURE = 8
 
 # Set up logging
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     filename='server.log',  # Log to a file
                     filemode='a')  # Append mode
