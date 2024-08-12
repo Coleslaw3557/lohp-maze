@@ -53,12 +53,17 @@ class AudioManager:
                         audio_files_to_download = await response.json()
                         logger.info(f"Received list of {len(audio_files_to_download)} audio files to download")
                         for audio_file in audio_files_to_download:
+                            logger.info(f"Checking audio file: {audio_file}")
                             if audio_file not in self.preloaded_audio:
+                                logger.info(f"Attempting to download: {audio_file}")
                                 success = await self.download_audio(audio_file)
                                 if success:
+                                    logger.info(f"Successfully downloaded: {audio_file}")
                                     await self.preload_single_audio_file(audio_file)
                                 else:
                                     logger.error(f"Failed to download {audio_file}")
+                            else:
+                                logger.info(f"Audio file already preloaded: {audio_file}")
                     else:
                         logger.error(f"Failed to get audio files list. Status code: {response.status}")
                         logger.error(f"Response content: {await response.text()}")
@@ -110,6 +115,7 @@ class AudioManager:
                             async with aiofiles.open(full_path, 'wb') as f:
                                 await f.write(content)
                             logger.info(f"Successfully downloaded audio file: {file_name}")
+                            logger.info(f"File saved to: {full_path}")
                             return True
                         elif response.status == 404:
                             logger.error(f"Audio file not found on server: {file_name}")
