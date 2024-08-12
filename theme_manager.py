@@ -135,44 +135,36 @@ class ThemeManager:
             return False
 
     async def set_current_theme_async(self, theme_name):
-        logger.info(f"Attempting to set theme to: {theme_name}")
+        logger.info(f"Setting theme to: {theme_name}")
         if theme_name in self.themes:
             with self.theme_lock:
                 old_theme = self.current_theme
-                logger.info(f"Stopping current theme: {old_theme}")
                 await self.stop_current_theme_async()
-                logger.info(f"Current theme stopped. Setting new theme: {theme_name}")
                 self.current_theme = theme_name
                 self.stop_theme.clear()
-                logger.info(f"Starting new theme thread for: {theme_name}")
                 self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
                 self.theme_thread.start()
-            logger.info(f"Theme successfully changed from {old_theme} to: {theme_name}")
+            logger.info(f"Theme changed from {old_theme} to: {theme_name}")
             return True
         else:
             logger.warning(f"Theme not found: {theme_name}")
             return False
 
     async def stop_current_theme_async(self):
-        logger.info("Attempting to stop current theme")
         async with asyncio.Lock():
             if self.current_theme:
                 logger.info(f"Stopping current theme: {self.current_theme}")
                 self.stop_theme.set()
                 if self.theme_thread and self.theme_thread.is_alive():
-                    logger.info("Waiting for theme thread to join")
                     try:
                         await asyncio.wait_for(asyncio.to_thread(self.theme_thread.join), timeout=5.0)
                     except asyncio.TimeoutError:
                         logger.warning("Theme thread join timed out after 5 seconds")
-                        self.theme_thread = None  # Abandon the thread if it doesn't join in time
+                        self.theme_thread = None
                 self.current_theme = None
                 self.current_theme_index = -1
-                logger.info("Resetting all lights")
                 await asyncio.to_thread(self._reset_all_lights)
-                logger.info("Current theme stopped and all lights reset")
-            else:
-                logger.info("No current theme to stop")
+                logger.info("Theme stopped and lights reset")
 
     async def set_next_theme_async(self):
         logger.info("Setting next theme")
@@ -216,9 +208,7 @@ class ThemeManager:
             while not self.stop_theme.is_set():
                 current_time = time.time() - start_time
                 if current_time - last_update_time >= 1 / self.frequency:
-                    logger.debug(f"Generating and applying theme step for {theme_name} at time {current_time}")
-                    theme_values = self._generate_and_apply_theme_step(theme_data, current_time)
-                    logger.debug(f"Generated theme values: {theme_values}")
+                    self._generate_and_apply_theme_step(theme_data, current_time)
                     last_update_time = current_time
                 time.sleep(0.001)  # Small sleep to prevent CPU hogging
         except Exception as e:
