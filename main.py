@@ -369,33 +369,37 @@ def stop_test():
 async def run_effect_all_rooms():
     data = await request.json
     effect_name = data.get('effect_name')
+    audio_params = data.get('audio', {})
+    
     if not effect_name:
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
-
+    
+    logger.info(f"Preparing effect: {effect_name} for all rooms")
+    effect_data = effects_manager.get_effect(effect_name)
+    if not effect_data:
+        logger.error(f"Effect not found: {effect_name}")
+        return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
+    
+    # Add audio parameters to effect data
+    effect_data['audio'] = audio_params
+    
     try:
-        effect_data = effects_manager.get_effect(effect_name)
-        if not effect_data:
-            return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
-
         # Get all rooms
         room_layout = light_config.get_room_layout()
         all_rooms = list(room_layout.keys())
-
-        # Prepare audio for all rooms
-        audio_file = effects_manager.get_audio_file(effect_name)
-        audio_params = effect_data.get('audio', {})
-        await remote_host_manager.stream_audio_to_room(all_rooms, audio_file, audio_params, effect_name)
-
-        # Apply effect to all rooms simultaneously
-        success, message = await effects_manager.apply_effect_to_all_rooms(effect_name)
-
+        
+        # Execute the effect immediately for all rooms
+        success, message = await effects_manager.apply_effect_to_all_rooms(effect_name, effect_data)
+        
         if success:
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in all rooms simultaneously'})
         else:
+            logger.error(f"Failed to execute effect {effect_name} in all rooms: {message}")
             return jsonify({'status': 'error', 'message': message}), 500
     except Exception as e:
-        logger.exception(f"Error executing {effect_name} effect for all rooms")
-        return jsonify({"error": str(e)}), 500
+        error_message = f"Error executing effect {effect_name} for all rooms: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        return jsonify({'status': 'error', 'message': error_message}), 500
 
 @app.route('/api/audio/<path:filename>')
 async def serve_audio(filename):

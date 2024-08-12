@@ -325,9 +325,8 @@ class EffectsManager:
             self.add_effect(effect_name, effect_data)
         logger.info(f"Initialized {len(effects)} effects")
 
-    async def apply_effect_to_all_rooms(self, effect_name):
+    async def apply_effect_to_all_rooms(self, effect_name, effect_data):
         logger.info(f"Applying effect {effect_name} to all rooms")
-        effect_data = self.get_effect(effect_name)
         if not effect_data:
             logger.error(f"{effect_name} effect not found")
             return False, f"{effect_name} effect not found"
@@ -335,25 +334,37 @@ class EffectsManager:
         room_layout = self.light_config_manager.get_room_layout()
         all_rooms = list(room_layout.keys())
 
+        # Instruct all clients to play the audio
+        await self.remote_host_manager.send_audio_command(all_rooms, 'play_effect_audio', {'effect_name': effect_name})
+
+        # Pause themes for all rooms
+        for room in all_rooms:
+            self.theme_manager.pause_theme_for_room(room)
+
         # Apply lighting effect to all rooms simultaneously
         lighting_tasks = []
         for room in all_rooms:
             lights = room_layout.get(room, [])
             fixture_ids = [(light['start_address'] - 1) // 8 for light in lights]
             for fixture_id in fixture_ids:
-                lighting_tasks.append(self._apply_effect_to_fixture(fixture_id, effect_data))
+                task = self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data))
+                lighting_tasks.append(task)
 
-        lighting_results = await asyncio.gather(*lighting_tasks, return_exceptions=True)
-        
-        success = all(isinstance(result, bool) and result for result in lighting_results)
-        
-        if success:
-            logger.info(f"{effect_name} effect triggered in all rooms")
-        else:
-            logger.error(f"Failed to trigger {effect_name} effect in some rooms")
-            for result in lighting_results:
-                if isinstance(result, Exception):
-                    logger.error(f"Error during effect execution: {str(result)}")
+        try:
+            lighting_results = await asyncio.gather(*lighting_tasks, return_exceptions=True)
+            success = all(isinstance(result, bool) and result for result in lighting_results)
+            
+            if success:
+                logger.info(f"{effect_name} effect triggered in all rooms")
+            else:
+                logger.error(f"Failed to trigger {effect_name} effect in some rooms")
+                for result in lighting_results:
+                    if isinstance(result, Exception):
+                        logger.error(f"Error during effect execution: {str(result)}")
+        finally:
+            # Resume themes for all rooms
+            for room in all_rooms:
+                self.theme_manager.resume_theme_for_room(room)
 
         return success, f"{effect_name} effect {'triggered' if success else 'failed to trigger'} in all rooms"
 
