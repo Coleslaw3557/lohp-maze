@@ -8,7 +8,6 @@ import aiohttp
 import aiofiles
 import threading
 import pyaudio
-import wave
 from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
@@ -116,24 +115,24 @@ class AudioManager:
         try:
             logger.info(f"Playing effect audio file: {full_path}")
             
-            # Load and play the MP3 file directly using PyAudio
-            with wave.open(full_path, 'rb') as wf:
-                # Open a PyAudio stream
-                stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(wf.getsampwidth()),
-                                           channels=wf.getnchannels(),
-                                           rate=wf.getframerate(),
-                                           output=True)
-                
-                # Read data in chunks and play
-                chunk_size = 1024
-                data = wf.readframes(chunk_size)
-                while data:
-                    stream.write(data)
-                    data = wf.readframes(chunk_size)
-                
-                # Close the stream
-                stream.stop_stream()
-                stream.close()
+            # Load and play the MP3 file using PyDub and PyAudio
+            audio = AudioSegment.from_mp3(full_path)
+            audio = audio - (20 * math.log10(1 / volume))  # Adjust volume
+            
+            # Open a PyAudio stream
+            stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(audio.sample_width),
+                                       channels=audio.channels,
+                                       rate=audio.frame_rate,
+                                       output=True)
+            
+            # Play audio
+            chunk_size = 1024
+            for chunk in audio[::chunk_size].raw_data:
+                stream.write(chunk)
+            
+            # Close the stream
+            stream.stop_stream()
+            stream.close()
             
             logger.info(f"Finished playing effect audio file: {file_name}, volume: {volume}")
             
