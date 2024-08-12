@@ -13,6 +13,7 @@ class AudioManager:
         self.config_file = config_file
         self.audio_dir = audio_dir
         self.audio_config = self.load_config()
+        self.last_played = {}
         logger.info("AudioManager initialized")
 
     def get_audio_files_to_download(self):
@@ -37,7 +38,7 @@ class AudioManager:
             logger.error(f"Error decoding JSON from {self.config_file}.")
             return {"effects": {}, "default_volume": 0.7}
 
-    def get_audio_file(self, effect_name):
+    def get_random_audio_file(self, effect_name):
         effect_config = self.audio_config['effects'].get(effect_name, {})
         audio_files = effect_config.get('audio_files', [])
         
@@ -45,7 +46,15 @@ class AudioManager:
             logger.warning(f"No audio files found for effect: {effect_name}")
             return None
         
-        selected_file = random.choice(audio_files)
+        if len(audio_files) > 1:
+            available_files = [file for file in audio_files if file != self.last_played.get(effect_name)]
+            if not available_files:
+                available_files = audio_files
+        else:
+            available_files = audio_files
+        
+        selected_file = random.choice(available_files)
+        self.last_played[effect_name] = selected_file
         full_path = os.path.join(self.audio_dir, selected_file)
         
         if os.path.exists(full_path):

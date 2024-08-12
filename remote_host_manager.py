@@ -272,7 +272,7 @@ class RemoteHostManager:
             logger.warning(f"No client IP found for room: {room}. Cannot play audio.")
             return False
 
-        audio_file = self.audio_manager.get_audio_file(effect_name)
+        audio_file = self.audio_manager.get_random_audio_file(effect_name)
         if not audio_file:
             logger.error(f"No audio file found for effect: {effect_name}")
             return False

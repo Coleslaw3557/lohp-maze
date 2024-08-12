@@ -293,10 +293,9 @@ class WebSocketClient:
         effect_name = audio_data.get('effect_name')
         file_name = audio_data.get('file_name')
         volume = audio_data.get('volume', 1.0)
-        loop = audio_data.get('loop', False)
         if file_name:
             logger.info(f"Playing audio file '{file_name}' for effect '{effect_name}'")
-            success = self.audio_manager.play_effect_audio(file_name, volume, loop)
+            success = self.audio_manager.play_effect_audio(file_name, volume)
             if not success:
                 logger.error(f"Failed to play audio file '{file_name}' for effect '{effect_name}'")
         else:
@@ -308,9 +307,8 @@ class WebSocketClient:
             file_name = audio_data.get('file_name')
             effect_name = audio_data.get('effect_name')
             volume = audio_data.get('volume', 1.0)
-            loop = audio_data.get('loop', False)
             if file_name:
-                await self.audio_manager.play_effect_audio(file_name, volume, loop)
+                await self.audio_manager.play_effect_audio(file_name, volume)
             else:
                 logger.warning("Received audio_start without file_name")
         else:
