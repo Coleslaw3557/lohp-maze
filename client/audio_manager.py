@@ -260,10 +260,21 @@ class AudioManager:
 
         try:
             # Load the MP3 file
-            audio = MP3(full_path)
+            from pydub import AudioSegment
+            audio = AudioSegment.from_mp3(full_path)
+            audio = audio.set_channels(1)  # Convert to mono
+            audio = audio.set_frame_rate(44100)  # Set sample rate to 44.1kHz
+            audio = audio.set_sample_width(2)  # Set to 16-bit
+
+            # Export as WAV in memory
+            import io
+            buffer = io.BytesIO()
+            audio.export(buffer, format="wav")
+            buffer.seek(0)
             
             # Set as current background music
             with self.lock:
+                self.audio_file = buffer
                 self.background_music = audio
                 self.current_position = 0
             
@@ -272,14 +283,11 @@ class AudioManager:
                 self.stream.stop_stream()
                 self.stream.close()
             
-            # Initialize the audio file
-            self.audio_file = open(full_path, 'rb')
-            
             # Start playing
             self.is_playing = True
             self.stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
-                                            channels=audio.info.channels,
-                                            rate=audio.info.sample_rate,
+                                            channels=1,
+                                            rate=44100,
                                             output=True,
                                             stream_callback=self.audio_callback)
             self.stream.start_stream()
