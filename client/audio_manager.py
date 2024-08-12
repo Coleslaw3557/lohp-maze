@@ -67,6 +67,8 @@ class AudioManager:
                             await f.write(await response.read())
                         logger.info(f"Downloaded audio file: {file_name}")
                         self.preloaded_audio[file_name] = file_path
+                    elif response.status == 404:
+                        logger.warning(f"Audio file not found on server: {file_name}")
                     else:
                         logger.error(f"Failed to download audio file: {file_name}. Status: {response.status}")
             except Exception as e:
