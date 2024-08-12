@@ -304,6 +304,14 @@ class EffectsManager:
         logger.info(f"Getting theme: {theme_name}")
         return self.theme_manager.get_theme(theme_name)
 
+    async def start_music(self):
+        logger.info("Starting background music")
+        return await self.remote_host_manager.start_background_music()
+
+    async def stop_music(self):
+        logger.info("Stopping background music")
+        return await self.remote_host_manager.stop_background_music()
+
     async def prepare_audio_for_all_rooms(self, effect_name):
         logger.info(f"Preparing audio for effect {effect_name} in all rooms")
         effect_data = self.get_effect(effect_name)
