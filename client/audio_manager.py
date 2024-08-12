@@ -6,6 +6,7 @@ import asyncio
 import aiohttp
 import aiofiles
 import vlc
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class AudioManager:
         self.background_music_volume = 0.5
         self.effect_volume = 1.0
         self.vlc_instance = self.initialize_vlc()
+        self.audio_lock = asyncio.Lock()
 
     def initialize_vlc(self):
         audio_outputs = ['pulse', 'alsa', 'oss', 'jack']
@@ -191,7 +193,7 @@ class AudioManager:
             logger.warning(f"No audio files found for effect '{effect_name}' in config")
         return None
 
-    def start_background_music(self, music_file):
+    async def start_background_music(self, music_file):
         if not music_file:
             logger.warning("No music file specified for background music")
             return
@@ -204,24 +206,33 @@ class AudioManager:
         logger.info(f"Starting background music: {music_file}")
 
         try:
-            # Stop any existing background music
-            if self.background_music_player:
-                self.background_music_player.stop()
+            async with self.audio_lock:
+                # Stop any existing background music
+                if self.background_music_player:
+                    self.background_music_player.stop()
 
-            # Create a new media player
-            self.background_music_player = self.vlc_instance.media_player_new()
-            media = self.vlc_instance.media_new(full_path)
-            self.background_music_player.set_media(media)
+                # Create a new media player
+                self.background_music_player = self.vlc_instance.media_player_new()
+                media = self.vlc_instance.media_new(full_path)
+                self.background_music_player.set_media(media)
 
-            # Set volume and start playing
-            self.background_music_player.audio_set_volume(int(self.background_music_volume * 100))
-            self.background_music_player.play()
+                # Set volume and start playing
+                self.background_music_player.audio_set_volume(int(self.background_music_volume * 100))
+                self.background_music_player.play()
 
-            # Set up event manager to handle looping
-            event_manager = self.background_music_player.event_manager()
-            event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.loop_background_music)
+                # Set up event manager to handle looping
+                event_manager = self.background_music_player.event_manager()
+                event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.loop_background_music)
 
             logger.info(f"Started playing background music: {music_file}")
+
+            # Wait for a short time to ensure playback has started
+            await asyncio.sleep(0.1)
+
+            if self.background_music_player.is_playing():
+                logger.info(f"Confirmed background music playback started for {music_file}")
+            else:
+                logger.warning(f"Background music playback did not start for {music_file}")
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
