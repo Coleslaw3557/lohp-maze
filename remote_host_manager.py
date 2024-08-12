@@ -285,9 +285,10 @@ class RemoteHostManager:
             'loop': audio_params.get('loop', False)
         })
 
-    async def start_background_music(self, music_file):
-        logger.info(f"Starting background music '{music_file}' on all connected clients")
+    async def start_background_music(self):
+        logger.info("Starting background music on all connected clients")
         success = True
+        music_file = self.get_random_music_file()
         for client_ip, websocket in self.connected_clients.items():
             try:
                 message = {
@@ -297,9 +298,25 @@ class RemoteHostManager:
                 await websocket.send(json.dumps(message))
                 logger.info(f"Successfully sent start_background_music command to client {client_ip}")
             except Exception as e:
-                logger.error(f"Error starting background music '{music_file}' for client {client_ip}: {str(e)}")
+                logger.error(f"Error starting background music for client {client_ip}: {str(e)}")
                 success = False
+        if success:
+            asyncio.create_task(self.continue_background_music())
         return success
+
+    def get_random_music_file(self):
+        music_files = [f for f in os.listdir('music') if f.endswith('.mp3')]
+        return random.choice(music_files) if music_files else None
+
+    async def continue_background_music(self):
+        while True:
+            await asyncio.sleep(300)  # Wait for 5 minutes
+            music_file = self.get_random_music_file()
+            if music_file:
+                await self.start_background_music()
+            else:
+                logger.warning("No music files available for background music")
+                break
 
     async def stop_background_music(self):
         logger.info("Stopping background music on all connected clients")

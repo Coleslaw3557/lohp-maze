@@ -318,25 +318,13 @@ def get_light_models():
 async def start_music():
     try:
         logger.info("Received request to start music")
-        data = await request.get_json(silent=True)
-        logger.debug(f"Received data: {data}")
-        if not data:
-            logger.info("No JSON data received, using default music file")
-            music_file = "default_background_music.mp3"  # Replace with your default music file name
-        else:
-            music_file = data.get('music_file')
-            if not music_file:
-                logger.warning("No music file specified in request, using default")
-                music_file = "default_background_music.mp3"  # Replace with your default music file name
-        
-        logger.info(f"Attempting to start background music: {music_file}")
-        success = await effects_manager.start_music(music_file)
+        success = await effects_manager.start_music()
         if success:
-            logger.info(f"Successfully started background music: {music_file}")
-            return jsonify({"status": "success", "message": f"Background music '{music_file}' started"}), 200
+            logger.info("Successfully started background music")
+            return jsonify({"status": "success", "message": "Background music started"}), 200
         else:
-            logger.error(f"Failed to start background music: {music_file}")
-            return jsonify({"status": "error", "message": f"Failed to start background music '{music_file}'"}), 500
+            logger.error("Failed to start background music")
+            return jsonify({"status": "error", "message": "Failed to start background music"}), 500
     except Exception as e:
         logger.error(f"Error starting background music: {str(e)}", exc_info=True)
         return jsonify({"status": "error", "message": f"Internal server error: {str(e)}"}), 500
