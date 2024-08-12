@@ -38,7 +38,7 @@ class AudioManager:
         # For now, we'll assume all files are already present
         pass
 
-    async def play_effect_audio(self, effect_name, volume=1.0, loop=False):
+    def play_effect_audio(self, effect_name, volume=1.0, loop=False):
         file_name = self.get_audio_file_for_effect(effect_name)
         if not file_name:
             logger.error(f"No audio file found for effect: {effect_name}")
@@ -50,37 +50,27 @@ class AudioManager:
             logger.error(f"Audio file not found: {full_path}")
             return False
         
-        await self.stop_audio()
+        self.stop_audio()
         try:
-            logger.info(f"Attempting to play audio file: {full_path}")
+            logger.info(f"Playing audio file: {full_path}")
             wave_obj = sa.WaveObject.from_wave_file(full_path)
             play_obj = wave_obj.play()
             self.current_audio = play_obj
             
             logger.info(f"Started playing audio for effect: {effect_name}, file: {file_name}, volume: {volume}, loop: {loop}")
             
-            # Set volume
             play_obj.set_volume(volume)
             
-            # Handle looping
-            while loop and not self.stop_event.is_set():
-                while play_obj.is_playing() and not self.stop_event.is_set():
-                    await asyncio.sleep(0.1)
-                if not self.stop_event.is_set():
+            if loop:
+                play_obj.wait_done()
+                while loop and not self.stop_event.is_set():
                     play_obj = wave_obj.play()
                     play_obj.set_volume(volume)
-            
-            # Wait for the audio to finish or be stopped if not looping
-            if not loop:
-                while play_obj.is_playing() and not self.stop_event.is_set():
-                    await asyncio.sleep(0.1)
-            
-            if self.stop_event.is_set():
-                play_obj.stop()
-                logger.info(f"Audio playback stopped for effect: {effect_name}")
+                    play_obj.wait_done()
             else:
-                logger.info(f"Audio playback completed for effect: {effect_name}")
+                play_obj.wait_done()
             
+            logger.info(f"Audio playback completed for effect: {effect_name}")
             return True
         except Exception as e:
             logger.error(f"Error playing audio for effect {effect_name} (file: {full_path}): {str(e)}", exc_info=True)
@@ -96,25 +86,10 @@ class AudioManager:
         logger.warning(f"No audio files found for effect '{effect_name}' in config")
         return None
 
-    async def stop_audio(self):
+    def stop_audio(self):
         if self.current_audio:
             self.stop_event.set()
             self.current_audio.stop()
             logger.info("Stopped current audio playback")
             self.current_audio = None
             self.stop_event.clear()
-
-    async def play_cached_audio(self, effect_name, volume=1.0, loop=False):
-        # This method is not needed as we're playing MP3 files directly
-        pass
-
-    async def receive_audio_data(self, audio_data):
-        logger.info(f"Received {len(audio_data)} bytes of audio data")
-        # Here you can implement the logic to save the received audio data
-        # For example, you could save it to a temporary file and then play it
-        temp_file = os.path.join(self.cache_dir, 'temp_audio.mp3')
-        with open(temp_file, 'wb') as f:
-            f.write(audio_data)
-        logger.info(f"Saved received audio data to {temp_file}")
-        # You might want to play this audio file immediately
-        await self.play_effect_audio('temp_audio.mp3', volume=1.0, loop=False)

@@ -259,89 +259,18 @@ class RemoteHostManager:
         # For example:
         # self.effect_manager.trigger_effect(room, trigger)
 
-    async def stream_audio_to_room(self, room, audio_file, audio_params, effect_name):
-        if not audio_file:
-            logger.info(f"No audio file provided for effect {effect_name} in room {room}. Skipping audio playback.")
-            return True
-
+    async def play_audio_in_room(self, room, effect_name, audio_params):
         client_ip = self.get_client_ip_by_room(room)
         if not client_ip:
-            logger.warning(f"No client IP found for room: {room}. Cannot stream audio.")
+            logger.warning(f"No client IP found for room: {room}. Cannot play audio.")
             return False
 
-        logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
-        try:
-            # Check if this client has already received the audio for this effect
-            if client_ip not in self.audio_sent_to_clients:
-                self.audio_sent_to_clients[client_ip] = set()
-            
-            if effect_name in self.audio_sent_to_clients[client_ip]:
-                logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Instructing client to play cached audio.")
-                return await self.send_audio_command(room, 'play_cached_audio', {
-                    'effect_name': effect_name,
-                    'volume': audio_params.get('volume', 1.0),
-                    'loop': audio_params.get('loop', False)
-                })
-
-            audio_data = await self._get_audio_data(audio_file)
-            if not audio_data:
-                logger.error(f"Failed to get audio data for file: {audio_file}")
-                return False
-
-            file_name = self._get_file_name(audio_file)
-
-            # Send audio_start command
-            success = await self.send_audio_command(room, 'audio_start', {
-                'file_name': file_name,
-                'effect_name': effect_name,
-                'volume': audio_params.get('volume', 1.0),
-                'loop': audio_params.get('loop', False)
-            })
-            if not success:
-                logger.error(f"Failed to send audio_start command to client {client_ip} for room {room}")
-                return False
-
-            logger.info(f"Sent audio_start command for {file_name} to room {room}")
-            await asyncio.sleep(0.1)  # Add a small delay before sending audio data
-
-            # Send audio data
-            websocket = self.connected_clients.get(client_ip)
-            if websocket:
-                try:
-                    await websocket.send(audio_data)
-                    logger.info(f"Successfully streamed audio data ({len(audio_data)} bytes) to client {client_ip} for room {room}")
-                    self.audio_sent_to_clients[client_ip].add(effect_name)
-                    return True
-                except Exception as e:
-                    logger.error(f"Failed to send audio data to client {client_ip} for room {room}: {str(e)}")
-                    return False
-            else:
-                logger.error(f"No WebSocket connection found for client {client_ip}")
-                return False
-        except Exception as e:
-            logger.error(f"Error streaming audio to client {client_ip} for room {room}: {str(e)}")
-            return False
-
-    async def _get_audio_data(self, audio_file):
-        if isinstance(audio_file, str):
-            try:
-                async with aiofiles.open(audio_file, 'rb') as f:
-                    return await f.read()
-            except IOError as e:
-                logger.error(f"Error reading audio file: {str(e)}")
-        elif isinstance(audio_file, bytes):
-            return audio_file
-        elif audio_file is True:  # Handle the case where audio_file is a boolean
-            logger.warning("Audio file is True, but no actual file provided")
-            return None
-        else:
-            logger.error(f"Invalid audio_file parameter: {type(audio_file)}")
-        return None
-
-    def _get_file_name(self, audio_file):
-        if isinstance(audio_file, str):
-            return os.path.basename(audio_file)
-        return 'stream.mp3'
+        logger.info(f"Instructing client to play audio for effect '{effect_name}' in room {room} (Client IP: {client_ip})")
+        return await self.send_audio_command(room, 'play_effect_audio', {
+            'effect_name': effect_name,
+            'volume': audio_params.get('volume', 1.0),
+            'loop': audio_params.get('loop', False)
+        })
 
     async def send_audio_command(self, room, command, data):
         client_ip = self.get_client_ip_by_room(room)
