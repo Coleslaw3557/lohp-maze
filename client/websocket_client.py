@@ -169,7 +169,8 @@ class WebSocketClient:
             'run_effect_all_rooms': self.handle_run_effect_all_rooms,
             'play_effect_audio': self.handle_play_effect_audio,
             'audio_files_to_download': self.handle_audio_files_to_download,
-            'start_background_music': self.handle_start_background_music
+            'start_background_music': self.handle_start_background_music,
+            'stop_background_music': self.handle_stop_background_music
         }
 
         message_type = message.get('type')
@@ -413,3 +414,6 @@ class WebSocketClient:
     async def execute_effect(self, effect_id):
         logger.info(f"Executing effect: {effect_id}")
         # TODO: Implement effect execution
+    async def handle_stop_background_music(self, message):
+        logger.info("Received stop_background_music command")
+        await self.audio_manager.stop_background_music()

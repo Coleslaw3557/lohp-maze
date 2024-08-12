@@ -240,3 +240,9 @@ class AudioManager:
         # This method will be called when the media player reaches the end of the track
         self.background_music_player.set_position(0)
         self.background_music_player.play()
+    async def stop_background_music(self):
+        logger.info("Stopping background music")
+        if self.background_music_player:
+            self.background_music_player.stop()
+            self.background_music_player = None
+        logger.info("Background music stopped")
