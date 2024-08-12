@@ -388,14 +388,18 @@ async def run_effect_all_rooms():
         room_layout = light_config.get_room_layout()
         all_rooms = list(room_layout.keys())
         
+        # Play audio for all rooms
+        audio_success = await remote_host_manager.play_audio_in_room(all_rooms, effect_name, audio_params)
+        
         # Execute the effect immediately for all rooms
         success, message = await effects_manager.apply_effect_to_all_rooms(effect_name, effect_data)
         
-        if success:
+        if success and audio_success:
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in all rooms simultaneously'})
         else:
-            logger.error(f"Failed to execute effect {effect_name} in all rooms: {message}")
-            return jsonify({'status': 'error', 'message': message}), 500
+            error_message = f"Failed to execute effect {effect_name} in all rooms. Audio success: {audio_success}, Lighting success: {success}"
+            logger.error(error_message)
+            return jsonify({'status': 'error', 'message': error_message}), 500
     except Exception as e:
         error_message = f"Error executing effect {effect_name} for all rooms: {str(e)}"
         logger.error(error_message, exc_info=True)
