@@ -107,3 +107,14 @@ class AudioManager:
     async def play_cached_audio(self, effect_name, volume=1.0, loop=False):
         # This method is not needed as we're playing MP3 files directly
         pass
+
+    async def receive_audio_data(self, audio_data):
+        logger.info(f"Received {len(audio_data)} bytes of audio data")
+        # Here you can implement the logic to save the received audio data
+        # For example, you could save it to a temporary file and then play it
+        temp_file = os.path.join(self.cache_dir, 'temp_audio.mp3')
+        with open(temp_file, 'wb') as f:
+            f.write(audio_data)
+        logger.info(f"Saved received audio data to {temp_file}")
+        # You might want to play this audio file immediately
+        await self.play_effect_audio('temp_audio.mp3', volume=1.0, loop=False)
