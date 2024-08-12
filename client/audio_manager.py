@@ -61,8 +61,9 @@ class AudioManager:
                                     logger.error(f"Failed to download {audio_file}")
                     else:
                         logger.error(f"Failed to get audio files list. Status code: {response.status}")
+                        logger.error(f"Response content: {await response.text()}")
         except Exception as e:
-            logger.error(f"Error downloading audio files: {str(e)}")
+            logger.error(f"Error downloading audio files: {str(e)}", exc_info=True)
 
     async def preload_single_audio_file(self, audio_file):
         file_path = os.path.join(self.cache_dir, 'audio_files', audio_file)
@@ -112,15 +113,17 @@ class AudioManager:
                             return True
                         elif response.status == 404:
                             logger.error(f"Audio file not found on server: {file_name}")
+                            logger.error(f"Response content: {await response.text()}")
                             return False
                         else:
                             logger.error(f"Failed to download audio file: {file_name}. Status code: {response.status}")
+                            logger.error(f"Response content: {await response.text()}")
             except aiohttp.ClientError as e:
-                logger.error(f"Network error while downloading {file_name}: {str(e)}")
+                logger.error(f"Network error while downloading {file_name}: {str(e)}", exc_info=True)
             except IOError as e:
-                logger.error(f"IO error while saving {file_name}: {str(e)}")
+                logger.error(f"IO error while saving {file_name}: {str(e)}", exc_info=True)
             except Exception as e:
-                logger.error(f"Unexpected error while downloading {file_name}: {str(e)}")
+                logger.error(f"Unexpected error while downloading {file_name}: {str(e)}", exc_info=True)
             
             if attempt < max_retries - 1:
                 logger.info(f"Retrying download in {retry_delay} seconds...")
