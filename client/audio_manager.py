@@ -6,6 +6,7 @@ import aiohttp
 import aiofiles
 import threading
 import pyaudio
+import math
 from mutagen.mp3 import MP3
 from pydub import AudioSegment
 from pydub.utils import make_chunks
