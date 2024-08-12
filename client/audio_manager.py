@@ -9,6 +9,9 @@ import aiohttp
 import aiofiles
 from pydub.playback import play
 import ffmpeg
+import threading
+import pyaudio
+import wave
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +26,11 @@ class AudioManager:
         self.effect_audio = None
         self.effect_volume = 1.0
         self.mixer = AudioSegment.silent(duration=1)
+        self.pyaudio = pyaudio.PyAudio()
+        self.stream = None
+        self.is_playing = False
+        self.play_thread = None
+        self.lock = threading.Lock()
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
@@ -110,22 +118,19 @@ class AudioManager:
         try:
             logger.info(f"Playing effect audio file: {full_path}")
             
-            # Stop any currently playing effect
-            if self.effect_audio:
-                self.stop_effect_audio()
-            
-            # Load and play the MP3 file directly
+            # Load the MP3 file
             audio = AudioSegment.from_mp3(full_path)
             
             # Adjust volume
             audio = audio + (20 * math.log10(volume))
             
             # Set as current effect audio
-            self.effect_audio = audio
-            self.effect_volume = volume
+            with self.lock:
+                self.effect_audio = audio
+                self.effect_volume = volume
             
-            # Play the audio
-            play(audio)
+            # Start playing if not already playing
+            self.play_audio()
             
             logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
             
@@ -141,8 +146,56 @@ class AudioManager:
             logger.info("Stopped effect audio")
 
     def mix_audio(self):
-        # We don't need to mix audio anymore as we're playing MP3s directly
-        pass
+        mixed = AudioSegment.silent(duration=1000)  # 1 second of silence
+        
+        if self.background_music:
+            mixed = mixed.overlay(self.background_music[:1000])
+        
+        if self.effect_audio:
+            mixed = mixed.overlay(self.effect_audio[:1000])
+        
+        return mixed
+
+    def audio_callback(self, in_data, frame_count, time_info, status):
+        with self.lock:
+            if not self.is_playing:
+                return (bytes(frame_count * 4), pyaudio.paContinue)
+            
+            mixed = self.mix_audio()
+            data = mixed.raw_data
+            return (data, pyaudio.paContinue)
+
+    def start_audio_stream(self):
+        self.stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
+                                        channels=2,
+                                        rate=44100,
+                                        output=True,
+                                        stream_callback=self.audio_callback)
+        self.stream.start_stream()
+
+    def stop_audio_stream(self):
+        if self.stream:
+            self.stream.stop_stream()
+            self.stream.close()
+        self.stream = None
+
+    def play_audio(self):
+        if self.play_thread and self.play_thread.is_alive():
+            return
+
+        self.play_thread = threading.Thread(target=self._play_audio)
+        self.play_thread.start()
+
+    def _play_audio(self):
+        self.is_playing = True
+        if not self.stream:
+            self.start_audio_stream()
+
+    def stop_audio(self):
+        self.is_playing = False
+        if self.play_thread:
+            self.play_thread.join()
+        self.stop_audio_stream()
 
     def stop_audio(self):
         self.active_audio_streams.clear()
@@ -186,10 +239,11 @@ class AudioManager:
             audio = audio + (20 * math.log10(self.background_music_volume))
             
             # Set as current background music
-            self.background_music = audio
+            with self.lock:
+                self.background_music = audio
             
-            # Mix background music and effect audio
-            self.mix_audio()
+            # Start playing if not already playing
+            self.play_audio()
             
             logger.info(f"Started playing background music: {music_file}")
 
