@@ -18,11 +18,20 @@ class AudioManager:
         self.effect_player = None
         self.background_music_volume = 0.5
         self.effect_volume = 1.0
-        try:
-            self.vlc_instance = vlc.Instance('--aout=pulse')
-        except:
-            logger.warning("Failed to initialize VLC with PulseAudio, falling back to ALSA")
-            self.vlc_instance = vlc.Instance('--aout=alsa')
+        self.vlc_instance = self.initialize_vlc()
+
+    def initialize_vlc(self):
+        audio_outputs = ['pulse', 'alsa', 'oss', 'jack']
+        for aout in audio_outputs:
+            try:
+                instance = vlc.Instance(f'--aout={aout}')
+                logger.info(f"Successfully initialized VLC with audio output: {aout}")
+                return instance
+            except Exception as e:
+                logger.warning(f"Failed to initialize VLC with {aout}: {str(e)}")
+        
+        logger.error("Failed to initialize VLC with any audio output")
+        raise Exception("Could not initialize VLC")
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
