@@ -5,6 +5,7 @@ import simpleaudio as sa
 import random
 from pydub import AudioSegment
 import io
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ class AudioManager:
             buffer.seek(0)
             
             # Play the audio
-            wave_obj = sa.WaveObject.from_wave_read(wave.open(buffer))
+            wave_obj = sa.WaveObject.from_wave_read(buffer)
             play_obj = wave_obj.play()
             self.current_audio = play_obj
             
