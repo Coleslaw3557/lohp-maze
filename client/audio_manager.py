@@ -77,7 +77,13 @@ class AudioManager:
             self.preloaded_audio[audio_file] = audio
             logger.info(f"Preloaded audio file: {audio_file}")
 
-    async def play_effect_audio(self, effect_name, file_name):
+    async def play_effect_audio(self, effect_name):
+        audio_files = self.config.get('audio_config', {}).get('effects', {}).get(effect_name, {}).get('audio_files', [])
+        if not audio_files:
+            logger.error(f"No audio files found for effect: {effect_name}")
+            return False
+        
+        file_name = random.choice(audio_files)
         full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
         
         if not os.path.exists(full_path):
