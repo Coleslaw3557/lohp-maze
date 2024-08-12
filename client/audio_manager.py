@@ -270,21 +270,21 @@ class AudioManager:
             # Set as current background music
             with self.lock:
                 self.background_music = full_path
-                self.background_music_info = {
-                    'channels': audio.info.channels,
-                    'sample_rate': audio.info.sample_rate
-                }
                 self.current_position = 0
             
-            # Start playing if not already playing
-            if not self.is_playing:
-                self.is_playing = True
-                self.stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
-                                                channels=audio.info.channels,
-                                                rate=audio.info.sample_rate,
-                                                output=True,
-                                                stream_callback=self.audio_callback)
-                self.stream.start_stream()
+            # Stop any existing stream
+            if self.stream:
+                self.stream.stop_stream()
+                self.stream.close()
+            
+            # Start playing
+            self.is_playing = True
+            self.stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
+                                            channels=audio.info.channels,
+                                            rate=audio.info.sample_rate,
+                                            output=True,
+                                            stream_callback=self.audio_callback)
+            self.stream.start_stream()
             
             logger.info(f"Started playing background music: {music_file}")
 
@@ -293,20 +293,21 @@ class AudioManager:
 
     def audio_callback(self, in_data, frame_count, time_info, status):
         if not self.is_playing or not self.background_music:
-            return (bytes(frame_count * 4), pyaudio.paContinue)
+            return (bytes(frame_count * 4), pyaudio.paComplete)
         
         try:
+            audio = MP3(self.background_music)
             with open(self.background_music, 'rb') as f:
-                audio = MP3(self.background_music)
-                f.seek(int(self.current_position * audio.info.sample_rate * 2 * audio.info.channels))
-                data = f.read(frame_count * 2 * audio.info.channels)
+                f.seek(int(self.current_position * audio.info.sample_rate * audio.info.channels * 2))
+                data = f.read(frame_count * audio.info.channels * 2)
+                if len(data) == 0:
+                    # End of file reached
+                    return (bytes(frame_count * 4), pyaudio.paComplete)
                 self.current_position += frame_count / audio.info.sample_rate
-                if self.current_position >= audio.info.length:
-                    self.current_position = 0
-                return (data, pyaudio.paContinue)
+            return (data, pyaudio.paContinue)
         except Exception as e:
             logger.error(f"Error in audio callback: {str(e)}", exc_info=True)
-            return (bytes(frame_count * 4), pyaudio.paContinue)
+            return (bytes(frame_count * 4), pyaudio.paComplete)
     def mix_audio(self):
         # This method is no longer used for background music playback
         # It can be used for mixing effect sounds with background music in the future
