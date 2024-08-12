@@ -8,6 +8,7 @@ import aiohttp
 import aiofiles
 import threading
 import pyaudio
+import wave
 from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
