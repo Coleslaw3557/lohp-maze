@@ -5,6 +5,7 @@ import random
 import aiohttp
 import aiofiles
 import vlc
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -97,59 +98,33 @@ class AudioManager:
                     logger.error(f"Failed to get list of background music files. Status: {response.status}")
 
     def play_effect_audio(self, file_name, volume=1.0):
-        full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
-        if not os.path.exists(full_path):
-            logger.error(f"Audio file not found: {full_path}")
-            return False
-        
-        try:
-            logger.info(f"Playing effect audio file: {full_path}")
-            
-            # Stop any currently playing audio
-            self.stop_audio()
-            
-            # Set the stop flag to False
-            self.stop_flag = threading.Event()
-            
-            # Start a new thread to play the audio
-            self.play_thread = threading.Thread(target=self._play_audio_thread, args=(full_path, volume))
-            self.play_thread.start()
-            
-            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
-            
-            return True
-        except Exception as e:
-            logger.error(f"Error playing effect audio file {file_name} (full path: {full_path}): {str(e)}", exc_info=True)
+        full_path = self.preloaded_audio.get(file_name)
+        if not full_path:
+            logger.warning(f"Audio file not found: {file_name}")
             return False
 
-    def _play_audio_thread(self, file_path, volume):
         try:
-            # Load the MP3 file
-            audio = MP3(file_path)
-            
-            # Open a PyAudio stream
-            stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
-                                       channels=audio.info.channels,
-                                       rate=audio.info.sample_rate,
-                                       output=True)
-            
-            # Play audio in chunks
-            chunk_size = 1024
-            with open(file_path, 'rb') as f:
-                data = f.read(chunk_size)
-                while data and not self.stop_flag.is_set():
-                    stream.write(data)
-                    data = f.read(chunk_size)
-            
-            # Close the stream
-            stream.stop_stream()
-            stream.close()
-            
-            logger.info(f"Finished playing effect audio file: {file_path}")
+            logger.info(f"Playing effect audio file: {file_name}")
+
+            # Stop any existing effect audio
+            if self.effect_player:
+                self.effect_player.stop()
+
+            # Create a new media player for the effect
+            self.effect_player = self.vlc_instance.media_player_new()
+            media = self.vlc_instance.media_new(full_path)
+            self.effect_player.set_media(media)
+
+            # Set volume and start playing
+            self.effect_player.audio_set_volume(int(volume * 100))
+            self.effect_player.play()
+
+            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
+
+            return True
         except Exception as e:
-            logger.error(f"Error in audio playback thread: {str(e)}", exc_info=True)
-        finally:
-            self.current_stream = None
+            logger.error(f"Error playing effect audio file {file_name}: {str(e)}", exc_info=True)
+            return False
 
     def stop_audio(self):
         if self.play_thread and self.play_thread.is_alive():
@@ -172,45 +147,12 @@ class AudioManager:
         # For now, we'll return a placeholder
         return b'\x00' * 44100  # 1 second of silence (assuming 16-bit mono at 44.1kHz)
 
-    def audio_callback(self, in_data, frame_count, time_info, status):
-        with self.lock:
-            if not self.is_playing:
-                return (bytes(frame_count * 4), pyaudio.paContinue)
-            
-            data = self.mix_audio()
-            return (data, pyaudio.paContinue)
-
-    def start_audio_stream(self):
-        self.stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
-                                        channels=2,
-                                        rate=44100,
-                                        output=True,
-                                        stream_callback=self.audio_callback)
-        self.stream.start_stream()
-
-    def stop_audio_stream(self):
-        if self.stream:
-            self.stream.stop_stream()
-            self.stream.close()
-        self.stream = None
-
-    def play_audio(self):
-        if self.play_thread and self.play_thread.is_alive():
-            return
-
-        self.play_thread = threading.Thread(target=self._play_audio)
-        self.play_thread.start()
-
-    def _play_audio(self):
-        self.is_playing = True
-        if not self.stream:
-            self.start_audio_stream()
-
     def stop_audio(self):
-        self.is_playing = False
-        if self.play_thread:
-            self.play_thread.join()
-        self.stop_audio_stream()
+        if self.background_music_player:
+            self.background_music_player.stop()
+        if self.effect_player:
+            self.effect_player.stop()
+        logger.info("Stopped all audio playback")
 
     def stop_audio(self):
         if self.background_music_player:
