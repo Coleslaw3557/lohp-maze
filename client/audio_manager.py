@@ -52,6 +52,7 @@ class AudioManager:
         
         await self.stop_audio()
         try:
+            logger.info(f"Attempting to play audio file: {full_path}")
             wave_obj = sa.WaveObject.from_wave_file(full_path)
             play_obj = wave_obj.play()
             self.current_audio = play_obj
@@ -82,14 +83,17 @@ class AudioManager:
             
             return True
         except Exception as e:
-            logger.error(f"Error playing audio for effect {effect_name}: {str(e)}", exc_info=True)
+            logger.error(f"Error playing audio for effect {effect_name} (file: {full_path}): {str(e)}", exc_info=True)
             return False
 
     def get_audio_file_for_effect(self, effect_name):
         audio_config = self.config.get('effects', {}).get(effect_name, {})
         audio_files = audio_config.get('audio_files', [])
         if audio_files:
-            return random.choice(audio_files)
+            chosen_file = random.choice(audio_files)
+            logger.info(f"Selected audio file '{chosen_file}' for effect '{effect_name}'")
+            return chosen_file
+        logger.warning(f"No audio files found for effect '{effect_name}' in config")
         return None
 
     async def stop_audio(self):
