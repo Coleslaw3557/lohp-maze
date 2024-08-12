@@ -28,7 +28,7 @@ class AudioManager:
         logger.info("Initializing AudioManager")
         await self.preload_existing_audio_files()
         await self.download_audio_files()
-        logger.info("AudioManager initialization complete")
+        logger.info(f"AudioManager initialization complete. Preloaded audio files: {list(self.preloaded_audio.keys())}")
 
     async def preload_existing_audio_files(self):
         logger.info("Preloading existing audio files")
@@ -160,20 +160,25 @@ class AudioManager:
 
     async def play_cached_audio(self, effect_name, volume=1.0, loop=False):
         file_name = f"{effect_name.lower()}.mp3"
+        logger.info(f"Attempting to play cached audio: {file_name}")
         if file_name in self.preloaded_audio:
             self.stop_audio()
             try:
                 audio = self.preloaded_audio[file_name]
+                logger.info(f"Audio loaded from preloaded cache: {file_name}")
                 audio = audio + (20 * math.log10(volume))
                 
                 self.current_audio = file_name
                 self.stop_event.clear()
                 
+                logger.info(f"Preparing to play audio: {file_name}")
                 play_obj = _play_with_simpleaudio(audio)
                 
                 if loop:
+                    logger.info(f"Starting looped playback for: {file_name}")
                     threading.Thread(target=self._loop_audio, args=(play_obj, audio)).start()
                 else:
+                    logger.info(f"Starting single playback for: {file_name}")
                     threading.Thread(target=self._wait_for_completion, args=(play_obj,)).start()
                 
                 logger.info(f"Started playing cached audio: {file_name} (volume: {volume}, loop: {loop})")
@@ -181,6 +186,7 @@ class AudioManager:
                 logger.error(f"Error playing cached audio: {str(e)}", exc_info=True)
         else:
             logger.error(f"Preloaded audio not found for effect: {effect_name}")
+            logger.info(f"Available preloaded audio files: {list(self.preloaded_audio.keys())}")
 
     def stop_audio(self):
         if self.current_audio:
