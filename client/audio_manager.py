@@ -3,6 +3,8 @@ import os
 import logging
 import simpleaudio as sa
 import random
+from pydub import AudioSegment
+import io
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +49,25 @@ class AudioManager:
         self.stop_audio()
         try:
             logger.info(f"Playing audio file: {full_path}")
-            wave_obj = sa.WaveObject.from_wave_file(full_path)
+            
+            # Load the audio file (MP3 or WAV)
+            audio = AudioSegment.from_file(full_path)
+            
+            # Adjust volume
+            audio = audio + (20 * math.log10(volume))
+            
+            # Export as WAV to a bytes buffer
+            buffer = io.BytesIO()
+            audio.export(buffer, format="wav")
+            buffer.seek(0)
+            
+            # Play the audio
+            wave_obj = sa.WaveObject.from_wave_read(wave.open(buffer))
             play_obj = wave_obj.play()
             self.current_audio = play_obj
             
             logger.info(f"Started playing audio file: {file_name}, volume: {volume}")
             
-            play_obj.set_volume(volume)
             play_obj.wait_done()
             
             logger.info(f"Audio playback completed for file: {file_name}")
