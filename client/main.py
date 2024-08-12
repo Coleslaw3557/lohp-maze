@@ -11,7 +11,7 @@ from config_manager import ConfigManager
 from sync_manager import SyncManager
 
 # Set up logging
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     filename='client.log',
                     filemode='a')
@@ -19,10 +19,14 @@ logger = logging.getLogger(__name__)
 
 # Add a stream handler to also log to console
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+
+# Set logging levels for specific modules
+logging.getLogger('websockets').setLevel(logging.DEBUG)
+logging.getLogger('asyncio').setLevel(logging.DEBUG)
 
 def log_and_exit(error_message):
     logger.critical(f"Critical error: {error_message}")
@@ -46,7 +50,7 @@ async def main():
             sync_manager
         )
 
-        uri = f"ws://{config.get('server_ip')}:8765"
+        uri = f"ws://{config.get('server_ip')}:{config.get('server_port', 8765)}"
         max_retries = 5
         retry_delay = 5
         
@@ -56,12 +60,14 @@ async def main():
                     async with websockets.connect(uri) as websocket:
                         logger.info(f"Connected to WebSocket server at {uri}")
                         await ws_client.set_websocket(websocket)
+                        logger.debug(f"WebSocket connection details: {websocket.remote_address}")
                         await asyncio.gather(
                             ws_client.listen(),
                             trigger_manager.monitor_triggers(ws_client.send_trigger_event)
                         )
                 except websockets.exceptions.WebSocketException as e:
                     logger.error(f"WebSocket connection error: {e}")
+                    logger.debug(f"Connection attempt details: URI={uri}, Attempt={attempt+1}")
                     if attempt < max_retries - 1:
                         wait_time = retry_delay * (2 ** attempt)
                         logger.info(f"Attempting to reconnect in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
