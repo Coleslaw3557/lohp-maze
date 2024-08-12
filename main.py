@@ -228,7 +228,6 @@ async def run_effect():
     data = await request.json
     room = data.get('room')
     effect_name = data.get('effect_name')
-    audio_params = data.get('audio', {})
     
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
@@ -239,10 +238,22 @@ async def run_effect():
         logger.error(f"Effect not found: {effect_name}")
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    # Add audio parameters to effect data
-    effect_data['audio'] = audio_params
-    
     try:
+        # Get audio configuration for the effect
+        audio_config = audio_manager.get_audio_config(effect_name)
+        if audio_config:
+            audio_file = random.choice(audio_config['audio_files'])
+            volume = audio_config.get('volume', audio_manager.audio_config['default_volume'])
+        else:
+            audio_file = None
+            volume = audio_manager.audio_config['default_volume']
+        
+        # Add audio parameters to effect data
+        effect_data['audio'] = {
+            'file': audio_file,
+            'volume': volume
+        }
+        
         # Execute the effect immediately
         success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
         
@@ -255,6 +266,11 @@ async def run_effect():
         error_message = f"Error executing effect {effect_name} for room {room}: {str(e)}"
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
+
+@app.route('/api/audio_files_to_download', methods=['GET'])
+def get_audio_files_to_download():
+    audio_files = audio_manager.get_audio_files_to_download()
+    return jsonify(audio_files)
 
 # This function has been removed as it's no longer needed
 

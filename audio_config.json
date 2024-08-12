@@ -1,0 +1,69 @@
+{
+    "effects": {
+        "Lightning": {
+            "audio_files": ["lightning1.mp3", "lightning2.mp3", "lightning3.mp3"],
+            "volume": 1.0
+        },
+        "PoliceLights": {
+            "audio_files": ["gadget-policelights.mp3", "vintage-police.mp3"],
+            "volume": 0.8
+        },
+        "GateInspection": {
+            "audio_files": ["fallout-ticketsplease.mp3", "jones-ticketsplease.mp3"],
+            "volume": 0.7
+        },
+        "GateGreeters": {
+            "audio_files": ["gate_greeters.mp3"],
+            "volume": 0.7
+        },
+        "WrongAnswer": {
+            "audio_files": ["wrong_answer.mp3"],
+            "volume": 0.8
+        },
+        "CorrectAnswer": {
+            "audio_files": ["correct_answer.mp3"],
+            "volume": 0.8
+        },
+        "Entrance": {
+            "audio_files": ["entrance.mp3"],
+            "volume": 0.9
+        },
+        "GuyLineClimb": {
+            "audio_files": ["guy_line_climb.mp3"],
+            "volume": 0.7
+        },
+        "SparkPony": {
+            "audio_files": ["spark_pony.mp3"],
+            "volume": 0.8
+        },
+        "PortoStandBy": {
+            "audio_files": ["porto_standby.mp3"],
+            "volume": 0.6
+        },
+        "PortoHit": {
+            "audio_files": ["porto_hit.mp3"],
+            "volume": 0.9
+        },
+        "CuddlePuddle": {
+            "audio_files": ["cuddle_puddle.mp3"],
+            "volume": 0.7
+        },
+        "PhotoBomb-BG": {
+            "audio_files": ["photobomb_bg.mp3"],
+            "volume": 0.6
+        },
+        "PhotoBomb-Spot": {
+            "audio_files": ["photobomb_spot.mp3"],
+            "volume": 0.8
+        },
+        "DeepPlaya-BG": {
+            "audio_files": ["deep_playa_bg.mp3"],
+            "volume": 0.5
+        },
+        "ImageEnhancement": {
+            "audio_files": ["image_enhancement.mp3"],
+            "volume": 0.7
+        }
+    },
+    "default_volume": 0.7
+}
