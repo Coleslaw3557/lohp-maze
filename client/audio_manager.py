@@ -26,7 +26,6 @@ class AudioManager:
         logger.info("Initializing AudioManager")
         await self.preload_existing_audio_files()
         await self.download_audio_files()
-        await self.start_background_music()
         logger.info(f"AudioManager initialization complete. Preloaded audio files: {list(self.preloaded_audio.keys())}")
 
     async def preload_existing_audio_files(self):
@@ -171,49 +170,40 @@ class AudioManager:
             self.current_audio = None
             self.stop_event.clear()
 
-    async def start_background_music(self):
-        music_files = [f for f in self.preloaded_audio.keys() if f.startswith('The 7th Continent Soundscape')]
-        if not music_files:
-            logger.warning(f"No background music files found in {self.cache_dir}/audio_files")
-            logger.info(f"Available audio files: {list(self.preloaded_audio.keys())}")
+    async def start_background_music(self, music_file):
+        if not music_file:
+            logger.warning("No music file specified for background music")
             return
 
-        logger.info(f"Found {len(music_files)} background music files: {music_files}")
+        full_path = self.preloaded_audio.get(music_file)
+        if not full_path:
+            logger.warning(f"Specified music file not found: {music_file}")
+            return
 
-        while True:
-            random.shuffle(music_files)
-            for music_file in music_files:
-                if self.stop_event.is_set():
-                    return
+        logger.info(f"Starting background music: {music_file}")
 
-                full_path = self.preloaded_audio[music_file]
-                logger.info(f"Attempting to play background music: {full_path}")
-                try:
-                    audio = AudioSegment.from_file(full_path)
-                    audio = audio + (20 * math.log10(self.background_music_volume))
-                    raw_data = audio.raw_data
-                    num_channels = audio.channels
-                    sample_width = audio.sample_width
-                    frame_rate = audio.frame_rate
+        try:
+            audio = AudioSegment.from_file(full_path)
+            audio = audio + (20 * math.log10(self.background_music_volume))
+            raw_data = audio.raw_data
+            num_channels = audio.channels
+            sample_width = audio.sample_width
+            frame_rate = audio.frame_rate
 
-                    play_obj = sa.play_buffer(
-                        raw_data,
-                        num_channels,
-                        sample_width,
-                        frame_rate
-                    )
-                    self.background_music = play_obj
-                    logger.info(f"Started playing background music: {music_file}")
-                    
-                    while play_obj.is_playing() and not self.stop_event.is_set():
-                        await asyncio.sleep(1)
-                    
-                    if self.stop_event.is_set():
-                        play_obj.stop()
-                        return
-
-                except Exception as e:
-                    logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
-
+            play_obj = sa.play_buffer(
+                raw_data,
+                num_channels,
+                sample_width,
+                frame_rate
+            )
+            self.background_music = play_obj
+            logger.info(f"Started playing background music: {music_file}")
+            
+            while play_obj.is_playing() and not self.stop_event.is_set():
+                await asyncio.sleep(1)
+            
             if self.stop_event.is_set():
-                return
+                play_obj.stop()
+
+        except Exception as e:
+            logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)

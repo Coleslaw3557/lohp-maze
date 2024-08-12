@@ -201,7 +201,11 @@ class WebSocketClient:
 
     async def handle_start_background_music(self, message):
         logger.info("Received start_background_music command")
-        await self.audio_manager.start_background_music()
+        music_file = message.get('data', {}).get('music_file')
+        if music_file:
+            await self.audio_manager.start_background_music(music_file)
+        else:
+            logger.warning("Received start_background_music command without a music file specified")
 
     async def handle_typeless_message(self, message):
         """
