@@ -39,15 +39,9 @@ class AudioManager:
         pass
 
     def play_effect_audio(self, effect_name, volume=1.0, loop=False):
-        file_name = self.get_audio_file_for_effect(effect_name)
-        if not file_name:
+        full_path = self.get_audio_file_for_effect(effect_name)
+        if not full_path:
             logger.error(f"No audio file found for effect: {effect_name}")
-            return False
-
-        full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
-        
-        if not os.path.exists(full_path):
-            logger.error(f"Audio file not found: {full_path}")
             return False
         
         self.stop_audio()
@@ -81,9 +75,14 @@ class AudioManager:
         audio_files = audio_config.get('audio_files', [])
         if audio_files:
             chosen_file = random.choice(audio_files)
-            logger.info(f"Selected audio file '{chosen_file}' for effect '{effect_name}'")
-            return chosen_file
-        logger.warning(f"No audio files found for effect '{effect_name}' in config")
+            full_path = os.path.join(self.cache_dir, 'audio_files', chosen_file)
+            if os.path.exists(full_path):
+                logger.info(f"Selected audio file '{full_path}' for effect '{effect_name}'")
+                return full_path
+            else:
+                logger.warning(f"Audio file '{full_path}' not found for effect '{effect_name}'")
+        else:
+            logger.warning(f"No audio files found for effect '{effect_name}' in config")
         return None
 
     def stop_audio(self):
