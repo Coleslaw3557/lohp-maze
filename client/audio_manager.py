@@ -46,29 +46,43 @@ class AudioManager:
 
     async def download_audio_files(self):
         server_url = f"http://{self.config.get('server_ip')}:5000/api/audio_files_to_download"
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(server_url) as response:
-                    if response.status == 200:
-                        audio_files_to_download = await response.json()
-                        logger.info(f"Received list of {len(audio_files_to_download)} audio files to download")
-                        for audio_file in audio_files_to_download:
-                            logger.info(f"Checking audio file: {audio_file}")
-                            if audio_file not in self.preloaded_audio:
-                                logger.info(f"Attempting to download: {audio_file}")
-                                success = await self.download_audio(audio_file)
-                                if success:
-                                    logger.info(f"Successfully downloaded: {audio_file}")
-                                    await self.preload_single_audio_file(audio_file)
+        max_retries = 5
+        retry_delay = 5
+
+        for attempt in range(max_retries):
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(server_url) as response:
+                        if response.status == 200:
+                            audio_files_to_download = await response.json()
+                            logger.info(f"Received list of {len(audio_files_to_download)} audio files to download")
+                            for audio_file in audio_files_to_download:
+                                logger.info(f"Checking audio file: {audio_file}")
+                                if audio_file not in self.preloaded_audio:
+                                    logger.info(f"Attempting to download: {audio_file}")
+                                    success = await self.download_audio(audio_file)
+                                    if success:
+                                        logger.info(f"Successfully downloaded: {audio_file}")
+                                        await self.preload_single_audio_file(audio_file)
+                                    else:
+                                        logger.error(f"Failed to download {audio_file}")
                                 else:
-                                    logger.error(f"Failed to download {audio_file}")
-                            else:
-                                logger.info(f"Audio file already preloaded: {audio_file}")
-                    else:
-                        logger.error(f"Failed to get audio files list. Status code: {response.status}")
-                        logger.error(f"Response content: {await response.text()}")
-        except Exception as e:
-            logger.error(f"Error downloading audio files: {str(e)}", exc_info=True)
+                                    logger.info(f"Audio file already preloaded: {audio_file}")
+                            return  # Successfully downloaded all files, exit the function
+                        else:
+                            logger.error(f"Failed to get audio files list. Status code: {response.status}")
+                            logger.error(f"Response content: {await response.text()}")
+            except aiohttp.ClientError as e:
+                logger.error(f"Connection error (attempt {attempt + 1}/{max_retries}): {str(e)}")
+            except Exception as e:
+                logger.error(f"Unexpected error (attempt {attempt + 1}/{max_retries}): {str(e)}", exc_info=True)
+
+            if attempt < max_retries - 1:
+                wait_time = retry_delay * (2 ** attempt)
+                logger.info(f"Retrying in {wait_time} seconds...")
+                await asyncio.sleep(wait_time)
+            else:
+                logger.error("Max retries reached. Unable to download audio files.")
 
     async def preload_single_audio_file(self, audio_file):
         file_path = os.path.join(self.cache_dir, 'audio_files', audio_file)
