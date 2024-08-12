@@ -32,10 +32,10 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
     transition_speed = theme_data.get('transition_speed', 0.7)
 
     # Use multiple time factors for more complex patterns
-    time_factor_slow = current_time * transition_speed * 0.1
-    time_factor_medium = current_time * transition_speed * 0.5
-    time_factor_fast = current_time * transition_speed
-    time_factor_very_fast = current_time * transition_speed * 2
+    time_factor_slow = current_time * transition_speed * 0.05
+    time_factor_medium = current_time * transition_speed * 0.2
+    time_factor_fast = current_time * transition_speed * 0.8
+    time_factor_very_fast = current_time * transition_speed * 3
 
     # Create more complex waveforms
     wave_slow = math.sin(time_factor_slow)
@@ -44,64 +44,80 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
     wave_very_fast = math.sin(time_factor_very_fast)
     wave_complex = (wave_slow + wave_medium + wave_fast + wave_very_fast) / 4
 
+    # Add room-specific offsets for wave-like effects across rooms
+    room_offset = (room_index / total_rooms) * 2 * math.pi
+    room_wave = math.sin(time_factor_medium + room_offset)
+
     color_wheel_speed = theme_data.get('color_wheel_speed', 0.3)
     room_transition_speed = theme_data.get('room_transition_speed', 0.08)
-    room_offset = (room_index / total_rooms + time_factor_medium * room_transition_speed) % 1
 
     base_hue = theme_data.get('base_hue', 0)
     hue_range = theme_data.get('hue_range', 0.7)
-    hue = (base_hue + (wave_complex * 0.5 + 0.5) * hue_range + time_factor_slow * color_wheel_speed) % 1
+    hue = (base_hue + (wave_complex * 0.5 + 0.5) * hue_range + time_factor_slow * color_wheel_speed + room_wave * 0.1) % 1
     
     saturation_min = theme_data.get('saturation_min', 0.7)
     saturation_max = theme_data.get('saturation_max', 1.0)
-    saturation = saturation_min + (saturation_max - saturation_min) * (wave_medium * 0.5 + 0.5)
+    saturation = saturation_min + (saturation_max - saturation_min) * ((wave_medium + room_wave) * 0.25 + 0.5)
     
     value_min = theme_data.get('value_min', 0.6)
     value_max = theme_data.get('value_max', 1.0)
-    value = value_min + (value_max - value_min) * (wave_fast * 0.5 + 0.5) * overall_brightness
+    value = value_min + (value_max - value_min) * ((wave_fast + room_wave) * 0.25 + 0.5) * overall_brightness
 
     # Apply theme-specific effects
     if 'neon_pulse' in theme_data:  # NeonNightlife theme
-        neon_pulse = (math.sin(time_factor_fast * 3) * 0.5 + 0.5) * theme_data.get('neon_pulse', 0.9)
-        strobe = (math.sin(time_factor_very_fast * 10) * 0.5 + 0.5) * theme_data.get('strobe_frequency', 0.3)
+        neon_pulse = (math.sin(time_factor_fast * 3 + room_offset) * 0.5 + 0.5) * theme_data.get('neon_pulse', 0.9)
+        strobe = (math.sin(time_factor_very_fast * 10 + room_offset) * 0.5 + 0.5) * theme_data.get('strobe_frequency', 0.3)
         hue = (hue + neon_pulse * 0.2) % 1
         value = max(value_min, min(value_max, value + neon_pulse * 0.3 + strobe * 0.2))
     elif 'wave_effect' in theme_data:  # TropicalParadise theme
-        wave = math.sin(time_factor_medium * 1.5) * theme_data.get('wave_effect', 0.7)
-        sunset = (math.sin(time_factor_slow * 0.5) * 0.5 + 0.5) * theme_data.get('sunset_glow', 0.8)
-        hue = (hue + sunset * 0.1) % 1
+        wave = math.sin(time_factor_medium * 1.5 + room_offset) * theme_data.get('wave_effect', 0.7)
+        sunset = (math.sin(time_factor_slow * 0.5 + room_offset) * 0.5 + 0.5) * theme_data.get('sunset_glow', 0.8)
+        hue = (hue + sunset * 0.1 + wave * 0.05) % 1
         saturation = max(saturation_min, min(saturation_max, saturation + wave * 0.2))
-        value = max(value_min, min(value_max, value + sunset * 0.3))
+        value = max(value_min, min(value_max, value + sunset * 0.3 + wave * 0.1))
     elif 'neon_flicker' in theme_data:  # CyberPunk theme
         flicker = random.uniform(0.8, 1.0) * theme_data.get('neon_flicker', 0.8)
-        data_stream = (math.sin(time_factor_very_fast * 5) * 0.5 + 0.5) * theme_data.get('data_stream', 0.7)
+        data_stream = (math.sin(time_factor_very_fast * 5 + room_offset) * 0.5 + 0.5) * theme_data.get('data_stream', 0.7)
         hue = (hue + data_stream * 0.3) % 1
         value = max(value_min, min(value_max, value * flicker + data_stream * 0.2))
     elif 'fairy_lights' in theme_data:  # EnchantedForest theme
-        fairy_lights = (math.sin(time_factor_fast * 4) * 0.5 + 0.5) * theme_data.get('fairy_lights', 0.6)
-        moonbeam = (math.sin(time_factor_slow * 0.3) * 0.5 + 0.5) * theme_data.get('moonbeam', 0.5)
-        hue = (hue + moonbeam * 0.1) % 1
-        saturation = max(saturation_min, min(saturation_max, saturation - moonbeam * 0.3))
-        value = max(value_min, min(value_max, value + fairy_lights * 0.4))
+        fairy_lights = (math.sin(time_factor_fast * 4 + room_offset) * 0.5 + 0.5) * theme_data.get('fairy_lights', 0.6)
+        moonbeam = (math.sin(time_factor_slow * 0.3 + room_offset) * 0.5 + 0.5) * theme_data.get('moonbeam', 0.5)
+        hue = (hue + moonbeam * 0.1 + fairy_lights * 0.05) % 1
+        saturation = max(saturation_min, min(saturation_max, saturation - moonbeam * 0.3 + fairy_lights * 0.2))
+        value = max(value_min, min(value_max, value + fairy_lights * 0.4 + moonbeam * 0.2))
     elif 'starfield_twinkle' in theme_data:  # CosmicVoyage theme
         twinkle = random.uniform(0.7, 1.0) * theme_data.get('starfield_twinkle', 0.8)
-        nebula = (math.sin(time_factor_medium * 0.7) * 0.5 + 0.5) * theme_data.get('nebula_swirl', 0.7)
-        hue = (hue + nebula * 0.2) % 1
-        saturation = max(saturation_min, min(saturation_max, saturation + nebula * 0.3))
-        value = max(value_min, min(value_max, value * twinkle))
+        nebula = (math.sin(time_factor_medium * 0.7 + room_offset) * 0.5 + 0.5) * theme_data.get('nebula_swirl', 0.7)
+        hue = (hue + nebula * 0.2 + twinkle * 0.05) % 1
+        saturation = max(saturation_min, min(saturation_max, saturation + nebula * 0.3 + twinkle * 0.1))
+        value = max(value_min, min(value_max, value * twinkle + nebula * 0.2))
 
     # Add some randomness to prevent static patterns
-    hue = (hue + random.uniform(-0.05, 0.05)) % 1
-    saturation = max(saturation_min, min(saturation_max, saturation + random.uniform(-0.1, 0.1)))
-    value = max(value_min, min(value_max, value + random.uniform(-0.1, 0.1)))
+    hue = (hue + random.uniform(-0.03, 0.03)) % 1
+    saturation = max(saturation_min, min(saturation_max, saturation + random.uniform(-0.05, 0.05)))
+    value = max(value_min, min(value_max, value + random.uniform(-0.05, 0.05)))
+
+    # Generate complementary and analogous colors for more vibrant mixtures
+    complementary_hue = (hue + 0.5) % 1
+    analogous_hue1 = (hue + 0.0833) % 1  # 30 degrees
+    analogous_hue2 = (hue - 0.0833) % 1  # -30 degrees
 
     r, g, b = hsv_to_rgb(hue, saturation, value)
+    r_comp, g_comp, b_comp = hsv_to_rgb(complementary_hue, saturation, value)
+    r_ana1, g_ana1, b_ana1 = hsv_to_rgb(analogous_hue1, saturation, value)
+    r_ana2, g_ana2, b_ana2 = hsv_to_rgb(analogous_hue2, saturation, value)
+
+    # Mix colors for more vibrant shades
+    r_mix = (r * 0.6 + r_comp * 0.2 + r_ana1 * 0.1 + r_ana2 * 0.1)
+    g_mix = (g * 0.6 + g_comp * 0.2 + g_ana1 * 0.1 + g_ana2 * 0.1)
+    b_mix = (b * 0.6 + b_comp * 0.2 + b_ana1 * 0.1 + b_ana2 * 0.1)
 
     channels['total_dimming'] = int(value * 255)
-    channels['r_dimming'] = int(r * 255)
-    channels['g_dimming'] = int(g * 255)
-    channels['b_dimming'] = int(b * 255)
-    channels['w_dimming'] = 0  # Remove white component
+    channels['r_dimming'] = int(r_mix * 255)
+    channels['g_dimming'] = int(g_mix * 255)
+    channels['b_dimming'] = int(b_mix * 255)
+    channels['w_dimming'] = int((r_mix + g_mix + b_mix) / 3 * 64)  # Add a subtle white component
 
     return channels
 
