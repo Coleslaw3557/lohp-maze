@@ -5,7 +5,6 @@ import random
 import aiohttp
 import aiofiles
 import vlc
-import threading
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ class AudioManager:
         self.effect_player = None
         self.background_music_volume = 0.5
         self.effect_volume = 1.0
-        self.vlc_instance = vlc.Instance('--no-xlib')
+        self.vlc_instance = vlc.Instance()
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
@@ -181,7 +180,7 @@ class AudioManager:
         self.mix_audio()
         logger.info("Stopped all audio playback")
 
-    async def start_background_music(self, music_file):
+    def start_background_music(self, music_file):
         if not music_file:
             logger.warning("No music file specified for background music")
             return
