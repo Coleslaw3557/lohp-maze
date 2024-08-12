@@ -49,6 +49,9 @@ async def main():
             sync_manager
         )
 
+        # Start background music
+        asyncio.create_task(audio_manager.start_background_music())
+
         uri = f"ws://{config.get('server_ip')}:{config.get('server_port', 8765)}"
         max_retries = 5
         retry_delay = 5

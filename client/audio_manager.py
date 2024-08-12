@@ -19,11 +19,14 @@ class AudioManager:
         self.stop_event = asyncio.Event()
         self.preloaded_audio = {}
         self.server_url = f"http://{config.get('server_ip')}:{config.get('server_port', 5000)}"
+        self.background_music = None
+        self.background_music_volume = 0.5
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
         await self.preload_existing_audio_files()
         await self.download_audio_files()
+        await self.start_background_music()
         logger.info(f"AudioManager initialization complete. Preloaded audio files: {list(self.preloaded_audio.keys())}")
 
     async def preload_existing_audio_files(self):
@@ -77,9 +80,12 @@ class AudioManager:
             logger.error(f"Audio file not found: {full_path}")
             return False
         
-        self.stop_audio()
         try:
             logger.info(f"Playing audio file: {full_path}")
+            
+            # Mute background music
+            if self.background_music:
+                self.background_music.set_volume(0)
             
             # Load the audio file (MP3 or WAV)
             audio = AudioSegment.from_file(full_path)
@@ -107,6 +113,11 @@ class AudioManager:
             play_obj.wait_done()
             
             logger.info(f"Audio playback completed for file: {file_name}")
+            
+            # Unmute background music
+            if self.background_music:
+                self.background_music.set_volume(self.background_music_volume)
+            
             return True
         except Exception as e:
             logger.error(f"Error playing audio file {file_name} (full path: {full_path}): {str(e)}", exc_info=True)
@@ -134,3 +145,46 @@ class AudioManager:
             logger.info("Stopped current audio playback")
             self.current_audio = None
             self.stop_event.clear()
+
+    async def start_background_music(self):
+        music_files = [f for f in os.listdir(os.path.join(self.cache_dir, 'audio_files')) if f.startswith('bg_')]
+        if not music_files:
+            logger.warning("No background music files found")
+            return
+
+        while True:
+            random.shuffle(music_files)
+            for music_file in music_files:
+                if self.stop_event.is_set():
+                    return
+
+                full_path = os.path.join(self.cache_dir, 'audio_files', music_file)
+                try:
+                    audio = AudioSegment.from_file(full_path)
+                    audio = audio + (20 * math.log10(self.background_music_volume))
+                    raw_data = audio.raw_data
+                    num_channels = audio.channels
+                    sample_width = audio.sample_width
+                    frame_rate = audio.frame_rate
+
+                    play_obj = sa.play_buffer(
+                        raw_data,
+                        num_channels,
+                        sample_width,
+                        frame_rate
+                    )
+                    self.background_music = play_obj
+                    logger.info(f"Started playing background music: {music_file}")
+                    
+                    while play_obj.is_playing() and not self.stop_event.is_set():
+                        await asyncio.sleep(1)
+                    
+                    if self.stop_event.is_set():
+                        play_obj.stop()
+                        return
+
+                except Exception as e:
+                    logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
+
+            if self.stop_event.is_set():
+                return

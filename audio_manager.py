@@ -9,11 +9,13 @@ warnings.filterwarnings("ignore", category=RuntimeWarning, message="Couldn't fin
 logger = logging.getLogger(__name__)
 
 class AudioManager:
-    def __init__(self, config_file='audio_config.json', audio_dir='audio_files'):
+    def __init__(self, config_file='audio_config.json', audio_dir='audio_files', music_dir='music'):
         self.config_file = config_file
         self.audio_dir = audio_dir
+        self.music_dir = music_dir
         self.audio_config = self.load_config()
         self.last_played = {}
+        self.background_music = []
         logger.info("AudioManager initialized")
 
     def get_audio_files_to_download(self):
@@ -23,7 +25,17 @@ class AudioManager:
         audio_files = []
         for effect, config in self.audio_config['effects'].items():
             audio_files.extend(config.get('audio_files', []))
+        
+        # Add background music files
+        audio_files.extend(self.get_background_music_files())
+        
         return list(set(audio_files))  # Remove duplicates
+
+    def get_background_music_files(self):
+        """
+        Returns a list of all background music files.
+        """
+        return [f for f in os.listdir(self.music_dir) if f.endswith('.mp3')]
 
     def load_config(self):
         try:
