@@ -8,8 +8,6 @@ import threading
 import pyaudio
 import math
 from mutagen.mp3 import MP3
-from pydub import AudioSegment
-from pydub.utils import make_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -275,7 +273,7 @@ class AudioManager:
             
             # Set as current background music
             with self.lock:
-                self.background_music = full_path
+                self.background_music = audio
                 self.current_position = 0
             
             # Stop any existing stream
@@ -302,14 +300,20 @@ class AudioManager:
             return (bytes(frame_count * 4), pyaudio.paComplete)
         
         try:
-            audio = MP3(self.background_music)
-            with open(self.background_music, 'rb') as f:
-                f.seek(int(self.current_position * audio.info.sample_rate * audio.info.channels * 2))
-                data = f.read(frame_count * audio.info.channels * 2)
-                if len(data) == 0:
-                    # End of file reached
-                    return (bytes(frame_count * 4), pyaudio.paComplete)
-                self.current_position += frame_count / audio.info.sample_rate
+            audio = self.background_music
+            bytes_per_frame = audio.info.channels * 2  # 2 bytes per sample for 16-bit audio
+            start_byte = int(self.current_position * audio.info.sample_rate * bytes_per_frame)
+            end_byte = start_byte + (frame_count * bytes_per_frame)
+
+            with open(audio.filename, 'rb') as f:
+                f.seek(start_byte)
+                data = f.read(end_byte - start_byte)
+
+            if len(data) == 0:
+                # End of file reached
+                return (bytes(frame_count * 4), pyaudio.paComplete)
+
+            self.current_position += frame_count / audio.info.sample_rate
             return (data, pyaudio.paContinue)
         except Exception as e:
             logger.error(f"Error in audio callback: {str(e)}", exc_info=True)
