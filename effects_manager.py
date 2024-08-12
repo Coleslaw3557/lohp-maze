@@ -26,6 +26,9 @@ class EffectsManager:
         self.effect_buffer = {}
         self.sync_manager = SyncManager()
         self.active_effects = {}  # New dictionary to track active effects per room
+        self.previous_values = {}  # Store previous values for smoothing
+        self.smoothing_factor = 0.2  # Adjust this value to control smoothing (0.0 to 1.0)
+        self.update_frequency = 10  # Set update frequency to 10 Hz
         
         logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
         
@@ -33,6 +36,7 @@ class EffectsManager:
         self.initialize_effects()
 
     def update_frequency(self, new_frequency):
+        self.update_frequency = new_frequency
         self.theme_manager.frequency = new_frequency
         logger.info(f"Update frequency set to {new_frequency} Hz")
 
@@ -208,14 +212,34 @@ class EffectsManager:
 
     async def _apply_effect_to_fixture(self, fixture_id, effect_data):
         try:
+            step_values = get_effect_step_values(effect_data)
+            smoothed_values = self._smooth_values(fixture_id, step_values)
             await self.interrupt_handler.interrupt_fixture(
                 fixture_id,
                 effect_data['duration'],
-                get_effect_step_values(effect_data)
+                smoothed_values
             )
             logger.debug(f"Effect applied to fixture {fixture_id}")
         except Exception as e:
             logger.error(f"Error applying effect to fixture {fixture_id}: {str(e)}")
+
+    def _smooth_values(self, fixture_id, step_values):
+        def smoothed_step_values(elapsed_time):
+            new_values = step_values(elapsed_time)
+            if fixture_id not in self.previous_values:
+                self.previous_values[fixture_id] = new_values
+                return new_values
+
+            smoothed = []
+            for i, value in enumerate(new_values):
+                prev_value = self.previous_values[fixture_id][i]
+                smoothed_value = prev_value + (value - prev_value) * self.smoothing_factor
+                smoothed.append(int(smoothed_value))
+
+            self.previous_values[fixture_id] = smoothed
+            return smoothed
+
+        return smoothed_step_values
 
     def get_all_effects(self):
         return self.effects

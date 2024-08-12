@@ -17,10 +17,12 @@ class ThemeManager:
         self.stop_theme = threading.Event()
         self.theme_lock = threading.Lock()
         self.master_brightness = 1.0
-        self.frequency = 44  # 44 Hz update rate
+        self.frequency = 10  # Reduce update rate to 10 Hz
         self.paused_rooms = set()
         self.theme_list = []
         self.current_theme_index = -1
+        self.previous_values = {}  # Store previous values for smoothing
+        self.smoothing_factor = 0.2  # Adjust this value to control smoothing (0.0 to 1.0)
         self.load_themes()  # Load themes when initializing
 
     def load_themes(self):
@@ -223,9 +225,10 @@ class ThemeManager:
         for room_index, (room, lights) in enumerate(room_layout.items()):
             if room not in self.paused_rooms:
                 room_channels = generate_theme_values(theme_data, current_time, self.master_brightness, room_index, total_rooms)
-                all_room_channels[room] = room_channels
-                logger.debug(f"Generated channels for room {room}: {room_channels}")
-                self._apply_room_channels(room, lights, room_channels)
+                smoothed_channels = self._smooth_channels(room, room_channels)
+                all_room_channels[room] = smoothed_channels
+                logger.debug(f"Generated channels for room {room}: {smoothed_channels}")
+                self._apply_room_channels(room, lights, smoothed_channels)
             else:
                 logger.debug(f"Room {room} is paused, skipping theme application")
         
@@ -233,6 +236,20 @@ class ThemeManager:
             logger.warning("No room channels were generated. Check if all rooms are paused or if there's an issue with room layout.")
         
         return all_room_channels
+
+    def _smooth_channels(self, room, new_channels):
+        if room not in self.previous_values:
+            self.previous_values[room] = new_channels
+            return new_channels
+
+        smoothed_channels = {}
+        for channel, value in new_channels.items():
+            prev_value = self.previous_values[room].get(channel, value)
+            smoothed_value = prev_value + (value - prev_value) * self.smoothing_factor
+            smoothed_channels[channel] = int(smoothed_value)
+
+        self.previous_values[room] = smoothed_channels
+        return smoothed_channels
 
     def pause_theme_for_room(self, room):
         self.paused_rooms.add(room)
