@@ -1,7 +1,7 @@
 {
     "effects": {
         "Lightning": {
-            "audio_files": ["lightning1.mp3", "lightning2.mp3", "lightning3.mp3"],
+            "audio_files": ["lightning1.mp3"],
             "volume": 1.0
         },
         "PoliceLights": {
@@ -17,7 +17,7 @@
             "volume": 0.7
         },
         "WrongAnswer": {
-            "audio_files": [""],
+            "audio_files": [],
             "volume": 0.8
         },
         "CorrectAnswer": {
@@ -29,35 +29,35 @@
             "volume": 0.9
         },
         "GuyLineClimb": {
-            "audio_files": [""],
+            "audio_files": [],
             "volume": 0.7
         },
         "SparkPony": {
-            "audio_files": [""],
+            "audio_files": [],
             "volume": 0.8
         },
         "PortoStandBy": {
-            "audio_files": [""],
+            "audio_files": [],
             "volume": 0.6
         },
         "PortoHit": {
-            "audio_files": [""],
+            "audio_files": [],
             "volume": 0.9
         },
         "CuddlePuddle": {
-            "audio_files": [""],
+            "audio_files": [],
             "volume": 0.7
         },
         "PhotoBomb-BG": {
-            "audio_files": [""],
+            "audio_files": [],
             "volume": 0.6
         },
         "PhotoBomb-Spot": {
-            "audio_files": [""],
+            "audio_files": [],
             "volume": 0.8
         },
         "DeepPlaya-BG": {
-            "audio_files": [""],
+            "audio_files": [],
             "volume": 0.5
         },
         "ImageEnhancement": {
