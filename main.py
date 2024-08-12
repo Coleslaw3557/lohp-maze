@@ -318,15 +318,17 @@ def get_light_models():
 async def start_music():
     try:
         logger.info("Received request to start music")
-        data = await request.get_json()
+        data = await request.get_json(silent=True)
         logger.debug(f"Received data: {data}")
         if not data:
-            logger.warning("No JSON data received in request")
-            return jsonify({"status": "error", "message": "No JSON data received"}), 400
-        music_file = data.get('music_file')
-        if not music_file:
-            logger.warning("No music file specified in request")
-            return jsonify({"status": "error", "message": "No music file specified"}), 400
+            logger.info("No JSON data received, using default music file")
+            music_file = "default_background_music.mp3"  # Replace with your default music file name
+        else:
+            music_file = data.get('music_file')
+            if not music_file:
+                logger.warning("No music file specified in request, using default")
+                music_file = "default_background_music.mp3"  # Replace with your default music file name
+        
         logger.info(f"Attempting to start background music: {music_file}")
         success = await effects_manager.start_music(music_file)
         if success:
