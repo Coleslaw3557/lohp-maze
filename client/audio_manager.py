@@ -38,7 +38,7 @@ class AudioManager:
         # For now, we'll assume all files are already present
         pass
 
-    def play_effect_audio(self, file_name, volume=1.0, loop=False):
+    def play_effect_audio(self, file_name, volume=1.0):
         full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
         if not os.path.exists(full_path):
             logger.error(f"Audio file not found: {full_path}")
@@ -51,17 +51,10 @@ class AudioManager:
             play_obj = wave_obj.play()
             self.current_audio = play_obj
             
-            logger.info(f"Started playing audio file: {file_name}, volume: {volume}, loop: {loop}")
+            logger.info(f"Started playing audio file: {file_name}, volume: {volume}")
             
             play_obj.set_volume(volume)
-            
-            if loop:
-                while loop and not self.stop_event.is_set():
-                    play_obj = wave_obj.play()
-                    play_obj.set_volume(volume)
-                    play_obj.wait_done()
-            else:
-                play_obj.wait_done()
+            play_obj.wait_done()
             
             logger.info(f"Audio playback completed for file: {file_name}")
             return True
