@@ -160,23 +160,6 @@ class AudioManager:
         while effect_player.is_playing():
             await asyncio.sleep(0.1)
         self.effect_players.remove(effect_player)
-                if not loop:
-                    while effect_player.is_playing():
-                        await asyncio.sleep(0.1)
-                    self.effect_players.remove(effect_player)
-                return True
-            else:
-                logger.warning(f"Playback did not start for {file_name}")
-                return False
-
-        except Exception as e:
-            logger.exception(f"Error playing effect audio file {file_name}: {str(e)}")
-            return False
-
-            return True
-        except Exception as e:
-            logger.error(f"Error playing effect audio file {file_name}: {str(e)}", exc_info=True)
-            return False
 
     def loop_effect_audio(self, event):
         # This method will be called when the effect audio reaches the end of the track
