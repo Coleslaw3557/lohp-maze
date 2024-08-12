@@ -444,7 +444,10 @@ async def run_effect_all_rooms():
 
 @app.route('/api/audio/<path:filename>')
 async def serve_audio(filename):
-    audio_dir = os.path.join(os.path.dirname(__file__), 'audio_files')
+    if filename.startswith('The 7th Continent Soundscape'):
+        audio_dir = os.path.join(os.path.dirname(__file__), 'music')
+    else:
+        audio_dir = os.path.join(os.path.dirname(__file__), 'audio_files')
     return await send_from_directory(audio_dir, filename)
 
 if __name__ == '__main__':
