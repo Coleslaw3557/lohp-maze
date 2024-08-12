@@ -289,8 +289,12 @@ class RemoteHostManager:
         logger.info("Starting background music on all connected clients")
         success = True
         for client_ip in self.connected_clients:
-            result = await self.send_audio_command(None, 'start_background_music', {})
-            success = success and result
+            try:
+                result = await self.send_audio_command(None, 'start_background_music', {})
+                success = success and result
+            except AttributeError as e:
+                logger.error(f"Error starting background music for client {client_ip}: {str(e)}")
+                success = False
         return success
 
     async def stop_background_music(self):
@@ -302,9 +306,24 @@ class RemoteHostManager:
         return success
 
     async def send_audio_command(self, room, command, data):
-        client_ip = self.get_client_ip_by_room(room)
-        if client_ip:
-            if client_ip in self.connected_clients:
+        if room is None:
+            # If room is None, send the command to all connected clients
+            success = True
+            for client_ip, websocket in self.connected_clients.items():
+                try:
+                    message = {
+                        "type": command,
+                        "data": data if data is not None else {}
+                    }
+                    await websocket.send(json.dumps(message))
+                    logger.info(f"Successfully sent {command} command to client {client_ip}")
+                except Exception as e:
+                    logger.error(f"Error sending {command} command to client {client_ip}: {str(e)}")
+                    success = False
+            return success
+        else:
+            client_ip = self.get_client_ip_by_room(room)
+            if client_ip and client_ip in self.connected_clients:
                 websocket = self.connected_clients[client_ip]
                 logger.info(f"Sending {command} command for room {room} to client {client_ip}")
                 try:
@@ -323,10 +342,8 @@ class RemoteHostManager:
                 except Exception as e:
                     logger.error(f"Error sending {command} command for room {room} to client {client_ip}: {str(e)}")
             else:
-                logger.error(f"Client {client_ip} for room {room} is not connected. Cannot send {command} command.")
-        else:
-            logger.error(f"No client IP found for room: {room}. Cannot send {command} command.")
-        return False
+                logger.error(f"No connected client found for room: {room}. Cannot send {command} command.")
+            return False
 
     # This method is not used and can be removed
 
