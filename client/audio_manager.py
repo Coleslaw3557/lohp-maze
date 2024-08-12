@@ -22,6 +22,7 @@ class AudioManager:
         self.background_music = None
         self.background_music_volume = 0.5
         self.background_music_volume = 0.5
+        self.background_music_volume = 0.5
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
