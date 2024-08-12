@@ -2,13 +2,10 @@ import asyncio
 import os
 import logging
 import random
-from pydub import AudioSegment
 import io
 import math
 import aiohttp
 import aiofiles
-from pydub.playback import play
-import ffmpeg
 import threading
 import pyaudio
 import wave
@@ -118,14 +115,26 @@ class AudioManager:
         try:
             logger.info(f"Playing effect audio file: {full_path}")
             
-            # Load and play the MP3 file directly
-            self.effect_audio = AudioSegment.from_mp3(full_path)
-            self.effect_audio = self.effect_audio + (20 * math.log10(volume))
+            # Load and play the MP3 file directly using PyAudio
+            with wave.open(full_path, 'rb') as wf:
+                # Open a PyAudio stream
+                stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(wf.getsampwidth()),
+                                           channels=wf.getnchannels(),
+                                           rate=wf.getframerate(),
+                                           output=True)
+                
+                # Read data in chunks and play
+                chunk_size = 1024
+                data = wf.readframes(chunk_size)
+                while data:
+                    stream.write(data)
+                    data = wf.readframes(chunk_size)
+                
+                # Close the stream
+                stream.stop_stream()
+                stream.close()
             
-            # Start playing if not already playing
-            self.play_audio()
-            
-            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
+            logger.info(f"Finished playing effect audio file: {file_name}, volume: {volume}")
             
             return True
         except Exception as e:
