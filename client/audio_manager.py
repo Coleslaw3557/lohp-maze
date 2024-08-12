@@ -57,14 +57,19 @@ class AudioManager:
             # Adjust volume
             audio = audio + (20 * math.log10(volume))
             
-            # Export as WAV to a bytes buffer
-            buffer = io.BytesIO()
-            audio.export(buffer, format="wav")
-            buffer.seek(0)
+            # Convert to raw PCM data
+            raw_data = audio.raw_data
+            num_channels = audio.channels
+            sample_width = audio.sample_width
+            frame_rate = audio.frame_rate
             
             # Play the audio
-            wave_obj = sa.WaveObject.from_wave_read(buffer)
-            play_obj = wave_obj.play()
+            play_obj = sa.play_buffer(
+                raw_data,
+                num_channels,
+                sample_width,
+                frame_rate
+            )
             self.current_audio = play_obj
             
             logger.info(f"Started playing audio file: {file_name}, volume: {volume}")
