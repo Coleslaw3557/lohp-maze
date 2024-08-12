@@ -26,16 +26,23 @@ class AudioManager:
         for effect, config in self.audio_config['effects'].items():
             audio_files.extend(config.get('audio_files', []))
         
-        # Add background music files
-        audio_files.extend(self.get_background_music_files())
+        # Add background music files separately
+        music_files = self.get_background_music_files()
         
-        return list(set(audio_files))  # Remove duplicates
+        return {
+            'effects': list(set(audio_files)),
+            'music': music_files
+        }
 
     def get_background_music_files(self):
         """
-        Returns a list of all background music files.
+        Returns a list of all background music files from the music directory.
         """
-        return [f for f in os.listdir(self.music_dir) if f.endswith('.mp3')]
+        if os.path.exists(self.music_dir):
+            return [f for f in os.listdir(self.music_dir) if f.endswith('.mp3')]
+        else:
+            logger.warning(f"Music directory not found: {self.music_dir}")
+            return []
 
     def load_config(self):
         try:
