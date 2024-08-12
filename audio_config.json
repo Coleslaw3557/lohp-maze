@@ -13,7 +13,7 @@
             "volume": 0.7
         },
         "GateGreeters": {
-            "audio_files": [""],
+            "audio_files": ["greeters-weed.mp3", "greeters-jurasic-park.mp3"],
             "volume": 0.7
         },
         "WrongAnswer": {
@@ -21,7 +21,7 @@
             "volume": 0.8
         },
         "CorrectAnswer": {
-            "audio_files": [""],
+            "audio_files": ["ff9-victory.mp3", "MW2-Betty-Area-Secure.mp3", "MW2-Betty-gate-Code.mp3", "MW2-Bety-Inspection-Successful.mp3"],
             "volume": 0.8
         },
         "Entrance": {
