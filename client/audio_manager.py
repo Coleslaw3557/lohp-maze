@@ -287,15 +287,24 @@ class AudioManager:
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
-    def mix_audio(self):
-        if self.background_music:
+
+    def audio_callback(self, in_data, frame_count, time_info, status):
+        if not self.is_playing or not self.background_music:
+            return (bytes(frame_count * 4), pyaudio.paContinue)
+        
+        try:
             with open(self.background_music, 'rb') as f:
                 audio = MP3(self.background_music)
-                frame_count = int(44100 * 0.1)  # 100ms of audio
-                f.seek(int(audio.info.sample_rate * 2 * audio.info.channels * (self.current_position % audio.info.length)))
+                f.seek(int(self.current_position * audio.info.sample_rate * 2 * audio.info.channels))
                 data = f.read(frame_count * 2 * audio.info.channels)
-                self.current_position += 0.1
+                self.current_position += frame_count / audio.info.sample_rate
                 if self.current_position >= audio.info.length:
                     self.current_position = 0
-                return data
+                return (data, pyaudio.paContinue)
+        except Exception as e:
+            logger.error(f"Error in audio callback: {str(e)}", exc_info=True)
+            return (bytes(frame_count * 4), pyaudio.paContinue)
+    def mix_audio(self):
+        # This method is no longer used for background music playback
+        # It can be used for mixing effect sounds with background music in the future
         return b'\x00' * 4410  # 100ms of silence
