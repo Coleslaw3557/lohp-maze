@@ -317,7 +317,9 @@ def get_light_models():
 @app.route('/api/start_music', methods=['POST'])
 async def start_music():
     try:
-        data = await request.json
+        data = await request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "No JSON data received"}), 400
         music_file = data.get('music_file')
         if not music_file:
             return jsonify({"status": "error", "message": "No music file specified"}), 400
