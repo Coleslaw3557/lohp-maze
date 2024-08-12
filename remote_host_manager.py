@@ -290,6 +290,9 @@ class RemoteHostManager:
         logger.info("Starting background music on all connected clients")
         success = True
         music_file = self.get_random_music_file()
+        if not music_file:
+            logger.error("No music files available for background music")
+            return False
         for client_ip, websocket in self.connected_clients.items():
             try:
                 message = {
