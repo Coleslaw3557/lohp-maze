@@ -254,13 +254,9 @@ class ThemeManager:
                         channel_offset = light_model['channels'][channel]
                         fixture_values[channel_offset] = value
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
-                new_values = [max(current, new) for current, new in zip(current_values, fixture_values)]
-                logger.debug(f"Updating fixture {fixture_id} in room {room}: Current values: {current_values}, New values: {new_values}")
-                if new_values != current_values:
-                    self.dmx_state_manager.update_fixture(fixture_id, new_values)
-                    logger.info(f"Updated fixture {fixture_id} in room {room} with new values: {new_values}")
-                else:
-                    logger.debug(f"No change in values for fixture {fixture_id} in room {room}")
+                logger.debug(f"Updating fixture {fixture_id} in room {room}: Current values: {current_values}, New values: {fixture_values}")
+                self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+                logger.info(f"Updated fixture {fixture_id} in room {room} with new values: {fixture_values}")
             else:
                 logger.debug(f"Fixture {fixture_id} in room {room} is interrupted, skipping update")
 
