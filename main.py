@@ -327,8 +327,8 @@ async def start_music():
         else:
             return jsonify({"status": "error", "message": f"Failed to start background music '{music_file}'"}), 500
     except Exception as e:
-        logger.error(f"Error starting background music: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        logger.error(f"Error starting background music: {str(e)}", exc_info=True)
+        return jsonify({"status": "error", "message": f"Internal server error: {str(e)}"}), 500
 
 @app.route('/api/stop_music', methods=['POST'])
 async def stop_music():

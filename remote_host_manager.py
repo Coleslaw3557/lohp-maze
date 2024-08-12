@@ -288,11 +288,15 @@ class RemoteHostManager:
     async def start_background_music(self, music_file):
         logger.info(f"Starting background music '{music_file}' on all connected clients")
         success = True
-        for client_ip in self.connected_clients:
+        for client_ip, websocket in self.connected_clients.items():
             try:
-                result = await self.send_audio_command(None, 'start_background_music', {'music_file': music_file})
-                success = success and result
-            except AttributeError as e:
+                message = {
+                    "type": "start_background_music",
+                    "data": {"music_file": music_file}
+                }
+                await websocket.send(json.dumps(message))
+                logger.info(f"Successfully sent start_background_music command to client {client_ip}")
+            except Exception as e:
                 logger.error(f"Error starting background music '{music_file}' for client {client_ip}: {str(e)}")
                 success = False
         return success
