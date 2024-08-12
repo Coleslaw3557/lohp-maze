@@ -16,15 +16,12 @@ class AudioManager:
     def __init__(self, cache_dir, config):
         self.cache_dir = cache_dir
         self.config = config
-        self.current_audio = None
-        self.stop_event = asyncio.Event()
         self.preloaded_audio = {}
         self.server_url = f"http://{config.get('server_ip')}:{config.get('server_port', 5000)}"
         self.background_music = None
         self.background_music_volume = 0.5
-        self.active_audio_streams = []
-        self.mixer = AudioSegment.silent(duration=1)
-        self.active_audio_streams = []
+        self.effect_audio = None
+        self.effect_volume = 1.0
         self.mixer = AudioSegment.silent(duration=1)
 
     async def initialize(self):
@@ -111,7 +108,11 @@ class AudioManager:
             return False
         
         try:
-            logger.info(f"Playing audio file: {full_path}")
+            logger.info(f"Playing effect audio file: {full_path}")
+            
+            # Stop any currently playing effect
+            if self.effect_audio:
+                self.stop_effect_audio()
             
             # Load the audio file (MP3 or WAV)
             audio = AudioSegment.from_file(full_path)
@@ -119,30 +120,37 @@ class AudioManager:
             # Adjust volume
             audio = audio + (20 * math.log10(volume))
             
-            # Add the audio to the active streams
-            self.active_audio_streams.append(audio)
+            # Set as current effect audio
+            self.effect_audio = audio
+            self.effect_volume = volume
             
-            # Mix all active streams
+            # Mix background music and effect audio
             self.mix_audio()
             
-            logger.info(f"Started playing audio file: {file_name}, volume: {volume}")
+            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
             
             return True
         except Exception as e:
-            logger.error(f"Error playing audio file {file_name} (full path: {full_path}): {str(e)}", exc_info=True)
+            logger.error(f"Error playing effect audio file {file_name} (full path: {full_path}): {str(e)}", exc_info=True)
             return False
 
+    def stop_effect_audio(self):
+        if self.effect_audio:
+            self.effect_audio = None
+            self.mix_audio()
+            logger.info("Stopped effect audio")
+
     def mix_audio(self):
-        if not self.active_audio_streams:
-            return
-
-        # Mix all active streams
-        mixed = self.active_audio_streams[0]
-        for audio in self.active_audio_streams[1:]:
-            mixed = mixed.overlay(audio)
-
-        # Play the mixed audio
-        play(mixed)
+        mixed = AudioSegment.silent(duration=1)
+        
+        if self.background_music:
+            mixed = mixed.overlay(self.background_music)
+        
+        if self.effect_audio:
+            mixed = mixed.overlay(self.effect_audio)
+        
+        if not mixed.duration_seconds == 1:  # Only play if there's actual audio
+            play(mixed)
 
     def stop_audio(self):
         self.active_audio_streams.clear()
@@ -185,10 +193,10 @@ class AudioManager:
             audio = AudioSegment.from_file(full_path)
             audio = audio + (20 * math.log10(self.background_music_volume))
             
-            # Add the background music to the active streams
-            self.active_audio_streams.append(audio)
+            # Set as current background music
+            self.background_music = audio
             
-            # Mix all active streams
+            # Mix background music and effect audio
             self.mix_audio()
             
             logger.info(f"Started playing background music: {music_file}")
