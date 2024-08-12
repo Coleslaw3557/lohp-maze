@@ -134,30 +134,21 @@ class AudioManager:
     def _play_audio_thread(self, file_path, volume):
         try:
             # Load the MP3 file
-            audio = AudioSegment.from_mp3(file_path)
-            
-            # Apply volume adjustment
-            audio = audio + (20 * math.log10(volume))
-            
-            # Get audio parameters
-            sample_width = audio.sample_width
-            channels = audio.channels
-            frame_rate = audio.frame_rate
+            audio = MP3(file_path)
             
             # Open a PyAudio stream
-            stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(sample_width),
-                                       channels=channels,
-                                       rate=frame_rate,
+            stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
+                                       channels=audio.info.channels,
+                                       rate=audio.info.sample_rate,
                                        output=True)
             
             # Play audio in chunks
             chunk_size = 1024
-            chunks = make_chunks(audio, chunk_size)
-            
-            for chunk in chunks:
-                if self.stop_flag.is_set():
-                    break
-                stream.write(chunk._data)
+            with open(file_path, 'rb') as f:
+                data = f.read(chunk_size)
+                while data and not self.stop_flag.is_set():
+                    stream.write(data)
+                    data = f.read(chunk_size)
             
             # Close the stream
             stream.stop_stream()
