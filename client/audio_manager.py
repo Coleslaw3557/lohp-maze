@@ -38,7 +38,12 @@ class AudioManager:
         # For now, we'll assume all files are already present
         pass
 
-    async def play_effect_audio(self, file_name, volume=1.0, loop=False):
+    async def play_effect_audio(self, effect_name, volume=1.0, loop=False):
+        file_name = self.get_audio_file_for_effect(effect_name)
+        if not file_name:
+            logger.error(f"No audio file found for effect: {effect_name}")
+            return False
+
         full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
         
         if not os.path.exists(full_path):
@@ -51,7 +56,7 @@ class AudioManager:
             play_obj = wave_obj.play()
             self.current_audio = play_obj
             
-            logger.info(f"Started playing audio file: {file_name}, volume: {volume}, loop: {loop}")
+            logger.info(f"Started playing audio for effect: {effect_name}, file: {file_name}, volume: {volume}, loop: {loop}")
             
             # Set volume
             play_obj.set_volume(volume)
@@ -71,14 +76,21 @@ class AudioManager:
             
             if self.stop_event.is_set():
                 play_obj.stop()
-                logger.info(f"Audio playback stopped for file: {file_name}")
+                logger.info(f"Audio playback stopped for effect: {effect_name}")
             else:
-                logger.info(f"Audio playback completed for file: {file_name}")
+                logger.info(f"Audio playback completed for effect: {effect_name}")
             
             return True
         except Exception as e:
-            logger.error(f"Error playing audio file {file_name}: {str(e)}", exc_info=True)
+            logger.error(f"Error playing audio for effect {effect_name}: {str(e)}", exc_info=True)
             return False
+
+    def get_audio_file_for_effect(self, effect_name):
+        audio_config = self.config.get('effects', {}).get(effect_name, {})
+        audio_files = audio_config.get('audio_files', [])
+        if audio_files:
+            return random.choice(audio_files)
+        return None
 
     async def stop_audio(self):
         if self.current_audio:
