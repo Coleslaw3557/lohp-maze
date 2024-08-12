@@ -25,7 +25,7 @@
             "volume": 0.8
         },
         "Entrance": {
-            "audio_files": [""],
+            "audio_files": ["greeters-jurasic-park.mp3"],
             "volume": 0.9
         },
         "GuyLineClimb": {
