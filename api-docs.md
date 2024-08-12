@@ -26,12 +26,32 @@ Sets the current lighting theme for all rooms.
     "theme_name": "[string]"
   }
   ```
+- **Optional Params:**
+  ```json
+  {
+    "next_theme": true
+  }
+  ```
 
 #### Example
 ```bash
 curl -X POST http://localhost:5000/api/set_theme \
      -H "Content-Type: application/json" \
      -d '{"theme_name": "NeonNightlife"}'
+```
+
+To set the next theme:
+```bash
+curl -X POST http://localhost:5000/api/set_theme \
+     -H "Content-Type: application/json" \
+     -d '{"next_theme": true}'
+```
+
+To turn off the theme:
+```bash
+curl -X POST http://localhost:5000/api/set_theme \
+     -H "Content-Type: application/json" \
+     -d '{"theme_name": "NoTheme"}'
 ```
 
 ### 2. Run Effect
@@ -227,6 +247,56 @@ curl -X POST http://localhost:5000/api/run_effect_all_rooms \
          "loop": false
        }
      }'
+```
+
+### 12. Stop Effect
+
+Stops the currently running effect in a specific room or all rooms.
+
+- **URL:** `/stop_effect`
+- **Method:** `POST`
+- **Data Params:**
+  ```json
+  {
+    "room": "[string]"
+  }
+  ```
+  Note: If "room" is not provided, it will stop effects in all rooms.
+
+#### Example (Stop effect in a specific room)
+```bash
+curl -X POST http://localhost:5000/api/stop_effect \
+     -H "Content-Type: application/json" \
+     -d '{"room": "Entrance"}'
+```
+
+#### Example (Stop effects in all rooms)
+```bash
+curl -X POST http://localhost:5000/api/stop_effect
+```
+
+### 13. Get Effects Details
+
+Retrieves detailed information about all available effects.
+
+- **URL:** `/effects_details`
+- **Method:** `GET`
+
+#### Example
+```bash
+curl http://localhost:5000/api/effects_details
+```
+
+### 14. Get Light Models
+
+Retrieves information about all configured light models.
+
+- **URL:** `/light_models`
+- **Method:** `GET`
+
+#### Example
+```bash
+curl http://localhost:5000/api/light_models
 ```
 
 ## Error Handling
