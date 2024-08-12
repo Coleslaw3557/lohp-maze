@@ -18,7 +18,11 @@ class AudioManager:
         self.effect_player = None
         self.background_music_volume = 0.5
         self.effect_volume = 1.0
-        self.vlc_instance = vlc.Instance()
+        try:
+            self.vlc_instance = vlc.Instance('--aout=pulse')
+        except:
+            logger.warning("Failed to initialize VLC with PulseAudio, falling back to ALSA")
+            self.vlc_instance = vlc.Instance('--aout=alsa')
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
@@ -207,7 +211,9 @@ class AudioManager:
             self.background_music_player.play()
 
             # Set the player to loop
+            self.background_music_player.set_media(media)
             self.background_music_player.set_playback_mode(vlc.PlaybackMode.loop)
+            self.background_music_player.play()
 
             logger.info(f"Started playing background music: {music_file}")
 
