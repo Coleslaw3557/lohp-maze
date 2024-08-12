@@ -275,7 +275,6 @@ class ThemeManager:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 logger.debug(f"Updating fixture {fixture_id} in room {room}: Current values: {current_values}, New values: {fixture_values}")
                 self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
-                logger.info(f"Updated fixture {fixture_id} in room {room} with new values: {fixture_values}")
             else:
                 logger.debug(f"Fixture {fixture_id} in room {room} is interrupted, skipping update")
 
