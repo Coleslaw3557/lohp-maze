@@ -23,18 +23,17 @@ NUM_FIXTURES = 21
 CHANNELS_PER_FIXTURE = 8
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG if DEBUG else logging.INFO,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    filename='server.log',  # Log to a file
-                    filemode='a')  # Append mode
+                    handlers=[logging.StreamHandler(sys.stdout)])  # Log to stdout
 logger = logging.getLogger(__name__)
 
-# Add a stream handler to also log to console
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG if DEBUG else logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+# Set specific loggers to desired levels
+logging.getLogger('pyftdi.ftdi').setLevel(logging.WARNING)
+logging.getLogger('pydub.converter').setLevel(logging.ERROR)
+
+# Set the root logger to INFO
+logging.getLogger().setLevel(logging.INFO)
 
 app = Quart(__name__)
 app = cors(app)
@@ -187,18 +186,34 @@ from quart import request
 async def set_theme():
     data = await request.json
     theme_name = data.get('theme_name')
-    if not theme_name:
-        return jsonify({'status': 'error', 'message': 'Theme name is required'}), 400
+    next_theme = data.get('next_theme', False)
+
+    if not theme_name and not next_theme:
+        return jsonify({'status': 'error', 'message': 'Theme name or next_theme flag is required'}), 400
 
     try:
-        logger.info(f"Setting theme to: {theme_name}")
-        success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=10.0)
-        if success:
-            logger.info(f"Theme set successfully to: {theme_name}")
-            return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+        if next_theme:
+            logger.info("Setting next theme")
+            theme_name = await effects_manager.set_next_theme_async()
+            if not theme_name:
+                return jsonify({'status': 'error', 'message': 'Failed to set next theme'}), 400
+        elif theme_name.lower() == 'notheme':
+            logger.info("Turning off theme")
+            await effects_manager.stop_current_theme_async()
+            return jsonify({'status': 'success', 'message': 'Theme turned off'})
+        
+        if theme_name:
+            logger.info(f"Setting theme to: {theme_name}")
+            success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=10.0)
+            if success:
+                logger.info(f"Theme set successfully to: {theme_name}")
+                return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+            else:
+                logger.error(f"Failed to set theme to: {theme_name}")
+                return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
         else:
-            logger.error(f"Failed to set theme to: {theme_name}")
-            return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+            logger.error("No valid theme name provided")
+            return jsonify({'status': 'error', 'message': 'No valid theme name provided'}), 400
     except asyncio.TimeoutError:
         logger.error(f"Timeout while setting theme to: {theme_name}")
         return jsonify({'status': 'error', 'message': f'Timeout while setting theme to {theme_name}'}), 504
@@ -351,33 +366,40 @@ def stop_test():
 async def run_effect_all_rooms():
     data = await request.json
     effect_name = data.get('effect_name')
+    audio_params = data.get('audio', {})
+    
     if not effect_name:
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
-
+    
+    logger.info(f"Preparing effect: {effect_name} for all rooms")
+    effect_data = effects_manager.get_effect(effect_name)
+    if not effect_data:
+        logger.error(f"Effect not found: {effect_name}")
+        return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
+    
+    # Add audio parameters to effect data
+    effect_data['audio'] = audio_params
+    
     try:
-        effect_data = effects_manager.get_effect(effect_name)
-        if not effect_data:
-            return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
-
-        # Get all rooms
-        room_layout = light_config.get_room_layout()
-        all_rooms = list(room_layout.keys())
-
-        # Prepare audio for all rooms
-        audio_file = effects_manager.get_audio_file(effect_name)
-        audio_params = effect_data.get('audio', {})
-        await remote_host_manager.stream_audio_to_room(all_rooms, audio_file, audio_params, effect_name)
-
-        # Apply effect to all rooms simultaneously
-        success, message = await effects_manager.apply_effect_to_all_rooms(effect_name)
-
-        if success:
-            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in all rooms simultaneously'})
+        # Get unique remote units
+        remote_units = remote_host_manager.get_unique_remote_units()
+        
+        # Play audio for each unique remote unit
+        audio_success = await remote_host_manager.play_audio_for_remote_units(remote_units, effect_name, audio_params)
+        
+        # Execute the effect immediately for all rooms
+        success, message = await effects_manager.apply_effect_to_all_rooms(effect_name, effect_data)
+        
+        if success and audio_success:
+            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed for all remote units simultaneously'})
         else:
-            return jsonify({'status': 'error', 'message': message}), 500
+            error_message = f"Failed to execute effect {effect_name} for all remote units. Audio success: {audio_success}, Lighting success: {success}"
+            logger.error(error_message)
+            return jsonify({'status': 'error', 'message': error_message}), 500
     except Exception as e:
-        logger.exception(f"Error executing {effect_name} effect for all rooms")
-        return jsonify({"error": str(e)}), 500
+        error_message = f"Error executing effect {effect_name} for all remote units: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        return jsonify({'status': 'error', 'message': error_message}), 500
 
 @app.route('/api/audio/<path:filename>')
 async def serve_audio(filename):
@@ -394,7 +416,7 @@ if __name__ == '__main__':
     config.use_reloader = DEBUG
     config.accesslog = "-"  # Log to stdout
     config.errorlog = "-"  # Log to stderr
-    config.loglevel = "INFO"
+    config.loglevel = "DEBUG"
 
     async def run_server():
         try:

@@ -1,15 +1,11 @@
 import json
 import logging
 import os
+import warnings
+from pydub import AudioSegment
 
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work")
 logger = logging.getLogger(__name__)
-
-try:
-    from pydub import AudioSegment
-    PYDUB_AVAILABLE = True
-except ImportError:
-    PYDUB_AVAILABLE = False
-    logger.warning("pydub module not found. Some audio functionality may be limited.")
 
 class AudioManager:
     def __init__(self, config_file='audio_config.json', audio_dir='audio_files'):

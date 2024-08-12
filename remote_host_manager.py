@@ -23,6 +23,21 @@ class RemoteHostManager:
         self.audio_manager = audio_manager
         logger.info("RemoteHostManager initialized")
 
+    def get_unique_remote_units(self):
+        return list(set(self.connected_clients.keys()))
+
+    async def play_audio_for_remote_units(self, remote_units, effect_name, audio_params):
+        success = True
+        for remote_unit in remote_units:
+            rooms = self.get_rooms_for_remote_unit(remote_unit)
+            if rooms:
+                audio_success = await self.play_audio_in_room(rooms[0], effect_name, audio_params)
+                success = success and audio_success
+        return success
+
+    def get_rooms_for_remote_unit(self, remote_unit):
+        return self.client_rooms.get(remote_unit, [])
+
     def clear_audio_sent_to_clients(self):
         self.audio_sent_to_clients.clear()
         logger.info("Cleared audio sent to clients tracking")

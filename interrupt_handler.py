@@ -13,6 +13,7 @@ class InterruptHandler:
         self.interrupted_fixtures = set()
         self.original_states = {}
         self.fixture_locks = {fixture_id: threading.Lock() for fixture_id in range(dmx_state_manager.num_fixtures)}
+        self.interrupt_end_times = {}
 
     async def interrupt_fixture(self, fixture_id, duration, interrupt_sequence):
         async with asyncio.Lock():
@@ -37,6 +38,7 @@ class InterruptHandler:
             
             start_time = time.time()
             end_time = start_time + duration
+            self.interrupt_end_times[fixture_id] = end_time
             step_count = 0
             try:
                 while time.time() < end_time and self.active_interrupts.get(fixture_id, {}).get('id') == interrupt_id:
@@ -47,7 +49,6 @@ class InterruptHandler:
                     elapsed_time = time.time() - start_time
                     new_values = interrupt_sequence(elapsed_time)
                     self.dmx_state_manager.update_fixture(fixture_id, new_values, override=True)
-                    logger.debug(f"Step {step_count}: Fixture {fixture_id}, Elapsed time: {elapsed_time:.3f}s, New values: {new_values}")
                     await asyncio.sleep(1 / 44)  # 44Hz update rate
                     step_count += 1
                 
@@ -60,11 +61,12 @@ class InterruptHandler:
                 if self.active_interrupts.get(fixture_id, {}).get('id') == interrupt_id:
                     del self.active_interrupts[fixture_id]
                 
-                # Remove the fixture from interrupted set and restore original state
+                # Remove the fixture from interrupted set
                 self.interrupted_fixtures.discard(fixture_id)
                 if fixture_id in self.original_states:
-                    self.dmx_state_manager.update_fixture(fixture_id, self.original_states[fixture_id], override=True)
                     del self.original_states[fixture_id]
+                if fixture_id in self.interrupt_end_times:
+                    del self.interrupt_end_times[fixture_id]
 
             logger.info(f"Effect completed for fixture {fixture_id}.")
             logger.debug(f"Completed {step_count} steps for fixture {fixture_id} over {duration} seconds")
