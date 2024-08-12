@@ -107,7 +107,7 @@ class AudioManager:
                     logger.error(f"Failed to get list of background music files. Status: {response.status}")
 
     def play_effect_audio(self, file_name, volume=1.0):
-        full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
+        full_path = os.path.join(self.audio_dir, file_name)
         if not os.path.exists(full_path):
             logger.error(f"Audio file not found: {full_path}")
             return False
@@ -115,31 +115,66 @@ class AudioManager:
         try:
             logger.info(f"Playing effect audio file: {full_path}")
             
-            # Load and play the MP3 file using PyDub and PyAudio
-            audio = AudioSegment.from_mp3(full_path)
-            audio = audio - (20 * math.log10(1 / volume))  # Adjust volume
+            # Stop any currently playing audio
+            self.stop_audio()
             
-            # Open a PyAudio stream
-            stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(audio.sample_width),
-                                       channels=audio.channels,
-                                       rate=audio.frame_rate,
-                                       output=True)
+            # Set the stop flag to False
+            self.stop_flag.clear()
             
-            # Play audio
-            chunk_size = 1024
-            for chunk in audio[::chunk_size].raw_data:
-                stream.write(chunk)
+            # Start a new thread to play the audio
+            self.play_thread = threading.Thread(target=self._play_audio_thread, args=(full_path, volume))
+            self.play_thread.start()
             
-            # Close the stream
-            stream.stop_stream()
-            stream.close()
-            
-            logger.info(f"Finished playing effect audio file: {file_name}, volume: {volume}")
+            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
             
             return True
         except Exception as e:
             logger.error(f"Error playing effect audio file {file_name} (full path: {full_path}): {str(e)}", exc_info=True)
             return False
+
+    def _play_audio_thread(self, file_path, volume):
+        try:
+            audio = MP3(file_path)
+            
+            # Open a PyAudio stream
+            stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
+                                       channels=audio.info.channels,
+                                       rate=audio.info.sample_rate,
+                                       output=True)
+            
+            # Open the MP3 file
+            with open(file_path, 'rb') as f:
+                data = f.read()
+            
+            # Play audio
+            chunk_size = 1024
+            offset = 0
+            while offset < len(data):
+                if self.stop_flag.is_set():
+                    break
+                chunk = data[offset:offset + chunk_size]
+                stream.write(chunk)
+                offset += chunk_size
+            
+            # Close the stream
+            stream.stop_stream()
+            stream.close()
+            
+            logger.info(f"Finished playing effect audio file: {file_path}")
+        except Exception as e:
+            logger.error(f"Error in audio playback thread: {str(e)}", exc_info=True)
+        finally:
+            self.current_stream = None
+
+    def stop_audio(self):
+        if self.play_thread and self.play_thread.is_alive():
+            self.stop_flag.set()
+            self.play_thread.join()
+        if self.current_stream:
+            self.current_stream.stop_stream()
+            self.current_stream.close()
+            self.current_stream = None
+        logger.info("Audio playback stopped")
 
     def stop_effect_audio(self):
         if self.effect_audio:

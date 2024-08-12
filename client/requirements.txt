@@ -4,8 +4,6 @@ RPi.GPIO==0.7.0
 quart==0.18.3
 quart-cors==0.6.0
 hypercorn==0.14.3
-pydub==0.25.1
-ffmpeg-python==0.2.0
 aiohttp==3.8.5
-simpleaudio==1.0.4
 pyaudio==0.2.13
+mutagen==1.45.1
