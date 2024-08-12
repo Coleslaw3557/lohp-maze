@@ -58,7 +58,8 @@ async def main():
         retry_delay = 5
         
         connection_lock = asyncio.Lock()
-        try:
+        
+        async def handle_connection():
             while True:
                 async with connection_lock:
                     for attempt in range(max_retries):
@@ -93,6 +94,19 @@ async def main():
                                 logger.error(f"Failed to connect after {max_retries} attempts. Waiting for 60 seconds before trying again.")
                                 await asyncio.sleep(60)
                                 break
+
+        async def run_background_tasks():
+            # Add any additional background tasks here
+            while True:
+                # Example: Periodic time sync
+                await sync_manager.sync_time_with_server()
+                await asyncio.sleep(300)  # Sync every 5 minutes
+
+        try:
+            await asyncio.gather(
+                handle_connection(),
+                run_background_tasks()
+            )
         except KeyboardInterrupt:
             logger.info("Shutting down client...")
         finally:
