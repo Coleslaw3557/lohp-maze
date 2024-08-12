@@ -24,6 +24,8 @@ class AudioManager:
         self.background_music_volume = 0.5
         self.active_audio_streams = []
         self.mixer = AudioSegment.silent(duration=1)
+        self.active_audio_streams = []
+        self.mixer = AudioSegment.silent(duration=1)
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
@@ -163,12 +165,9 @@ class AudioManager:
         return None
 
     def stop_audio(self):
-        if self.current_audio:
-            self.stop_event.set()
-            self.current_audio.stop()
-            logger.info("Stopped current audio playback")
-            self.current_audio = None
-            self.stop_event.clear()
+        self.active_audio_streams.clear()
+        self.mix_audio()
+        logger.info("Stopped all audio playback")
 
     async def start_background_music(self, music_file):
         if not music_file:
@@ -196,3 +195,14 @@ class AudioManager:
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
+    def mix_audio(self):
+        if not self.active_audio_streams:
+            return
+
+        # Mix all active streams
+        mixed = self.active_audio_streams[0]
+        for audio in self.active_audio_streams[1:]:
+            mixed = mixed.overlay(audio)
+
+        # Play the mixed audio
+        play(mixed)
