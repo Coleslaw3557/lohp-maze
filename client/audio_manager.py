@@ -118,16 +118,9 @@ class AudioManager:
         try:
             logger.info(f"Playing effect audio file: {full_path}")
             
-            # Load the MP3 file
-            audio = AudioSegment.from_mp3(full_path)
-            
-            # Adjust volume
-            audio = audio + (20 * math.log10(volume))
-            
-            # Set as current effect audio
-            with self.lock:
-                self.effect_audio = audio
-                self.effect_volume = volume
+            # Load and play the MP3 file directly
+            self.effect_audio = AudioSegment.from_mp3(full_path)
+            self.effect_audio = self.effect_audio + (20 * math.log10(volume))
             
             # Start playing if not already playing
             self.play_audio()
