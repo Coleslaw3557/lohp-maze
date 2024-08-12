@@ -51,9 +51,10 @@ class AudioManager:
             async with session.get(f"{self.server_url}/api/audio_files_to_download") as response:
                 if response.status == 200:
                     files_to_download = await response.json()
-                    for file_name in files_to_download:
-                        if file_name and file_name not in self.preloaded_audio:
-                            await self.download_audio_file(session, file_name, audio_dir)
+                    for category, file_list in files_to_download.items():
+                        for file_name in file_list:
+                            if file_name and file_name not in self.preloaded_audio:
+                                await self.download_audio_file(session, file_name, audio_dir)
                 else:
                     logger.error(f"Failed to get list of audio files to download. Status: {response.status}")
 
@@ -85,9 +86,10 @@ class AudioManager:
         os.makedirs(music_dir, exist_ok=True)
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{self.server_url}/api/background_music_files") as response:
+            async with session.get(f"{self.server_url}/api/audio_files_to_download") as response:
                 if response.status == 200:
-                    music_files = await response.json()
+                    files_to_download = await response.json()
+                    music_files = files_to_download.get('music', [])
                     for file_name in music_files:
                         if file_name and file_name not in self.preloaded_audio:
                             await self.download_audio_file(session, file_name, music_dir)
