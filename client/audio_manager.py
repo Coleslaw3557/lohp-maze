@@ -38,10 +38,10 @@ class AudioManager:
         # For now, we'll assume all files are already present
         pass
 
-    def play_effect_audio(self, effect_name, volume=1.0, loop=False):
-        full_path = self.get_audio_file_for_effect(effect_name)
-        if not full_path:
-            logger.error(f"No audio file found for effect: {effect_name}")
+    def play_effect_audio(self, file_name, volume=1.0, loop=False):
+        full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
+        if not os.path.exists(full_path):
+            logger.error(f"Audio file not found: {full_path}")
             return False
         
         self.stop_audio()
@@ -51,7 +51,7 @@ class AudioManager:
             play_obj = wave_obj.play()
             self.current_audio = play_obj
             
-            logger.info(f"Started playing audio for effect: {effect_name}, file: {full_path}, volume: {volume}, loop: {loop}")
+            logger.info(f"Started playing audio file: {file_name}, volume: {volume}, loop: {loop}")
             
             play_obj.set_volume(volume)
             
@@ -64,10 +64,10 @@ class AudioManager:
             else:
                 play_obj.wait_done()
             
-            logger.info(f"Audio playback completed for effect: {effect_name}")
+            logger.info(f"Audio playback completed for file: {file_name}")
             return True
         except Exception as e:
-            logger.error(f"Error playing audio for effect {effect_name} (file: {full_path}): {str(e)}", exc_info=True)
+            logger.error(f"Error playing audio file {file_name} (full path: {full_path}): {str(e)}", exc_info=True)
             return False
 
     def get_audio_file_for_effect(self, effect_name):
