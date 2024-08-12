@@ -6,6 +6,8 @@ import random
 from pydub import AudioSegment
 import io
 import math
+import aiohttp
+import aiofiles
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,7 @@ class AudioManager:
         self.current_audio = None
         self.stop_event = asyncio.Event()
         self.preloaded_audio = {}
+        self.server_url = f"http://{config.get('server_ip')}:{config.get('server_port', 5000)}"
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
@@ -29,7 +32,7 @@ class AudioManager:
         if os.path.exists(audio_dir):
             audio_files = os.listdir(audio_dir)
             for audio_file in audio_files:
-                if audio_file.endswith('.mp3'):
+                if audio_file.endswith(('.mp3', '.wav')):
                     file_path = os.path.join(audio_dir, audio_file)
                     self.preloaded_audio[audio_file] = file_path
             logger.info(f"Preloaded {len(self.preloaded_audio)} existing audio files")
@@ -37,9 +40,36 @@ class AudioManager:
             logger.info("No existing audio files found")
 
     async def download_audio_files(self):
-        # This method should be implemented to download any missing audio files
-        # For now, we'll assume all files are already present
-        pass
+        logger.info("Downloading new audio files")
+        audio_dir = os.path.join(self.cache_dir, 'audio_files')
+        os.makedirs(audio_dir, exist_ok=True)
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{self.server_url}/api/audio_files_to_download") as response:
+                if response.status == 200:
+                    files_to_download = await response.json()
+                    for file_name in files_to_download:
+                        if file_name and file_name not in self.preloaded_audio:
+                            await self.download_audio_file(session, file_name, audio_dir)
+                else:
+                    logger.error(f"Failed to get list of audio files to download. Status: {response.status}")
+
+    async def download_audio_file(self, session, file_name, audio_dir):
+        file_path = os.path.join(audio_dir, file_name)
+        if not os.path.exists(file_path):
+            try:
+                async with session.get(f"{self.server_url}/api/audio/{file_name}") as response:
+                    if response.status == 200:
+                        async with aiofiles.open(file_path, mode='wb') as f:
+                            await f.write(await response.read())
+                        logger.info(f"Downloaded audio file: {file_name}")
+                        self.preloaded_audio[file_name] = file_path
+                    else:
+                        logger.error(f"Failed to download audio file: {file_name}. Status: {response.status}")
+            except Exception as e:
+                logger.error(f"Error downloading audio file {file_name}: {str(e)}")
+        else:
+            logger.info(f"Audio file already exists: {file_name}")
 
     def play_effect_audio(self, file_name, volume=1.0):
         full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
