@@ -143,11 +143,16 @@ class AudioManager:
                                        output=True)
             
             # Open the MP3 file
-            with wave.open(file_path, 'rb') as wf:
-                data = wf.readframes(1024)
-                while data and not self.stop_flag.is_set():
-                    stream.write(data)
-                    data = wf.readframes(1024)
+            with open(file_path, 'rb') as f:
+                data = f.read()
+            
+            # Play audio
+            chunk_size = 1024
+            offset = 0
+            while offset < len(data) and not self.stop_flag.is_set():
+                chunk = data[offset:offset + chunk_size]
+                stream.write(chunk)
+                offset += chunk_size
             
             # Close the stream
             stream.stop_stream()
