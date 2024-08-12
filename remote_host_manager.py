@@ -272,9 +272,15 @@ class RemoteHostManager:
             logger.warning(f"No client IP found for room: {room}. Cannot play audio.")
             return False
 
+        audio_file = self.audio_manager.get_audio_file(effect_name)
+        if not audio_file:
+            logger.error(f"No audio file found for effect: {effect_name}")
+            return False
+
         logger.info(f"Instructing client to play audio for effect '{effect_name}' in room {room} (Client IP: {client_ip})")
         return await self.send_audio_command(room, 'play_effect_audio', {
             'effect_name': effect_name,
+            'file_name': os.path.basename(audio_file),
             'volume': audio_params.get('volume', 1.0),
             'loop': audio_params.get('loop', False)
         })
