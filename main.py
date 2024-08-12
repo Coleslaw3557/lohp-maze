@@ -406,7 +406,7 @@ if __name__ == '__main__':
     config.use_reloader = DEBUG
     config.accesslog = "-"  # Log to stdout
     config.errorlog = "-"  # Log to stderr
-    config.loglevel = "INFO"
+    config.loglevel = "DEBUG"
 
     async def run_server():
         try:
