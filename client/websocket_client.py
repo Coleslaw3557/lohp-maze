@@ -18,10 +18,27 @@ class WebSocketClient:
         self.websocket = None
         self.time_offset = 0  # Time offset between client and server
 
+    def __init__(self, config, audio_manager, trigger_manager, sync_manager):
+        self.config = config
+        self.server_ip = config.get('server_ip')
+        self.server_port = int(config.get('server_port', 8765))  # Default to 8765 if None
+        self.unit_name = config.get('unit_name')
+        self.audio_manager = audio_manager
+        self.trigger_manager = trigger_manager
+        self.sync_manager = sync_manager
+        self.websocket = None
+        self.time_offset = 0  # Time offset between client and server
+        self.connection_established = False
+        self.connection_lock = asyncio.Lock()
+
     async def set_websocket(self, websocket):
         self.websocket = websocket
-        await self.send_client_connected()
-        await self.send_status_update("connected")
+        if not self.connection_established:
+            async with self.connection_lock:
+                if not self.connection_established:
+                    await self.send_client_connected()
+                    await self.send_status_update("connected")
+                    self.connection_established = True
 
     async def send_client_connected(self):
         message = {
@@ -44,12 +61,15 @@ class WebSocketClient:
                     logger.info("Connection acknowledged by server")
                 else:
                     logger.error(f"Connection error: {response_data.get('message')}")
+                    self.connection_established = False
             else:
                 logger.warning(f"Unexpected response type: {response_data.get('type')}")
         except asyncio.TimeoutError:
             logger.error("Timeout waiting for connection response")
+            self.connection_established = False
         except Exception as e:
             logger.error(f"Error handling connection response: {str(e)}")
+            self.connection_established = False
 
     async def send_message(self, message):
         if self.websocket:

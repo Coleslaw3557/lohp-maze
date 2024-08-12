@@ -54,28 +54,30 @@ async def main():
         max_retries = 5
         retry_delay = 5
         
+        connection_lock = asyncio.Lock()
         while True:
-            for attempt in range(max_retries):
-                try:
-                    async with websockets.connect(uri) as websocket:
-                        logger.info(f"Connected to WebSocket server at {uri}")
-                        await ws_client.set_websocket(websocket)
-                        logger.debug(f"WebSocket connection details: {websocket.remote_address}")
-                        await asyncio.gather(
-                            ws_client.listen(),
-                            trigger_manager.monitor_triggers(ws_client.send_trigger_event)
-                        )
-                except websockets.exceptions.WebSocketException as e:
-                    logger.error(f"WebSocket connection error: {e}")
-                    logger.debug(f"Connection attempt details: URI={uri}, Attempt={attempt+1}")
-                    if attempt < max_retries - 1:
-                        wait_time = retry_delay * (2 ** attempt)
-                        logger.info(f"Attempting to reconnect in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
-                        await asyncio.sleep(wait_time)
-                    else:
-                        logger.error(f"Failed to connect after {max_retries} attempts. Waiting for 60 seconds before trying again.")
-                        await asyncio.sleep(60)
-                        break
+            async with connection_lock:
+                for attempt in range(max_retries):
+                    try:
+                        async with websockets.connect(uri) as websocket:
+                            logger.info(f"Connected to WebSocket server at {uri}")
+                            await ws_client.set_websocket(websocket)
+                            logger.debug(f"WebSocket connection details: {websocket.remote_address}")
+                            await asyncio.gather(
+                                ws_client.listen(),
+                                trigger_manager.monitor_triggers(ws_client.send_trigger_event)
+                            )
+                    except websockets.exceptions.WebSocketException as e:
+                        logger.error(f"WebSocket connection error: {e}")
+                        logger.debug(f"Connection attempt details: URI={uri}, Attempt={attempt+1}")
+                        if attempt < max_retries - 1:
+                            wait_time = retry_delay * (2 ** attempt)
+                            logger.info(f"Attempting to reconnect in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
+                            await asyncio.sleep(wait_time)
+                        else:
+                            logger.error(f"Failed to connect after {max_retries} attempts. Waiting for 60 seconds before trying again.")
+                            await asyncio.sleep(60)
+                            break
                 except KeyboardInterrupt:
                     logger.info("Shutting down client...")
                     await ws_client.disconnect()
