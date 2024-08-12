@@ -27,6 +27,7 @@ class AudioManager:
         await self.preload_existing_audio_files()
         await self.download_audio_files()
         logger.info(f"AudioManager initialization complete. Preloaded audio files: {list(self.preloaded_audio.keys())}")
+        # Remove automatic start of background music
 
     async def preload_existing_audio_files(self):
         logger.info("Preloading existing audio files")
