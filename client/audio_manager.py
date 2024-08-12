@@ -2,13 +2,11 @@ import asyncio
 import os
 import logging
 import random
-import io
-import math
 import aiohttp
 import aiofiles
 import threading
 import pyaudio
-from pydub import AudioSegment
+from mutagen.mp3 import MP3
 
 logger = logging.getLogger(__name__)
 
@@ -265,18 +263,14 @@ class AudioManager:
 
         try:
             # Load the MP3 file
-            audio = AudioSegment.from_mp3(full_path)
-            
-            # Convert to raw PCM data
-            raw_data = audio.raw_data
+            audio = MP3(full_path)
             
             # Set as current background music
             with self.lock:
-                self.background_music = raw_data
+                self.background_music = full_path
                 self.background_music_info = {
-                    'channels': audio.channels,
-                    'width': audio.sample_width,
-                    'framerate': audio.frame_rate
+                    'channels': audio.info.channels,
+                    'sample_rate': audio.info.sample_rate
                 }
             
             # Start playing if not already playing
