@@ -108,16 +108,26 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
     r_ana1, g_ana1, b_ana1 = hsv_to_rgb(analogous_hue1, saturation, value)
     r_ana2, g_ana2, b_ana2 = hsv_to_rgb(analogous_hue2, saturation, value)
 
-    # Mix colors for more vibrant shades
-    r_mix = (r * 0.6 + r_comp * 0.2 + r_ana1 * 0.1 + r_ana2 * 0.1)
-    g_mix = (g * 0.6 + g_comp * 0.2 + g_ana1 * 0.1 + g_ana2 * 0.1)
-    b_mix = (b * 0.6 + b_comp * 0.2 + b_ana1 * 0.1 + b_ana2 * 0.1)
+    # Determine dominant color channels
+    color_values = [r, g, b]
+    max_color = max(color_values)
+    secondary_color = sorted(color_values, reverse=True)[1]
+    
+    # Calculate color ratios
+    primary_ratio = 1.0
+    secondary_ratio = secondary_color / max_color if max_color > 0 else 0
+    tertiary_ratio = 0.0
+
+    # Assign color values ensuring only one or two channels are dominant
+    r_final = r * primary_ratio if r == max_color else (r * secondary_ratio if r == secondary_color else r * tertiary_ratio)
+    g_final = g * primary_ratio if g == max_color else (g * secondary_ratio if g == secondary_color else g * tertiary_ratio)
+    b_final = b * primary_ratio if b == max_color else (b * secondary_ratio if b == secondary_color else b * tertiary_ratio)
 
     channels['total_dimming'] = int(value * 255)
-    channels['r_dimming'] = int(r_mix * 255)
-    channels['g_dimming'] = int(g_mix * 255)
-    channels['b_dimming'] = int(b_mix * 255)
-    channels['w_dimming'] = int((r_mix + g_mix + b_mix) / 3 * 64)  # Add a subtle white component
+    channels['r_dimming'] = int(r_final * 255)
+    channels['g_dimming'] = int(g_final * 255)
+    channels['b_dimming'] = int(b_final * 255)
+    channels['w_dimming'] = 0  # Remove white component to avoid creating white light
 
     return channels
 
