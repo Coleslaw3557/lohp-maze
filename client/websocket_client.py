@@ -307,18 +307,31 @@ class WebSocketClient:
             logger.warning("Received sync_time message without server_time")
 
     async def handle_play_effect_audio(self, message):
+        logger.debug(f"Received play_effect_audio message: {message}")
+        room = message.get('room')
         audio_data = message.get('data', {})
         effect_name = audio_data.get('effect_name')
         file_name = audio_data.get('file_name')
         volume = audio_data.get('volume', 1.0)
         loop = audio_data.get('loop', False)
-        if file_name:
-            logger.info(f"Playing audio file '{file_name}' for effect '{effect_name}'")
+
+        if room not in self.config.get('associated_rooms', []):
+            logger.warning(f"Received play_effect_audio for unassociated room: {room}")
+            return
+
+        if not file_name:
+            logger.warning(f"Received play_effect_audio without file_name for effect '{effect_name}' in room '{room}'")
+            return
+
+        logger.info(f"Attempting to play audio file '{file_name}' for effect '{effect_name}' in room '{room}'")
+        try:
             success = await self.audio_manager.play_effect_audio(file_name, volume, loop)
-            if not success:
-                logger.error(f"Failed to play audio file '{file_name}' for effect '{effect_name}'")
-        else:
-            logger.warning(f"Received play_effect_audio without file_name for effect '{effect_name}'")
+            if success:
+                logger.info(f"Successfully played audio file '{file_name}' for effect '{effect_name}' in room '{room}'")
+            else:
+                logger.error(f"Failed to play audio file '{file_name}' for effect '{effect_name}' in room '{room}'")
+        except Exception as e:
+            logger.exception(f"Error playing audio file '{file_name}' for effect '{effect_name}' in room '{room}': {str(e)}")
 
     async def handle_audio_start(self, message):
         audio_data = message.get('data')
