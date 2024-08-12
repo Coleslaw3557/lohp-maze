@@ -22,7 +22,7 @@ class AudioManager:
         self.background_music_volume = 0.5
         self.effect_audio = None
         self.effect_volume = 1.0
-        self.mixer = AudioSegment.silent(duration=1)
+        self.mixer = None  # Remove AudioSegment usage
         self.pyaudio = pyaudio.PyAudio()
         self.stream = None
         self.is_playing = False
@@ -148,15 +148,9 @@ class AudioManager:
             logger.info("Stopped effect audio")
 
     def mix_audio(self):
-        mixed = AudioSegment.silent(duration=1000)  # 1 second of silence
-        
-        if self.background_music:
-            mixed = mixed.overlay(self.background_music[:1000])
-        
-        if self.effect_audio:
-            mixed = mixed.overlay(self.effect_audio[:1000])
-        
-        return mixed
+        # This method needs to be reimplemented using PyAudio
+        # For now, we'll return a placeholder
+        return b'\x00' * 44100  # 1 second of silence (assuming 16-bit mono at 44.1kHz)
 
     def audio_callback(self, in_data, frame_count, time_info, status):
         with self.lock:
@@ -237,12 +231,16 @@ class AudioManager:
         logger.info(f"Starting background music: {music_file}")
 
         try:
-            audio = AudioSegment.from_file(full_path)
-            audio = audio + (20 * math.log10(self.background_music_volume))
-            
-            # Set as current background music
-            with self.lock:
-                self.background_music = audio
+            # Open the audio file
+            with wave.open(full_path, 'rb') as wf:
+                # Set as current background music
+                with self.lock:
+                    self.background_music = wf.readframes(wf.getnframes())
+                    self.background_music_info = {
+                        'channels': wf.getnchannels(),
+                        'width': wf.getsampwidth(),
+                        'framerate': wf.getframerate()
+                    }
             
             # Start playing if not already playing
             self.play_audio()
@@ -252,13 +250,6 @@ class AudioManager:
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
     def mix_audio(self):
-        if not self.active_audio_streams:
-            return
-
-        # Mix all active streams
-        mixed = self.active_audio_streams[0]
-        for audio in self.active_audio_streams[1:]:
-            mixed = mixed.overlay(audio)
-
-        # Play the mixed audio
-        play(mixed)
+        # This method needs to be reimplemented using PyAudio
+        # For now, we'll just log a message
+        logger.info("mix_audio method called, but not implemented yet")
