@@ -58,7 +58,7 @@ class AudioManager:
                     logger.error(f"Failed to get list of audio files to download. Status: {response.status}")
 
         # Download background music files
-        await self.download_background_music_files(session)
+        await self.download_background_music_files()
 
     async def download_audio_file(self, session, file_name, audio_dir):
         file_path = os.path.join(audio_dir, file_name)
@@ -79,19 +79,20 @@ class AudioManager:
         else:
             logger.info(f"Audio file already exists: {file_name}")
 
-    async def download_background_music_files(self, session):
+    async def download_background_music_files(self):
         logger.info("Downloading background music files")
         music_dir = os.path.join(self.cache_dir, 'audio_files')
         os.makedirs(music_dir, exist_ok=True)
 
-        async with session.get(f"{self.server_url}/api/background_music_files") as response:
-            if response.status == 200:
-                music_files = await response.json()
-                for file_name in music_files:
-                    if file_name and file_name not in self.preloaded_audio:
-                        await self.download_audio_file(session, file_name, music_dir)
-            else:
-                logger.error(f"Failed to get list of background music files. Status: {response.status}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{self.server_url}/api/background_music_files") as response:
+                if response.status == 200:
+                    music_files = await response.json()
+                    for file_name in music_files:
+                        if file_name and file_name not in self.preloaded_audio:
+                            await self.download_audio_file(session, file_name, music_dir)
+                else:
+                    logger.error(f"Failed to get list of background music files. Status: {response.status}")
 
     def play_effect_audio(self, file_name, volume=1.0):
         full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
