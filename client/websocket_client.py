@@ -296,7 +296,14 @@ class WebSocketClient:
         if effect_name:
             file_name = self.audio_manager.get_audio_file_for_effect(effect_name)
             if file_name:
-                await self.audio_manager.play_effect_audio(file_name, volume, loop)
+                await self.send_message({
+                    'type': 'play_effect_audio',
+                    'data': {
+                        'file_name': file_name,
+                        'volume': volume,
+                        'loop': loop
+                    }
+                })
             else:
                 logger.warning(f"No audio file found for effect: {effect_name}")
         else:
