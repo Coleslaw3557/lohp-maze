@@ -13,20 +13,19 @@ from sync_manager import SyncManager
 # Set up logging
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    filename='client.log',
-                    filemode='a')
+                    handlers=[logging.StreamHandler(sys.stdout)])
 logger = logging.getLogger(__name__)
-
-# Add a stream handler to also log to console
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
 
 # Set logging levels for specific modules
 logging.getLogger('websockets').setLevel(logging.DEBUG)
 logging.getLogger('asyncio').setLevel(logging.DEBUG)
+logging.getLogger('aiohttp').setLevel(logging.DEBUG)
+logging.getLogger('pydub').setLevel(logging.DEBUG)
+
+# Ensure all loggers propagate to the root logger
+for name in logging.root.manager.loggerDict:
+    logging.getLogger(name).propagate = True
+    logging.getLogger(name).setLevel(logging.DEBUG)
 
 def log_and_exit(error_message):
     logger.critical(f"Critical error: {error_message}")
@@ -60,10 +59,12 @@ async def main():
                 async with connection_lock:
                     for attempt in range(max_retries):
                         try:
+                            logger.info(f"Attempting to connect to WebSocket server at {uri} (Attempt {attempt + 1}/{max_retries})")
                             async with websockets.connect(uri) as websocket:
                                 logger.info(f"Connected to WebSocket server at {uri}")
                                 await ws_client.set_websocket(websocket)
                                 logger.debug(f"WebSocket connection details: {websocket.remote_address}")
+                                logger.info("Starting WebSocket listener and trigger monitor")
                                 await asyncio.gather(
                                     ws_client.listen(),
                                     trigger_manager.monitor_triggers(ws_client.send_trigger_event)
