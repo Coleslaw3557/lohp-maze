@@ -179,13 +179,15 @@ class EffectsManager:
 
     # Remove the _apply_audio_effect method as it's no longer needed
 
-    async def _run_effect(self, room, fixture_ids, effect_data, audio_file, audio_params, effect_name):
+    async def _run_effect(self, room, fixture_ids, effect_data, effect_name):
         try:
             # Prepare and play audio
+            audio_params = effect_data.get('audio', {})
+            audio_file = self.audio_manager.get_audio_file(effect_name)
             audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
             
             # Apply lighting effect
-            lighting_task = self._apply_lighting_effect(fixture_ids, effect_data)
+            lighting_task = self._apply_lighting_effect(room, effect_data)
             
             # Run lighting and audio tasks concurrently
             await asyncio.gather(lighting_task, audio_task)
