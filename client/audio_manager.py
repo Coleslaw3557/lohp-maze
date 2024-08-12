@@ -15,7 +15,7 @@ class AudioManager:
         self.preloaded_audio = {}
         self.server_url = f"http://{config.get('server_ip')}:{config.get('server_port', 5000)}"
         self.background_music_player = None
-        self.effect_player = None
+        self.effect_players = []
         self.background_music_volume = 0.5
         self.effect_volume = 1.0
         self.vlc_instance = self.initialize_vlc()
@@ -109,7 +109,7 @@ class AudioManager:
                 else:
                     logger.error(f"Failed to get list of background music files. Status: {response.status}")
 
-    def play_effect_audio(self, file_name, volume=1.0):
+    def play_effect_audio(self, file_name, volume=1.0, loop=False):
         full_path = self.preloaded_audio.get(file_name)
         if not full_path:
             logger.warning(f"Audio file not found: {file_name}")
@@ -118,59 +118,42 @@ class AudioManager:
         try:
             logger.info(f"Playing effect audio file: {file_name}")
 
-            # Stop any existing effect audio
-            if self.effect_player:
-                self.effect_player.stop()
-
             # Create a new media player for the effect
-            self.effect_player = self.vlc_instance.media_player_new()
+            effect_player = self.vlc_instance.media_player_new()
             media = self.vlc_instance.media_new(full_path)
-            self.effect_player.set_media(media)
+            effect_player.set_media(media)
 
             # Set volume and start playing
-            self.effect_player.audio_set_volume(int(volume * 100))
-            self.effect_player.play()
+            effect_player.audio_set_volume(int(volume * 100))
+            effect_player.play()
 
-            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
+            if loop:
+                event_manager = effect_player.event_manager()
+                event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.loop_effect_audio)
+
+            self.effect_players.append(effect_player)
+
+            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}, loop: {loop}")
 
             return True
         except Exception as e:
             logger.error(f"Error playing effect audio file {file_name}: {str(e)}", exc_info=True)
             return False
 
-    def stop_audio(self):
-        if self.play_thread and self.play_thread.is_alive():
-            self.stop_flag.set()
-            self.play_thread.join()
-        if self.current_stream:
-            self.current_stream.stop_stream()
-            self.current_stream.close()
-            self.current_stream = None
-        logger.info("Audio playback stopped")
-
-    def stop_effect_audio(self):
-        if self.effect_audio:
-            self.effect_audio = None
-            self.mix_audio()
-            logger.info("Stopped effect audio")
-
-    def mix_audio(self):
-        # This method needs to be reimplemented using PyAudio
-        # For now, we'll return a placeholder
-        return b'\x00' * 44100  # 1 second of silence (assuming 16-bit mono at 44.1kHz)
+    def loop_effect_audio(self, event):
+        # This method will be called when the effect audio reaches the end of the track
+        for player in self.effect_players:
+            if player.get_state() == vlc.State.Ended:
+                player.set_position(0)
+                player.play()
+                break
 
     def stop_audio(self):
         if self.background_music_player:
             self.background_music_player.stop()
-        if self.effect_player:
-            self.effect_player.stop()
-        logger.info("Stopped all audio playback")
-
-    def stop_audio(self):
-        if self.background_music_player:
-            self.background_music_player.stop()
-        if self.effect_player:
-            self.effect_player.stop()
+        for player in self.effect_players:
+            player.stop()
+        self.effect_players.clear()
         logger.info("Stopped all audio playback")
 
     def get_audio_file_for_effect(self, effect_name):
@@ -187,11 +170,6 @@ class AudioManager:
         else:
             logger.warning(f"No audio files found for effect '{effect_name}' in config")
         return None
-
-    def stop_audio(self):
-        self.active_audio_streams.clear()
-        self.mix_audio()
-        logger.info("Stopped all audio playback")
 
     def start_background_music(self, music_file):
         if not music_file:
@@ -232,36 +210,3 @@ class AudioManager:
         # This method will be called when the media player reaches the end of the track
         self.background_music_player.set_position(0)
         self.background_music_player.play()
-
-    def play_effect_audio(self, file_name, volume=1.0):
-        full_path = self.preloaded_audio.get(file_name)
-        if not full_path:
-            logger.warning(f"Audio file not found: {file_name}")
-            return False
-
-        try:
-            logger.info(f"Playing effect audio file: {file_name}")
-
-            # Stop any existing effect audio
-            if self.effect_player:
-                self.effect_player.stop()
-
-            # Create a new media player for the effect
-            self.effect_player = self.vlc_instance.media_player_new()
-            media = self.vlc_instance.media_new(full_path)
-            self.effect_player.set_media(media)
-
-            # Set volume and start playing
-            self.effect_player.audio_set_volume(int(volume * 100))
-            self.effect_player.play()
-
-            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
-
-            return True
-        except Exception as e:
-            logger.error(f"Error playing effect audio file {file_name}: {str(e)}", exc_info=True)
-            return False
-    def mix_audio(self):
-        # This method is no longer used for background music playback
-        # It can be used for mixing effect sounds with background music in the future
-        return b'\x00' * 4410  # 100ms of silence
