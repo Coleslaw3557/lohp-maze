@@ -8,7 +8,7 @@ import aiohttp
 import aiofiles
 import threading
 import pyaudio
-import wave
+from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
 
@@ -231,16 +231,20 @@ class AudioManager:
         logger.info(f"Starting background music: {music_file}")
 
         try:
-            # Open the audio file
-            with wave.open(full_path, 'rb') as wf:
-                # Set as current background music
-                with self.lock:
-                    self.background_music = wf.readframes(wf.getnframes())
-                    self.background_music_info = {
-                        'channels': wf.getnchannels(),
-                        'width': wf.getsampwidth(),
-                        'framerate': wf.getframerate()
-                    }
+            # Load the MP3 file
+            audio = AudioSegment.from_mp3(full_path)
+            
+            # Convert to raw PCM data
+            raw_data = audio.raw_data
+            
+            # Set as current background music
+            with self.lock:
+                self.background_music = raw_data
+                self.background_music_info = {
+                    'channels': audio.channels,
+                    'width': audio.sample_width,
+                    'framerate': audio.frame_rate
+                }
             
             # Start playing if not already playing
             self.play_audio()
