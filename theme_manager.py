@@ -211,13 +211,16 @@ class ThemeManager:
         theme_data = self.themes[theme_name]
         logger.info(f"Starting theme: {theme_name}")
         start_time = time.time()
+        last_update_time = 0
         try:
             while not self.stop_theme.is_set():
                 current_time = time.time() - start_time
-                logger.debug(f"Generating and applying theme step for {theme_name} at time {current_time}")
-                theme_values = self._generate_and_apply_theme_step(theme_data, current_time)
-                logger.debug(f"Generated theme values: {theme_values}")
-                time.sleep(1 / self.frequency)
+                if current_time - last_update_time >= 1 / self.frequency:
+                    logger.debug(f"Generating and applying theme step for {theme_name} at time {current_time}")
+                    theme_values = self._generate_and_apply_theme_step(theme_data, current_time)
+                    logger.debug(f"Generated theme values: {theme_values}")
+                    last_update_time = current_time
+                time.sleep(0.001)  # Small sleep to prevent CPU hogging
         except Exception as e:
             logger.error(f"Error in theme {theme_name}: {str(e)}", exc_info=True)
         finally:
@@ -235,6 +238,10 @@ class ThemeManager:
                 self._apply_room_channels(room, lights, room_channels)
             else:
                 logger.debug(f"Room {room} is paused, skipping theme application")
+        
+        if not all_room_channels:
+            logger.warning("No room channels were generated. Check if all rooms are paused or if there's an issue with room layout.")
+        
         return all_room_channels
 
     def pause_theme_for_room(self, room):
@@ -259,7 +266,11 @@ class ThemeManager:
                 current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
                 new_values = [max(current, new) for current, new in zip(current_values, fixture_values)]
                 logger.debug(f"Updating fixture {fixture_id} in room {room}: Current values: {current_values}, New values: {new_values}")
-                self.dmx_state_manager.update_fixture(fixture_id, new_values)
+                if new_values != current_values:
+                    self.dmx_state_manager.update_fixture(fixture_id, new_values)
+                    logger.info(f"Updated fixture {fixture_id} in room {room} with new values: {new_values}")
+                else:
+                    logger.debug(f"No change in values for fixture {fixture_id} in room {room}")
             else:
                 logger.debug(f"Fixture {fixture_id} in room {room} is interrupted, skipping update")
 
