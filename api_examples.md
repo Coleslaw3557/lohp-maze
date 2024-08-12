@@ -162,4 +162,20 @@ curl -X POST http://192.168.1.238:5000/api/stop_effect \
      -d '{}'
 ```
 
+## Start Background Music
+
+Starts the background music on all connected clients.
+
+```bash
+curl -X POST http://192.168.1.238:5000/api/start_music
+```
+
+## Stop Background Music
+
+Stops the background music on all connected clients.
+
+```bash
+curl -X POST http://192.168.1.238:5000/api/stop_music
+```
+
 These curl commands cover all the API endpoints available in the current implementation. You can use these for easy copy and pasting when interacting with the API.
