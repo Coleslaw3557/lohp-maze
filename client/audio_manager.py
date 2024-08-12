@@ -219,15 +219,19 @@ class AudioManager:
             self.background_music_player.audio_set_volume(int(self.background_music_volume * 100))
             self.background_music_player.play()
 
-            # Set the player to loop
-            self.background_music_player.set_media(media)
-            self.background_music_player.set_playback_mode(vlc.PlaybackMode.loop)
-            self.background_music_player.play()
+            # Set up event manager to handle looping
+            event_manager = self.background_music_player.event_manager()
+            event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.loop_background_music)
 
             logger.info(f"Started playing background music: {music_file}")
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
+
+    def loop_background_music(self, event):
+        # This method will be called when the media player reaches the end of the track
+        self.background_music_player.set_position(0)
+        self.background_music_player.play()
 
     def play_effect_audio(self, file_name, volume=1.0):
         full_path = self.preloaded_audio.get(file_name)
