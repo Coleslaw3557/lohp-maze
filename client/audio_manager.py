@@ -111,6 +111,7 @@ class AudioManager:
                     logger.error(f"Failed to get list of background music files. Status: {response.status}")
 
     async def play_effect_audio(self, file_name, volume=1.0, loop=False):
+        logger.debug(f"Attempting to play effect audio: file_name={file_name}, volume={volume}, loop={loop}")
         full_path = self.preloaded_audio.get(file_name)
         if not full_path:
             logger.warning(f"Audio file not found: {file_name}")
@@ -136,11 +137,23 @@ class AudioManager:
 
             logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}, loop: {loop}")
 
-            # Wait for the effect to finish playing if it's not looping
-            if not loop:
-                while effect_player.is_playing():
-                    await asyncio.sleep(0.1)
-                self.effect_players.remove(effect_player)
+            # Wait for a short time to ensure playback has started
+            await asyncio.sleep(0.1)
+            
+            if effect_player.is_playing():
+                logger.info(f"Confirmed playback started for {file_name}")
+                if not loop:
+                    while effect_player.is_playing():
+                        await asyncio.sleep(0.1)
+                    self.effect_players.remove(effect_player)
+                return True
+            else:
+                logger.warning(f"Playback did not start for {file_name}")
+                return False
+
+        except Exception as e:
+            logger.exception(f"Error playing effect audio file {file_name}: {str(e)}")
+            return False
 
             return True
         except Exception as e:
