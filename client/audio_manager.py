@@ -57,6 +57,9 @@ class AudioManager:
                 else:
                     logger.error(f"Failed to get list of audio files to download. Status: {response.status}")
 
+        # Download background music files
+        await self.download_background_music_files(session)
+
     async def download_audio_file(self, session, file_name, audio_dir):
         file_path = os.path.join(audio_dir, file_name)
         if not os.path.exists(file_path):
@@ -75,6 +78,20 @@ class AudioManager:
                 logger.error(f"Error downloading audio file {file_name}: {str(e)}")
         else:
             logger.info(f"Audio file already exists: {file_name}")
+
+    async def download_background_music_files(self, session):
+        logger.info("Downloading background music files")
+        music_dir = os.path.join(self.cache_dir, 'audio_files')
+        os.makedirs(music_dir, exist_ok=True)
+
+        async with session.get(f"{self.server_url}/api/background_music_files") as response:
+            if response.status == 200:
+                music_files = await response.json()
+                for file_name in music_files:
+                    if file_name and file_name not in self.preloaded_audio:
+                        await self.download_audio_file(session, file_name, music_dir)
+            else:
+                logger.error(f"Failed to get list of background music files. Status: {response.status}")
 
     def play_effect_audio(self, file_name, volume=1.0):
         full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
@@ -149,7 +166,7 @@ class AudioManager:
             self.stop_event.clear()
 
     async def start_background_music(self):
-        music_files = [f for f in os.listdir(os.path.join(self.cache_dir, 'audio_files')) if f.startswith('bg_')]
+        music_files = [f for f in self.preloaded_audio.keys() if f.startswith('bg_')]
         if not music_files:
             logger.warning("No background music files found")
             return
@@ -160,7 +177,7 @@ class AudioManager:
                 if self.stop_event.is_set():
                     return
 
-                full_path = os.path.join(self.cache_dir, 'audio_files', music_file)
+                full_path = self.preloaded_audio[music_file]
                 try:
                     audio = AudioSegment.from_file(full_path)
                     audio = audio + (20 * math.log10(self.background_music_volume))
