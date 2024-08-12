@@ -24,87 +24,97 @@ class ThemeManager:
         self.load_themes()  # Load themes when initializing
 
     def load_themes(self):
-        # Load themes from a JSON file or database
+        # Load themes with more dynamic and vibrant settings
         self.themes = {
-            "Ocean": {
-                "duration": 600,  # 10 minutes
-                "transition_speed": 0.03,
-                "color_variation": 0.6,
-                "intensity_fluctuation": 0.4,
-                "overall_brightness": 0.7,
-                "blue_green_balance": 0.7,
-                "room_transition_speed": 0.02,
-                "color_wheel_speed": 0.05,
-                "wave_effect": 0.6,
-                "depth_illusion": 0.5,
-                "bioluminescence": 0.4,
-                "coral_glow": 0.3,
-                "base_hue": 0.5,  # Cyan
-                "hue_range": 0.2  # Hue varies from 0.4 to 0.6 (blue to green)
-            },
-            "Jungle": {
-                "duration": 600,  # 10 minutes
-                "transition_speed": 0.04,
-                "color_variation": 0.7,
-                "intensity_fluctuation": 0.5,
-                "overall_brightness": 0.6,
-                "green_yellow_balance": 0.8,
-                "room_transition_speed": 0.03,
-                "color_wheel_speed": 0.06,
-                "leaf_rustle_effect": 0.7,
-                "sunbeam_effect": 0.6,
-                "flower_bloom": 0.5,
-                "firefly_glow": 0.4,
-                "base_hue": 0.3,  # Green
-                "hue_range": 0.15  # Hue varies from 0.225 to 0.375 (yellow-green to blue-green)
-            },
-            "MazeMadness": {
-                "duration": 600,  # 10 minutes
-                "transition_speed": 0.06,
-                "color_variation": 0.9,
-                "intensity_fluctuation": 0.7,
-                "overall_brightness": 0.8,
-                "room_transition_speed": 0.04,
-                "color_wheel_speed": 0.1,
-                "geometric_patterns": 0.8,
-                "perspective_shift": 0.7,
-                "neon_glow": 0.9,
-                "color_pulse": 0.6,
-                "base_hue": 0.8,  # Purple
-                "hue_range": 1.0  # Full color spectrum
-            },
-            "TimsFav": {
-                "duration": 600,  # 10 minutes
-                "transition_speed": 0.08,
+            "NeonNightlife": {
+                "duration": 3600,  # 1 hour
+                "transition_speed": 0.1,
                 "color_variation": 1.0,
                 "intensity_fluctuation": 0.8,
                 "overall_brightness": 0.9,
                 "room_transition_speed": 0.05,
-                "color_wheel_speed": 0.15,
-                "joy_factor": 0.9,
-                "excitement_factor": 0.8,
-                "ecstasy_factor": 0.7,
-                "kaleidoscope_effect": 0.6,
-                "fractal_patterns": 0.5,
-                "rainbow_burst": 0.8,
-                "base_hue": 0.0,  # Red
-                "hue_range": 1.0  # Full color spectrum
+                "color_wheel_speed": 0.2,
+                "neon_pulse": 0.9,
+                "strobe_frequency": 0.3,
+                "color_shift": 0.7,
+                "base_hue": 0.8,  # Purple
+                "hue_range": 1.0,  # Full spectrum
+                "saturation_min": 0.7,
+                "saturation_max": 1.0,
+                "value_min": 0.6,
+                "value_max": 1.0
             },
-            "DesertDream": {
-                "duration": 600,  # 10 minutes
-                "transition_speed": 0.02,
-                "color_variation": 0.5,
-                "intensity_fluctuation": 0.3,
-                "overall_brightness": 0.6,
-                "room_transition_speed": 0.01,
-                "color_wheel_speed": 0.03,
-                "sand_ripple_effect": 0.4,
-                "mirage_illusion": 0.5,
-                "heat_wave_distortion": 0.3,
-                "oasis_glow": 0.4,
-                "sunset_hues": 0.6,
-                "base_hue": 0.08,  # Orange
-                "hue_range": 0.1  # Hue varies from 0.03 to 0.13 (red-orange to yellow-orange)
+            "TropicalParadise": {
+                "duration": 3600,  # 1 hour
+                "transition_speed": 0.08,
+                "color_variation": 0.9,
+                "intensity_fluctuation": 0.6,
+                "overall_brightness": 0.85,
+                "room_transition_speed": 0.04,
+                "color_wheel_speed": 0.15,
+                "wave_effect": 0.7,
+                "sunset_glow": 0.8,
+                "palm_shadow": 0.5,
+                "base_hue": 0.1,  # Orange
+                "hue_range": 0.3,  # Orange to Green
+                "saturation_min": 0.6,
+                "saturation_max": 1.0,
+                "value_min": 0.7,
+                "value_max": 0.95
+            },
+            "CyberPunk": {
+                "duration": 3600,  # 1 hour
+                "transition_speed": 0.12,
+                "color_variation": 1.0,
+                "intensity_fluctuation": 0.9,
+                "overall_brightness": 0.95,
+                "room_transition_speed": 0.06,
+                "color_wheel_speed": 0.25,
+                "neon_flicker": 0.8,
+                "data_stream": 0.7,
+                "hologram_effect": 0.6,
+                "base_hue": 0.6,  # Blue
+                "hue_range": 0.8,  # Blue to Pink
+                "saturation_min": 0.8,
+                "saturation_max": 1.0,
+                "value_min": 0.7,
+                "value_max": 1.0
+            },
+            "EnchantedForest": {
+                "duration": 3600,  # 1 hour
+                "transition_speed": 0.06,
+                "color_variation": 0.8,
+                "intensity_fluctuation": 0.7,
+                "overall_brightness": 0.8,
+                "room_transition_speed": 0.03,
+                "color_wheel_speed": 0.1,
+                "fairy_lights": 0.6,
+                "moonbeam": 0.5,
+                "firefly_effect": 0.7,
+                "base_hue": 0.3,  # Green
+                "hue_range": 0.4,  # Green to Purple
+                "saturation_min": 0.5,
+                "saturation_max": 0.9,
+                "value_min": 0.6,
+                "value_max": 0.9
+            },
+            "CosmicVoyage": {
+                "duration": 3600,  # 1 hour
+                "transition_speed": 0.15,
+                "color_variation": 1.0,
+                "intensity_fluctuation": 0.9,
+                "overall_brightness": 0.9,
+                "room_transition_speed": 0.07,
+                "color_wheel_speed": 0.3,
+                "starfield_twinkle": 0.8,
+                "nebula_swirl": 0.7,
+                "wormhole_effect": 0.6,
+                "base_hue": 0.7,  # Indigo
+                "hue_range": 1.0,  # Full spectrum
+                "saturation_min": 0.7,
+                "saturation_max": 1.0,
+                "value_min": 0.5,
+                "value_max": 1.0
             }
         }
         self.theme_list = list(self.themes.keys())

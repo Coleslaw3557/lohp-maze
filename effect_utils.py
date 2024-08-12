@@ -51,51 +51,49 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
     base_hue = theme_data.get('base_hue', 0)
     hue_range = theme_data.get('hue_range', 0.7)
     hue = (base_hue + (wave_complex * 0.5 + 0.5) * hue_range + time_factor_slow * color_wheel_speed) % 1
-    saturation = 0.7 + wave_medium * 0.3 * color_variation
-    value = overall_brightness * (0.7 + wave_fast * intensity_fluctuation * 0.3)
+    
+    saturation_min = theme_data.get('saturation_min', 0.7)
+    saturation_max = theme_data.get('saturation_max', 1.0)
+    saturation = saturation_min + (saturation_max - saturation_min) * (wave_medium * 0.5 + 0.5)
+    
+    value_min = theme_data.get('value_min', 0.6)
+    value_max = theme_data.get('value_max', 1.0)
+    value = value_min + (value_max - value_min) * (wave_fast * 0.5 + 0.5) * overall_brightness
 
-    if 'blue_green_balance' in theme_data:  # Ocean theme
-        wave_effect = math.sin(time_factor_fast * 1.5) * theme_data.get('wave_effect', 0.6)
-        depth_illusion = math.sin(time_factor_medium * 0.7) * theme_data.get('depth_illusion', 0.7)
-        bioluminescence = (math.sin(time_factor_very_fast * 2) * 0.5 + 0.5) * theme_data.get('bioluminescence', 0.6)
-        hue = (0.5 + 0.1 * wave_slow + 0.05 * wave_fast + 0.02 * wave_very_fast) % 1  # Cyan to blue range
-        value = max(0.2, min(1.0, value + wave_effect * 0.3 + depth_illusion * 0.2 + bioluminescence * 0.1))
-        saturation = max(0.5, min(1.0, saturation + bioluminescence * 0.3))
-    elif 'green_yellow_balance' in theme_data:  # Jungle theme
-        leaf_rustle = math.sin(time_factor_fast * 2) * theme_data.get('leaf_rustle_effect', 0.6)
-        sunbeam = (math.sin(time_factor_medium * 0.5) * 0.5 + 0.5) * theme_data.get('sunbeam_effect', 0.7)
-        flower_bloom = (math.sin(time_factor_slow * 0.3) * 0.5 + 0.5) * theme_data.get('flower_bloom', 0.6)
-        hue = (0.2 + 0.1 * wave_medium + 0.05 * wave_fast) % 1  # Green to yellow-green range
-        value = max(0.3, min(1.0, value + leaf_rustle * 0.2 + sunbeam * 0.3 + flower_bloom * 0.1))
-        saturation = max(0.6, min(1.0, saturation + flower_bloom * 0.2 + leaf_rustle * 0.1))
-    elif 'geometric_patterns' in theme_data:  # MazeMadness theme
-        geometric = math.sin(time_factor_fast * 3) * theme_data.get('geometric_patterns', 0.8)
-        perspective = math.sin(time_factor_medium * 1.5) * theme_data.get('perspective_shift', 0.7)
-        neon_glow = (math.sin(time_factor_very_fast * 2.5) * 0.5 + 0.5) * theme_data.get('neon_glow', 0.7)
-        hue = (wave_complex * 0.5 + 0.5 + time_factor_fast * color_wheel_speed) % 1  # Full color range
-        value = max(0.4, min(1.0, value + geometric * 0.3 + perspective * 0.2 + neon_glow * 0.2))
-        saturation = max(0.7, min(1.0, saturation + neon_glow * 0.3 + geometric * 0.1))
-    elif 'joy_factor' in theme_data:  # TimsFav theme
-        joy_wave = math.sin(time_factor_fast * 2.5) * theme_data.get('joy_factor', 0.8)
-        excitement_wave = math.sin(time_factor_medium * 1.8) * theme_data.get('excitement_factor', 0.9)
-        ecstasy_wave = math.sin(time_factor_slow * 1.2) * theme_data.get('ecstasy_factor', 0.7)
-        kaleidoscope = math.sin(time_factor_very_fast * 3) * theme_data.get('kaleidoscope_effect', 0.6)
-        hue = (joy_wave * 0.3 + excitement_wave * 0.3 + ecstasy_wave * 0.4 + time_factor_fast * color_wheel_speed) % 1
-        value = max(0.5, min(1.0, value + (joy_wave + excitement_wave + ecstasy_wave + kaleidoscope) * 0.15))
-        saturation = max(0.7, min(1.0, 0.8 + (joy_wave + excitement_wave + ecstasy_wave + kaleidoscope) * 0.05))
-    elif 'sand_ripple_effect' in theme_data:  # DesertDream theme
-        sand_ripple = math.sin(time_factor_medium * 1.5) * theme_data.get('sand_ripple_effect', 0.6)
-        mirage = (math.sin(time_factor_slow * 0.7) * 0.5 + 0.5) * theme_data.get('mirage_illusion', 0.7)
-        heat_wave = math.sin(time_factor_fast * 2) * theme_data.get('heat_wave_distortion', 0.5)
-        oasis = (math.sin(time_factor_very_fast * 1.5) * 0.5 + 0.5) * theme_data.get('oasis_glow', 0.4)
-        hue = (0.08 + 0.04 * wave_slow + 0.02 * wave_medium) % 1  # Warm desert colors
-        value = max(0.3, min(0.9, value + sand_ripple * 0.2 + heat_wave * 0.1 + oasis * 0.1))
-        saturation = max(0.4, min(0.9, saturation - mirage * 0.3 + oasis * 0.2))
+    # Apply theme-specific effects
+    if 'neon_pulse' in theme_data:  # NeonNightlife theme
+        neon_pulse = (math.sin(time_factor_fast * 3) * 0.5 + 0.5) * theme_data.get('neon_pulse', 0.9)
+        strobe = (math.sin(time_factor_very_fast * 10) * 0.5 + 0.5) * theme_data.get('strobe_frequency', 0.3)
+        hue = (hue + neon_pulse * 0.2) % 1
+        value = max(value_min, min(value_max, value + neon_pulse * 0.3 + strobe * 0.2))
+    elif 'wave_effect' in theme_data:  # TropicalParadise theme
+        wave = math.sin(time_factor_medium * 1.5) * theme_data.get('wave_effect', 0.7)
+        sunset = (math.sin(time_factor_slow * 0.5) * 0.5 + 0.5) * theme_data.get('sunset_glow', 0.8)
+        hue = (hue + sunset * 0.1) % 1
+        saturation = max(saturation_min, min(saturation_max, saturation + wave * 0.2))
+        value = max(value_min, min(value_max, value + sunset * 0.3))
+    elif 'neon_flicker' in theme_data:  # CyberPunk theme
+        flicker = random.uniform(0.8, 1.0) * theme_data.get('neon_flicker', 0.8)
+        data_stream = (math.sin(time_factor_very_fast * 5) * 0.5 + 0.5) * theme_data.get('data_stream', 0.7)
+        hue = (hue + data_stream * 0.3) % 1
+        value = max(value_min, min(value_max, value * flicker + data_stream * 0.2))
+    elif 'fairy_lights' in theme_data:  # EnchantedForest theme
+        fairy_lights = (math.sin(time_factor_fast * 4) * 0.5 + 0.5) * theme_data.get('fairy_lights', 0.6)
+        moonbeam = (math.sin(time_factor_slow * 0.3) * 0.5 + 0.5) * theme_data.get('moonbeam', 0.5)
+        hue = (hue + moonbeam * 0.1) % 1
+        saturation = max(saturation_min, min(saturation_max, saturation - moonbeam * 0.3))
+        value = max(value_min, min(value_max, value + fairy_lights * 0.4))
+    elif 'starfield_twinkle' in theme_data:  # CosmicVoyage theme
+        twinkle = random.uniform(0.7, 1.0) * theme_data.get('starfield_twinkle', 0.8)
+        nebula = (math.sin(time_factor_medium * 0.7) * 0.5 + 0.5) * theme_data.get('nebula_swirl', 0.7)
+        hue = (hue + nebula * 0.2) % 1
+        saturation = max(saturation_min, min(saturation_max, saturation + nebula * 0.3))
+        value = max(value_min, min(value_max, value * twinkle))
 
     # Add some randomness to prevent static patterns
-    hue = (hue + random.uniform(-0.02, 0.02)) % 1
-    saturation = max(0.1, min(1.0, saturation + random.uniform(-0.05, 0.05)))
-    value = max(0.1, min(1.0, value + random.uniform(-0.05, 0.05)))
+    hue = (hue + random.uniform(-0.05, 0.05)) % 1
+    saturation = max(saturation_min, min(saturation_max, saturation + random.uniform(-0.1, 0.1)))
+    value = max(value_min, min(value_max, value + random.uniform(-0.1, 0.1)))
 
     r, g, b = hsv_to_rgb(hue, saturation, value)
 
