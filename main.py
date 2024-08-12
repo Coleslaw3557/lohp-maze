@@ -29,6 +29,10 @@ logging.basicConfig(level=logging.DEBUG,
                     filemode='a')  # Append mode
 logger = logging.getLogger(__name__)
 
+# Set all loggers to DEBUG level
+for name in logging.root.manager.loggerDict:
+    logging.getLogger(name).setLevel(logging.DEBUG)
+
 # Suppress pydub warnings
 logging.getLogger('pydub.converter').setLevel(logging.ERROR)
 
