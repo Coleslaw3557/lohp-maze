@@ -285,6 +285,22 @@ class RemoteHostManager:
             'loop': audio_params.get('loop', False)
         })
 
+    async def start_background_music(self):
+        logger.info("Starting background music on all connected clients")
+        success = True
+        for client_ip in self.connected_clients:
+            result = await self.send_audio_command(None, 'start_background_music', {})
+            success = success and result
+        return success
+
+    async def stop_background_music(self):
+        logger.info("Stopping background music on all connected clients")
+        success = True
+        for client_ip in self.connected_clients:
+            result = await self.send_audio_command(None, 'stop_background_music', {})
+            success = success and result
+        return success
+
     async def send_audio_command(self, room, command, data):
         client_ip = self.get_client_ip_by_room(room)
         if client_ip:
