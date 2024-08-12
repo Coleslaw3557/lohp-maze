@@ -4,6 +4,7 @@ import websockets
 import time
 import sys
 import traceback
+import random
 from websocket_client import WebSocketClient
 from audio_manager import AudioManager
 from trigger_manager import TriggerManager
