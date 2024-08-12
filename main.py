@@ -314,6 +314,30 @@ def get_light_models():
     light_models = light_config.get_light_models()
     return jsonify(light_models)
 
+@app.route('/api/start_music', methods=['POST'])
+async def start_music():
+    try:
+        success = await effects_manager.start_music()
+        if success:
+            return jsonify({"status": "success", "message": "Background music started"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Failed to start background music"}), 500
+    except Exception as e:
+        logger.error(f"Error starting background music: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/stop_music', methods=['POST'])
+async def stop_music():
+    try:
+        success = await effects_manager.stop_music()
+        if success:
+            return jsonify({"status": "success", "message": "Background music stopped"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Failed to stop background music"}), 500
+    except Exception as e:
+        logger.error(f"Error stopping background music: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 # This route has been removed as it was a duplicate
 
 @app.route('/api/run_test', methods=['POST'])
