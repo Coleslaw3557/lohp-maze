@@ -80,9 +80,16 @@ class RemoteHostManager:
                 logger.error(f"No client IP found for room: {room}")
                 continue
 
-            logger.info(f"Instructing client to play cached audio for effect '{effect_name}' in room {room}")
-            tasks.append(self.send_audio_command(room, 'play_cached_audio', {
+            # Get the specific audio file for the effect
+            audio_file = self.audio_manager.get_audio_file(effect_name)
+            if not audio_file:
+                logger.error(f"No audio file found for effect: {effect_name}")
+                continue
+
+            logger.info(f"Instructing client to play audio file '{audio_file}' for effect '{effect_name}' in room {room}")
+            tasks.append(self.send_audio_command(room, 'play_effect_audio', {
                 'effect_name': effect_name,
+                'file_name': audio_file,
                 'volume': audio_params.get('volume', 1.0),
                 'loop': audio_params.get('loop', False)
             }))
