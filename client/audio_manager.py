@@ -272,6 +272,9 @@ class AudioManager:
                 self.stream.stop_stream()
                 self.stream.close()
             
+            # Initialize the data stream
+            audio.get_data_stream()
+            
             # Start playing
             self.is_playing = True
             self.stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
@@ -296,9 +299,7 @@ class AudioManager:
             start_byte = int(self.current_position * audio.info.sample_rate * bytes_per_frame)
             end_byte = start_byte + (frame_count * bytes_per_frame)
 
-            with open(audio.filename, 'rb') as f:
-                f.seek(start_byte)
-                data = f.read(end_byte - start_byte)
+            data = audio.get_data_stream().read(end_byte - start_byte)
 
             if len(data) == 0:
                 # End of file reached
