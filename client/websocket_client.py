@@ -168,7 +168,8 @@ class WebSocketClient:
             'execute_effect': self.handle_execute_effect,
             'run_effect_all_rooms': self.handle_run_effect_all_rooms,
             'play_effect_audio': self.handle_play_effect_audio,
-            'audio_files_to_download': self.handle_audio_files_to_download
+            'audio_files_to_download': self.handle_audio_files_to_download,
+            'start_background_music': self.handle_start_background_music
         }
 
         message_type = message.get('type')
@@ -197,6 +198,10 @@ class WebSocketClient:
         audio_files = message.get('data', [])
         logger.info(f"Received list of audio files to download: {audio_files}")
         await self.audio_manager.download_audio_files()
+
+    async def handle_start_background_music(self, message):
+        logger.info("Received start_background_music command")
+        await self.audio_manager.start_background_music()
 
     async def handle_typeless_message(self, message):
         """
