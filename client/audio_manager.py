@@ -8,6 +8,7 @@ import io
 import math
 import aiohttp
 import aiofiles
+from pydub.playback import play
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +22,8 @@ class AudioManager:
         self.server_url = f"http://{config.get('server_ip')}:{config.get('server_port', 5000)}"
         self.background_music = None
         self.background_music_volume = 0.5
-        self.background_music_volume = 0.5
-        self.background_music_volume = 0.5
+        self.active_audio_streams = []
+        self.mixer = AudioSegment.silent(duration=1)
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
@@ -110,45 +111,41 @@ class AudioManager:
         try:
             logger.info(f"Playing audio file: {full_path}")
             
-            # Mute background music
-            if self.background_music:
-                self.background_music.set_volume(0)
-            
             # Load the audio file (MP3 or WAV)
             audio = AudioSegment.from_file(full_path)
             
             # Adjust volume
             audio = audio + (20 * math.log10(volume))
             
-            # Convert to raw PCM data
-            raw_data = audio.raw_data
-            num_channels = audio.channels
-            sample_width = audio.sample_width
-            frame_rate = audio.frame_rate
+            # Add the audio to the active streams
+            self.active_audio_streams.append(audio)
             
-            # Play the audio
-            play_obj = sa.play_buffer(
-                raw_data,
-                num_channels,
-                sample_width,
-                frame_rate
-            )
-            self.current_audio = play_obj
+            # Mix all active streams
+            self.mix_audio()
             
             logger.info(f"Started playing audio file: {file_name}, volume: {volume}")
-            
-            play_obj.wait_done()
-            
-            logger.info(f"Audio playback completed for file: {file_name}")
-            
-            # Unmute background music
-            if self.background_music:
-                self.background_music.set_volume(self.background_music_volume)
             
             return True
         except Exception as e:
             logger.error(f"Error playing audio file {file_name} (full path: {full_path}): {str(e)}", exc_info=True)
             return False
+
+    def mix_audio(self):
+        if not self.active_audio_streams:
+            return
+
+        # Mix all active streams
+        mixed = self.active_audio_streams[0]
+        for audio in self.active_audio_streams[1:]:
+            mixed = mixed.overlay(audio)
+
+        # Play the mixed audio
+        play(mixed)
+
+    def stop_audio(self):
+        self.active_audio_streams.clear()
+        self.mix_audio()
+        logger.info("Stopped all audio playback")
 
     def get_audio_file_for_effect(self, effect_name):
         audio_config = self.config.get('effects', {}).get(effect_name, {})
@@ -188,25 +185,14 @@ class AudioManager:
         try:
             audio = AudioSegment.from_file(full_path)
             audio = audio + (20 * math.log10(self.background_music_volume))
-            raw_data = audio.raw_data
-            num_channels = audio.channels
-            sample_width = audio.sample_width
-            frame_rate = audio.frame_rate
-
-            play_obj = sa.play_buffer(
-                raw_data,
-                num_channels,
-                sample_width,
-                frame_rate
-            )
-            self.background_music = play_obj
+            
+            # Add the background music to the active streams
+            self.active_audio_streams.append(audio)
+            
+            # Mix all active streams
+            self.mix_audio()
+            
             logger.info(f"Started playing background music: {music_file}")
-            
-            while play_obj.is_playing() and not self.stop_event.is_set():
-                await asyncio.sleep(1)
-            
-            if self.stop_event.is_set():
-                play_obj.stop()
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
