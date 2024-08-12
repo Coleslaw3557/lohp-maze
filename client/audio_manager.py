@@ -294,13 +294,18 @@ class AudioManager:
             return (bytes(frame_count * 4), pyaudio.paComplete)
         
         try:
-            data = self.audio_file.read(frame_count * 4)  # 4 bytes per frame (2 channels * 2 bytes per sample)
+            data = self.audio_file.read(frame_count * 2)  # 2 bytes per frame (16-bit audio)
             if len(data) == 0:
                 # End of file reached
                 self.audio_file.seek(0)  # Loop back to the beginning
-                data = self.audio_file.read(frame_count * 4)
+                data = self.audio_file.read(frame_count * 2)
             
-            return (data, pyaudio.paContinue)
+            # Convert data to float32
+            import numpy as np
+            audio_data = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+            audio_data /= 32768.0  # Normalize to [-1.0, 1.0]
+            
+            return (audio_data.tobytes(), pyaudio.paContinue)
         except Exception as e:
             logger.error(f"Error in audio callback: {str(e)}", exc_info=True)
             return (bytes(frame_count * 4), pyaudio.paComplete)
