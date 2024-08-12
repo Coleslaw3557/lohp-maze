@@ -122,28 +122,44 @@ class AudioManager:
         try:
             logger.info(f"Playing effect audio file: {file_name}")
 
-            # Create a new media player for the effect
-            effect_player = self.vlc_instance.media_player_new()
-            media = self.vlc_instance.media_new(full_path)
-            effect_player.set_media(media)
+            async with self.audio_lock:
+                # Create a new media player for the effect
+                effect_player = self.vlc_instance.media_player_new()
+                media = self.vlc_instance.media_new(full_path)
+                effect_player.set_media(media)
 
-            # Set volume and start playing
-            effect_player.audio_set_volume(int(volume * 100))
-            effect_player.play()
+                # Set volume and start playing
+                effect_player.audio_set_volume(int(volume * 100))
+                effect_player.play()
 
-            if loop:
-                event_manager = effect_player.event_manager()
-                event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.loop_effect_audio)
+                if loop:
+                    event_manager = effect_player.event_manager()
+                    event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.loop_effect_audio)
 
-            self.effect_players.append(effect_player)
+                self.effect_players.append(effect_player)
 
             logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}, loop: {loop}")
 
             # Wait for a short time to ensure playback has started
             await asyncio.sleep(0.1)
-            
+
             if effect_player.is_playing():
                 logger.info(f"Confirmed playback started for {file_name}")
+                if not loop:
+                    asyncio.create_task(self.wait_for_effect_completion(effect_player))
+                return True
+            else:
+                logger.warning(f"Playback did not start for {file_name}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error playing effect audio file {file_name}: {str(e)}", exc_info=True)
+            return False
+
+    async def wait_for_effect_completion(self, effect_player):
+        while effect_player.is_playing():
+            await asyncio.sleep(0.1)
+        self.effect_players.remove(effect_player)
                 if not loop:
                     while effect_player.is_playing():
                         await asyncio.sleep(0.1)
