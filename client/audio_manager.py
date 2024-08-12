@@ -34,13 +34,16 @@ class AudioManager:
         audio_dir = os.path.join(self.cache_dir, 'audio_files')
         if os.path.exists(audio_dir):
             audio_files = os.listdir(audio_dir)
+            logger.info(f"Found {len(audio_files)} files in {audio_dir}")
             for audio_file in audio_files:
                 if audio_file.endswith(('.mp3', '.wav')):
                     file_path = os.path.join(audio_dir, audio_file)
                     self.preloaded_audio[audio_file] = file_path
+                    logger.debug(f"Preloaded audio file: {audio_file}")
             logger.info(f"Preloaded {len(self.preloaded_audio)} existing audio files")
+            logger.debug(f"Preloaded audio files: {list(self.preloaded_audio.keys())}")
         else:
-            logger.info("No existing audio files found")
+            logger.warning(f"Audio directory not found: {audio_dir}")
 
     async def download_audio_files(self):
         logger.info("Downloading new audio files")
@@ -169,10 +172,13 @@ class AudioManager:
             self.stop_event.clear()
 
     async def start_background_music(self):
-        music_files = [f for f in self.preloaded_audio.keys() if f.startswith('bg_')]
+        music_files = [f for f in self.preloaded_audio.keys() if f.startswith('The 7th Continent Soundscape')]
         if not music_files:
-            logger.warning("No background music files found")
+            logger.warning(f"No background music files found in {self.cache_dir}/audio_files")
+            logger.info(f"Available audio files: {list(self.preloaded_audio.keys())}")
             return
+
+        logger.info(f"Found {len(music_files)} background music files: {music_files}")
 
         while True:
             random.shuffle(music_files)
@@ -181,6 +187,7 @@ class AudioManager:
                     return
 
                 full_path = self.preloaded_audio[music_file]
+                logger.info(f"Attempting to play background music: {full_path}")
                 try:
                     audio = AudioSegment.from_file(full_path)
                     audio = audio + (20 * math.log10(self.background_music_volume))
