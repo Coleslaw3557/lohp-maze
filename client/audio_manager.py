@@ -4,10 +4,7 @@ import logging
 import random
 import aiohttp
 import aiofiles
-import threading
-import pyaudio
-import math
-from mutagen.mp3 import MP3
+import vlc
 
 logger = logging.getLogger(__name__)
 
@@ -17,23 +14,17 @@ class AudioManager:
         self.config = config
         self.preloaded_audio = {}
         self.server_url = f"http://{config.get('server_ip')}:{config.get('server_port', 5000)}"
-        self.background_music = None
+        self.background_music_player = None
+        self.effect_player = None
         self.background_music_volume = 0.5
-        self.effect_audio = None
         self.effect_volume = 1.0
-        self.mixer = None  # Remove AudioSegment usage
-        self.pyaudio = pyaudio.PyAudio()
-        self.stream = None
-        self.is_playing = False
-        self.play_thread = None
-        self.lock = threading.Lock()
+        self.vlc_instance = vlc.Instance('--no-xlib')
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
         await self.preload_existing_audio_files()
         await self.download_audio_files()
         logger.info(f"AudioManager initialization complete. Preloaded audio files: {list(self.preloaded_audio.keys())}")
-        # Remove automatic start of background music
 
     async def preload_existing_audio_files(self):
         logger.info("Preloading existing audio files")
@@ -222,8 +213,10 @@ class AudioManager:
         self.stop_audio_stream()
 
     def stop_audio(self):
-        self.active_audio_streams.clear()
-        self.mix_audio()
+        if self.background_music_player:
+            self.background_music_player.stop()
+        if self.effect_player:
+            self.effect_player.stop()
         logger.info("Stopped all audio playback")
 
     def get_audio_file_for_effect(self, effect_name):
@@ -259,64 +252,55 @@ class AudioManager:
         logger.info(f"Starting background music: {music_file}")
 
         try:
-            # Load the MP3 file
-            from pydub import AudioSegment
-            audio = AudioSegment.from_mp3(full_path)
-            audio = audio.set_channels(1)  # Convert to mono
-            audio = audio.set_frame_rate(44100)  # Set sample rate to 44.1kHz
-            audio = audio.set_sample_width(2)  # Set to 16-bit
+            # Stop any existing background music
+            if self.background_music_player:
+                self.background_music_player.stop()
 
-            # Export as WAV in memory
-            import io
-            buffer = io.BytesIO()
-            audio.export(buffer, format="wav")
-            buffer.seek(0)
-            
-            # Set as current background music
-            with self.lock:
-                self.audio_file = buffer
-                self.background_music = audio
-                self.current_position = 0
-            
-            # Stop any existing stream
-            if self.stream:
-                self.stream.stop_stream()
-                self.stream.close()
-            
-            # Start playing
-            self.is_playing = True
-            self.stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
-                                            channels=1,
-                                            rate=44100,
-                                            output=True,
-                                            stream_callback=self.audio_callback)
-            self.stream.start_stream()
-            
+            # Create a new media player
+            self.background_music_player = self.vlc_instance.media_player_new()
+            media = self.vlc_instance.media_new(full_path)
+            self.background_music_player.set_media(media)
+
+            # Set volume and start playing
+            self.background_music_player.audio_set_volume(int(self.background_music_volume * 100))
+            self.background_music_player.play()
+
+            # Set the player to loop
+            self.background_music_player.set_playback_mode(vlc.PlaybackMode.loop)
+
             logger.info(f"Started playing background music: {music_file}")
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
 
-    def audio_callback(self, in_data, frame_count, time_info, status):
-        if not self.is_playing or not self.background_music:
-            return (bytes(frame_count * 4), pyaudio.paComplete)
-        
+    def play_effect_audio(self, file_name, volume=1.0):
+        full_path = self.preloaded_audio.get(file_name)
+        if not full_path:
+            logger.warning(f"Audio file not found: {file_name}")
+            return False
+
         try:
-            data = self.audio_file.read(frame_count * 2)  # 2 bytes per frame (16-bit audio)
-            if len(data) == 0:
-                # End of file reached
-                self.audio_file.seek(0)  # Loop back to the beginning
-                data = self.audio_file.read(frame_count * 2)
-            
-            # Convert data to float32
-            import numpy as np
-            audio_data = np.frombuffer(data, dtype=np.int16).astype(np.float32)
-            audio_data /= 32768.0  # Normalize to [-1.0, 1.0]
-            
-            return (audio_data.tobytes(), pyaudio.paContinue)
+            logger.info(f"Playing effect audio file: {file_name}")
+
+            # Stop any existing effect audio
+            if self.effect_player:
+                self.effect_player.stop()
+
+            # Create a new media player for the effect
+            self.effect_player = self.vlc_instance.media_player_new()
+            media = self.vlc_instance.media_new(full_path)
+            self.effect_player.set_media(media)
+
+            # Set volume and start playing
+            self.effect_player.audio_set_volume(int(volume * 100))
+            self.effect_player.play()
+
+            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
+
+            return True
         except Exception as e:
-            logger.error(f"Error in audio callback: {str(e)}", exc_info=True)
-            return (bytes(frame_count * 4), pyaudio.paComplete)
+            logger.error(f"Error playing effect audio file {file_name}: {str(e)}", exc_info=True)
+            return False
     def mix_audio(self):
         # This method is no longer used for background music playback
         # It can be used for mixing effect sounds with background music in the future

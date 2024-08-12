@@ -6,8 +6,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev \
     ffmpeg \
-    libasound2-dev \
-    portaudio19-dev \
+    vlc \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
