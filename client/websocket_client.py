@@ -278,18 +278,15 @@ class WebSocketClient:
         else:
             logger.warning("Received sync_time message without server_time")
 
-    async def handle_play_cached_audio(self, message):
-        audio_data = message.get('data')
-        if audio_data:
-            effect_name = audio_data.get('effect_name')
-            volume = audio_data.get('volume', 1.0)
-            loop = audio_data.get('loop', False)
-            if effect_name:
-                await self.audio_manager.play_cached_audio(effect_name, volume, loop)
-            else:
-                logger.warning("Received play_cached_audio without effect_name")
+    async def handle_play_effect_audio(self, message):
+        audio_data = message.get('data', {})
+        file_name = audio_data.get('file_name')
+        volume = audio_data.get('volume', 1.0)
+        loop = audio_data.get('loop', False)
+        if file_name:
+            await self.audio_manager.play_effect_audio(file_name, volume, loop)
         else:
-            logger.warning("Received play_cached_audio without data")
+            logger.warning("Received play_effect_audio without file_name")
 
     async def handle_audio_start(self, message):
         audio_data = message.get('data')

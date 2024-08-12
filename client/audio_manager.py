@@ -38,13 +38,7 @@ class AudioManager:
         # For now, we'll assume all files are already present
         pass
 
-    async def play_effect_audio(self, effect_name):
-        audio_files = self.config.get('audio_config', {}).get('effects', {}).get(effect_name, {}).get('audio_files', [])
-        if not audio_files:
-            logger.info(f"No audio files found for effect: {effect_name}")
-            return True  # Return True as this is not an error condition
-        
-        file_name = random.choice(audio_files)
+    async def play_effect_audio(self, file_name, volume=1.0, loop=False):
         full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
         
         if not os.path.exists(full_path):
@@ -57,21 +51,33 @@ class AudioManager:
             play_obj = wave_obj.play()
             self.current_audio = play_obj
             
-            logger.info(f"Started playing audio for effect: {effect_name}, file: {file_name}")
+            logger.info(f"Started playing audio file: {file_name}, volume: {volume}, loop: {loop}")
             
-            # Wait for the audio to finish or be stopped
-            while play_obj.is_playing() and not self.stop_event.is_set():
-                await asyncio.sleep(0.1)
+            # Set volume
+            play_obj.set_volume(volume)
+            
+            # Handle looping
+            while loop and not self.stop_event.is_set():
+                while play_obj.is_playing() and not self.stop_event.is_set():
+                    await asyncio.sleep(0.1)
+                if not self.stop_event.is_set():
+                    play_obj = wave_obj.play()
+                    play_obj.set_volume(volume)
+            
+            # Wait for the audio to finish or be stopped if not looping
+            if not loop:
+                while play_obj.is_playing() and not self.stop_event.is_set():
+                    await asyncio.sleep(0.1)
             
             if self.stop_event.is_set():
                 play_obj.stop()
-                logger.info(f"Audio playback stopped for effect: {effect_name}")
+                logger.info(f"Audio playback stopped for file: {file_name}")
             else:
-                logger.info(f"Audio playback completed for effect: {effect_name}")
+                logger.info(f"Audio playback completed for file: {file_name}")
             
             return True
         except Exception as e:
-            logger.error(f"Error playing audio for effect {effect_name}: {str(e)}", exc_info=True)
+            logger.error(f"Error playing audio file {file_name}: {str(e)}", exc_info=True)
             return False
 
     async def stop_audio(self):
