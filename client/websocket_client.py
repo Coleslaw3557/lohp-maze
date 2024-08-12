@@ -334,6 +334,12 @@ class WebSocketClient:
 
     async def listen(self):
         while True:
+            if self.websocket is None:
+                logger.error("WebSocket is None. Attempting to reconnect...")
+                await self.reconnect()
+                await asyncio.sleep(5)  # Wait before trying again
+                continue
+
             try:
                 message = await self.websocket.recv()
                 if isinstance(message, str):
