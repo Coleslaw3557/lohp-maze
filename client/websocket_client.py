@@ -186,7 +186,7 @@ class WebSocketClient:
     async def handle_audio_files_to_download(self, message):
         audio_files = message.get('data', [])
         logger.info(f"Received list of audio files to download: {audio_files}")
-        await self.audio_manager.download_audio_files(audio_files)
+        await self.audio_manager.download_audio_files()
 
     async def handle_typeless_message(self, message):
         """
