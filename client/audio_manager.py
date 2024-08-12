@@ -1,7 +1,6 @@
 import asyncio
 import os
 import logging
-import simpleaudio as sa
 import random
 from pydub import AudioSegment
 import io
@@ -9,6 +8,7 @@ import math
 import aiohttp
 import aiofiles
 from pydub.playback import play
+import ffmpeg
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +114,8 @@ class AudioManager:
             if self.effect_audio:
                 self.stop_effect_audio()
             
-            # Load the audio file (MP3 or WAV)
-            audio = AudioSegment.from_file(full_path)
+            # Load and play the MP3 file directly
+            audio = AudioSegment.from_mp3(full_path)
             
             # Adjust volume
             audio = audio + (20 * math.log10(volume))
@@ -124,8 +124,8 @@ class AudioManager:
             self.effect_audio = audio
             self.effect_volume = volume
             
-            # Mix background music and effect audio
-            self.mix_audio()
+            # Play the audio
+            play(audio)
             
             logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}")
             
@@ -141,16 +141,8 @@ class AudioManager:
             logger.info("Stopped effect audio")
 
     def mix_audio(self):
-        mixed = AudioSegment.silent(duration=1)
-        
-        if self.background_music:
-            mixed = mixed.overlay(self.background_music)
-        
-        if self.effect_audio:
-            mixed = mixed.overlay(self.effect_audio)
-        
-        if not mixed.duration_seconds == 1:  # Only play if there's actual audio
-            play(mixed)
+        # We don't need to mix audio anymore as we're playing MP3s directly
+        pass
 
     def stop_audio(self):
         self.active_audio_streams.clear()
