@@ -130,6 +130,9 @@ class EffectsManager:
         
         self.room_effects[room] = effect_name
         
+        # Pause the theme for this room
+        self.theme_manager.pause_theme_for_room(room)
+        
         # Instruct the client to play the audio only once at the beginning
         await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
         
@@ -150,9 +153,10 @@ class EffectsManager:
             # Ensure the room effect is cleared even if an exception occurs
             if room in self.room_effects:
                 del self.room_effects[room]
+            # Resume the theme for this room
+            self.theme_manager.resume_theme_for_room(room)
         
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
-        # Remove the second audio command here
         return True, f"{effect_name} effect applied to room {room}"
 
     # Remove the _apply_audio_effect method as it's no longer needed
