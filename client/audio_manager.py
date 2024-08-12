@@ -141,16 +141,19 @@ class AudioManager:
                                        output=True)
             
             # Open the MP3 file
-            with open(file_path, 'rb') as f:
-                data = f.read()
+            audio_file = MP3(file_path)
+            audio_data = audio_file.info.length * audio_file.info.sample_rate * audio_file.info.channels * 2
             
             # Play audio
             chunk_size = 1024
             offset = 0
-            while offset < len(data) and not self.stop_flag.is_set():
-                chunk = data[offset:offset + chunk_size]
+            while offset < audio_data and not self.stop_flag.is_set():
+                audio_file.seek(offset)
+                chunk = audio_file.read(chunk_size)
+                if not chunk:
+                    break
                 stream.write(chunk)
-                offset += chunk_size
+                offset += len(chunk)
             
             # Close the stream
             stream.stop_stream()
