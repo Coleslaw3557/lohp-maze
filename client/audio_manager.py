@@ -7,6 +7,8 @@ import aiofiles
 import threading
 import pyaudio
 from mutagen.mp3 import MP3
+from pydub import AudioSegment
+from pydub.utils import make_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +107,7 @@ class AudioManager:
                     logger.error(f"Failed to get list of background music files. Status: {response.status}")
 
     def play_effect_audio(self, file_name, volume=1.0):
-        full_path = os.path.join(self.audio_dir, file_name)
+        full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
         if not os.path.exists(full_path):
             logger.error(f"Audio file not found: {full_path}")
             return False
@@ -117,7 +119,7 @@ class AudioManager:
             self.stop_audio()
             
             # Set the stop flag to False
-            self.stop_flag.clear()
+            self.stop_flag = threading.Event()
             
             # Start a new thread to play the audio
             self.play_thread = threading.Thread(target=self._play_audio_thread, args=(full_path, volume))
@@ -132,28 +134,31 @@ class AudioManager:
 
     def _play_audio_thread(self, file_path, volume):
         try:
-            audio = MP3(file_path)
+            # Load the MP3 file
+            audio = AudioSegment.from_mp3(file_path)
+            
+            # Apply volume adjustment
+            audio = audio + (20 * math.log10(volume))
+            
+            # Get audio parameters
+            sample_width = audio.sample_width
+            channels = audio.channels
+            frame_rate = audio.frame_rate
             
             # Open a PyAudio stream
-            stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
-                                       channels=audio.info.channels,
-                                       rate=audio.info.sample_rate,
+            stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(sample_width),
+                                       channels=channels,
+                                       rate=frame_rate,
                                        output=True)
             
-            # Open the MP3 file
-            audio_file = MP3(file_path)
-            audio_data = audio_file.info.length * audio_file.info.sample_rate * audio_file.info.channels * 2
-            
-            # Play audio
+            # Play audio in chunks
             chunk_size = 1024
-            offset = 0
-            while offset < audio_data and not self.stop_flag.is_set():
-                audio_file.seek(offset)
-                chunk = audio_file.read(chunk_size)
-                if not chunk:
+            chunks = make_chunks(audio, chunk_size)
+            
+            for chunk in chunks:
+                if self.stop_flag.is_set():
                     break
-                stream.write(chunk)
-                offset += len(chunk)
+                stream.write(chunk._data)
             
             # Close the stream
             stream.stop_stream()
