@@ -188,8 +188,7 @@ class AudioManager:
             if not self.is_playing:
                 return (bytes(frame_count * 4), pyaudio.paContinue)
             
-            mixed = self.mix_audio()
-            data = mixed.raw_data
+            data = self.mix_audio()
             return (data, pyaudio.paContinue)
 
     def start_audio_stream(self):
@@ -272,15 +271,31 @@ class AudioManager:
                     'channels': audio.info.channels,
                     'sample_rate': audio.info.sample_rate
                 }
+                self.current_position = 0
             
             # Start playing if not already playing
-            self.play_audio()
+            if not self.is_playing:
+                self.is_playing = True
+                self.stream = self.pyaudio.open(format=self.pyaudio.get_format_from_width(2),
+                                                channels=audio.info.channels,
+                                                rate=audio.info.sample_rate,
+                                                output=True,
+                                                stream_callback=self.audio_callback)
+                self.stream.start_stream()
             
             logger.info(f"Started playing background music: {music_file}")
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
     def mix_audio(self):
-        # This method needs to be reimplemented using PyAudio
-        # For now, we'll just log a message
-        logger.info("mix_audio method called, but not implemented yet")
+        if self.background_music:
+            with open(self.background_music, 'rb') as f:
+                audio = MP3(self.background_music)
+                frame_count = int(44100 * 0.1)  # 100ms of audio
+                f.seek(int(audio.info.sample_rate * 2 * audio.info.channels * (self.current_position % audio.info.length)))
+                data = f.read(frame_count * 2 * audio.info.channels)
+                self.current_position += 0.1
+                if self.current_position >= audio.info.length:
+                    self.current_position = 0
+                return data
+        return b'\x00' * 4410  # 100ms of silence
