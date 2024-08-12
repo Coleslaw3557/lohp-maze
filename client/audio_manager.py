@@ -7,6 +7,7 @@ import aiohttp
 import aiofiles
 import vlc
 from concurrent.futures import ThreadPoolExecutor
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ class AudioManager:
         self.effect_volume = 1.0
         self.vlc_instance = self.initialize_vlc()
         self.audio_lock = asyncio.Lock()
+        self.last_music_change_time = 0
+        self.music_change_cooldown = 5  # 5 seconds cooldown
 
     def initialize_vlc(self):
         audio_outputs = ['pulse', 'alsa', 'oss', 'jack']
@@ -34,7 +37,9 @@ class AudioManager:
                 logger.warning(f"Failed to initialize VLC with {aout}: {str(e)}")
         
         logger.error("Failed to initialize VLC with any audio output")
-        raise Exception("Could not initialize VLC")
+        # Instead of raising an exception, return None and log the error
+        logger.error("Could not initialize VLC. Audio playback may not work.")
+        return None
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
@@ -193,6 +198,11 @@ class AudioManager:
         return None
 
     async def start_background_music(self, music_file):
+        current_time = time.time()
+        if current_time - self.last_music_change_time < self.music_change_cooldown:
+            logger.info(f"Ignoring music change request for {music_file} due to cooldown")
+            return
+
         if not music_file:
             logger.warning("No music file specified for background music")
             return
@@ -230,11 +240,17 @@ class AudioManager:
 
             if self.background_music_player.is_playing():
                 logger.info(f"Confirmed background music playback started for {music_file}")
+                self.last_music_change_time = current_time
             else:
                 logger.warning(f"Background music playback did not start for {music_file}")
+                # Try to reinitialize VLC instance and retry playback
+                self.vlc_instance = self.initialize_vlc()
+                await self.start_background_music(music_file)
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
+            # Try to reinitialize VLC instance
+            self.vlc_instance = self.initialize_vlc()
 
     def loop_background_music(self, event):
         # This method will be called when the media player reaches the end of the track
