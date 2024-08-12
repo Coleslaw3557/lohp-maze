@@ -23,20 +23,17 @@ NUM_FIXTURES = 21
 CHANNELS_PER_FIXTURE = 8
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     handlers=[logging.StreamHandler(sys.stdout)])  # Log to stdout
 logger = logging.getLogger(__name__)
 
-# Set all loggers to DEBUG level
-for name in logging.root.manager.loggerDict:
-    logging.getLogger(name).setLevel(logging.DEBUG)
-
-# Suppress pydub warnings
+# Set specific loggers to desired levels
+logging.getLogger('pyftdi.ftdi').setLevel(logging.WARNING)
 logging.getLogger('pydub.converter').setLevel(logging.ERROR)
 
-# Explicitly set the root logger to DEBUG
-logging.getLogger().setLevel(logging.DEBUG)
+# Set the root logger to INFO
+logging.getLogger().setLevel(logging.INFO)
 
 app = Quart(__name__)
 app = cors(app)
