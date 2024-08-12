@@ -25,10 +25,11 @@ class EffectsManager:
         self.interrupt_handler.theme_manager = self.theme_manager  # Set the theme_manager after initialization
         self.effect_buffer = {}
         self.sync_manager = SyncManager()
-        self.active_effects = {}  # New dictionary to track active effects per room
+        self.active_effects = {}  # Dictionary to track active effects per room
         self.previous_values = {}  # Store previous values for smoothing
         self.smoothing_factor = 0.2  # Adjust this value to control smoothing (0.0 to 1.0)
         self.update_frequency = 10  # Set update frequency to 10 Hz
+        self.effect_tasks = {}  # New dictionary to track effect tasks per room
         
         logger.info(f"InterruptHandler successfully initialized: {self.interrupt_handler}")
         
@@ -84,15 +85,15 @@ class EffectsManager:
             logger.warning(f"No effect found: {effect_name}")
 
     async def stop_effect_in_room(self, room):
-        if room in self.active_effects:
+        if room in self.effect_tasks:
             logger.info(f"Stopping active effect in room: {room}")
-            effect_task = self.active_effects[room]
+            effect_task = self.effect_tasks[room]
             effect_task.cancel()
             try:
                 await effect_task
             except asyncio.CancelledError:
                 pass
-            del self.active_effects[room]
+            del self.effect_tasks[room]
             
             # Reset fixtures in the room
             room_layout = self.light_config_manager.get_room_layout()
@@ -136,15 +137,20 @@ class EffectsManager:
         # Instruct the client to play the audio only once at the beginning
         await self.remote_host_manager.send_audio_command(room, 'play_effect_audio', {'effect_name': effect_name})
         
-        tasks = []
-        # Use the interrupt system to apply the effect
-        for fixture_id in fixture_ids:
-            task = self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data))
-            tasks.append(task)
+        # Create a new task for this effect
+        effect_task = asyncio.create_task(self._run_effect(room, fixture_ids, effect_data, effect_name))
+        
+        # Store the task in the effect_tasks dictionary
+        if room in self.effect_tasks:
+            # Cancel the previous effect task if it exists
+            self.effect_tasks[room].cancel()
+        self.effect_tasks[room] = effect_task
         
         try:
-            # Run all lighting tasks concurrently
-            await asyncio.gather(*tasks)
+            # Wait for the effect task to complete
+            await effect_task
+        except asyncio.CancelledError:
+            logger.info(f"Effect '{effect_name}' in room '{room}' was cancelled")
         except Exception as e:
             error_message = f"Error applying effect '{effect_name}' to room '{room}': {str(e)}"
             logger.error(error_message, exc_info=True)
@@ -153,11 +159,23 @@ class EffectsManager:
             # Ensure the room effect is cleared even if an exception occurs
             if room in self.room_effects:
                 del self.room_effects[room]
+            # Remove the task from effect_tasks
+            self.effect_tasks.pop(room, None)
             # Resume the theme for this room
             self.theme_manager.resume_theme_for_room(room)
         
         logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
         return True, f"{effect_name} effect applied to room {room}"
+
+    async def _run_effect(self, room, fixture_ids, effect_data, effect_name):
+        tasks = []
+        # Use the interrupt system to apply the effect
+        for fixture_id in fixture_ids:
+            task = self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'], get_effect_step_values(effect_data))
+            tasks.append(task)
+        
+        # Run all lighting tasks concurrently
+        await asyncio.gather(*tasks)
 
     # Remove the _apply_audio_effect method as it's no longer needed
 
