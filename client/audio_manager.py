@@ -21,6 +21,7 @@ class AudioManager:
         self.server_url = f"http://{config.get('server_ip')}:{config.get('server_port', 5000)}"
         self.background_music = None
         self.background_music_volume = 0.5
+        self.background_music_volume = 0.5
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
