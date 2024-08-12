@@ -51,7 +51,7 @@ class AudioManager:
             play_obj = wave_obj.play()
             self.current_audio = play_obj
             
-            logger.info(f"Started playing audio for effect: {effect_name}, file: {file_name}, volume: {volume}, loop: {loop}")
+            logger.info(f"Started playing audio for effect: {effect_name}, file: {full_path}, volume: {volume}, loop: {loop}")
             
             play_obj.set_volume(volume)
             
