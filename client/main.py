@@ -50,13 +50,8 @@ async def main():
             sync_manager
         )
 
-        # Start background music
-        background_music_files = [file for file in audio_manager.preloaded_audio.keys() if file.startswith("The 7th Continent Soundscape")]
-        if background_music_files:
-            music_file = random.choice(background_music_files)
-            asyncio.create_task(audio_manager.start_background_music(music_file))
-        else:
-            logger.warning("No background music files found")
+        # Background music is not started automatically
+        logger.info("Background music is ready to be started manually")
 
         uri = f"ws://{config.get('server_ip')}:{config.get('server_port', 8765)}"
         max_retries = 5
