@@ -317,11 +317,15 @@ def get_light_models():
 @app.route('/api/start_music', methods=['POST'])
 async def start_music():
     try:
-        success = await effects_manager.start_music()
+        data = await request.json
+        music_file = data.get('music_file')
+        if not music_file:
+            return jsonify({"status": "error", "message": "No music file specified"}), 400
+        success = await effects_manager.start_music(music_file)
         if success:
-            return jsonify({"status": "success", "message": "Background music started"}), 200
+            return jsonify({"status": "success", "message": f"Background music '{music_file}' started"}), 200
         else:
-            return jsonify({"status": "error", "message": "Failed to start background music"}), 500
+            return jsonify({"status": "error", "message": f"Failed to start background music '{music_file}'"}), 500
     except Exception as e:
         logger.error(f"Error starting background music: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
