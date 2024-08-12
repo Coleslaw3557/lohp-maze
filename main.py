@@ -25,8 +25,7 @@ CHANNELS_PER_FIXTURE = 8
 # Set up logging
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    filename='server.log',  # Log to a file
-                    filemode='a')  # Append mode
+                    handlers=[logging.StreamHandler(sys.stdout)])  # Log to stdout
 logger = logging.getLogger(__name__)
 
 # Set all loggers to DEBUG level
@@ -35,6 +34,9 @@ for name in logging.root.manager.loggerDict:
 
 # Suppress pydub warnings
 logging.getLogger('pydub.converter').setLevel(logging.ERROR)
+
+# Explicitly set the root logger to DEBUG
+logging.getLogger().setLevel(logging.DEBUG)
 
 app = Quart(__name__)
 app = cors(app)
