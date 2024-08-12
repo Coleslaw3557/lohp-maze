@@ -73,9 +73,8 @@ async def main():
                             logger.error(f"WebSocket connection error: {e}")
                             logger.debug(f"Connection attempt details: URI={uri}, Attempt={attempt+1}")
                             if attempt < max_retries - 1:
-                                wait_time = retry_delay * (2 ** attempt)
-                                logger.info(f"Attempting to reconnect in {wait_time} seconds... (Attempt {attempt + 1}/{max_retries})")
-                                await asyncio.sleep(wait_time)
+                                logger.info(f"Attempting to reconnect in 5 seconds... (Attempt {attempt + 1}/{max_retries})")
+                                await asyncio.sleep(5)
                             else:
                                 logger.error(f"Failed to connect after {max_retries} attempts. Waiting for 60 seconds before trying again.")
                                 await asyncio.sleep(60)
