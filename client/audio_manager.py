@@ -272,8 +272,8 @@ class AudioManager:
                 self.stream.stop_stream()
                 self.stream.close()
             
-            # Initialize the data stream
-            audio.get_data_stream()
+            # Initialize the audio file
+            self.audio_file = open(full_path, 'rb')
             
             # Start playing
             self.is_playing = True
@@ -294,18 +294,12 @@ class AudioManager:
             return (bytes(frame_count * 4), pyaudio.paComplete)
         
         try:
-            audio = self.background_music
-            bytes_per_frame = audio.info.channels * 2  # 2 bytes per sample for 16-bit audio
-            start_byte = int(self.current_position * audio.info.sample_rate * bytes_per_frame)
-            end_byte = start_byte + (frame_count * bytes_per_frame)
-
-            data = audio.get_data_stream().read(end_byte - start_byte)
-
+            data = self.audio_file.read(frame_count * 4)  # 4 bytes per frame (2 channels * 2 bytes per sample)
             if len(data) == 0:
                 # End of file reached
-                return (bytes(frame_count * 4), pyaudio.paComplete)
-
-            self.current_position += frame_count / audio.info.sample_rate
+                self.audio_file.seek(0)  # Loop back to the beginning
+                data = self.audio_file.read(frame_count * 4)
+            
             return (data, pyaudio.paContinue)
         except Exception as e:
             logger.error(f"Error in audio callback: {str(e)}", exc_info=True)
