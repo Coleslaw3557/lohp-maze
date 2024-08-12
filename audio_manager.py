@@ -1,11 +1,11 @@
 import json
 import logging
 import os
-import warnings
 import random
-from pydub import AudioSegment
+import pyaudio
+import threading
+from mutagen.mp3 import MP3
 
-warnings.filterwarnings("ignore", category=RuntimeWarning, message="Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work")
 logger = logging.getLogger(__name__)
 
 class AudioManager:
@@ -16,6 +16,10 @@ class AudioManager:
         self.audio_config = self.load_config()
         self.last_played = {}
         self.background_music = []
+        self.pyaudio = pyaudio.PyAudio()
+        self.current_stream = None
+        self.play_thread = None
+        self.stop_flag = threading.Event()
         logger.info("AudioManager initialized")
 
     def get_audio_files_to_download(self):
