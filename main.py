@@ -5,6 +5,7 @@ import json
 import websockets
 import sys
 import traceback
+import random
 from quart import Quart, request, jsonify, Response, send_from_directory
 from quart_cors import cors
 from werkzeug.urls import uri_to_iri, iri_to_uri
@@ -228,7 +229,6 @@ async def run_effect():
     data = await request.json
     room = data.get('room')
     effect_name = data.get('effect_name')
-    audio_params = data.get('audio', {})
     
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
@@ -239,10 +239,22 @@ async def run_effect():
         logger.error(f"Effect not found: {effect_name}")
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
     
-    # Add audio parameters to effect data
-    effect_data['audio'] = audio_params
-    
     try:
+        # Get audio configuration for the effect
+        audio_config = audio_manager.get_audio_config(effect_name)
+        if audio_config:
+            audio_file = random.choice(audio_config['audio_files'])
+            volume = audio_config.get('volume', audio_manager.audio_config['default_volume'])
+        else:
+            audio_file = None
+            volume = audio_manager.audio_config['default_volume']
+        
+        # Add audio parameters to effect data
+        effect_data['audio'] = {
+            'file': audio_file,
+            'volume': volume
+        }
+        
         # Execute the effect immediately
         success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
         
@@ -255,6 +267,11 @@ async def run_effect():
         error_message = f"Error executing effect {effect_name} for room {room}: {str(e)}"
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
+
+@app.route('/api/audio_files_to_download', methods=['GET'])
+def get_audio_files_to_download():
+    audio_files = audio_manager.get_audio_files_to_download()
+    return jsonify(audio_files)
 
 # This function has been removed as it's no longer needed
 
@@ -296,6 +313,33 @@ def get_themes():
 def get_light_models():
     light_models = light_config.get_light_models()
     return jsonify(light_models)
+
+@app.route('/api/start_music', methods=['POST'])
+async def start_music():
+    try:
+        logger.info("Received request to start music")
+        success = await effects_manager.start_music()
+        if success:
+            logger.info("Successfully started background music")
+            return jsonify({"status": "success", "message": "Background music started"}), 200
+        else:
+            logger.error("Failed to start background music")
+            return jsonify({"status": "error", "message": "Failed to start background music"}), 500
+    except Exception as e:
+        logger.error(f"Error starting background music: {str(e)}", exc_info=True)
+        return jsonify({"status": "error", "message": f"Internal server error: {str(e)}"}), 500
+
+@app.route('/api/stop_music', methods=['POST'])
+async def stop_music():
+    try:
+        success = await effects_manager.stop_music()
+        if success:
+            return jsonify({"status": "success", "message": "Background music stopped"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Failed to stop background music"}), 500
+    except Exception as e:
+        logger.error(f"Error stopping background music: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # This route has been removed as it was a duplicate
 
@@ -403,7 +447,10 @@ async def run_effect_all_rooms():
 
 @app.route('/api/audio/<path:filename>')
 async def serve_audio(filename):
-    audio_dir = os.path.join(os.path.dirname(__file__), 'audio_files')
+    if filename.startswith('The 7th Continent Soundscape'):
+        audio_dir = os.path.join(os.path.dirname(__file__), 'music')
+    else:
+        audio_dir = os.path.join(os.path.dirname(__file__), 'audio_files')
     return await send_from_directory(audio_dir, filename)
 
 if __name__ == '__main__':

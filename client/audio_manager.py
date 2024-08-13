@@ -1,16 +1,13 @@
 import asyncio
-import aiofiles
 import os
 import logging
-from pydub import AudioSegment
-from pydub.playback import _play_with_simpleaudio
-import io
-import threading
-import math
-import aiohttp
-import simpleaudio as sa
-import time
 import random
+import asyncio
+import aiohttp
+import aiofiles
+import vlc
+from concurrent.futures import ThreadPoolExecutor
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -18,280 +15,250 @@ class AudioManager:
     def __init__(self, cache_dir, config):
         self.cache_dir = cache_dir
         self.config = config
-        self.current_audio = None
-        self.stop_event = threading.Event()
-        self.prepared_audio = {}
-        self.audio_files = [
-            "lightning.mp3",
-            # Add other audio files here
-        ]
-        self.current_effect_audio = None
         self.preloaded_audio = {}
-        self.glitch_intensity = 0.0
+        self.server_url = f"http://{config.get('server_ip')}:{config.get('server_port', 5000)}"
+        self.background_music_player = None
+        self.effect_players = []
+        self.background_music_volume = 0.5
+        self.effect_volume = 1.0
+        self.vlc_instance = self.initialize_vlc()
+        self.audio_lock = asyncio.Lock()
+        self.last_music_change_time = 0
+        self.music_change_cooldown = 5  # 5 seconds cooldown
+
+    def initialize_vlc(self):
+        audio_outputs = ['pulse', 'alsa', 'oss', 'jack']
+        for aout in audio_outputs:
+            try:
+                instance = vlc.Instance(f'--aout={aout}')
+                logger.info(f"Successfully initialized VLC with audio output: {aout}")
+                return instance
+            except Exception as e:
+                logger.warning(f"Failed to initialize VLC with {aout}: {str(e)}")
+        
+        logger.error("Failed to initialize VLC with any audio output")
+        # Instead of raising an exception, return None and log the error
+        logger.error("Could not initialize VLC. Audio playback may not work.")
+        return None
 
     async def initialize(self):
         logger.info("Initializing AudioManager")
         await self.preload_existing_audio_files()
-        logger.info("AudioManager initialization complete")
+        await self.download_audio_files()
+        logger.info(f"AudioManager initialization complete. Preloaded audio files: {list(self.preloaded_audio.keys())}")
 
     async def preload_existing_audio_files(self):
         logger.info("Preloading existing audio files")
         audio_dir = os.path.join(self.cache_dir, 'audio_files')
         if os.path.exists(audio_dir):
             audio_files = os.listdir(audio_dir)
+            logger.info(f"Found {len(audio_files)} files in {audio_dir}")
             for audio_file in audio_files:
-                if audio_file.endswith('.mp3'):
+                if audio_file.endswith(('.mp3', '.wav')):
                     file_path = os.path.join(audio_dir, audio_file)
-                    audio = AudioSegment.from_mp3(file_path)
-                    self.preloaded_audio[audio_file] = audio
+                    self.preloaded_audio[audio_file] = file_path
+                    logger.debug(f"Preloaded audio file: {audio_file}")
             logger.info(f"Preloaded {len(self.preloaded_audio)} existing audio files")
+            logger.debug(f"Preloaded audio files: {list(self.preloaded_audio.keys())}")
         else:
-            logger.info("No existing audio files found")
+            logger.warning(f"Audio directory not found: {audio_dir}")
 
-    async def download_audio_files(self, audio_files_to_download):
-        logger.info(f"Received list of {len(audio_files_to_download)} audio files to download")
-        for audio_file in audio_files_to_download:
-            if audio_file not in self.preloaded_audio:
-                success = await self.download_audio(audio_file)
-                if success:
-                    await self.preload_single_audio_file(audio_file)
+    async def download_audio_files(self):
+        logger.info("Downloading new audio files")
+        audio_dir = os.path.join(self.cache_dir, 'audio_files')
+        os.makedirs(audio_dir, exist_ok=True)
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{self.server_url}/api/audio_files_to_download") as response:
+                if response.status == 200:
+                    files_to_download = await response.json()
+                    for category, file_list in files_to_download.items():
+                        for file_name in file_list:
+                            if file_name and file_name not in self.preloaded_audio:
+                                await self.download_audio_file(session, file_name, audio_dir)
                 else:
-                    logger.error(f"Failed to download {audio_file}")
-        logger.info("Finished processing audio files to download")
+                    logger.error(f"Failed to get list of audio files to download. Status: {response.status}")
 
-    async def preload_single_audio_file(self, audio_file):
-        file_path = os.path.join(self.cache_dir, 'audio_files', audio_file)
-        if os.path.exists(file_path):
-            audio = AudioSegment.from_mp3(file_path)
-            self.preloaded_audio[audio_file] = audio
-            logger.info(f"Preloaded audio file: {audio_file}")
+        # Download background music files
+        await self.download_background_music_files()
 
-    async def prepare_audio(self, file_name, effect_name, volume=1.0, loop=False):
-        full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
-        
-        if not os.path.exists(full_path):
-            logger.error(f"Audio file not found: {full_path}")
-            return False
-        
-        self.prepared_audio[effect_name] = {
-            'file_name': full_path,
-            'volume': volume,
-            'loop': loop
-        }
-        logger.info(f"Prepared audio for effect: {effect_name}")
-        return True
-
-    def get_prepared_audio(self):
-        if self.prepared_audio:
-            return next(iter(self.prepared_audio.values()))
-        return None
-
-    async def play_effect_audio(self, effect_name, file_name):
-        full_path = os.path.join(self.cache_dir, 'audio_files', os.path.basename(file_name))
-        
-        if not os.path.exists(full_path):
-            logger.error(f"Audio file not found: {full_path}")
-            return False
-        
-        self.stop_audio()
-        try:
-            audio = AudioSegment.from_mp3(full_path)
-            self.current_audio = full_path
-            self.stop_event.clear()
-            
-            await asyncio.to_thread(self._play_audio, audio, False)  # Assuming no loop by default
-            
-            logger.info(f"Started playing audio for effect: {effect_name}, file: {file_name}")
-            return True
-        except Exception as e:
-            logger.error(f"Error playing audio for effect {effect_name}: {str(e)}", exc_info=True)
-            return False
-
-    async def download_audio(self, file_name):
-        # Remove 'audio_files/' prefix if present
-        if file_name.startswith('audio_files/'):
-            file_name = file_name[len('audio_files/'):]
-        
-        server_url = f"http://{self.config.get('server_ip')}:5000/api/audio/{file_name}"
-        max_retries = 3
-        retry_delay = 5
-
-        for attempt in range(max_retries):
+    async def download_audio_file(self, session, file_name, audio_dir):
+        file_path = os.path.join(audio_dir, file_name)
+        if not os.path.exists(file_path):
             try:
-                logger.info(f"Attempting to download audio file from: {server_url} (Attempt {attempt + 1}/{max_retries})")
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(server_url) as response:
-                        if response.status == 200:
-                            content = await response.read()
-                            full_path = os.path.join(self.cache_dir, 'audio_files', file_name)
-                            os.makedirs(os.path.dirname(full_path), exist_ok=True)
-                            async with aiofiles.open(full_path, 'wb') as f:
-                                await f.write(content)
-                            logger.info(f"Successfully downloaded audio file: {file_name}")
-                            return True
-                        elif response.status == 404:
-                            logger.error(f"Audio file not found on server: {file_name}")
-                            logger.error(f"Server response: {await response.text()}")
-                            return False
-                        else:
-                            logger.error(f"Failed to download audio file: {file_name}. Status code: {response.status}")
-                            logger.error(f"Server response: {await response.text()}")
-            except aiohttp.ClientError as e:
-                logger.error(f"Network error while downloading {file_name}: {str(e)}")
-            except IOError as e:
-                logger.error(f"IO error while saving {file_name}: {str(e)}")
+                async with session.get(f"{self.server_url}/api/audio/{file_name}") as response:
+                    if response.status == 200:
+                        async with aiofiles.open(file_path, mode='wb') as f:
+                            await f.write(await response.read())
+                        logger.info(f"Downloaded audio file: {file_name}")
+                        self.preloaded_audio[file_name] = file_path
+                    elif response.status == 404:
+                        logger.warning(f"Audio file not found on server: {file_name}")
+                    else:
+                        logger.error(f"Failed to download audio file: {file_name}. Status: {response.status}")
             except Exception as e:
-                logger.error(f"Unexpected error while downloading {file_name}: {str(e)}")
-            
-            if attempt < max_retries - 1:
-                logger.info(f"Retrying download in {retry_delay} seconds...")
-                await asyncio.sleep(retry_delay)
+                logger.error(f"Error downloading audio file {file_name}: {str(e)}")
+        else:
+            logger.info(f"Audio file already exists: {file_name}")
+
+    async def download_background_music_files(self):
+        logger.info("Downloading background music files")
+        music_dir = os.path.join(self.cache_dir, 'audio_files')
+        os.makedirs(music_dir, exist_ok=True)
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{self.server_url}/api/audio_files_to_download") as response:
+                if response.status == 200:
+                    files_to_download = await response.json()
+                    music_files = files_to_download.get('music', [])
+                    for file_name in music_files:
+                        if file_name and file_name not in self.preloaded_audio:
+                            await self.download_audio_file(session, file_name, music_dir)
+                else:
+                    logger.error(f"Failed to get list of background music files. Status: {response.status}")
+
+    async def play_effect_audio(self, file_name, volume=1.0, loop=False):
+        logger.debug(f"Attempting to play effect audio: file_name={file_name}, volume={volume}, loop={loop}")
+        full_path = self.preloaded_audio.get(file_name)
+        if not full_path:
+            logger.warning(f"Audio file not found: {file_name}")
+            return False
+
+        try:
+            logger.info(f"Playing effect audio file: {file_name}")
+
+            async with self.audio_lock:
+                # Create a new media player for the effect
+                effect_player = self.vlc_instance.media_player_new()
+                media = self.vlc_instance.media_new(full_path)
+                effect_player.set_media(media)
+
+                # Set volume and start playing
+                effect_player.audio_set_volume(int(volume * 100))
+                effect_player.play()
+
+                if loop:
+                    event_manager = effect_player.event_manager()
+                    event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.loop_effect_audio)
+
+                self.effect_players.append(effect_player)
+
+            logger.info(f"Started playing effect audio file: {file_name}, volume: {volume}, loop: {loop}")
+
+            # Wait for a short time to ensure playback has started
+            await asyncio.sleep(0.1)
+
+            if effect_player.is_playing():
+                logger.info(f"Confirmed playback started for {file_name}")
+                if not loop:
+                    asyncio.create_task(self.wait_for_effect_completion(effect_player))
+                return True
             else:
-                logger.error(f"Failed to download {file_name} after {max_retries} attempts")
+                logger.warning(f"Playback did not start for {file_name}")
                 return False
 
-    async def play_prepared_audio(self, file_name):
-        if file_name in self.prepared_audio:
-            audio_info = self.prepared_audio[file_name]
-            if os.path.exists(audio_info['file_name']):
-                self.stop_audio()
-                try:
-                    audio = AudioSegment.from_mp3(audio_info['file_name'])
-                    volume = audio_info['volume']
-                    audio = audio + (20 * math.log10(volume))
-                    
-                    self.current_audio = audio_info['file_name']
-                    self.stop_event.clear()
-                    
-                    threading.Thread(target=self._play_audio, args=(audio, audio_info['loop'])).start()
-                    
-                    logger.info(f"Started playing audio: {audio_info['file_name']} (volume: {volume}, loop: {audio_info['loop']})")
-                except Exception as e:
-                    logger.error(f"Error playing audio: {str(e)}", exc_info=True)
-            else:
-                logger.error(f"Prepared audio file not found: {audio_info['file_name']}")
-        else:
-            logger.warning(f"No prepared audio found for: {file_name}")
-
-    async def play_cached_audio(self, effect_name, volume=1.0, loop=False):
-        file_name = f"{effect_name.lower()}.mp3"
-        if file_name in self.preloaded_audio:
-            self.stop_audio()
-            try:
-                audio = self.preloaded_audio[file_name]
-                audio = audio + (20 * math.log10(volume))
-                
-                self.current_audio = file_name
-                self.stop_event.clear()
-                
-                play_obj = _play_with_simpleaudio(audio)
-                
-                if loop:
-                    threading.Thread(target=self._loop_audio, args=(play_obj, audio)).start()
-                else:
-                    threading.Thread(target=self._wait_for_completion, args=(play_obj,)).start()
-                
-                logger.info(f"Started playing cached audio: {file_name} (volume: {volume}, loop: {loop})")
-            except Exception as e:
-                logger.error(f"Error playing cached audio: {str(e)}", exc_info=True)
-        else:
-            logger.error(f"Preloaded audio not found for effect: {effect_name}")
-
-    async def receive_audio_data(self, audio_data):
-        file_name = f"temp_audio_{time.time()}.mp3"
-        file_path = os.path.join(self.cache_dir, 'audio_files', file_name)
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        
-        logger.info(f"Saving received audio data to: {file_path}")
-        async with aiofiles.open(file_path, 'wb') as f:
-            await f.write(audio_data)
-        
-        self.stop_audio()
-        
-        try:
-            # Decode and play the MP3 file
-            logger.info(f"Decoding MP3 file: {file_path}")
-            audio = AudioSegment.from_mp3(file_path)
-            volume = 1.0  # Default volume
-            audio = audio + (20 * math.log10(volume))  # Adjust volume (pydub uses dB)
-            
-            self.current_audio = file_name
-            self.stop_event.clear()
-            
-            # Start playback in a separate thread
-            logger.info(f"Starting audio playback: {self.current_audio}")
-            threading.Thread(target=self._play_audio, args=(audio, False)).start()
-            
-            logger.info(f"Started playing audio: {file_name} (volume: {volume}, loop: False)")
         except Exception as e:
-            logger.error(f"Error playing received audio: {str(e)}", exc_info=True)
+            logger.error(f"Error playing effect audio file {file_name}: {str(e)}", exc_info=True)
+            return False
+
+    async def wait_for_effect_completion(self, effect_player):
+        while effect_player.is_playing():
+            await asyncio.sleep(0.1)
+        self.effect_players.remove(effect_player)
+
+    def loop_effect_audio(self, event):
+        # This method will be called when the effect audio reaches the end of the track
+        for player in self.effect_players:
+            if player.get_state() == vlc.State.Ended:
+                player.set_position(0)
+                player.play()
+                break
 
     def stop_audio(self):
-        if self.current_audio:
-            self.stop_event.set()
-            logger.info(f"Stopped playing audio: {self.current_audio}")
-            self.current_audio = None
+        if self.background_music_player:
+            self.background_music_player.stop()
+        for player in self.effect_players:
+            player.stop()
+        self.effect_players.clear()
+        logger.info("Stopped all audio playback")
 
-    def _loop_audio(self, play_obj, audio):
-        while not self.stop_event.is_set():
-            play_obj.wait_done()
-            if self.stop_event.is_set():
-                break
-            play_obj = _play_with_simpleaudio(audio)
-        play_obj.stop()
-        self.current_audio = None
-
-    def _wait_for_completion(self, play_obj):
-        play_obj.wait_done()
-        if not self.stop_event.is_set():
-            self.current_audio = None
-
-    def _play_audio(self, audio, loop=False):
-        play_obj = _play_with_simpleaudio(audio)
-        if loop:
-            while not self.stop_event.is_set():
-                play_obj.wait_done()
-                if self.stop_event.is_set():
-                    break
-                play_obj = _play_with_simpleaudio(audio)
+    def get_audio_file_for_effect(self, effect_name):
+        audio_config = self.config.get('effects', {}).get(effect_name, {})
+        audio_files = audio_config.get('audio_files', [])
+        if audio_files:
+            chosen_file = random.choice(audio_files)
+            full_path = os.path.join(self.cache_dir, 'audio_files', chosen_file)
+            if os.path.exists(full_path):
+                logger.info(f"Selected audio file '{full_path}' for effect '{effect_name}'")
+                return full_path
+            else:
+                logger.warning(f"Audio file '{full_path}' not found for effect '{effect_name}'")
         else:
-            self._wait_for_completion(play_obj)
-        play_obj.stop()
-        self.current_audio = None
+            logger.warning(f"No audio files found for effect '{effect_name}' in config")
+        return None
 
-    def apply_glitch_effect(self, audio):
-        if self.glitch_intensity == 0:
-            return audio
+    async def start_background_music(self, music_file):
+        current_time = time.time()
+        if current_time - self.last_music_change_time < self.music_change_cooldown:
+            logger.info(f"Ignoring music change request for {music_file} due to cooldown")
+            return
 
-        glitched_audio = AudioSegment.empty()
-        segment_length = 50  # ms
-        for i in range(0, len(audio), segment_length):
-            segment = audio[i:i+segment_length]
-            if random.random() < self.glitch_intensity:
-                # Apply random glitch effects
-                effect = random.choice(['reverse', 'repeat', 'silence', 'pitch_shift'])
-                if effect == 'reverse':
-                    segment = segment.reverse()
-                elif effect == 'repeat':
-                    segment = segment * 2
-                elif effect == 'silence':
-                    segment = AudioSegment.silent(duration=segment_length)
-                elif effect == 'pitch_shift':
-                    octaves = random.uniform(-1, 1)
-                    new_sample_rate = int(segment.frame_rate * (2.0 ** octaves))
-                    segment = segment._spawn(segment.raw_data, overrides={'frame_rate': new_sample_rate})
-            glitched_audio += segment
+        if not music_file:
+            logger.warning("No music file specified for background music")
+            return
 
-        return glitched_audio
+        full_path = self.preloaded_audio.get(music_file)
+        if not full_path:
+            logger.warning(f"Specified music file not found: {music_file}")
+            return
 
-    def set_glitch_intensity(self, intensity):
-        self.glitch_intensity = max(0.0, min(1.0, intensity))
+        logger.info(f"Starting background music: {music_file}")
 
-    async def cache_audio(self, file_name, audio_data):
-        file_path = os.path.join(self.cache_dir, file_name)
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        
-        async with aiofiles.open(file_path, 'wb') as f:
-            await f.write(audio_data)
-        
-        logger.info(f"Cached audio file: {file_name}")
+        try:
+            async with self.audio_lock:
+                # Stop any existing background music
+                if self.background_music_player:
+                    self.background_music_player.stop()
+
+                # Create a new media player
+                self.background_music_player = self.vlc_instance.media_player_new()
+                media = self.vlc_instance.media_new(full_path)
+                self.background_music_player.set_media(media)
+
+                # Set volume and start playing
+                self.background_music_player.audio_set_volume(int(self.background_music_volume * 100))
+                self.background_music_player.play()
+
+                # Set up event manager to handle looping
+                event_manager = self.background_music_player.event_manager()
+                event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.loop_background_music)
+
+            logger.info(f"Started playing background music: {music_file}")
+
+            # Wait for a short time to ensure playback has started
+            await asyncio.sleep(0.1)
+
+            if self.background_music_player.is_playing():
+                logger.info(f"Confirmed background music playback started for {music_file}")
+                self.last_music_change_time = current_time
+            else:
+                logger.warning(f"Background music playback did not start for {music_file}")
+                # Try to reinitialize VLC instance and retry playback
+                self.vlc_instance = self.initialize_vlc()
+                await self.start_background_music(music_file)
+
+        except Exception as e:
+            logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
+            # Try to reinitialize VLC instance
+            self.vlc_instance = self.initialize_vlc()
+
+    def loop_background_music(self, event):
+        # This method will be called when the media player reaches the end of the track
+        self.background_music_player.set_position(0)
+        self.background_music_player.play()
+    async def stop_background_music(self):
+        logger.info("Stopping background music")
+        if self.background_music_player:
+            self.background_music_player.stop()
+            self.background_music_player = None
+        logger.info("Background music stopped")

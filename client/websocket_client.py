@@ -18,10 +18,27 @@ class WebSocketClient:
         self.websocket = None
         self.time_offset = 0  # Time offset between client and server
 
+    def __init__(self, config, audio_manager, trigger_manager, sync_manager):
+        self.config = config
+        self.server_ip = config.get('server_ip')
+        self.server_port = int(config.get('server_port', 8765))  # Default to 8765 if None
+        self.unit_name = config.get('unit_name')
+        self.audio_manager = audio_manager
+        self.trigger_manager = trigger_manager
+        self.sync_manager = sync_manager
+        self.websocket = None
+        self.time_offset = 0  # Time offset between client and server
+        self.connection_established = False
+        self.connection_lock = asyncio.Lock()
+
     async def set_websocket(self, websocket):
         self.websocket = websocket
-        await self.send_client_connected()
-        await self.send_status_update("connected")
+        if not self.connection_established:
+            async with self.connection_lock:
+                if not self.connection_established:
+                    await self.send_client_connected()
+                    await self.send_status_update("connected")
+                    self.connection_established = True
 
     async def send_client_connected(self):
         message = {
@@ -44,12 +61,15 @@ class WebSocketClient:
                     logger.info("Connection acknowledged by server")
                 else:
                     logger.error(f"Connection error: {response_data.get('message')}")
+                    self.connection_established = False
             else:
                 logger.warning(f"Unexpected response type: {response_data.get('type')}")
         except asyncio.TimeoutError:
             logger.error("Timeout waiting for connection response")
+            self.connection_established = False
         except Exception as e:
             logger.error(f"Error handling connection response: {str(e)}")
+            self.connection_established = False
 
     async def send_message(self, message):
         if self.websocket:
@@ -148,7 +168,9 @@ class WebSocketClient:
             'execute_effect': self.handle_execute_effect,
             'run_effect_all_rooms': self.handle_run_effect_all_rooms,
             'play_effect_audio': self.handle_play_effect_audio,
-            'audio_files_to_download': self.handle_audio_files_to_download  # Add this line
+            'audio_files_to_download': self.handle_audio_files_to_download,
+            'start_background_music': self.handle_start_background_music,
+            'stop_background_music': self.handle_stop_background_music
         }
 
         message_type = message.get('type')
@@ -163,10 +185,37 @@ class WebSocketClient:
         else:
             logger.warning(f"Unknown message type received: {message_type}")
 
+    async def handle_play_cached_audio(self, message):
+        audio_data = message.get('data', {})
+        effect_name = audio_data.get('effect_name')
+        volume = audio_data.get('volume', 1.0)
+        loop = audio_data.get('loop', False)
+        if effect_name:
+            await self.audio_manager.play_effect_audio(effect_name, volume, loop)
+        else:
+            logger.warning("Received play_cached_audio without effect_name")
+
     async def handle_audio_files_to_download(self, message):
         audio_files = message.get('data', [])
         logger.info(f"Received list of audio files to download: {audio_files}")
-        await self.audio_manager.download_audio_files(audio_files)
+        await self.audio_manager.download_audio_files()
+
+    async def handle_start_background_music(self, message):
+        logger.info("Received start_background_music command")
+        music_file = message.get('data', {}).get('music_file')
+        if music_file:
+            logger.info(f"Starting background music: {music_file}")
+            await self.audio_manager.start_background_music(music_file)
+        else:
+            logger.error("Received start_background_music command without a music file specified")
+            # Send an error message back to the server
+            error_message = {
+                "type": "error",
+                "data": {
+                    "message": "No music file specified for background music"
+                }
+            }
+            await self.send_message(error_message)
 
     async def handle_typeless_message(self, message):
         """
@@ -243,7 +292,7 @@ class WebSocketClient:
         room = message.get('room')
         effect_name = message.get('data', {}).get('effect_name')
         if room in self.config.get('associated_rooms', []) and effect_name:
-            await self.audio_manager.play_effect_audio(effect_name, f"{effect_name.lower()}.mp3")
+            await self.audio_manager.play_effect_audio(effect_name)
             logger.info(f"Playing effect audio for '{effect_name}' in room '{room}'")
         else:
             logger.warning(f"Received play_effect_audio command for unassociated room or missing effect name: {room}, {effect_name}")
@@ -258,18 +307,32 @@ class WebSocketClient:
         else:
             logger.warning("Received sync_time message without server_time")
 
-    async def handle_play_cached_audio(self, message):
-        audio_data = message.get('data')
-        if audio_data:
-            effect_name = audio_data.get('effect_name')
-            volume = audio_data.get('volume', 1.0)
-            loop = audio_data.get('loop', False)
-            if effect_name:
-                await self.audio_manager.play_cached_audio(effect_name, volume, loop)
+    async def handle_play_effect_audio(self, message):
+        logger.debug(f"Received play_effect_audio message: {message}")
+        room = message.get('room')
+        audio_data = message.get('data', {})
+        effect_name = audio_data.get('effect_name')
+        file_name = audio_data.get('file_name')
+        volume = audio_data.get('volume', 1.0)
+        loop = audio_data.get('loop', False)
+
+        if room not in self.config.get('associated_rooms', []):
+            logger.warning(f"Received play_effect_audio for unassociated room: {room}")
+            return
+
+        if not file_name:
+            logger.warning(f"Received play_effect_audio without file_name for effect '{effect_name}' in room '{room}'")
+            return
+
+        logger.info(f"Attempting to play audio file '{file_name}' for effect '{effect_name}' in room '{room}'")
+        try:
+            success = await self.audio_manager.play_effect_audio(file_name, volume, loop)
+            if success:
+                logger.info(f"Successfully played audio file '{file_name}' for effect '{effect_name}' in room '{room}'")
             else:
-                logger.warning("Received play_cached_audio without effect_name")
-        else:
-            logger.warning("Received play_cached_audio without data")
+                logger.error(f"Failed to play audio file '{file_name}' for effect '{effect_name}' in room '{room}'")
+        except Exception as e:
+            logger.exception(f"Error playing audio file '{file_name}' for effect '{effect_name}' in room '{room}': {str(e)}")
 
     async def handle_audio_start(self, message):
         audio_data = message.get('data')
@@ -277,16 +340,21 @@ class WebSocketClient:
             file_name = audio_data.get('file_name')
             effect_name = audio_data.get('effect_name')
             volume = audio_data.get('volume', 1.0)
-            loop = audio_data.get('loop', False)
-            if file_name and effect_name:
-                await self.audio_manager.prepare_audio(file_name, effect_name, volume, loop)
+            if file_name:
+                await self.audio_manager.play_effect_audio(file_name, volume)
             else:
-                logger.warning("Received audio_start without file_name or effect_name")
+                logger.warning("Received audio_start without file_name")
         else:
             logger.warning("Received audio_start without data")
 
     async def listen(self):
         while True:
+            if self.websocket is None:
+                logger.error("WebSocket is None. Attempting to reconnect...")
+                await self.reconnect()
+                await asyncio.sleep(5)  # Wait before trying again
+                continue
+
             try:
                 message = await self.websocket.recv()
                 if isinstance(message, str):
@@ -346,3 +414,6 @@ class WebSocketClient:
     async def execute_effect(self, effect_id):
         logger.info(f"Executing effect: {effect_id}")
         # TODO: Implement effect execution
+    async def handle_stop_background_music(self, message):
+        logger.info("Received stop_background_music command")
+        await self.audio_manager.stop_background_music()

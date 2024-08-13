@@ -1,51 +1,52 @@
 import json
 import logging
 import os
-import warnings
-from pydub import AudioSegment
+import random
+import pyaudio
+import threading
+from mutagen.mp3 import MP3
 
-warnings.filterwarnings("ignore", category=RuntimeWarning, message="Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work")
 logger = logging.getLogger(__name__)
 
 class AudioManager:
-    def __init__(self, config_file='audio_config.json', audio_dir='audio_files'):
+    def __init__(self, config_file='audio_config.json', audio_dir='audio_files', music_dir='music'):
         self.config_file = config_file
         self.audio_dir = audio_dir
+        self.music_dir = music_dir
         self.audio_config = self.load_config()
+        self.last_played = {}
+        self.background_music = []
+        self.pyaudio = pyaudio.PyAudio()
+        self.current_stream = None
+        self.play_thread = None
+        self.stop_flag = threading.Event()
         logger.info("AudioManager initialized")
-        
-        # Add default configurations for all effects
-        default_effects = [
-            'Lightning', 'PoliceLights', 'GateInspection', 'GateGreeters',
-            'WrongAnswer', 'CorrectAnswer', 'Entrance', 'GuyLineClimb',
-            'SparkPony', 'PortoStandBy', 'PortoHit', 'CuddlePuddle',
-            'PhotoBomb-BG', 'PhotoBomb-Spot', 'DeepPlaya-BG', 'ImageEnhancement'
-        ]
-        
-        for effect in default_effects:
-            if effect not in self.audio_config['effects']:
-                self.audio_config['effects'][effect] = {
-                    'audio_file': f'{effect.lower().replace("-", "_")}.mp3',
-                    'volume': 1.0,
-                    'loop': False
-                }
-        
-        self.save_config()  # Save the updated configuration
 
     def get_audio_files_to_download(self):
         """
-        Returns a list of audio files that should be downloaded by the client.
+        Returns a list of all audio files that should be downloaded by the client.
         """
         audio_files = []
         for effect, config in self.audio_config['effects'].items():
-            audio_file = config.get('audio_file')
-            if audio_file:
-                full_path = os.path.join(self.audio_dir, audio_file)
-                if os.path.exists(full_path):
-                    audio_files.append(audio_file)
-                else:
-                    logger.warning(f"Audio file not found for effect {effect}: {full_path}")
-        return audio_files
+            audio_files.extend(config.get('audio_files', []))
+        
+        # Add background music files separately
+        music_files = self.get_background_music_files()
+        
+        return {
+            'effects': list(set(audio_files)),
+            'music': music_files
+        }
+
+    def get_background_music_files(self):
+        """
+        Returns a list of all background music files from the music directory.
+        """
+        if os.path.exists(self.music_dir):
+            return [f for f in os.listdir(self.music_dir) if f.endswith('.mp3')]
+        else:
+            logger.warning(f"Music directory not found: {self.music_dir}")
+            return []
 
     def load_config(self):
         try:
@@ -60,36 +61,31 @@ class AudioManager:
             logger.error(f"Error decoding JSON from {self.config_file}.")
             return {"effects": {}, "default_volume": 0.7}
 
-    def get_audio_file(self, effect_name):
+    def get_random_audio_file(self, effect_name):
         effect_config = self.audio_config['effects'].get(effect_name, {})
-        audio_file = effect_config.get('audio_file')
+        audio_files = effect_config.get('audio_files', [])
         
-        possible_filenames = [
-            audio_file,
-            f"{effect_name.lower()}.mp3",
-            f"{effect_name.lower().replace(' ', '_')}.mp3",
-            f"{effect_name.lower().replace('-', '_')}.mp3"
-        ]
+        if not audio_files:
+            logger.warning(f"No audio files found for effect: {effect_name}")
+            return None
         
-        for filename in possible_filenames:
-            if filename:
-                full_path = os.path.join(self.audio_dir, filename)
-                logger.debug(f"Trying audio file for effect '{effect_name}': {full_path}")
-                if os.path.exists(full_path):
-                    logger.info(f"Found audio file for effect '{effect_name}': {full_path}")
-                    return full_path
+        if len(audio_files) > 1:
+            available_files = [file for file in audio_files if file != self.last_played.get(effect_name)]
+            if not available_files:
+                available_files = audio_files
+        else:
+            available_files = audio_files
         
-        logger.warning(f"No audio file found for effect: {effect_name}")
+        selected_file = random.choice(available_files)
+        self.last_played[effect_name] = selected_file
+        full_path = os.path.join(self.audio_dir, selected_file)
+        
+        if os.path.exists(full_path):
+            logger.info(f"Selected audio file for effect '{effect_name}': {full_path}")
+            return full_path
+        
+        logger.warning(f"Selected audio file not found: {full_path}")
         return None
-
-    def create_silent_mp3(self, file_path):
-        try:
-            # Create an empty file as a fallback
-            with open(file_path, 'wb') as f:
-                f.write(b'')
-            logger.info(f"Created empty file as fallback: {file_path}")
-        except Exception as e:
-            logger.error(f"Error creating empty file: {str(e)}")
 
     def get_audio_config(self, effect_name):
         config = self.audio_config['effects'].get(effect_name, {})

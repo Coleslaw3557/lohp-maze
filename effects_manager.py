@@ -183,16 +183,15 @@ class EffectsManager:
         try:
             # Prepare and play audio
             audio_params = effect_data.get('audio', {})
-            audio_file = self.audio_manager.get_audio_file(effect_name)
-            audio_task = self.remote_host_manager.stream_audio_to_room(room, audio_file, audio_params, effect_name)
+            audio_success = await self.remote_host_manager.play_audio_in_room(room, effect_name, audio_params)
             
             # Apply lighting effect
             lighting_task = self._apply_lighting_effect(room, effect_data)
             
-            # Run lighting and audio tasks concurrently
-            await asyncio.gather(lighting_task, audio_task)
+            # Run lighting task
+            await lighting_task
             
-            logger.info(f"Effect '{effect_name}' application completed in room '{room}'")
+            logger.info(f"Effect '{effect_name}' application completed in room '{room}'. Audio success: {audio_success}")
         except asyncio.CancelledError:
             logger.info(f"Effect '{effect_name}' cancelled in room '{room}'")
         finally:
@@ -304,6 +303,14 @@ class EffectsManager:
     def get_theme(self, theme_name):
         logger.info(f"Getting theme: {theme_name}")
         return self.theme_manager.get_theme(theme_name)
+
+    async def start_music(self):
+        logger.info("Starting background music")
+        return await self.remote_host_manager.start_background_music()
+
+    async def stop_music(self):
+        logger.info("Stopping background music")
+        return await self.remote_host_manager.stop_background_music()
 
     async def prepare_audio_for_all_rooms(self, effect_name):
         logger.info(f"Preparing audio for effect {effect_name} in all rooms")

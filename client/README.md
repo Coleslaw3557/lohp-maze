@@ -1,76 +1,101 @@
-# LoHP-MazeManager Remote Unit Client
+# Remote Unit Client
 
-This is the client application for the LoHP-MazeManager Control System, designed to run on Raspberry Pi units distributed throughout the maze.
+## Overview
 
-## Setup
-
-1. Ensure you have Python 3.7+ installed on your Raspberry Pi.
-
-2. Clone this repository or copy the client folder to your Raspberry Pi.
-
-3. Install the required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-
-4. Configure the `config.json` file with your specific settings:
-   - Set the correct `server_ip` and `server_port`
-   - Update the `unit_name` and `associated_room`
-   - Configure any GPIO triggers as needed
-
-5. Ensure the `cache_dir` specified in `config.json` exists and is writable.
-
-## Usage
-
-To start the client application, run:
-
-```
-python main.py
-```
-
-The client will automatically:
-- Connect to the central server
-- Listen for audio commands
-- Monitor configured triggers
-- Manage local audio playback
+This is the client-side application for the Remote Unit system, designed to run on Raspberry Pi devices. It manages audio playback, handles triggers, and communicates with a central server via WebSocket.
 
 ## Features
 
 - WebSocket communication with the central server
-- Local audio playback and caching
-- GPIO trigger monitoring
+- Audio playback management using VLC
+- GPIO trigger handling
 - Time synchronization with the server
+- Background music support
+- Effect preparation and execution
+- Dockerized deployment
 
-## Troubleshooting
+## Components
 
-- If the client fails to connect to the server, check your network settings and the server IP/port in `config.json`.
-- For audio issues, ensure the correct audio output device is set in `config.json` and that the necessary audio files are available.
-- If triggers are not working, verify the GPIO pin configurations in `config.json` and check your physical connections.
+### 1. WebSocketClient (websocket_client.py)
 
-## Logs
+The core component that handles communication with the server. It:
+- Establishes and maintains a WebSocket connection
+- Handles various message types from the server
+- Manages reconnection attempts on connection loss
 
-Logs are output to the console by default. You can redirect them to a file if needed:
+### 2. AudioManager (audio_manager.py)
 
-```
-python main.py > client.log 2>&1
-```
+Responsible for audio playback. It:
+- Initializes the VLC instance for audio playback
+- Manages audio file caching and downloads
+- Handles playback of effect audio and background music
 
-## Docker
+### 3. TriggerManager (trigger_manager.py)
 
-To run the client using Docker:
+Manages GPIO triggers on the Raspberry Pi. It:
+- Sets up GPIO pins based on the configuration
+- Monitors triggers and reports events to the server
 
-1. Build the Docker image:
+### 4. ConfigManager (config_manager.py)
+
+Handles the loading and management of the client configuration. It:
+- Loads the configuration from a JSON file
+- Provides access to configuration parameters
+
+### 5. SyncManager (sync_manager.py)
+
+Manages time synchronization with the server. It:
+- Keeps track of the time offset between client and server
+- Provides methods to get the synced time
+
+### 6. Main Application (main.py)
+
+The entry point of the application. It:
+- Initializes all components
+- Starts the WebSocket connection and listening loop
+- Manages the overall flow of the application
+
+## Configuration
+
+The client is configured using a `config.json` file, which includes:
+- Server IP and port
+- Unit name and associated rooms
+- Audio output device
+- GPIO trigger configurations
+- Cache directory location
+
+## Deployment
+
+The application is containerized using Docker for easy deployment and management. The `Dockerfile` and `docker-compose.yml` files are provided for building and running the container.
+
+### Running the Client
+
+1. Ensure Docker and Docker Compose are installed on your Raspberry Pi.
+2. Navigate to the client directory.
+3. Build and start the container:
    ```
-   docker build -t lohp-client .
+   docker-compose up --build
    ```
 
-2. Run the container:
-   ```
-   docker run --device /dev/snd:/dev/snd --privileged -v /path/to/your/config.json:/app/config.json -v /path/to/your/cache:/app/cache lohp-client
-   ```
+## Development and Debugging
 
-Replace `/path/to/your/config.json` and `/path/to/your/cache` with the actual paths on your Raspberry Pi.
+- Logging is set up to provide detailed information about the client's operations.
+- The code is structured to allow easy extension and modification of functionality.
+- Error handling and reconnection logic are implemented to ensure robustness.
 
-## Support
+## Future Improvements
 
-For any issues or questions, please contact the LoHP-MazeManager development team.
+- Implement more sophisticated error handling and recovery mechanisms.
+- Add support for more types of triggers and effects.
+- Enhance the audio management system to support more complex audio scenarios.
+- Implement a local web interface for status monitoring and basic control.
+
+## Security Considerations
+
+- Ensure that the WebSocket connection is secured (e.g., using WSS instead of WS).
+- Implement authentication mechanisms for the client-server communication.
+- Regularly update dependencies to address potential vulnerabilities.
+
+## Contributing
+
+Contributions to improve the client are welcome. Please ensure to follow the existing code style and add appropriate tests for new features.

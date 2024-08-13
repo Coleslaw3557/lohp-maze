@@ -5,6 +5,7 @@ import aiofiles
 import websockets
 import os
 import time
+import random
 from websocket_handler import WebSocketHandler
 
 logger = logging.getLogger(__name__)
@@ -80,9 +81,16 @@ class RemoteHostManager:
                 logger.error(f"No client IP found for room: {room}")
                 continue
 
-            logger.info(f"Instructing client to play cached audio for effect '{effect_name}' in room {room}")
-            tasks.append(self.send_audio_command(room, 'play_cached_audio', {
+            # Get the specific audio file for the effect
+            audio_file = self.audio_manager.get_audio_file(effect_name)
+            if not audio_file:
+                logger.error(f"No audio file found for effect: {effect_name}")
+                continue
+
+            logger.info(f"Instructing client to play audio file '{audio_file}' for effect '{effect_name}' in room {room}")
+            tasks.append(self.send_audio_command(room, 'play_effect_audio', {
                 'effect_name': effect_name,
+                'file_name': audio_file,
                 'volume': audio_params.get('volume', 1.0),
                 'loop': audio_params.get('loop', False)
             }))
@@ -259,94 +267,88 @@ class RemoteHostManager:
         # For example:
         # self.effect_manager.trigger_effect(room, trigger)
 
-    async def stream_audio_to_room(self, room, audio_file, audio_params, effect_name):
-        if not audio_file:
-            logger.info(f"No audio file provided for effect {effect_name} in room {room}. Skipping audio playback.")
-            return True
-
+    async def play_audio_in_room(self, room, effect_name, audio_params):
         client_ip = self.get_client_ip_by_room(room)
         if not client_ip:
-            logger.warning(f"No client IP found for room: {room}. Cannot stream audio.")
+            logger.warning(f"No client IP found for room: {room}. Cannot play audio.")
             return False
 
-        logger.info(f"Streaming audio file to room {room} (Client IP: {client_ip})")
-        try:
-            # Check if this client has already received the audio for this effect
-            if client_ip not in self.audio_sent_to_clients:
-                self.audio_sent_to_clients[client_ip] = set()
-            
-            if effect_name in self.audio_sent_to_clients[client_ip]:
-                logger.info(f"Audio for effect '{effect_name}' already sent to client {client_ip}. Instructing client to play cached audio.")
-                return await self.send_audio_command(room, 'play_cached_audio', {
-                    'effect_name': effect_name,
-                    'volume': audio_params.get('volume', 1.0),
-                    'loop': audio_params.get('loop', False)
-                })
-
-            audio_data = await self._get_audio_data(audio_file)
-            if not audio_data:
-                logger.error(f"Failed to get audio data for file: {audio_file}")
-                return False
-
-            file_name = self._get_file_name(audio_file)
-
-            # Send audio_start command
-            success = await self.send_audio_command(room, 'audio_start', {
-                'file_name': file_name,
-                'effect_name': effect_name,
-                'volume': audio_params.get('volume', 1.0),
-                'loop': audio_params.get('loop', False)
-            })
-            if not success:
-                logger.error(f"Failed to send audio_start command to client {client_ip} for room {room}")
-                return False
-
-            logger.info(f"Sent audio_start command for {file_name} to room {room}")
-            await asyncio.sleep(0.1)  # Add a small delay before sending audio data
-
-            # Send audio data
-            websocket = self.connected_clients.get(client_ip)
-            if websocket:
-                try:
-                    await websocket.send(audio_data)
-                    logger.info(f"Successfully streamed audio data ({len(audio_data)} bytes) to client {client_ip} for room {room}")
-                    self.audio_sent_to_clients[client_ip].add(effect_name)
-                    return True
-                except Exception as e:
-                    logger.error(f"Failed to send audio data to client {client_ip} for room {room}: {str(e)}")
-                    return False
-            else:
-                logger.error(f"No WebSocket connection found for client {client_ip}")
-                return False
-        except Exception as e:
-            logger.error(f"Error streaming audio to client {client_ip} for room {room}: {str(e)}")
+        audio_file = self.audio_manager.get_random_audio_file(effect_name)
+        if not audio_file:
+            logger.error(f"No audio file found for effect: {effect_name}")
             return False
 
-    async def _get_audio_data(self, audio_file):
-        if isinstance(audio_file, str):
+        logger.info(f"Instructing client to play audio for effect '{effect_name}' in room {room} (Client IP: {client_ip})")
+        return await self.send_audio_command(room, 'play_effect_audio', {
+            'effect_name': effect_name,
+            'file_name': os.path.basename(audio_file),
+            'volume': audio_params.get('volume', 1.0),
+            'loop': audio_params.get('loop', False)
+        })
+
+    async def start_background_music(self):
+        logger.info("Starting background music on all connected clients")
+        success = True
+        music_file = self.get_random_music_file()
+        if not music_file:
+            logger.error("No music files available for background music")
+            return False
+        for client_ip, websocket in self.connected_clients.items():
             try:
-                async with aiofiles.open(audio_file, 'rb') as f:
-                    return await f.read()
-            except IOError as e:
-                logger.error(f"Error reading audio file: {str(e)}")
-        elif isinstance(audio_file, bytes):
-            return audio_file
-        elif audio_file is True:  # Handle the case where audio_file is a boolean
-            logger.warning("Audio file is True, but no actual file provided")
-            return None
-        else:
-            logger.error(f"Invalid audio_file parameter: {type(audio_file)}")
-        return None
+                message = {
+                    "type": "start_background_music",
+                    "data": {"music_file": music_file}
+                }
+                await websocket.send(json.dumps(message))
+                logger.info(f"Successfully sent start_background_music command to client {client_ip}")
+            except Exception as e:
+                logger.error(f"Error starting background music for client {client_ip}: {str(e)}")
+                success = False
+        if success:
+            asyncio.create_task(self.continue_background_music())
+        return success
 
-    def _get_file_name(self, audio_file):
-        if isinstance(audio_file, str):
-            return os.path.basename(audio_file)
-        return 'stream.mp3'
+    def get_random_music_file(self):
+        music_files = [f for f in os.listdir('music') if f.endswith('.mp3')]
+        return random.choice(music_files) if music_files else None
+
+    async def continue_background_music(self):
+        while True:
+            await asyncio.sleep(300)  # Wait for 5 minutes
+            music_file = self.get_random_music_file()
+            if music_file:
+                await self.start_background_music()
+            else:
+                logger.warning("No music files available for background music")
+                break
+
+    async def stop_background_music(self):
+        logger.info("Stopping background music on all connected clients")
+        success = True
+        for client_ip in self.connected_clients:
+            result = await self.send_audio_command(None, 'stop_background_music', {})
+            success = success and result
+        return success
 
     async def send_audio_command(self, room, command, data):
-        client_ip = self.get_client_ip_by_room(room)
-        if client_ip:
-            if client_ip in self.connected_clients:
+        if room is None:
+            # If room is None, send the command to all connected clients
+            success = True
+            for client_ip, websocket in self.connected_clients.items():
+                try:
+                    message = {
+                        "type": command,
+                        "data": data if data is not None else {}
+                    }
+                    await websocket.send(json.dumps(message))
+                    logger.info(f"Successfully sent {command} command to client {client_ip}")
+                except Exception as e:
+                    logger.error(f"Error sending {command} command to client {client_ip}: {str(e)}")
+                    success = False
+            return success
+        else:
+            client_ip = self.get_client_ip_by_room(room)
+            if client_ip and client_ip in self.connected_clients:
                 websocket = self.connected_clients[client_ip]
                 logger.info(f"Sending {command} command for room {room} to client {client_ip}")
                 try:
@@ -365,10 +367,8 @@ class RemoteHostManager:
                 except Exception as e:
                     logger.error(f"Error sending {command} command for room {room} to client {client_ip}: {str(e)}")
             else:
-                logger.error(f"Client {client_ip} for room {room} is not connected. Cannot send {command} command.")
-        else:
-            logger.error(f"No client IP found for room: {room}. Cannot send {command} command.")
-        return False
+                logger.error(f"No connected client found for room: {room}. Cannot send {command} command.")
+            return False
 
     # This method is not used and can be removed
 

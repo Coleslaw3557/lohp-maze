@@ -1,0 +1,69 @@
+{
+    "effects": {
+        "Lightning": {
+            "audio_files": ["lightning1.mp3"],
+            "volume": 1.0
+        },
+        "PoliceLights": {
+            "audio_files": ["gadget-policelights.mp3", "vintage-police.mp3"],
+            "volume": 0.8
+        },
+        "GateInspection": {
+            "audio_files": ["fallout-ticketsplease.mp3", "jones-ticketsplease.mp3"],
+            "volume": 0.7
+        },
+        "GateGreeters": {
+            "audio_files": ["greeters-weed.mp3", "greeters-jurasic-park.mp3"],
+            "volume": 0.7
+        },
+        "WrongAnswer": {
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "CorrectAnswer": {
+            "audio_files": ["ff9-victory.mp3", "MW2-Betty-Area-Secure.mp3", "MW2-Betty-gate-Code.mp3", "MW2-Bety-Inspection-Successful.mp3"],
+            "volume": 0.8
+        },
+        "Entrance": {
+            "audio_files": ["greeters-jurasic-park.mp3"],
+            "volume": 0.9
+        },
+        "GuyLineClimb": {
+            "audio_files": [],
+            "volume": 0.7
+        },
+        "SparkPony": {
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "PortoStandBy": {
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "PortoHit": {
+            "audio_files": [],
+            "volume": 0.9
+        },
+        "CuddlePuddle": {
+            "audio_files": [],
+            "volume": 0.7
+        },
+        "PhotoBomb-BG": {
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "PhotoBomb-Spot": {
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "DeepPlaya-BG": {
+            "audio_files": [],
+            "volume": 0.5
+        },
+        "ImageEnhancement": {
+            "audio_files": ["mw2-imageenhancement.mp3"],
+            "volume": 0.7
+        }
+    },
+    "default_volume": 0.7
+}
