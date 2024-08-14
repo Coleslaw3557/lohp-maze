@@ -3,6 +3,7 @@ import logging
 import websockets
 import asyncio
 import time
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -120,25 +121,8 @@ class WebSocketClient:
                 await self.reconnect()
 
     async def reconnect(self):
-        max_retries = 5
-        retry_delay = 5
-        for attempt in range(max_retries):
-            try:
-                uri = f"ws://{self.server_ip}:{self.server_port}"
-                logger.info(f"Attempting to reconnect to {uri} (Attempt {attempt + 1}/{max_retries})")
-                websocket = await websockets.connect(uri, ping_interval=20, ping_timeout=20)
-                await self.set_websocket(websocket)
-                logger.info("Reconnected to server")
-                return True
-            except Exception as e:
-                logger.error(f"Failed to reconnect: {e}")
-                if attempt < max_retries - 1:
-                    wait_time = retry_delay * (2 ** attempt)
-                    logger.info(f"Retrying in {wait_time} seconds...")
-                    await asyncio.sleep(wait_time)
-                else:
-                    logger.error("Max retries reached. Unable to reconnect.")
-        return False
+        logger.critical("WebSocket connection lost. Exiting program.")
+        sys.exit(1)
 
     async def handle_message(self, message):
         if isinstance(message, str):
