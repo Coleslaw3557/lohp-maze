@@ -1,6 +1,7 @@
 version: '3'
 services:
   escape-room-control:
+    container_name: lohp-server
     build: .
     ports:
       - "5000:5000"
@@ -13,3 +14,4 @@ services:
       - .:/app
     environment:
       - FLASK_ENV=production
+    restart: always
