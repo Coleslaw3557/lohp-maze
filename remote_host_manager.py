@@ -29,16 +29,19 @@ class RemoteHostManager:
 
     async def play_audio_for_all_clients(self, effect_name, audio_params):
         audio_success = True
-        for client in self.connected_clients:
-            client_success = await self.play_audio_for_client(client, effect_name, audio_params)
+        for client_ip in self.connected_clients:
+            client_success = await self.play_audio_for_client(client_ip, effect_name, audio_params)
             audio_success = audio_success and client_success
         return audio_success
 
-    async def play_audio_for_client(self, client, effect_name, audio_params):
-        rooms = self.get_rooms_for_remote_unit(client)
-        if rooms:
-            return await self.play_audio_in_room(rooms[0], effect_name, audio_params)
-        return False
+    async def play_audio_for_client(self, client_ip, effect_name, audio_params):
+        logger.info(f"Playing audio for client {client_ip}, effect: {effect_name}")
+        return await self.send_audio_command(client_ip, 'play_effect_audio', {
+            'effect_name': effect_name,
+            'file_name': audio_params.get('file'),
+            'volume': audio_params.get('volume', 1.0),
+            'loop': audio_params.get('loop', False)
+        })
 
     def get_rooms_for_remote_unit(self, remote_unit):
         return self.client_rooms.get(remote_unit, [])
@@ -152,48 +155,22 @@ class RemoteHostManager:
         logger.warning(f"No host configuration found for room: {room}")
         return None
 
-    async def send_audio_command(self, room, command, audio_data=None):
-        client_ip = self.get_client_ip_by_room(room)
-        if client_ip:
-            if client_ip in self.connected_clients:
-                websocket = self.connected_clients[client_ip]
-                logger.info(f"Sending {command} command for room {room} to client {client_ip}")
-                try:
-                    if command == 'audio_start':
-                        message = {
-                            "type": command,
-                            "room": room,
-                            "data": {
-                                "file_name": "audio.mp3",
-                                "volume": 1.0,
-                                "loop": False
-                            }
-                        }
-                        await websocket.send(json.dumps(message))
-                        if isinstance(audio_data, bytes):
-                            await websocket.send(audio_data)
-                    elif command == 'audio_data':
-                        if isinstance(audio_data, bytes):
-                            await websocket.send(audio_data)
-                        else:
-                            logger.error(f"Invalid audio data type for {command} command")
-                            return False
-                    else:
-                        message = {
-                            "type": command,
-                            "room": room,
-                            "data": audio_data
-                        }
-                        await websocket.send(json.dumps(message))
-                    
-                    logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
-                    return True
-                except Exception as e:
-                    logger.error(f"Error sending {command} command for room {room} to client {client_ip}: {str(e)}")
-            else:
-                logger.error(f"Client {client_ip} for room {room} is not connected. Cannot send {command} command.")
+    async def send_audio_command(self, client_ip, command, audio_data=None):
+        if client_ip in self.connected_clients:
+            websocket = self.connected_clients[client_ip]
+            logger.info(f"Sending {command} command to client {client_ip}")
+            try:
+                message = {
+                    "type": command,
+                    "data": audio_data
+                }
+                await websocket.send(json.dumps(message))
+                logger.info(f"Successfully sent {command} command to client {client_ip}")
+                return True
+            except Exception as e:
+                logger.error(f"Error sending {command} command to client {client_ip}: {str(e)}")
         else:
-            logger.error(f"No client IP found for room: {room}. Cannot send {command} command.")
+            logger.error(f"Client {client_ip} is not connected. Cannot send {command} command.")
         return False
 
     def update_client_rooms(self, unit_name, ip, rooms, websocket):
