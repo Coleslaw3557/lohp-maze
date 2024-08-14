@@ -30,22 +30,27 @@ class RemoteHostManager:
 
     async def play_audio_for_all_clients(self, effect_name, audio_params):
         audio_success = True
-        for client_ip in self.get_connected_clients():
-            client_success = await self.play_audio_for_client(client_ip, effect_name, audio_params)
-            audio_success = audio_success and client_success
-        return audio_success
-
-    async def play_audio_for_client(self, client_ip, effect_name, audio_params):
-        logger.info(f"Playing audio for client {client_ip}, effect: {effect_name}")
-        if client_ip in self.connected_clients:
-            return await self.send_audio_command(client_ip, 'play_effect_audio', {
+        for websocket in self.connected_clients.values():
+            client_success = await self.send_audio_command_ws(websocket, 'play_effect_audio', {
                 'effect_name': effect_name,
                 'file_name': audio_params.get('file'),
                 'volume': audio_params.get('volume', 1.0),
                 'loop': audio_params.get('loop', False)
             })
-        else:
-            logger.warning(f"Client {client_ip} not found in connected clients")
+            audio_success = audio_success and client_success
+        return audio_success
+
+    async def send_audio_command_ws(self, websocket, command, audio_data):
+        try:
+            message = {
+                "type": command,
+                "data": audio_data
+            }
+            await websocket.send(json.dumps(message))
+            logger.info(f"Successfully sent {command} command to client")
+            return True
+        except Exception as e:
+            logger.error(f"Error sending {command} command to client: {str(e)}")
             return False
 
     async def send_audio_command(self, client_ip, command, audio_data=None):

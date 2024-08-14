@@ -442,10 +442,10 @@ async def run_effect_all_rooms():
         # Execute the effect immediately for all rooms
         success, message = await effects_manager.apply_effect_to_all_rooms(effect_name, effect_data)
             
-        if success and audio_success:
+        if success:
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed for all remote units simultaneously'})
         else:
-            error_message = f"Failed to execute effect {effect_name} for all remote units. Audio success: {audio_success}, Lighting success: {success}"
+            error_message = f"Failed to execute effect {effect_name} for all remote units. Message: {message}"
             logger.error(error_message)
             return jsonify({'status': 'error', 'message': error_message}), 500
     except Exception as e:
