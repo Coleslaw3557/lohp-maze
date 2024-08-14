@@ -71,6 +71,10 @@
         "BikeLockRoom": {
             "audio_files": ["ramming-speed.mp3"],
             "volume": 0.8
+        },
+        "NoFriendsMonday": {
+            "audio_files": ["biggerboat.mp3"],
+            "volume": 0.8
         }
     },
     "default_volume": 0.7
