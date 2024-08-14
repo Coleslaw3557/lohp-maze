@@ -60,6 +60,10 @@
             "audio_files": [],
             "volume": 0.8
         },
+        "DeepPlaya-Hit": {
+            "audio_files": ["drink-with-me.mp3"],
+            "volume": 0.8
+        },
         "ImageEnhancement": {
             "audio_files": ["mw2-imageenhancement.mp3"],
             "volume": 0.7
