@@ -95,6 +95,17 @@ class AudioManager:
             logger.warning(f"No audio configuration found for effect: {effect_name}")
         return config
 
+    def get_random_audio_file(self, effect_name):
+        config = self.get_audio_config(effect_name)
+        audio_files = config.get('audio_files', [])
+        if audio_files:
+            selected_file = random.choice(audio_files)
+            logger.info(f"Randomly selected audio file '{selected_file}' for effect '{effect_name}'")
+            return selected_file
+        else:
+            logger.warning(f"No audio files found for effect: {effect_name}")
+            return None
+
     def prepare_audio_stream(self, effect_name):
         audio_file = self.get_audio_file(effect_name)
         if audio_file and os.path.exists(audio_file):
