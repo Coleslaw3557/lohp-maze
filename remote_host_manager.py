@@ -293,17 +293,20 @@ class RemoteHostManager:
         if not music_file:
             logger.error("No music files available for background music")
             return False
+        
+        message = {
+            "type": "start_background_music",
+            "data": {"music_file": music_file}
+        }
+        
         for client_ip, websocket in self.connected_clients.items():
             try:
-                message = {
-                    "type": "start_background_music",
-                    "data": {"music_file": music_file}
-                }
                 await websocket.send(json.dumps(message))
                 logger.info(f"Successfully sent start_background_music command to client {client_ip}")
             except Exception as e:
                 logger.error(f"Error starting background music for client {client_ip}: {str(e)}")
                 success = False
+        
         if success:
             asyncio.create_task(self.continue_background_music())
         return success
