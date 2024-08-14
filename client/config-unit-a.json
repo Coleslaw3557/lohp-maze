@@ -1,0 +1,19 @@
+{
+  "server_ip": "lohp-server",
+  "unit_name": "LOHP-UNIT-A",
+  "associated_rooms": ["Entrace", "Cuddle Cross", "Photo Bomb Room", "No Friends Monday", "Exit"],
+  "audio_output_device": "default",
+  "triggers": [
+    {
+      "name": "Button1",
+      "type": "gpio",
+      "pin": 17
+    },
+    {
+      "name": "Sensor1",
+      "type": "gpio",
+      "pin": 18
+    }
+  ],
+  "cache_dir": "/app/cache"
+}

@@ -2,6 +2,46 @@ Terminal Block:
 1.  5V (Red)           [7 wires: 5 Laser Tx, 5 Laser Rx, 1 ADS1115_1, 1 ADS1115_2]
 2.  3.3V (Orange)      [5 wires: 2 Resistor Ladders, 3 Piezo Sensors, 1 ADS1115_2 ADDR]
 3.  GND (Black)        [15 wires: 5 Laser Tx, 5 Laser Rx, 2 Resistor Ladders, 3 Piezo Sensors, 2 ADS1115s, 1 FTDI]
+
+Cop Dodge Room:
+4.  GPIO 17 (Laser Tx) [1 wire]
+5.  GPIO 27 (Laser Rx) [1 wire]
+
+Gate Room:
+6.  GPIO 22 (Laser Tx) [1 wire]
+7.  GPIO 5  (Laser Rx) [1 wire]
+8.  ADS1115_1 A0       [1 wire: Resistor Ladder 1]
+9.  ADS1115_1 A1       [1 wire: Resistor Ladder 2]
+
+Guy Line Climb Room:
+10. GPIO 24 (Laser Tx) [1 wire]
+11. GPIO 6  (Laser Rx) [1 wire]
+
+Sparkle Pony Room:
+12. GPIO 25 (Laser Tx) [1 wire]
+13. GPIO 13 (Laser Rx) [1 wire]
+
+Porto Room:
+14. GPIO 19 (Laser Tx) [1 wire]
+15. GPIO 26 (Laser Rx) [1 wire]
+16. ADS1115_2 A0       [1 wire: Piezo Sensor 1]
+17. ADS1115_2 A1       [1 wire: Piezo Sensor 2]
+18. ADS1115_2 A2       [1 wire: Piezo Sensor 3]
+
+I2C:
+19. GPIO 2 (SDA)       [2 wires: ADS1115_1, ADS1115_2]
+20. GPIO 3 (SCL)       [2 wires: ADS1115_1, ADS1115_2]
+
+UART:
+21. GPIO 14 (UART TX)  [1 wire: FTDI RX]
+22. GPIO 15 (UART RX)  [1 wire: FTDI TX]
+
+
+
+Terminal Block:
+1.  5V (Red)           [7 wires: 5 Laser Tx, 5 Laser Rx, 1 ADS1115_1, 1 ADS1115_2]
+2.  3.3V (Orange)      [5 wires: 2 Resistor Ladders, 3 Piezo Sensors, 1 ADS1115_2 ADDR]
+3.  GND (Black)        [15 wires: 5 Laser Tx, 5 Laser Rx, 2 Resistor Ladders, 3 Piezo Sensors, 2 ADS1115s, 1 FTDI]
 4.  GPIO 17 (Cop Dodge Tx)  [1 wire]
 5.  GPIO 27 (Cop Dodge Rx)  [1 wire]
 6.  GPIO 22 (Gate Tx)       [1 wire]
