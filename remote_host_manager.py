@@ -17,6 +17,7 @@ class RemoteHostManager:
         self.remote_hosts = {}
         self.connected_clients = {}
         self.client_rooms = {}
+        self.room_to_client_ip = {}
         self.prepared_audio = {}
         self.sync_manager = SyncManager()
         self.audio_sent_to_clients = {}
@@ -29,19 +30,23 @@ class RemoteHostManager:
 
     async def play_audio_for_all_clients(self, effect_name, audio_params):
         audio_success = True
-        for client_ip, websocket in self.connected_clients.items():
+        for client_ip in self.get_connected_clients():
             client_success = await self.play_audio_for_client(client_ip, effect_name, audio_params)
             audio_success = audio_success and client_success
         return audio_success
 
     async def play_audio_for_client(self, client_ip, effect_name, audio_params):
         logger.info(f"Playing audio for client {client_ip}, effect: {effect_name}")
-        return await self.send_audio_command(client_ip, 'play_effect_audio', {
-            'effect_name': effect_name,
-            'file_name': audio_params.get('file'),
-            'volume': audio_params.get('volume', 1.0),
-            'loop': audio_params.get('loop', False)
-        })
+        if client_ip in self.connected_clients:
+            return await self.send_audio_command(client_ip, 'play_effect_audio', {
+                'effect_name': effect_name,
+                'file_name': audio_params.get('file'),
+                'volume': audio_params.get('volume', 1.0),
+                'loop': audio_params.get('loop', False)
+            })
+        else:
+            logger.warning(f"Client {client_ip} not found in connected clients")
+            return False
 
     async def send_audio_command(self, client_ip, command, audio_data=None):
         if client_ip in self.connected_clients:
@@ -71,9 +76,10 @@ class RemoteHostManager:
             rooms = [room]
         
         for room in rooms:
-            for ip, client_rooms in self.client_rooms.items():
-                if room.lower() in [r.lower() for r in client_rooms]:
-                    return ip
+            if room in self.room_to_client_ip:
+                client_ips = self.room_to_client_ip[room]
+                if client_ips:
+                    return next(iter(client_ips))  # Return the first client IP associated with the room
         
         logger.warning(f"No client IP found for room(s): {rooms}")
         return None
@@ -150,6 +156,12 @@ class RemoteHostManager:
         logger.info(f"Updated associated rooms for client {unit_name} ({client_ip}): {rooms}")
         for room in rooms:
             logger.info(f"Associating room {room} with client {unit_name} ({client_ip})")
+        
+        # Update the reverse mapping of rooms to client IPs
+        for room in rooms:
+            if room not in self.room_to_client_ip:
+                self.room_to_client_ip[room] = set()
+            self.room_to_client_ip[room].add(client_ip)
         
         # Send the list of audio files to download
         self.send_audio_files_to_download(client_ip)
