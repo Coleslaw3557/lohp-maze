@@ -1,6 +1,7 @@
 version: '3'
 services:
   remote-unit-client:
+    container_name: lohp-client
     build: .
     devices:
       - "/dev/snd:/dev/snd"
