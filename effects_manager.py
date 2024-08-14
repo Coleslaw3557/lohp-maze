@@ -348,6 +348,7 @@ class EffectsManager:
             ("DeepPlaya-BG", create_deep_playa_bg_effect()),
             ("DeepPlaya-Hit", create_deep_playa_hit_effect()),
             ("ImageEnhancement", create_image_enhancement_effect()),
+            ("BikeLockRoom", create_bike_lock_room_effect()),
         ]
         for effect_name, effect_data in effects:
             self.add_effect(effect_name, effect_data)

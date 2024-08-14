@@ -67,6 +67,10 @@
         "ImageEnhancement": {
             "audio_files": ["mw2-imageenhancement.mp3"],
             "volume": 0.7
+        },
+        "BikeLockRoom": {
+            "audio_files": ["ramming-speed.mp3"],
+            "volume": 0.8
         }
     },
     "default_volume": 0.7
