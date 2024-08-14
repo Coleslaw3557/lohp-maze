@@ -29,7 +29,7 @@ class RemoteHostManager:
 
     async def play_audio_for_all_clients(self, effect_name, audio_params):
         audio_success = True
-        for client_ip in self.connected_clients:
+        for client_ip, websocket in self.connected_clients.items():
             client_success = await self.play_audio_for_client(client_ip, effect_name, audio_params)
             audio_success = audio_success and client_success
         return audio_success
@@ -72,7 +72,7 @@ class RemoteHostManager:
         
         for room in rooms:
             for ip, client_rooms in self.client_rooms.items():
-                if room in client_rooms:
+                if room.lower() in [r.lower() for r in client_rooms]:
                     return ip
         
         logger.warning(f"No client IP found for room(s): {rooms}")
@@ -142,7 +142,7 @@ class RemoteHostManager:
             logger.info(f"No audio tasks to execute for effect: {effect_name}")
             return True
 
-    def update_client_rooms(self, unit_name, ip, rooms, websocket, path):
+    def update_client_rooms(self, unit_name, ip, rooms, websocket):
         client_ip = websocket.remote_address[0]  # Get the actual client IP
         self.client_rooms[client_ip] = rooms
         self.connected_clients[client_ip] = websocket  # Store the WebSocket object
@@ -150,13 +150,9 @@ class RemoteHostManager:
         logger.info(f"Updated associated rooms for client {unit_name} ({client_ip}): {rooms}")
         for room in rooms:
             logger.info(f"Associating room {room} with client {unit_name} ({client_ip})")
-            # Ensure each room is associated with a client IP
-            if room not in self.room_to_client_ip:
-                self.room_to_client_ip[room] = client_ip
-            else:
-                logger.warning(f"Room {room} is already associated with another client. Updating to {client_ip}")
-                self.room_to_client_ip[room] = client_ip
-        logger.debug(f"WebSocket path: {path}")  # Log the path for debugging
+        
+        # Send the list of audio files to download
+        self.send_audio_files_to_download(client_ip)
 
     async def initialize_websocket_connections(self):
         logger.info("WebSocket connections will be initialized when clients connect")

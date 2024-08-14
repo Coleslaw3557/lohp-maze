@@ -417,37 +417,31 @@ async def run_effect_all_rooms():
     data = await request.json
     effect_name = data.get('effect_name')
     audio_params = data.get('audio', {})
-    
+        
     if not effect_name:
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
-    
+        
     logger.info(f"Preparing effect: {effect_name} for all rooms")
     effect_data = effects_manager.get_effect(effect_name)
     if not effect_data:
         logger.error(f"Effect not found: {effect_name}")
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
-    
+        
     # Select a random audio file for the effect
     audio_file = audio_manager.get_random_audio_file(effect_name)
     if not audio_file:
         logger.warning(f"No audio file found for effect: {effect_name}")
-    
+        
     # Add audio parameters to effect data
     effect_data['audio'] = {**audio_params, 'file': audio_file}
-    
+        
     try:
-        # Get all connected clients
-        connected_clients = remote_host_manager.get_connected_clients()
-        
-        # Play the audio file once for each connected client
-        audio_success = True
-        for client_ip in connected_clients:
-            client_success = await remote_host_manager.play_audio_for_client(client_ip, effect_name, effect_data['audio'])
-            audio_success = audio_success and client_success
-        
+        # Play the audio file for all connected clients
+        audio_success = await remote_host_manager.play_audio_for_all_clients(effect_name, effect_data['audio'])
+            
         # Execute the effect immediately for all rooms
         success, message = await effects_manager.apply_effect_to_all_rooms(effect_name, effect_data)
-        
+            
         if success and audio_success:
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed for all remote units simultaneously'})
         else:
