@@ -13,7 +13,7 @@
             "volume": 0.7
         },
         "GateGreeters": {
-            "audio_files": ["greeters-weed.mp3", "greeters-jurasic-park.mp3"],
+            "audio_files": ["greeters-weed.mp3", "greeters-jurasic-park.mp3", "prosper-spock.mp3"],
             "volume": 0.7
         },
         "WrongAnswer": {
@@ -33,7 +33,7 @@
             "volume": 0.7
         },
         "SparkPony": {
-            "audio_files": [],
+            "audio_files": ["mcoy-doctor.mp3"],
             "volume": 0.8
         },
         "PortoStandBy": {
@@ -61,7 +61,7 @@
             "volume": 0.8
         },
         "DeepPlaya-Hit": {
-            "audio_files": ["drink-with-me.mp3"],
+            "audio_files": ["drink-with-me.mp3", "tea.mp3", "drink-with-me.mp3"],
             "volume": 0.8
         },
         "ImageEnhancement": {
