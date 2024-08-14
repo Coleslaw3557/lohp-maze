@@ -286,8 +286,24 @@ class RemoteHostManager:
             'loop': audio_params.get('loop', False)
         })
 
+    def __init__(self, audio_manager=None):
+        self.remote_hosts = {}
+        self.connected_clients = {}
+        self.client_rooms = {}
+        self.prepared_audio = {}
+        self.sync_manager = SyncManager()
+        self.audio_sent_to_clients = {}
+        self.client_ready_status = {}
+        self.audio_manager = audio_manager
+        self.background_music_task = None
+        logger.info("RemoteHostManager initialized")
+
     async def start_background_music(self):
         logger.info("Starting background music on all connected clients")
+        if self.background_music_task is not None:
+            logger.info("Background music task already running")
+            return True
+
         success = True
         music_file = self.get_random_music_file()
         if not music_file:
@@ -308,7 +324,7 @@ class RemoteHostManager:
                 success = False
         
         if success:
-            asyncio.create_task(self.continue_background_music())
+            self.background_music_task = asyncio.create_task(self.continue_background_music())
         return success
 
     def get_random_music_file(self):
@@ -316,14 +332,18 @@ class RemoteHostManager:
         return random.choice(music_files) if music_files else None
 
     async def continue_background_music(self):
-        while True:
-            await asyncio.sleep(300)  # Wait for 5 minutes
-            music_file = self.get_random_music_file()
-            if music_file:
-                await self.start_background_music()
-            else:
-                logger.warning("No music files available for background music")
-                break
+        try:
+            while True:
+                await asyncio.sleep(300)  # Wait for 5 minutes
+                music_file = self.get_random_music_file()
+                if music_file:
+                    await self.start_background_music()
+                else:
+                    logger.warning("No music files available for background music")
+                    break
+        finally:
+            self.background_music_task = None
+            logger.info("Background music task ended")
 
     async def stop_background_music(self):
         logger.info("Stopping background music on all connected clients")
