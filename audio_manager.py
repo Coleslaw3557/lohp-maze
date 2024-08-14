@@ -3,7 +3,6 @@ import logging
 import os
 import random
 import threading
-from mutagen.mp3 import MP3
 
 logger = logging.getLogger(__name__)
 
