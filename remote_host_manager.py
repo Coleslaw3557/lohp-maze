@@ -32,12 +32,26 @@ class RemoteHostManager:
         for remote_unit in remote_units:
             rooms = self.get_rooms_for_remote_unit(remote_unit)
             if rooms:
-                audio_success = await self.play_audio_in_room(rooms[0], effect_name, audio_params)
+                audio_success = await self.play_audio_in_room(rooms, effect_name, audio_params)
                 success = success and audio_success
         return success
 
     def get_rooms_for_remote_unit(self, remote_unit):
         return self.client_rooms.get(remote_unit, [])
+
+    def get_client_ip_by_room(self, room):
+        if isinstance(room, list):
+            rooms = room
+        else:
+            rooms = [room]
+        
+        for room in rooms:
+            for ip, client_rooms in self.client_rooms.items():
+                if room in client_rooms:
+                    return ip
+        
+        logger.warning(f"No client IP found for room(s): {rooms}")
+        return None
 
     def clear_audio_sent_to_clients(self):
         self.audio_sent_to_clients.clear()
@@ -267,24 +281,34 @@ class RemoteHostManager:
         # For example:
         # self.effect_manager.trigger_effect(room, trigger)
 
-    async def play_audio_in_room(self, room, effect_name, audio_params):
-        client_ip = self.get_client_ip_by_room(room)
-        if not client_ip:
-            logger.warning(f"No client IP found for room: {room}. Cannot play audio.")
-            return False
+    async def play_audio_in_room(self, rooms, effect_name, audio_params):
+        if isinstance(rooms, str):
+            rooms = [rooms]
+        
+        success = True
+        for room in rooms:
+            client_ip = self.get_client_ip_by_room(room)
+            if not client_ip:
+                logger.warning(f"No client IP found for room: {room}. Cannot play audio.")
+                success = False
+                continue
 
-        audio_file = self.audio_manager.get_random_audio_file(effect_name)
-        if not audio_file:
-            logger.error(f"No audio file found for effect: {effect_name}")
-            return False
+            audio_file = self.audio_manager.get_random_audio_file(effect_name)
+            if not audio_file:
+                logger.error(f"No audio file found for effect: {effect_name}")
+                success = False
+                continue
 
-        logger.info(f"Instructing client to play audio for effect '{effect_name}' in room {room} (Client IP: {client_ip})")
-        return await self.send_audio_command(room, 'play_effect_audio', {
-            'effect_name': effect_name,
-            'file_name': os.path.basename(audio_file),
-            'volume': audio_params.get('volume', 1.0),
-            'loop': audio_params.get('loop', False)
-        })
+            logger.info(f"Instructing client to play audio for effect '{effect_name}' in room {room} (Client IP: {client_ip})")
+            result = await self.send_audio_command(room, 'play_effect_audio', {
+                'effect_name': effect_name,
+                'file_name': os.path.basename(audio_file),
+                'volume': audio_params.get('volume', 1.0),
+                'loop': audio_params.get('loop', False)
+            })
+            success = success and result
+
+        return success
 
     def __init__(self, audio_manager=None):
         self.remote_hosts = {}
