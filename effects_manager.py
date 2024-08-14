@@ -346,6 +346,7 @@ class EffectsManager:
             ("PhotoBomb-BG", create_photobomb_bg_effect()),
             ("PhotoBomb-Spot", create_photobomb_spot_effect()),
             ("DeepPlaya-BG", create_deep_playa_bg_effect()),
+            ("DeepPlaya-Hit", create_deep_playa_hit_effect()),
             ("ImageEnhancement", create_image_enhancement_effect()),
         ]
         for effect_name, effect_data in effects:
