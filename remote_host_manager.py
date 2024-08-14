@@ -43,6 +43,24 @@ class RemoteHostManager:
             'loop': audio_params.get('loop', False)
         })
 
+    async def send_audio_command(self, client_ip, command, audio_data=None):
+        if client_ip in self.connected_clients:
+            websocket = self.connected_clients[client_ip]
+            logger.info(f"Sending {command} command to client {client_ip}")
+            try:
+                message = {
+                    "type": command,
+                    "data": audio_data
+                }
+                await websocket.send(json.dumps(message))
+                logger.info(f"Successfully sent {command} command to client {client_ip}")
+                return True
+            except Exception as e:
+                logger.error(f"Error sending {command} command to client {client_ip}: {str(e)}")
+        else:
+            logger.error(f"Client {client_ip} is not connected. Cannot send {command} command.")
+        return False
+
     def get_rooms_for_remote_unit(self, remote_unit):
         return self.client_rooms.get(remote_unit, [])
 
