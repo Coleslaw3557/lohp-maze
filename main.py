@@ -440,10 +440,7 @@ async def run_effect_all_rooms():
         connected_clients = remote_host_manager.get_connected_clients()
         
         # Play the audio file once for each connected client
-        audio_success = True
-        for client in connected_clients:
-            client_success = await remote_host_manager.play_audio_for_client(client, effect_name, effect_data['audio'])
-            audio_success = audio_success and client_success
+        audio_success = await remote_host_manager.play_audio_for_all_clients(effect_name, effect_data['audio'])
         
         # Execute the effect immediately for all rooms
         success, message = await effects_manager.apply_effect_to_all_rooms(effect_name, effect_data)
