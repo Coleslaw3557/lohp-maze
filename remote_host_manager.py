@@ -24,17 +24,14 @@ class RemoteHostManager:
         self.audio_manager = audio_manager
         logger.info("RemoteHostManager initialized")
 
-    def get_unique_remote_units(self):
-        return list(set(self.connected_clients.keys()))
+    def get_connected_clients(self):
+        return list(self.connected_clients.keys())
 
-    async def play_audio_for_remote_units(self, remote_units, effect_name, audio_params):
-        success = True
-        for remote_unit in remote_units:
-            rooms = self.get_rooms_for_remote_unit(remote_unit)
-            if rooms:
-                audio_success = await self.play_audio_in_room(rooms, effect_name, audio_params)
-                success = success and audio_success
-        return success
+    async def play_audio_for_client(self, client, effect_name, audio_params):
+        rooms = self.get_rooms_for_remote_unit(client)
+        if rooms:
+            return await self.play_audio_in_room(rooms, effect_name, audio_params)
+        return False
 
     def get_rooms_for_remote_unit(self, remote_unit):
         return self.client_rooms.get(remote_unit, [])
