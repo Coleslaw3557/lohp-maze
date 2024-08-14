@@ -318,6 +318,12 @@ def get_light_models():
 async def start_music():
     try:
         logger.info("Received request to start music")
+        
+        # First, stop any currently playing music
+        await effects_manager.stop_music()
+        logger.info("Stopped any currently playing music")
+        
+        # Now start the new music
         success = await effects_manager.start_music()
         if success:
             logger.info("Successfully started background music")
