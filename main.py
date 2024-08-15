@@ -318,15 +318,16 @@ def get_light_models():
 @app.route('/api/light_fixtures', methods=['GET'])
 def get_light_fixtures():
     room_layout = light_config.get_room_layout()
-    fixtures = []
+    output = "ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM\n"
+    output += "COPYRIGHT 2075-2077 ROBCO INDUSTRIES\n"
+    output += "----- LIGHT FIXTURES DATABASE -----\n\n"
     for room, lights in room_layout.items():
+        output += f"ROOM: {room}\n"
         for light in lights:
-            fixtures.append({
-                'room': room,
-                'model': light['model'],
-                'start_address': light['start_address']
-            })
-    return jsonify(fixtures)
+            output += f"  MODEL: {light['model']}\n"
+            output += f"  START ADDRESS: {light['start_address']}\n"
+        output += "\n"
+    return Response(output, mimetype='text/plain')
 
 @app.route('/api/connected_clients', methods=['GET'])
 def get_connected_clients():
