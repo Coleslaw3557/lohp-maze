@@ -334,6 +334,19 @@ def get_connected_clients():
     clients = remote_host_manager.get_connected_clients_info()
     return jsonify(clients)
 
+@app.route('/api/terminate_client', methods=['POST'])
+async def terminate_client():
+    data = await request.json
+    client_ip = data.get('ip')
+    if not client_ip:
+        return jsonify({'status': 'error', 'message': 'Client IP is required'}), 400
+    
+    success = await remote_host_manager.terminate_client(client_ip)
+    if success:
+        return jsonify({'status': 'success', 'message': f'Client {client_ip} terminated successfully'})
+    else:
+        return jsonify({'status': 'error', 'message': f'Failed to terminate client {client_ip}'}), 500
+
 @app.route('/api/room_layout', methods=['GET'])
 def get_room_layout():
     room_layout = light_config.get_room_layout()
