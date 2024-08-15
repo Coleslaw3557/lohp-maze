@@ -84,4 +84,9 @@ const api = {
         });
         return response.json();
     },
+
+    async getLightFixtures() {
+        const response = await fetch(`${API_BASE_URL}/light_fixtures`);
+        return response.json();
+    },
 };

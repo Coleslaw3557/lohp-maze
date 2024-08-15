@@ -61,6 +61,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const response = await api.stopMusic();
         return JSON.stringify(response);
     }));
+
+    // Light Fixtures Table
+    const showLightFixturesControl = createControl('Show Light Fixtures', async () => {
+        const fixtures = await api.getLightFixtures();
+        let tableHTML = '<table><tr><th>Room</th><th>Model</th><th>Start Address</th></tr>';
+        fixtures.forEach(fixture => {
+            tableHTML += `<tr><td>${fixture.room}</td><td>${fixture.model}</td><td>${fixture.start_address}</td></tr>`;
+        });
+        tableHTML += '</table>';
+        return tableHTML;
+    });
+    apiControls.appendChild(showLightFixturesControl);
 });
 
 function createControl(title, action) {

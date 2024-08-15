@@ -319,6 +319,19 @@ def get_light_models():
     light_models = light_config.get_light_models()
     return jsonify(light_models)
 
+@app.route('/api/light_fixtures', methods=['GET'])
+def get_light_fixtures():
+    room_layout = light_config.get_room_layout()
+    fixtures = []
+    for room, lights in room_layout.items():
+        for light in lights:
+            fixtures.append({
+                'room': room,
+                'model': light['model'],
+                'start_address': light['start_address']
+            })
+    return jsonify(fixtures)
+
 @app.route('/api/start_music', methods=['POST'])
 async def start_music():
     try:
