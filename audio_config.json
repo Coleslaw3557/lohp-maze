@@ -5,7 +5,7 @@
             "volume": 1.0
         },
         "PoliceLights": {
-            "audio_files": ["gadget-policelights.mp3", "vintage-police.mp3"],
+            "audio_files": ["gadget-policelights.mp3", "vintage-police.mp3", "borg.mp3"],
             "volume": 0.8
         },
         "GateInspection": {
@@ -17,7 +17,7 @@
             "volume": 0.7
         },
         "WrongAnswer": {
-            "audio_files": ["fail.mp3", "growl1.mp3", "growl2.mp3", "megaman.mp3", "dinorar.mp3"],
+            "audio_files": ["fail.mp3", "growl1.mp3", "growl2.mp3", "megaman.mp3", "dinorar.mp3", "spacedoorsclosed.mp3"],
             "volume": 0.8
         },
         "CorrectAnswer": {
@@ -45,7 +45,7 @@
             "volume": 0.9
         },
         "CuddlePuddle": {
-            "audio_files": [],
+            "audio_files": ["dance.mp3"],
             "volume": 0.7
         },
         "PhotoBomb-BG": {
@@ -61,7 +61,7 @@
             "volume": 0.8
         },
         "DeepPlaya-Hit": {
-            "audio_files": ["drink-with-me.mp3", "tea.mp3", "drink-with-me.mp3", "fail.mp3"],
+            "audio_files": ["drink-with-me.mp3", "tea.mp3", "drink-with-me.mp3", "fail.mp3", "medicalemergency.mp3", "spacedoorsclosed.mp3"],
             "volume": 0.8
         },
         "ImageEnhancement": {
@@ -73,7 +73,7 @@
             "volume": 0.8
         },
         "NoFriendsMonday": {
-            "audio_files": ["biggerboat.mp3", "excuses.mp3"],
+            "audio_files": ["biggerboat.mp3", "excuses.mp3", "iwillsurvive.mp3"],
             "volume": 0.8
         }
     },
