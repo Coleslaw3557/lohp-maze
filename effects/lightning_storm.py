@@ -50,7 +50,7 @@ def create_lightning_storm_effect():
         if lightning_timings and current_time >= lightning_timings[0]:
             flash_time = lightning_timings.pop(0)
             
-            # Bright flash
+            # Bright initial flash
             lightning_storm_effect["steps"].append({
                 "time": flash_time,
                 "channels": {
@@ -65,9 +65,39 @@ def create_lightning_storm_effect():
                 }
             })
             
-            # Quick fade back to rain and blue light
+            # Quick dim
+            lightning_storm_effect["steps"].append({
+                "time": flash_time + 0.05,
+                "channels": {
+                    "total_dimming": 100,
+                    "r_dimming": 100,
+                    "g_dimming": 100,
+                    "b_dimming": 100,
+                    "w_dimming": 100,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+            
+            # Second flash
             lightning_storm_effect["steps"].append({
                 "time": flash_time + 0.1,
+                "channels": {
+                    "total_dimming": 200,
+                    "r_dimming": 200,
+                    "g_dimming": 200,
+                    "b_dimming": 200,
+                    "w_dimming": 200,
+                    "total_strobe": 0,
+                    "function_selection": 0,
+                    "function_speed": 0
+                }
+            })
+            
+            # Fade back to rain and blue light
+            lightning_storm_effect["steps"].append({
+                "time": flash_time + 0.2,
                 "channels": {
                     "total_dimming": max(rain_intensity, int(blue_intensity)),
                     "r_dimming": 0,
