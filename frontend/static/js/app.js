@@ -66,15 +66,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const showLightFixturesControl = createControl('Show Light Fixtures', async () => {
         try {
             const fixtures = await api.getLightFixtures();
-            let tableHTML = '<table class="data-table"><tr><th>Room</th><th>Model</th><th>Start Address</th></tr>';
-            fixtures.forEach(fixture => {
-                tableHTML += `<tr><td>${fixture.room}</td><td>${fixture.model}</td><td>${fixture.start_address}</td></tr>`;
-            });
-            tableHTML += '</table>';
-            return tableHTML;
+            return JSON.stringify(fixtures, null, 2);
         } catch (error) {
             console.error('Error fetching light fixtures:', error);
-            return '<p class="error-message">Error fetching light fixtures. Please check the console for details.</p>';
+            return 'Error fetching light fixtures. Please check the console for details.';
         }
     }, () => generateCurlCommand('GET', 'light_fixtures'));
     apiControls.appendChild(showLightFixturesControl);
@@ -83,15 +78,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const showConnectedClientsControl = createControl('Show Connected Clients', async () => {
         try {
             const clients = await api.getConnectedClients();
-            let tableHTML = '<table class="data-table"><tr><th>Name</th><th>IP</th><th>Associated Rooms</th></tr>';
-            clients.forEach(client => {
-                tableHTML += `<tr><td>${client.name}</td><td>${client.ip}</td><td>${client.rooms.join(', ')}</td></tr>`;
-            });
-            tableHTML += '</table>';
-            return tableHTML;
+            return JSON.stringify(clients, null, 2);
         } catch (error) {
             console.error('Error fetching connected clients:', error);
-            return '<p class="error-message">Error fetching connected clients. Please check the console for details.</p>';
+            return 'Error fetching connected clients. Please check the console for details.';
         }
     }, () => generateCurlCommand('GET', 'connected_clients'));
     apiControls.appendChild(showConnectedClientsControl);
@@ -142,7 +132,7 @@ function generateCurlCommand(method, endpoint, data = null) {
     if (data) {
         curlCommand += ` -H "Content-Type: application/json" -d '${JSON.stringify(data)}'`;
     }
-    return curlCommand;
+    return `<pre class="curl-command">${curlCommand}</pre>`;
 }
 
 function createSelect(id, options) {
