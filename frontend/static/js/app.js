@@ -64,33 +64,48 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Light Fixtures Table
     const showLightFixturesControl = createControl('Show Light Fixtures', async () => {
-        const fixtures = await api.getLightFixtures();
-        let tableHTML = '<table><tr><th>Room</th><th>Model</th><th>Start Address</th></tr>';
-        fixtures.forEach(fixture => {
-            tableHTML += `<tr><td>${fixture.room}</td><td>${fixture.model}</td><td>${fixture.start_address}</td></tr>`;
-        });
-        tableHTML += '</table>';
-        return tableHTML;
+        try {
+            const fixtures = await api.getLightFixtures();
+            let tableHTML = '<table><tr><th>Room</th><th>Model</th><th>Start Address</th></tr>';
+            fixtures.forEach(fixture => {
+                tableHTML += `<tr><td>${fixture.room}</td><td>${fixture.model}</td><td>${fixture.start_address}</td></tr>`;
+            });
+            tableHTML += '</table>';
+            return tableHTML;
+        } catch (error) {
+            console.error('Error fetching light fixtures:', error);
+            return '<p>Error fetching light fixtures. Please check the console for details.</p>';
+        }
     });
     apiControls.appendChild(showLightFixturesControl);
 
     // Connected Clients Table
     const showConnectedClientsControl = createControl('Show Connected Clients', async () => {
-        const clients = await api.getConnectedClients();
-        let tableHTML = '<table><tr><th>Name</th><th>IP</th><th>Associated Rooms</th></tr>';
-        clients.forEach(client => {
-            tableHTML += `<tr><td>${client.name}</td><td>${client.ip}</td><td>${client.rooms.join(', ')}</td></tr>`;
-        });
-        tableHTML += '</table>';
-        return tableHTML;
+        try {
+            const clients = await api.getConnectedClients();
+            let tableHTML = '<table><tr><th>Name</th><th>IP</th><th>Associated Rooms</th></tr>';
+            clients.forEach(client => {
+                tableHTML += `<tr><td>${client.name}</td><td>${client.ip}</td><td>${client.rooms.join(', ')}</td></tr>`;
+            });
+            tableHTML += '</table>';
+            return tableHTML;
+        } catch (error) {
+            console.error('Error fetching connected clients:', error);
+            return '<p>Error fetching connected clients. Please check the console for details.</p>';
+        }
     });
     apiControls.appendChild(showConnectedClientsControl);
 
     // Kill Process Button
     const killProcessControl = createControl('Kill Process', async () => {
         if (confirm('Are you sure you want to kill the entire process? This will stop all operations.')) {
-            const response = await api.killProcess();
-            return JSON.stringify(response);
+            try {
+                const response = await api.killProcess();
+                return JSON.stringify(response);
+            } catch (error) {
+                console.error('Error killing process:', error);
+                return '<p>Error killing process. Please check the console for details.</p>';
+            }
         }
         return 'Operation cancelled';
     });
@@ -98,13 +113,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Show Room Layout and Light Fixtures
     const showRoomLayoutControl = createControl('Show Room Layout and Light Fixtures', async () => {
-        const roomLayout = await api.getRoomLayout();
-        let layoutHTML = '<h3>Room Layout and Light Fixtures</h3>';
-        for (const [room, fixtures] of Object.entries(roomLayout)) {
-            layoutHTML += `<h4>${room}</h4><ul>`;
-            fixtures.forEach(fixture => {
-                layoutHTML += `<li>Model: ${fixture.model}, Start Address: ${fixture.start_address}</li>`;
-            });
+        try {
+            const roomLayout = await api.getRoomLayout();
+            let layoutHTML = '<h3>Room Layout and Light Fixtures</h3>';
+            for (const [room, fixtures] of Object.entries(roomLayout)) {
+                layoutHTML += `<h4>${room}</h4><ul>`;
+                fixtures.forEach(fixture => {
+                    layoutHTML += `<li>Model: ${fixture.model}, Start Address: ${fixture.start_address}</li>`;
+                });
+                layoutHTML += '</ul>';
+            }
+            return layoutHTML;
+        } catch (error) {
+            console.error('Error fetching room layout and fixtures:', error);
+            return '<p>Error fetching room layout and fixtures. Please check the console for details.</p>';
+        }
             layoutHTML += '</ul>';
         }
         return layoutHTML;
