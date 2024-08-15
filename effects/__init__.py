@@ -18,4 +18,3 @@ from .image_enhancement import create_image_enhancement_effect
 from .bike_lock_room import create_bike_lock_room_effect
 from .no_friends_monday import create_no_friends_monday_effect
 from .lightning_storm import create_lightning_storm_effect
-from .custom_effects import create_custom_effect
