@@ -111,4 +111,15 @@ const api = {
         const response = await fetch(`${API_BASE_URL}/rooms_units_fixtures`);
         return response.json();
     },
+
+    async updateThemeValue(controlId, value) {
+        const response = await fetch(`${API_BASE_URL}/update_theme_value`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ control_id: controlId, value: value }),
+        });
+        return response.json();
+    },
 };
