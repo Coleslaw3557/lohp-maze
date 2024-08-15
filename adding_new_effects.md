@@ -47,6 +47,7 @@ def create_strobe_effect():
 
 ```python
 from .strobe import create_strobe_effect
+from .lightning_storm import create_lightning_storm_effect
 ```
 
 3. In `effects_manager.py`, add to the `initialize_effects()` method:

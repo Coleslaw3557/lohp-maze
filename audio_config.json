@@ -8,10 +8,6 @@
             "audio_files": ["gadget-policelights.mp3", "vintage-police.mp3"],
             "volume": 0.8
         },
-        "LightningStorm": {
-            "audio_files": ["rainstorm.mp3"],
-            "volume": 1.0
-        },
         "GateInspection": {
             "audio_files": ["fallout-ticketsplease.mp3", "jones-ticketsplease.mp3"],
             "volume": 0.7
@@ -21,7 +17,7 @@
             "volume": 0.7
         },
         "WrongAnswer": {
-            "audio_files": ["fail.mp3"],
+            "audio_files": ["fail.mp3", "growl1.mp3", "growl2.mp3", "megaman.mp3", "dinorar.mp3"],
             "volume": 0.8
         },
         "CorrectAnswer": {
@@ -29,7 +25,7 @@
             "volume": 0.8
         },
         "Entrance": {
-            "audio_files": ["entrance.mp3"],
+            "audio_files": ["entrance.mp3", "doom.mp3", "pornhub.mp3","bjbjbj.mp3"],
             "volume": 0.9
         },
         "GuyLineClimb": {
@@ -41,7 +37,7 @@
             "volume": 0.8
         },
         "PortoStandBy": {
-            "audio_files": [],
+            "audio_files": ["elevator.mp3", "bjuice.mp3"],
             "volume": 0.6
         },
         "PortoHit": {
@@ -57,7 +53,7 @@
             "volume": 0.6
         },
         "PhotoBomb-Spot": {
-            "audio_files": ["girls-on-film.mp3"],
+            "audio_files": ["girls-on-film.mp3", "bearsounds.mp3"],
             "volume": 0.8
         },
         "DeepPlaya-BG": {
@@ -69,7 +65,7 @@
             "volume": 0.8
         },
         "ImageEnhancement": {
-            "audio_files": ["mw2-imageenhancement.mp3", "sf64-roll.mp3"],
+            "audio_files": ["mw2-imageenhancement.mp3", "sf64-roll.mp3", "faster.mp3"],
             "volume": 0.7
         },
         "BikeLockRoom": {
@@ -77,7 +73,7 @@
             "volume": 0.8
         },
         "NoFriendsMonday": {
-            "audio_files": ["biggerboat.mp3"],
+            "audio_files": ["biggerboat.mp3", "excuses.mp3"],
             "volume": 0.8
         }
     },
