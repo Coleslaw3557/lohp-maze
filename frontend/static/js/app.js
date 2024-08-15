@@ -73,6 +73,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         return tableHTML;
     });
     apiControls.appendChild(showLightFixturesControl);
+
+    // Connected Clients Table
+    const showConnectedClientsControl = createControl('Show Connected Clients', async () => {
+        const clients = await api.getConnectedClients();
+        let tableHTML = '<table><tr><th>Name</th><th>IP</th><th>Associated Rooms</th></tr>';
+        clients.forEach(client => {
+            tableHTML += `<tr><td>${client.name}</td><td>${client.ip}</td><td>${client.rooms.join(', ')}</td></tr>`;
+        });
+        tableHTML += '</table>';
+        return tableHTML;
+    });
+    apiControls.appendChild(showConnectedClientsControl);
 });
 
 function createControl(title, action) {

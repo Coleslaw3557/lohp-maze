@@ -42,6 +42,23 @@ tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
 .api-control {
     margin-bottom: 20px;
     padding: 15px;

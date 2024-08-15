@@ -332,6 +332,11 @@ def get_light_fixtures():
             })
     return jsonify(fixtures)
 
+@app.route('/api/connected_clients', methods=['GET'])
+def get_connected_clients():
+    clients = remote_host_manager.get_connected_clients_info()
+    return jsonify(clients)
+
 @app.route('/api/start_music', methods=['POST'])
 async def start_music():
     try:

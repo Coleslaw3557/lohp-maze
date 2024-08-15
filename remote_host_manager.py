@@ -28,6 +28,17 @@ class RemoteHostManager:
     def get_connected_clients(self):
         return list(self.connected_clients.keys())
 
+    def get_connected_clients_info(self):
+        clients_info = []
+        for client_ip, websocket in self.connected_clients.items():
+            client_info = {
+                'ip': client_ip,
+                'rooms': self.client_rooms.get(client_ip, []),
+                'name': self.remote_hosts.get(client_ip, {}).get('name', 'Unknown')
+            }
+            clients_info.append(client_info)
+        return clients_info
+
     async def play_audio_for_all_clients(self, effect_name, audio_params):
         audio_success = True
         for websocket in self.connected_clients.values():
