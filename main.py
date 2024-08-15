@@ -352,6 +352,21 @@ def get_rooms_units_fixtures():
     
     return jsonify(result)
 
+@app.route('/api/update_theme_value', methods=['POST'])
+async def update_theme_value():
+    data = await request.json
+    control_id = data.get('control_id')
+    value = data.get('value')
+    
+    if control_id is None or value is None:
+        return jsonify({'status': 'error', 'message': 'Missing control_id or value'}), 400
+    
+    success = await effects_manager.update_theme_value(control_id, value)
+    if success:
+        return jsonify({'status': 'success', 'message': f'Updated {control_id} to {value}'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Failed to update theme value'}), 500
+
 @app.route('/api/start_music', methods=['POST'])
 async def start_music():
     try:
