@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const themeSelect = document.getElementById('theme-select');
         const response = await api.setTheme(themeSelect.value);
         return JSON.stringify(response);
-    });
+    }, () => generateCurlCommand('POST', 'set_theme', { theme_name: document.getElementById('theme-select').value }));
     const themeSelect = createSelect('theme-select', Object.keys(themes));
     setThemeControl.insertBefore(themeSelect, setThemeControl.querySelector('button'));
     apiControls.appendChild(setThemeControl);
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const setNextThemeControl = createControl('Set Next Theme', async () => {
         const response = await api.setTheme(null, true);
         return JSON.stringify(response);
-    });
+    }, () => generateCurlCommand('POST', 'set_theme', { next_theme: true }));
     apiControls.appendChild(setNextThemeControl);
 
     // Run Effect
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const effectSelect = document.getElementById('effect-select');
         const response = await api.runEffect(roomSelect.value, effectSelect.value);
         return JSON.stringify(response);
-    });
+    }, () => generateCurlCommand('POST', 'run_effect', { room: document.getElementById('room-select').value, effect_name: document.getElementById('effect-select').value }));
     const roomSelect = createSelect('room-select', Object.keys(rooms));
     const effectSelect = createSelect('effect-select', Object.keys(effects));
     runEffectControl.insertBefore(createLabel('Room:', roomSelect), runEffectControl.querySelector('button'));
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const brightnessInput = document.getElementById('brightness-input');
         const response = await api.setMasterBrightness(parseFloat(brightnessInput.value));
         return JSON.stringify(response);
-    });
+    }, () => generateCurlCommand('POST', 'set_master_brightness', { brightness: parseFloat(document.getElementById('brightness-input').value) }));
     const brightnessInput = document.createElement('input');
     brightnessInput.type = 'number';
     brightnessInput.id = 'brightness-input';
@@ -54,13 +54,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     apiControls.appendChild(createControl('Start Music', async () => {
         const response = await api.startMusic();
         return JSON.stringify(response);
-    }));
+    }, () => generateCurlCommand('POST', 'start_music')));
 
     // Stop Music
     apiControls.appendChild(createControl('Stop Music', async () => {
         const response = await api.stopMusic();
         return JSON.stringify(response);
-    }));
+    }, () => generateCurlCommand('POST', 'stop_music')));
 
     // Light Fixtures Table
     const showLightFixturesControl = createControl('Show Light Fixtures', async () => {
@@ -112,23 +112,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     apiControls.appendChild(showRoomLayoutControl);
 });
 
-function createControl(title, action) {
+function createControl(title, action, getCurlCommand) {
     const control = document.createElement('div');
     control.className = 'api-control';
     control.innerHTML = `
         <h2>${title}</h2>
         <button>Execute</button>
         <div class="response"></div>
+        <div class="curl-command"></div>
     `;
     control.querySelector('button').addEventListener('click', async () => {
         const responseElement = control.querySelector('.response');
+        const curlElement = control.querySelector('.curl-command');
         try {
-            responseElement.textContent = await action();
+            const result = await action();
+            responseElement.textContent = result;
+            curlElement.textContent = `Curl equivalent: ${getCurlCommand()}`;
         } catch (error) {
             responseElement.textContent = `Error: ${error.message}`;
+            curlElement.textContent = '';
         }
     });
     return control;
+}
+
+function generateCurlCommand(method, endpoint, data = null) {
+    let curlCommand = `curl -X ${method} http://localhost:5000/api/${endpoint}`;
+    if (data) {
+        curlCommand += ` -H "Content-Type: application/json" -d '${JSON.stringify(data)}'`;
+    }
+    return curlCommand;
 }
 
 function createSelect(id, options) {
