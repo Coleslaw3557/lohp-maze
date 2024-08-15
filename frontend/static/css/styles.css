@@ -288,6 +288,44 @@ button:hover {
     word-wrap: break-word;
     font-size: 16px;
     color: var(--text-color);
+    white-space: pre-wrap;
+    font-family: 'Courier New', monospace;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.client-list {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.client-list th, .client-list td {
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    text-align: left;
+}
+
+.client-list th {
+    background-color: rgba(255, 255, 255, 0.1);
+    font-weight: bold;
+}
+
+.client-list tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.terminate-button {
+    background-color: #ff4136;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.terminate-button:hover {
+    background-color: #ff7066;
 }
 
 @keyframes glow {

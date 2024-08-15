@@ -120,17 +120,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     apiControls.appendChild(showConnectedClientsControl);
 
     function createClientList(clients) {
-        let listHTML = '<ul class="client-list">';
+        let listHTML = '<table class="client-list"><thead><tr><th>Name</th><th>IP</th><th>Rooms</th><th>Action</th></tr></thead><tbody>';
         clients.forEach(client => {
             listHTML += `
-                <li>
-                    <strong>${client.name}</strong> (${client.ip})
-                    <button class="terminate-button" data-ip="${client.ip}">Terminate</button>
-                    <br>Rooms: ${client.rooms.join(', ')}
-                </li>
+                <tr>
+                    <td>${client.name}</td>
+                    <td>${client.ip}</td>
+                    <td>${client.rooms.join(', ')}</td>
+                    <td><button class="terminate-button" data-ip="${client.ip}">Terminate</button></td>
+                </tr>
             `;
         });
-        listHTML += '</ul>';
+        listHTML += '</tbody></table>';
 
         // Add event listeners for terminate buttons
         setTimeout(() => {
@@ -139,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const ip = e.target.getAttribute('data-ip');
                     try {
                         await api.terminateClient(ip);
-                        e.target.closest('li').remove();
+                        e.target.closest('tr').remove();
                     } catch (error) {
                         console.error('Error terminating client:', error);
                         alert('Failed to terminate client. Check console for details.');
@@ -174,7 +175,7 @@ function createControl(title, action, getCurlCommand) {
     control.innerHTML = `
         <h2>${title}</h2>
         <button>Execute</button>
-        <div class="response"></div>
+        <pre class="response"></pre>
         <div class="curl-command"></div>
     `;
     control.querySelector('button').addEventListener('click', async () => {
@@ -182,8 +183,8 @@ function createControl(title, action, getCurlCommand) {
         const curlElement = control.querySelector('.curl-command');
         try {
             const result = await action();
-            responseElement.textContent = result;
-            curlElement.textContent = `Curl equivalent: ${getCurlCommand()}`;
+            responseElement.innerHTML = result;
+            curlElement.innerHTML = `Curl equivalent: ${getCurlCommand()}`;
         } catch (error) {
             responseElement.textContent = `Error: ${error.message}`;
             curlElement.textContent = '';
