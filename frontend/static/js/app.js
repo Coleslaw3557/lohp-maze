@@ -14,6 +14,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     setThemeControl.insertBefore(themeSelect, setThemeControl.querySelector('button'));
     apiControls.appendChild(setThemeControl);
 
+    // Set Next Theme
+    const setNextThemeControl = createControl('Set Next Theme', async () => {
+        const response = await api.setTheme(null, true);
+        return JSON.stringify(response);
+    });
+    apiControls.appendChild(setNextThemeControl);
+
     // Run Effect
     const runEffectControl = createControl('Run Effect', async () => {
         const roomSelect = document.getElementById('room-select');
@@ -23,8 +30,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     const roomSelect = createSelect('room-select', Object.keys(rooms));
     const effectSelect = createSelect('effect-select', Object.keys(effects));
-    runEffectControl.insertBefore(effectSelect, runEffectControl.querySelector('button'));
-    runEffectControl.insertBefore(roomSelect, effectSelect);
+    runEffectControl.insertBefore(createLabel('Room:', roomSelect), runEffectControl.querySelector('button'));
+    runEffectControl.insertBefore(createLabel('Effect:', effectSelect), runEffectControl.querySelector('button'));
     apiControls.appendChild(runEffectControl);
 
     // Set Master Brightness
@@ -40,7 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     brightnessInput.max = '1';
     brightnessInput.step = '0.1';
     brightnessInput.value = '1';
-    setBrightnessControl.insertBefore(brightnessInput, setBrightnessControl.querySelector('button'));
+    setBrightnessControl.insertBefore(createLabel('Brightness:', brightnessInput), setBrightnessControl.querySelector('button'));
     apiControls.appendChild(setBrightnessControl);
 
     // Start Music
@@ -54,26 +61,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const response = await api.stopMusic();
         return JSON.stringify(response);
     }));
-
-    // Run Effect All Rooms
-    const runEffectAllRoomsControl = createControl('Run Effect All Rooms', async () => {
-        const allRoomsEffectSelect = document.getElementById('all-rooms-effect-select');
-        const response = await api.runEffectAllRooms(allRoomsEffectSelect.value);
-        return JSON.stringify(response);
-    });
-    const allRoomsEffectSelect = createSelect('all-rooms-effect-select', Object.keys(effects));
-    runEffectAllRoomsControl.insertBefore(allRoomsEffectSelect, runEffectAllRoomsControl.querySelector('button'));
-    apiControls.appendChild(runEffectAllRoomsControl);
-
-    // Stop Effect
-    const stopEffectControl = createControl('Stop Effect', async () => {
-        const stopEffectRoomSelect = document.getElementById('stop-effect-room-select');
-        const response = await api.stopEffect(stopEffectRoomSelect.value);
-        return JSON.stringify(response);
-    });
-    const stopEffectRoomSelect = createSelect('stop-effect-room-select', [...Object.keys(rooms), 'all']);
-    stopEffectControl.insertBefore(stopEffectRoomSelect, stopEffectControl.querySelector('button'));
-    apiControls.appendChild(stopEffectControl);
 });
 
 function createControl(title, action) {
@@ -105,4 +92,11 @@ function createSelect(id, options) {
         select.appendChild(optionElement);
     });
     return select;
+}
+
+function createLabel(text, element) {
+    const label = document.createElement('label');
+    label.textContent = text;
+    label.appendChild(element);
+    return label;
 }
