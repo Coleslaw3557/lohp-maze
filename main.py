@@ -198,12 +198,7 @@ async def set_theme():
         return jsonify({'status': 'error', 'message': 'Theme name or next_theme flag is required'}), 400
 
     try:
-        if next_theme:
-            logger.info("Setting next theme")
-            theme_name = await effects_manager.set_next_theme_async()
-            if not theme_name:
-                return jsonify({'status': 'error', 'message': 'Failed to set next theme'}), 400
-        elif theme_name.lower() == 'notheme':
+        if theme_name.lower() == 'notheme':
             logger.info("Turning off theme")
             await effects_manager.stop_current_theme_async()
             return jsonify({'status': 'success', 'message': 'Theme turned off'})

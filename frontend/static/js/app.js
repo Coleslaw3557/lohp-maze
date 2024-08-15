@@ -14,12 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     setThemeControl.insertBefore(themeSelect, setThemeControl.querySelector('button'));
     apiControls.appendChild(setThemeControl);
 
-    // Set Next Theme
-    const setNextThemeControl = createControl('Set Next Theme', async () => {
-        const response = await api.setTheme(null, true);
-        return JSON.stringify(response);
-    }, () => generateCurlCommand('POST', 'set_theme', { next_theme: true }));
-    apiControls.appendChild(setNextThemeControl);
 
     // Run Effect
     const runEffectControl = createControl('Run Effect', async () => {
