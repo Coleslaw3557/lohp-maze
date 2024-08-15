@@ -24,6 +24,7 @@ class ThemeManager:
         self.previous_values = {}  # Store previous values for smoothing
         self.smoothing_factor = 0.2  # Adjust this value to control smoothing (0.0 to 1.0)
         self.load_themes()  # Load themes when initializing
+        self.temporary_theme_values = {}  # Store temporary theme values
 
     def load_themes(self):
         # Load themes with more dynamic and vibrant settings
@@ -301,14 +302,9 @@ class ThemeManager:
 
     async def update_theme_value(self, control_id, value):
         if self.current_theme:
-            theme_data = self.themes[self.current_theme]
-            if control_id in theme_data:
-                theme_data[control_id] = value
-                logger.info(f"Updated {control_id} to {value} for current theme")
-                return True
-            else:
-                logger.warning(f"Control {control_id} not found in current theme")
-                return False
+            self.temporary_theme_values[control_id] = value
+            logger.info(f"Updated temporary value for {control_id} to {value} for current theme")
+            return True
         else:
             logger.warning("No current theme to update")
             return False

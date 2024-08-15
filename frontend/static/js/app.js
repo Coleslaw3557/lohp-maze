@@ -52,22 +52,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     const themeControls = {
         'transition-speed': 0.08,
         'color-variation': 0.9,
-        // Add more theme controls here
+        'intensity-fluctuation': 0.6,
+        'color-wheel-speed': 0.2,
+        'wave-effect': 0.7
     };
 
     Object.keys(themeControls).forEach(controlId => {
         const slider = document.getElementById(controlId);
         const valueDisplay = document.getElementById(`${controlId}-value`);
         
-        slider.value = themeControls[controlId];
-        valueDisplay.textContent = themeControls[controlId];
+        if (slider && valueDisplay) {
+            slider.value = themeControls[controlId];
+            valueDisplay.textContent = themeControls[controlId];
 
-        slider.addEventListener('input', async () => {
-            const value = parseFloat(slider.value);
-            valueDisplay.textContent = value.toFixed(2);
-            const response = await api.updateThemeValue(controlId, value);
-            console.log(`${controlId} updated:`, response);
-        });
+            slider.addEventListener('input', async () => {
+                const value = parseFloat(slider.value);
+                valueDisplay.textContent = value.toFixed(2);
+                const response = await api.updateThemeValue(controlId, value);
+                console.log(`${controlId} updated:`, response);
+            });
+        } else {
+            console.warn(`Element not found for theme control: ${controlId}`);
+        }
     });
 
     // Start Music

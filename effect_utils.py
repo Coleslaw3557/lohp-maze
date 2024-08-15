@@ -24,12 +24,12 @@ def hsv_to_rgb(h, s, v):
     if i == 5:
         return (v, p, q)
 
-def generate_theme_values(theme_data, current_time, master_brightness, room_index=0, total_rooms=1):
+def generate_theme_values(theme_data, current_time, master_brightness, room_index=0, total_rooms=1, temporary_values=None):
     channels = {}
     overall_brightness = theme_data.get('overall_brightness', 0.8) * master_brightness
-    color_variation = theme_data.get('color_variation', 0.8)
-    intensity_fluctuation = theme_data.get('intensity_fluctuation', 0.6)
-    transition_speed = theme_data.get('transition_speed', 0.7)
+    color_variation = temporary_values.get('color-variation', theme_data.get('color_variation', 0.8))
+    intensity_fluctuation = temporary_values.get('intensity-fluctuation', theme_data.get('intensity_fluctuation', 0.6))
+    transition_speed = temporary_values.get('transition-speed', theme_data.get('transition_speed', 0.7))
 
     # Use multiple time factors for more complex patterns
     time_factor_slow = current_time * transition_speed * 0.05
@@ -48,8 +48,9 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
     room_offset = (room_index / total_rooms) * 2 * math.pi
     room_wave = math.sin(time_factor_medium + room_offset)
 
-    color_wheel_speed = theme_data.get('color_wheel_speed', 0.3)
+    color_wheel_speed = temporary_values.get('color-wheel-speed', theme_data.get('color_wheel_speed', 0.3))
     room_transition_speed = theme_data.get('room_transition_speed', 0.08)
+    wave_effect = temporary_values.get('wave-effect', theme_data.get('wave_effect', 0.7))
 
     base_hue = theme_data.get('base_hue', 0)
     hue_range = theme_data.get('hue_range', 0.7)
