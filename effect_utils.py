@@ -94,6 +94,13 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
         hue = (hue + nebula * 0.2 + twinkle * 0.05) % 1
         saturation = max(saturation_min, min(saturation_max, saturation + nebula * 0.3 + twinkle * 0.1))
         value = max(value_min, min(value_max, value * twinkle + nebula * 0.2))
+    elif 'neon_flicker' in theme_data:  # BladeRunner theme
+        flicker = random.uniform(0.8, 1.0) * theme_data.get('neon_flicker', 0.4)
+        rain = (math.sin(time_factor_fast * 2 + room_offset) * 0.5 + 0.5) * theme_data.get('rain_effect', 0.6)
+        smog = (math.sin(time_factor_slow * 0.3 + room_offset) * 0.5 + 0.5) * theme_data.get('smog_effect', 0.5)
+        hue = (hue + smog * 0.1) % 1
+        saturation = max(saturation_min, min(saturation_max, saturation - smog * 0.2))
+        value = max(value_min, min(value_max, value * flicker - rain * 0.3 - smog * 0.2))
 
     # Add some randomness to prevent static patterns
     hue = (hue + random.uniform(-0.03, 0.03)) % 1

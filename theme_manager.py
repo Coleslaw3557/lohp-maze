@@ -118,6 +118,24 @@ class ThemeManager:
                 "saturation_max": 1.0,
                 "value_min": 0.5,
                 "value_max": 1.0
+            },
+            "BladeRunner": {
+                "duration": 3600,  # 1 hour
+                "transition_speed": 0.08,
+                "color_variation": 0.7,
+                "intensity_fluctuation": 0.6,
+                "overall_brightness": 0.7,
+                "room_transition_speed": 0.05,
+                "color_wheel_speed": 0.1,
+                "neon_flicker": 0.4,
+                "rain_effect": 0.6,
+                "smog_effect": 0.5,
+                "base_hue": 0.6,  # Blue
+                "hue_range": 0.3,  # Blue to Purple
+                "saturation_min": 0.6,
+                "saturation_max": 0.9,
+                "value_min": 0.3,
+                "value_max": 0.8
             }
         }
         self.theme_list = list(self.themes.keys())
