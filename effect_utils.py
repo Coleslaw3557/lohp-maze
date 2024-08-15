@@ -27,6 +27,7 @@ def hsv_to_rgb(h, s, v):
 def generate_theme_values(theme_data, current_time, master_brightness, room_index=0, total_rooms=1, temporary_values=None):
     channels = {}
     overall_brightness = theme_data.get('overall_brightness', 0.8) * master_brightness
+    temporary_values = temporary_values or {}
     color_variation = temporary_values.get('color-variation', theme_data.get('color_variation', 0.8))
     intensity_fluctuation = temporary_values.get('intensity-fluctuation', theme_data.get('intensity_fluctuation', 0.6))
     transition_speed = temporary_values.get('transition-speed', theme_data.get('transition_speed', 0.7))
