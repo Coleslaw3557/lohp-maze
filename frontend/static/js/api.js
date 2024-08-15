@@ -16,13 +16,14 @@ const api = {
         return response.json();
     },
 
-    async setTheme(themeName) {
+    async setTheme(themeName, nextTheme = false) {
+        const body = nextTheme ? { next_theme: true } : { theme_name: themeName };
         const response = await fetch(`${API_BASE_URL}/set_theme`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ theme_name: themeName }),
+            body: JSON.stringify(body),
         });
         return response.json();
     },
