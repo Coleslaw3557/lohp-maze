@@ -169,31 +169,29 @@ function createLabel(text, element) {
 }
 
 function createTable(data, columns) {
-    const table = document.createElement('table');
-    table.className = 'data-table';
+    let tableHTML = '<div class="table-container"><table class="themed-table">';
     
     // Create header
-    const header = table.createTHead();
-    const headerRow = header.insertRow();
+    tableHTML += '<thead><tr>';
     columns.forEach(column => {
-        const th = document.createElement('th');
-        th.textContent = column.charAt(0).toUpperCase() + column.slice(1);
-        headerRow.appendChild(th);
+        tableHTML += `<th>${column.charAt(0).toUpperCase() + column.slice(1)}</th>`;
     });
+    tableHTML += '</tr></thead>';
 
     // Create body
-    const body = table.createTBody();
+    tableHTML += '<tbody>';
     data.forEach(item => {
-        const row = body.insertRow();
+        tableHTML += '<tr>';
         columns.forEach(column => {
-            const cell = row.insertCell();
             let value = item[column];
             if (Array.isArray(value)) {
                 value = value.join(', ');
             }
-            cell.textContent = value;
+            tableHTML += `<td>${value}</td>`;
         });
+        tableHTML += '</tr>';
     });
+    tableHTML += '</tbody></table></div>';
 
-    return table.outerHTML;
+    return tableHTML;
 }

@@ -127,32 +127,49 @@ h1 {
     font-size: 36px;
 }
 
-.data-table {
+.table-container {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.themed-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    margin-top: 20px;
     font-size: 16px;
+    color: var(--text-color);
 }
 
-.data-table th, .data-table td {
-    border: 1px solid var(--border-color);
+.themed-table th, .themed-table td {
     padding: 12px;
     text-align: left;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.data-table th {
+.themed-table th {
     background-color: var(--secondary-color);
-    color: var(--text-color);
+    color: var(--background-color);
     font-weight: bold;
+    text-transform: uppercase;
 }
 
-.data-table tr:nth-child(even) {
+.themed-table tr:nth-child(even) {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-.data-table tr:hover {
+.themed-table tr:hover {
     background-color: rgba(255, 255, 255, 0.1);
+}
+
+.themed-table td {
+    transition: all 0.3s ease;
+}
+
+.themed-table tr:hover td {
+    color: var(--primary-color);
 }
 
 .error-message {
