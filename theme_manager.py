@@ -165,6 +165,8 @@ class ThemeManager:
                 self.stop_theme.clear()
                 self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
                 self.theme_thread.start()
+                # Reset temporary theme values
+                self.temporary_theme_values = {}
             logger.info(f"Theme changed from {old_theme} to: {theme_name}")
             return True
         else:
