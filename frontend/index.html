@@ -10,6 +10,11 @@
     <div id="app">
         <h1>Super Secret Control System</h1>
         <div class="crt-overlay"></div>
+        <div id="brightness-control">
+            <label for="brightness-slider">Master Brightness:</label>
+            <input type="range" id="brightness-slider" min="0" max="1" step="0.01" value="1">
+            <span id="brightness-value">100%</span>
+        </div>
         <div id="api-controls"></div>
     </div>
     <script src="/static/js/api.js"></script>

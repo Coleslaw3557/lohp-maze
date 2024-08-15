@@ -29,20 +29,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     apiControls.appendChild(runEffectControl);
 
     // Set Master Brightness
-    const setBrightnessControl = createControl('Set Master Brightness', async () => {
-        const brightnessInput = document.getElementById('brightness-input');
-        const response = await api.setMasterBrightness(parseFloat(brightnessInput.value));
-        return JSON.stringify(response);
-    }, () => generateCurlCommand('POST', 'set_master_brightness', { brightness: parseFloat(document.getElementById('brightness-input').value) }));
-    const brightnessInput = document.createElement('input');
-    brightnessInput.type = 'number';
-    brightnessInput.id = 'brightness-input';
-    brightnessInput.min = '0';
-    brightnessInput.max = '1';
-    brightnessInput.step = '0.1';
-    brightnessInput.value = '1';
-    setBrightnessControl.insertBefore(createLabel('Brightness:', brightnessInput), setBrightnessControl.querySelector('button'));
-    apiControls.appendChild(setBrightnessControl);
+    const brightnessSlider = document.getElementById('brightness-slider');
+    const brightnessValue = document.getElementById('brightness-value');
+
+    brightnessSlider.addEventListener('input', async () => {
+        const brightness = parseFloat(brightnessSlider.value);
+        brightnessValue.textContent = `${Math.round(brightness * 100)}%`;
+        const response = await api.setMasterBrightness(brightness);
+        console.log('Brightness set:', response);
+    });
+
+    // Initialize brightness value display
+    brightnessValue.textContent = `${Math.round(brightnessSlider.value * 100)}%`;
 
     // Start Music
     apiControls.appendChild(createControl('Start Music', async () => {
