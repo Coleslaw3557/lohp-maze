@@ -128,8 +128,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Error fetching room layout and fixtures:', error);
             return '<p>Error fetching room layout and fixtures. Please check the console for details.</p>';
         }
-            layoutHTML += '</ul>';
-        }
         return layoutHTML;
     });
     apiControls.appendChild(showRoomLayoutControl);
