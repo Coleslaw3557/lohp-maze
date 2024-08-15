@@ -14,11 +14,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     setThemeControl.insertBefore(themeSelect, setThemeControl.querySelector('button'));
     apiControls.appendChild(setThemeControl);
 
-    // Next Theme
+    // Set Next Theme
     const nextThemeButton = document.getElementById('nextThemeButton');
     nextThemeButton.addEventListener('click', async () => {
-        const response = await api.setNextTheme();
-        console.log('Next theme set:', response);
+        const response = await fetch('/api/set_theme', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ next_theme: true }),
+        });
+        const result = await response.json();
+        console.log('Next theme set:', result);
     });
 
     // Run Effect
