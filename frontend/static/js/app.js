@@ -95,6 +95,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return 'Operation cancelled';
     });
     apiControls.appendChild(killProcessControl);
+
+    // Show Room Layout and Light Fixtures
+    const showRoomLayoutControl = createControl('Show Room Layout and Light Fixtures', async () => {
+        const roomLayout = await api.getRoomLayout();
+        let layoutHTML = '<h3>Room Layout and Light Fixtures</h3>';
+        for (const [room, fixtures] of Object.entries(roomLayout)) {
+            layoutHTML += `<h4>${room}</h4><ul>`;
+            fixtures.forEach(fixture => {
+                layoutHTML += `<li>Model: ${fixture.model}, Start Address: ${fixture.start_address}</li>`;
+            });
+            layoutHTML += '</ul>';
+        }
+        return layoutHTML;
+    });
+    apiControls.appendChild(showRoomLayoutControl);
 });
 
 function createControl(title, action) {

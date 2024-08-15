@@ -337,6 +337,11 @@ def get_connected_clients():
     clients = remote_host_manager.get_connected_clients_info()
     return jsonify(clients)
 
+@app.route('/api/room_layout', methods=['GET'])
+def get_room_layout():
+    room_layout = light_config.get_room_layout()
+    return jsonify(room_layout)
+
 @app.route('/api/start_music', methods=['POST'])
 async def start_music():
     try:

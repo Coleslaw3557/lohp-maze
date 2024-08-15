@@ -101,4 +101,9 @@ const api = {
         });
         return response.json();
     },
+
+    async getRoomLayout() {
+        const response = await fetch(`${API_BASE_URL}/room_layout`);
+        return response.json();
+    },
 };
