@@ -107,17 +107,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, () => generateCurlCommand('GET', 'light_fixtures'));
     apiControls.appendChild(showLightFixturesControl);
 
-    // Connected Clients Table
-    const showConnectedClientsControl = createControl('Show Connected Clients', async () => {
+    // Connected Clients Display
+    const showConnectedClientsControl = createControl('Connected Clients', async () => {
         try {
             const clients = await api.getConnectedClients();
-            return createTable(clients, ['ip', 'name', 'rooms']);
+            return createClientList(clients);
         } catch (error) {
             console.error('Error fetching connected clients:', error);
             return 'Error fetching connected clients. Please check the console for details.';
         }
     }, () => generateCurlCommand('GET', 'connected_clients'));
     apiControls.appendChild(showConnectedClientsControl);
+
+    function createClientList(clients) {
+        let listHTML = '<ul class="client-list">';
+        clients.forEach(client => {
+            listHTML += `
+                <li>
+                    <strong>${client.name}</strong> (${client.ip})
+                    <button class="terminate-button" data-ip="${client.ip}">Terminate</button>
+                    <br>Rooms: ${client.rooms.join(', ')}
+                </li>
+            `;
+        });
+        listHTML += '</ul>';
+
+        // Add event listeners for terminate buttons
+        setTimeout(() => {
+            document.querySelectorAll('.terminate-button').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const ip = e.target.getAttribute('data-ip');
+                    try {
+                        await api.terminateClient(ip);
+                        e.target.closest('li').remove();
+                    } catch (error) {
+                        console.error('Error terminating client:', error);
+                        alert('Failed to terminate client. Check console for details.');
+                    }
+                });
+            });
+        }, 0);
+
+        return listHTML;
+    }
 
     // Kill Process Button
     const killProcessControl = createControl('Kill Process', async () => {

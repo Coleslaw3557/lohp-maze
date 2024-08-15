@@ -133,4 +133,15 @@ const api = {
         });
         return response.json();
     },
+
+    async terminateClient(ip) {
+        const response = await fetch(`${API_BASE_URL}/terminate_client`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ip: ip }),
+        });
+        return response.json();
+    },
 };
