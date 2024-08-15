@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Error fetching light fixtures:', error);
             return '<p>Error fetching light fixtures. Please check the console for details.</p>';
         }
-    });
+    }, () => generateCurlCommand('GET', 'light_fixtures'));
     apiControls.appendChild(showLightFixturesControl);
 
     // Connected Clients Table
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Error fetching connected clients:', error);
             return '<p>Error fetching connected clients. Please check the console for details.</p>';
         }
-    });
+    }, () => generateCurlCommand('GET', 'connected_clients'));
     apiControls.appendChild(showConnectedClientsControl);
 
     // Kill Process Button
