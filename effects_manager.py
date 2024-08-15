@@ -3,7 +3,15 @@ import logging
 import asyncio
 import os
 import time
-from effects import *
+from effects import (
+    create_lightning_effect, create_police_lights_effect, create_gate_inspection_effect,
+    create_gate_greeters_effect, create_wrong_answer_effect, create_correct_answer_effect,
+    create_entrance_effect, create_guy_line_climb_effect, create_spark_pony_effect,
+    create_porto_standby_effect, create_porto_hit_effect, create_cuddle_puddle_effect,
+    create_photobomb_bg_effect, create_photobomb_spot_effect, create_deep_playa_bg_effect,
+    create_deep_playa_hit_effect, create_image_enhancement_effect, create_bike_lock_room_effect,
+    create_no_friends_monday_effect
+)
 from theme_manager import ThemeManager
 from effect_utils import get_effect_step_values
 from interrupt_handler import InterruptHandler
@@ -350,7 +358,6 @@ class EffectsManager:
             ("ImageEnhancement", create_image_enhancement_effect()),
             ("BikeLockRoom", create_bike_lock_room_effect()),
             ("NoFriendsMonday", create_no_friends_monday_effect()),
-            ("LightningStorm", create_lightning_storm_effect()),
         ]
         for effect_name, effect_data in effects:
             self.add_effect(effect_name, effect_data)
