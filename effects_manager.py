@@ -350,6 +350,7 @@ class EffectsManager:
             ("ImageEnhancement", create_image_enhancement_effect()),
             ("BikeLockRoom", create_bike_lock_room_effect()),
             ("NoFriendsMonday", create_no_friends_monday_effect()),
+            ("LightningStorm", create_lightning_storm_effect()),
         ]
         for effect_name, effect_data in effects:
             self.add_effect(effect_name, effect_data)

@@ -8,6 +8,10 @@
             "audio_files": ["gadget-policelights.mp3", "vintage-police.mp3"],
             "volume": 0.8
         },
+        "LightningStorm": {
+            "audio_files": ["rainstorm.mp3"],
+            "volume": 1.0
+        },
         "GateInspection": {
             "audio_files": ["fallout-ticketsplease.mp3", "jones-ticketsplease.mp3"],
             "volume": 0.7
