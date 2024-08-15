@@ -343,6 +343,20 @@ def get_room_layout():
     room_layout = light_config.get_room_layout()
     return jsonify(room_layout)
 
+@app.route('/api/rooms_units_fixtures', methods=['GET'])
+def get_rooms_units_fixtures():
+    room_layout = light_config.get_room_layout()
+    connected_clients = remote_host_manager.get_connected_clients_info()
+    
+    result = {}
+    for room, fixtures in room_layout.items():
+        result[room] = {
+            'fixtures': [{'model': f['model'], 'start_address': f['start_address']} for f in fixtures],
+            'units': [client['name'] for client in connected_clients if room in client['rooms']]
+        }
+    
+    return jsonify(result)
+
 @app.route('/api/start_music', methods=['POST'])
 async def start_music():
     try:

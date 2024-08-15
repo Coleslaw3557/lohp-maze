@@ -111,26 +111,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     apiControls.appendChild(killProcessControl);
 
-    // Show Room Layout and Light Fixtures
-    const showRoomLayoutControl = createControl('Show Room Layout and Light Fixtures', async () => {
+    // Show Rooms, Units, and Fixtures
+    const showRoomsUnitsFixturesControl = createControl('Show Rooms, Units, and Fixtures', async () => {
         try {
-            const roomLayout = await api.getRoomLayout();
-            let layoutHTML = '<h3>Room Layout and Light Fixtures</h3>';
-            for (const [room, fixtures] of Object.entries(roomLayout)) {
-                layoutHTML += `<h4>${room}</h4><ul>`;
-                fixtures.forEach(fixture => {
+            const data = await api.getRoomsUnitsFixtures();
+            let layoutHTML = '<h3>Rooms, Units, and Fixtures</h3>';
+            for (const [room, info] of Object.entries(data)) {
+                layoutHTML += `<h4>${room}</h4>`;
+                layoutHTML += `<p>Associated Units: ${info.units.join(', ') || 'None'}</p>`;
+                layoutHTML += '<ul>';
+                info.fixtures.forEach(fixture => {
                     layoutHTML += `<li>Model: ${fixture.model}, Start Address: ${fixture.start_address}</li>`;
                 });
                 layoutHTML += '</ul>';
             }
             return layoutHTML;
         } catch (error) {
-            console.error('Error fetching room layout and fixtures:', error);
-            return '<p>Error fetching room layout and fixtures. Please check the console for details.</p>';
+            console.error('Error fetching rooms, units, and fixtures:', error);
+            return '<p>Error fetching rooms, units, and fixtures. Please check the console for details.</p>';
         }
-        return layoutHTML;
     });
-    apiControls.appendChild(showRoomLayoutControl);
+    apiControls.appendChild(showRoomsUnitsFixturesControl);
 });
 
 function createControl(title, action, getCurlCommand) {

@@ -107,8 +107,8 @@ const api = {
         return response.json();
     },
 
-    async getRoomLayout() {
-        const response = await fetch(`${API_BASE_URL}/room_layout`);
+    async getRoomsUnitsFixtures() {
+        const response = await fetch(`${API_BASE_URL}/rooms_units_fixtures`);
         return response.json();
     },
 };
