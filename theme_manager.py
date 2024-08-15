@@ -298,3 +298,17 @@ class ThemeManager:
             self._apply_room_channels(room, lights, room_channels)
         else:
             logger.warning(f"No current theme to apply to room {room}")
+
+    async def update_theme_value(self, control_id, value):
+        if self.current_theme:
+            theme_data = self.themes[self.current_theme]
+            if control_id in theme_data:
+                theme_data[control_id] = value
+                logger.info(f"Updated {control_id} to {value} for current theme")
+                return True
+            else:
+                logger.warning(f"Control {control_id} not found in current theme")
+                return False
+        else:
+            logger.warning("No current theme to update")
+            return False
