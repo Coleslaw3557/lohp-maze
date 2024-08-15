@@ -6,8 +6,9 @@ import websockets
 import sys
 import traceback
 import random
-from quart import Quart, request, jsonify, Response, send_from_directory
+from quart import Quart, request, jsonify, Response, send_from_directory, send_file
 from quart_cors import cors
+import os
 from werkzeug.urls import uri_to_iri, iri_to_uri
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
@@ -36,9 +37,13 @@ logging.getLogger('pydub.converter').setLevel(logging.ERROR)
 # Set the root logger to INFO
 logging.getLogger().setLevel(logging.INFO)
 
-app = Quart(__name__)
+app = Quart(__name__, static_folder='frontend/static')
 app = cors(app)
 app.secret_key = SECRET_KEY
+
+@app.route('/')
+async def index():
+    return await send_file('frontend/index.html')
 
 connected_clients = set()
 
