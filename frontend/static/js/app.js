@@ -65,19 +65,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Light Fixtures Table
     const showLightFixturesControl = createControl('Show Light Fixtures', async () => {
         try {
-            console.log('Fetching light fixtures...');
             const fixtures = await api.getLightFixtures();
-            console.log('Light fixtures received:', fixtures);
-            let tableHTML = '<table><tr><th>Room</th><th>Model</th><th>Start Address</th></tr>';
+            let tableHTML = '<table class="data-table"><tr><th>Room</th><th>Model</th><th>Start Address</th></tr>';
             fixtures.forEach(fixture => {
                 tableHTML += `<tr><td>${fixture.room}</td><td>${fixture.model}</td><td>${fixture.start_address}</td></tr>`;
             });
             tableHTML += '</table>';
-            console.log('Generated table HTML:', tableHTML);
             return tableHTML;
         } catch (error) {
             console.error('Error fetching light fixtures:', error);
-            return '<p>Error fetching light fixtures. Please check the console for details.</p>';
+            return '<p class="error-message">Error fetching light fixtures. Please check the console for details.</p>';
         }
     }, () => generateCurlCommand('GET', 'light_fixtures'));
     apiControls.appendChild(showLightFixturesControl);
@@ -85,19 +82,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Connected Clients Table
     const showConnectedClientsControl = createControl('Show Connected Clients', async () => {
         try {
-            console.log('Fetching connected clients...');
             const clients = await api.getConnectedClients();
-            console.log('Connected clients received:', clients);
-            let tableHTML = '<table><tr><th>Name</th><th>IP</th><th>Associated Rooms</th></tr>';
+            let tableHTML = '<table class="data-table"><tr><th>Name</th><th>IP</th><th>Associated Rooms</th></tr>';
             clients.forEach(client => {
                 tableHTML += `<tr><td>${client.name}</td><td>${client.ip}</td><td>${client.rooms.join(', ')}</td></tr>`;
             });
             tableHTML += '</table>';
-            console.log('Generated table HTML:', tableHTML);
             return tableHTML;
         } catch (error) {
             console.error('Error fetching connected clients:', error);
-            return '<p>Error fetching connected clients. Please check the console for details.</p>';
+            return '<p class="error-message">Error fetching connected clients. Please check the console for details.</p>';
         }
     }, () => generateCurlCommand('GET', 'connected_clients'));
     apiControls.appendChild(showConnectedClientsControl);
@@ -117,30 +111,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     apiControls.appendChild(killProcessControl);
 
-    // Show Rooms, Units, and Fixtures
-    const showRoomsUnitsFixturesControl = createControl('Show Rooms, Units, and Fixtures', async () => {
-        try {
-            console.log('Fetching rooms, units, and fixtures...');
-            const data = await api.getRoomsUnitsFixtures();
-            console.log('Rooms, units, and fixtures data received:', data);
-            let layoutHTML = '<h3>Rooms, Units, and Fixtures</h3>';
-            for (const [room, info] of Object.entries(data)) {
-                layoutHTML += `<h4>${room}</h4>`;
-                layoutHTML += `<p>Associated Units: ${info.units.join(', ') || 'None'}</p>`;
-                layoutHTML += '<ul>';
-                info.fixtures.forEach(fixture => {
-                    layoutHTML += `<li>Model: ${fixture.model}, Start Address: ${fixture.start_address}</li>`;
-                });
-                layoutHTML += '</ul>';
-            }
-            console.log('Generated layout HTML:', layoutHTML);
-            return layoutHTML;
-        } catch (error) {
-            console.error('Error fetching rooms, units, and fixtures:', error);
-            return '<p>Error fetching rooms, units, and fixtures. Please check the console for details.</p>';
-        }
-    });
-    apiControls.appendChild(showRoomsUnitsFixturesControl);
 });
 
 function createControl(title, action, getCurlCommand) {
