@@ -34,7 +34,7 @@ class RemoteHostManager:
             client_info = {
                 'ip': client_ip,
                 'rooms': self.client_rooms.get(client_ip, []),
-                'name': self.remote_hosts.get(client_ip, {}).get('name', 'Unknown')
+                'name': self.remote_hosts.get(client_ip, {}).get('name', f'Client-{client_ip}')
             }
             clients_info.append(client_info)
         return clients_info
