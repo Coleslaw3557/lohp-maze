@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const showLightFixturesControl = createControl('Show Light Fixtures', async () => {
         try {
             const fixtures = await api.getLightFixtures();
-            return JSON.stringify(fixtures, null, 2);
+            return `<pre>${JSON.stringify(fixtures, null, 2)}</pre>`;
         } catch (error) {
             console.error('Error fetching light fixtures:', error);
             return 'Error fetching light fixtures. Please check the console for details.';
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const showConnectedClientsControl = createControl('Show Connected Clients', async () => {
         try {
             const clients = await api.getConnectedClients();
-            return JSON.stringify(clients, null, 2);
+            return `<pre>${JSON.stringify(clients, null, 2)}</pre>`;
         } catch (error) {
             console.error('Error fetching connected clients:', error);
             return 'Error fetching connected clients. Please check the console for details.';
