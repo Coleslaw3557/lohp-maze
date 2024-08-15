@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const showLightFixturesControl = createControl('Show Light Fixtures', async () => {
         try {
             const fixtures = await api.getLightFixtures();
-            return `<pre>${JSON.stringify(fixtures, null, 2)}</pre>`;
+            return createTable(fixtures, ['room', 'model', 'start_address']);
         } catch (error) {
             console.error('Error fetching light fixtures:', error);
             return 'Error fetching light fixtures. Please check the console for details.';
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const showConnectedClientsControl = createControl('Show Connected Clients', async () => {
         try {
             const clients = await api.getConnectedClients();
-            return `<pre>${JSON.stringify(clients, null, 2)}</pre>`;
+            return createTable(clients, ['ip', 'name', 'rooms']);
         } catch (error) {
             console.error('Error fetching connected clients:', error);
             return 'Error fetching connected clients. Please check the console for details.';
@@ -144,4 +144,34 @@ function createLabel(text, element) {
     label.textContent = text;
     label.appendChild(element);
     return label;
+}
+
+function createTable(data, columns) {
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    
+    // Create header
+    const header = table.createTHead();
+    const headerRow = header.insertRow();
+    columns.forEach(column => {
+        const th = document.createElement('th');
+        th.textContent = column.charAt(0).toUpperCase() + column.slice(1);
+        headerRow.appendChild(th);
+    });
+
+    // Create body
+    const body = table.createTBody();
+    data.forEach(item => {
+        const row = body.insertRow();
+        columns.forEach(column => {
+            const cell = row.insertCell();
+            let value = item[column];
+            if (Array.isArray(value)) {
+                value = value.join(', ');
+            }
+            cell.textContent = value;
+        });
+    });
+
+    return table.outerHTML;
 }
