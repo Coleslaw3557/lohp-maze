@@ -39,6 +39,24 @@ class RemoteHostManager:
             clients_info.append(client_info)
         return clients_info
 
+    async def terminate_client(self, client_ip):
+        if client_ip in self.connected_clients:
+            websocket = self.connected_clients[client_ip]
+            try:
+                await websocket.close()
+                del self.connected_clients[client_ip]
+                if client_ip in self.client_rooms:
+                    del self.client_rooms[client_ip]
+                if client_ip in self.remote_hosts:
+                    del self.remote_hosts[client_ip]
+                logger.info(f"Client {client_ip} terminated successfully")
+                return True
+            except Exception as e:
+                logger.error(f"Error terminating client {client_ip}: {str(e)}")
+        else:
+            logger.warning(f"Client {client_ip} not found in connected clients")
+        return False
+
     async def play_audio_for_all_clients(self, effect_name, audio_params):
         audio_success = True
         for websocket in self.connected_clients.values():
