@@ -42,6 +42,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize brightness value display
     brightnessValue.textContent = `${Math.round(brightnessSlider.value * 100)}%`;
 
+    // Theme control sliders
+    const themeControls = {
+        'transition-speed': 0.08,
+        'color-variation': 0.9,
+        // Add more theme controls here
+    };
+
+    Object.keys(themeControls).forEach(controlId => {
+        const slider = document.getElementById(controlId);
+        const valueDisplay = document.getElementById(`${controlId}-value`);
+        
+        slider.value = themeControls[controlId];
+        valueDisplay.textContent = themeControls[controlId];
+
+        slider.addEventListener('input', async () => {
+            const value = parseFloat(slider.value);
+            valueDisplay.textContent = value.toFixed(2);
+            const response = await api.updateThemeValue(controlId, value);
+            console.log(`${controlId} updated:`, response);
+        });
+    });
+
     // Start Music
     apiControls.appendChild(createControl('Start Music', async () => {
         const response = await api.startMusic();
