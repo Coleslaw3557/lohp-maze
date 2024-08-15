@@ -27,6 +27,17 @@ const api = {
         return response.json();
     },
 
+    async setNextTheme() {
+        const response = await fetch(`${API_BASE_URL}/set_theme`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ next_theme: true }),
+        });
+        return response.json();
+    },
+
     async runEffect(room, effectName) {
         const response = await fetch(`${API_BASE_URL}/run_effect`, {
             method: 'POST',
