@@ -194,16 +194,21 @@ async def set_theme():
     theme_name = data.get('theme_name')
     next_theme = data.get('next_theme', False)
 
-    if not theme_name and not next_theme:
-        return jsonify({'status': 'error', 'message': 'Theme name or next_theme flag is required'}), 400
-
     try:
-        if theme_name.lower() == 'notheme':
-            logger.info("Turning off theme")
-            await effects_manager.stop_current_theme_async()
-            return jsonify({'status': 'success', 'message': 'Theme turned off'})
-        
+        if next_theme:
+            logger.info("Setting next theme")
+            next_theme_name = await effects_manager.set_next_theme_async()
+            if next_theme_name:
+                return jsonify({'status': 'success', 'message': f'Theme set to next theme: {next_theme_name}'})
+            else:
+                return jsonify({'status': 'error', 'message': 'Failed to set next theme'}), 400
+
         if theme_name:
+            if theme_name.lower() == 'notheme':
+                logger.info("Turning off theme")
+                await effects_manager.stop_current_theme_async()
+                return jsonify({'status': 'success', 'message': 'Theme turned off'})
+            
             logger.info(f"Setting theme to: {theme_name}")
             success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=10.0)
             if success:
@@ -212,9 +217,8 @@ async def set_theme():
             else:
                 logger.error(f"Failed to set theme to: {theme_name}")
                 return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
-        else:
-            logger.error("No valid theme name provided")
-            return jsonify({'status': 'error', 'message': 'No valid theme name provided'}), 400
+        
+        return jsonify({'status': 'error', 'message': 'Theme name or next_theme flag is required'}), 400
     except asyncio.TimeoutError:
         logger.error(f"Timeout while setting theme to: {theme_name}")
         return jsonify({'status': 'error', 'message': f'Timeout while setting theme to {theme_name}'}), 504
