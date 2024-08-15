@@ -94,4 +94,11 @@ const api = {
         const response = await fetch(`${API_BASE_URL}/connected_clients`);
         return response.json();
     },
+
+    async killProcess() {
+        const response = await fetch(`${API_BASE_URL}/kill_process`, {
+            method: 'POST',
+        });
+        return response.json();
+    },
 };

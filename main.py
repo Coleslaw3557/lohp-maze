@@ -370,6 +370,13 @@ async def stop_music():
         logger.error(f"Error stopping background music: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/kill_process', methods=['POST'])
+async def kill_process():
+    logger.info("Kill process request received")
+    response = jsonify({"status": "success", "message": "Process termination initiated"})
+    await response.make_response()
+    os._exit(0)  # This will immediately terminate the Python process
+
 # This route has been removed as it was a duplicate
 
 @app.route('/api/run_test', methods=['POST'])

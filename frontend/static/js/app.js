@@ -85,6 +85,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return tableHTML;
     });
     apiControls.appendChild(showConnectedClientsControl);
+
+    // Kill Process Button
+    const killProcessControl = createControl('Kill Process', async () => {
+        if (confirm('Are you sure you want to kill the entire process? This will stop all operations.')) {
+            const response = await api.killProcess();
+            return JSON.stringify(response);
+        }
+        return 'Operation cancelled';
+    });
+    apiControls.appendChild(killProcessControl);
 });
 
 function createControl(title, action) {
