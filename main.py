@@ -247,18 +247,19 @@ async def run_effect():
     try:
         # Get audio configuration for the effect
         audio_config = audio_manager.get_audio_config(effect_name)
-        if audio_config:
+        if audio_config and audio_config.get('audio_files'):
             audio_file = random.choice(audio_config['audio_files'])
             volume = audio_config.get('volume', audio_manager.audio_config['default_volume'])
         else:
             audio_file = None
-            volume = audio_manager.audio_config['default_volume']
-        
-        # Add audio parameters to effect data
-        effect_data['audio'] = {
-            'file': audio_file,
-            'volume': volume
-        }
+            volume = None
+    
+        # Add audio parameters to effect data only if audio_file exists
+        if audio_file:
+            effect_data['audio'] = {
+                'file': audio_file,
+                'volume': volume
+            }
         
         # Execute the effect immediately
         success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
