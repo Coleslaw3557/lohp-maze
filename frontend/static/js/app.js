@@ -98,11 +98,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Light Fixtures Table
     const showLightFixturesControl = createControl('Show Light Fixtures', async () => {
         try {
-            const fixtures = await api.getLightFixtures();
-            return createTable(fixtures, ['room', 'model', 'start_address']);
+            const response = await api.getLightFixtures();
+            return `<pre>${response}</pre>`;
         } catch (error) {
             console.error('Error fetching light fixtures:', error);
-            return 'Error fetching light fixtures. Please check the console for details.';
+            return '<p class="error-message">Error fetching light fixtures. Please check the console for details.</p>';
         }
     }, () => generateCurlCommand('GET', 'light_fixtures'));
     apiControls.appendChild(showLightFixturesControl);

@@ -98,7 +98,7 @@ const api = {
 
     async getLightFixtures() {
         const response = await fetch(`${API_BASE_URL}/light_fixtures`);
-        return response.json();
+        return response.text();
     },
 
     async getConnectedClients() {
