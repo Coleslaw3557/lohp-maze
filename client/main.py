@@ -8,6 +8,7 @@ import random
 import RPi.GPIO as GPIO
 import requests
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from websocket_client import WebSocketClient
 from audio_manager import AudioManager
 from trigger_manager import TriggerManager
@@ -60,7 +61,7 @@ def execute_action(action, server_ip):
         except Exception as e:
             logger.error(f"Error executing action: {str(e)}")
 
-async def monitor_triggers(config, trigger_queue):
+def monitor_triggers_thread(config, trigger_queue):
     last_trigger_time = {}
     rate_limit = config.get('rate_limit', 5)
     
@@ -74,12 +75,16 @@ async def monitor_triggers(config, trigger_queue):
                     current_time = time.time()
                     if trigger_name not in last_trigger_time or (current_time - last_trigger_time[trigger_name]) > rate_limit:
                         logger.info(f"Trigger activated: {trigger_name}")
-                        await trigger_queue.put((trigger_name, trigger['action']))
+                        asyncio.run_coroutine_threadsafe(trigger_queue.put((trigger_name, trigger['action'])), asyncio.get_event_loop())
                         last_trigger_time[trigger_name] = current_time
                 elif current_state == GPIO.HIGH:
                     last_trigger_time.pop(trigger_name, None)
         
-        await asyncio.sleep(0.01)  # Check every 10ms
+        time.sleep(0.01)  # Check every 10ms
+
+async def monitor_triggers(config, trigger_queue):
+    # This function is kept for compatibility, but it's not used anymore
+    pass
 
 async def process_triggers(trigger_queue, config):
     while True:
@@ -118,8 +123,9 @@ async def main():
         
         trigger_queue = asyncio.Queue()
         
-        # Start the GPIO monitoring as a coroutine
-        monitor_task = asyncio.create_task(monitor_triggers(config, trigger_queue))
+        # Start the GPIO monitoring in a separate thread
+        executor = ThreadPoolExecutor(max_workers=1)
+        monitor_future = executor.submit(monitor_triggers_thread, config, trigger_queue)
 
         async def handle_connection():
             try:
@@ -131,8 +137,7 @@ async def main():
                     logger.info("Starting WebSocket listener and trigger monitor")
                     await asyncio.gather(
                         ws_client.listen(),
-                        process_triggers(trigger_queue, config),
-                        monitor_triggers(config, trigger_queue)
+                        process_triggers(trigger_queue, config)
                     )
             except websockets.exceptions.WebSocketException as e:
                 logger.error(f"WebSocket connection error: {e}")
@@ -157,6 +162,7 @@ async def main():
             logger.info("Shutting down client...")
         finally:
             await ws_client.disconnect()
+            executor.shutdown(wait=False)
             GPIO.cleanup()
     except Exception as e:
         log_and_exit(f"Unhandled exception in main: {str(e)}")
