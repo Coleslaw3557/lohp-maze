@@ -64,8 +64,8 @@ try:
 
     # Define thresholds for connected vs unconnected states
     CONNECTED_THRESHOLD = 100  # Adjust this value based on your specific setup
-except OSError:
-    print("Failed to initialize ADCs. Analog sensors will not be available.")
+except OSError as e:
+    print(f"Failed to initialize ADCs. Error: {e}")
     adc_available = False
 
 # Set up Terminal for TUI
@@ -97,42 +97,29 @@ def get_sensor_data():
     for room, pin in laser_receivers.items():
         try:
             status = "Intact" if GPIO.input(pin) == GPIO.LOW else "Broken"
-        except:
-            status = "Error"
+        except Exception as e:
+            status = f"Error: {e}"
         data.append((f"GPIO {pin}", f"{room} Laser", room, status))
     
     adc_data = [
-        ("ADC1 A0", "Resistor Ladder 1", "Gate"),
-        ("ADC1 A1", "Resistor Ladder 2", "Gate"),
-        ("ADC1 A2", "Buttons", "Gate"),
-        ("ADC2 A0", "Piezo 1", "Porto"),
-        ("ADC2 A1", "Piezo 2", "Porto"),
-        ("ADC2 A2", "Piezo 3", "Porto")
+        ("ADC1 A0", "Resistor Ladder 1", "Gate", gate_resistor_ladder1),
+        ("ADC1 A1", "Resistor Ladder 2", "Gate", gate_resistor_ladder2),
+        ("ADC1 A2", "Buttons", "Gate", gate_buttons),
+        ("ADC2 A0", "Piezo 1", "Porto", porto_piezo1),
+        ("ADC2 A1", "Piezo 2", "Porto", porto_piezo2),
+        ("ADC2 A2", "Piezo 3", "Porto", porto_piezo3)
     ]
     
-    for adc, sensor, room in adc_data:
+    for adc, sensor, room, analog_in in adc_data:
         if adc_available:
             try:
-                if adc == "ADC1 A0":
-                    filtered_value = get_filtered_value('gate_resistor_ladder1', gate_resistor_ladder1.value)
-                    value = f"{filtered_value:.0f} ({gate_resistor_ladder1.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
-                elif adc == "ADC1 A1":
-                    filtered_value = get_filtered_value('gate_resistor_ladder2', gate_resistor_ladder2.value)
-                    value = f"{filtered_value:.0f} ({gate_resistor_ladder2.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
-                elif adc == "ADC1 A2":
-                    filtered_value = get_filtered_value('gate_buttons', gate_buttons.value)
+                filtered_value = get_filtered_value(f"{room.lower()}_{sensor.lower().replace(' ', '_')}", analog_in.value)
+                if sensor == "Buttons":
                     value = get_button_state(filtered_value)
-                elif adc == "ADC2 A0":
-                    filtered_value = get_filtered_value('porto_piezo1', porto_piezo1.value)
-                    value = f"{filtered_value:.0f} ({porto_piezo1.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
-                elif adc == "ADC2 A1":
-                    filtered_value = get_filtered_value('porto_piezo2', porto_piezo2.value)
-                    value = f"{filtered_value:.0f} ({porto_piezo2.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
-                elif adc == "ADC2 A2":
-                    filtered_value = get_filtered_value('porto_piezo3', porto_piezo3.value)
-                    value = f"{filtered_value:.0f} ({porto_piezo3.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
-            except:
-                value = "Error"
+                else:
+                    value = f"{filtered_value:.0f} ({analog_in.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
+            except Exception as e:
+                value = f"Error: {e}"
         else:
             value = "Offline"
         data.append((adc, sensor, room, value))
