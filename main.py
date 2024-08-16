@@ -437,7 +437,7 @@ async def shutdown():
 
 def shutdown_host_system():
     logger.info("Shutting down host system")
-    os.system('chroot /host shutdown -h now')
+    os.system('halt')
 
 @app.route('/api/kill_process', methods=['POST'])
 async def kill_process():

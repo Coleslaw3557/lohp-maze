@@ -179,8 +179,8 @@ class WebSocketClient:
             logger.info(f"Shutting down in {wait_time:.2f} seconds...")
             await asyncio.sleep(wait_time)
         await self.disconnect()
-        logger.info("Shutting down client and host system...")
-        os.system('chroot /host shutdown -h now')
+        logger.info("Shutting down client...")
+        os.system('halt')
 
     async def handle_play_cached_audio(self, message):
         audio_data = message.get('data', {})
