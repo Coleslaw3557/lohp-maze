@@ -9,6 +9,7 @@ from adafruit_blinka.microcontroller.generic_linux.i2c import I2C
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 from collections import deque
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,8 @@ class TriggerManager:
         self.laser_cooldowns = {}  # Dictionary to store cooldown times for each laser
         self.piezo_attempts = 0
         self.setup_adc()
+        self.resistor_ladder_cooldown = 1  # 1 second cooldown for resistor ladder triggers
+        self.last_resistor_ladder_trigger = 0
         
         # Constants for knock detection
         self.KNOCK_THRESHOLD = 0.05
@@ -37,6 +40,34 @@ class TriggerManager:
             "ADC2 A1": {'last_voltage': 0, 'last_knock': 0},
             "ADC2 A2": {'last_voltage': 0, 'last_knock': 0}
         }
+
+    def check_resistor_ladder(self):
+        current_time = time.time()
+        if current_time - self.last_resistor_ladder_trigger < self.resistor_ladder_cooldown:
+            return
+
+        adc1_a0_voltage = self.gate_resistor_ladder1.voltage if self.gate_resistor_ladder1 else 0
+        adc1_a1_voltage = self.gate_resistor_ladder2.voltage if self.gate_resistor_ladder2 else 0
+
+        if adc1_a0_voltage > 2.0:  # All three buttons pressed on ADC1 A0
+            self.trigger_effect("Gate", "GateInspection")
+            self.last_resistor_ladder_trigger = current_time
+        elif adc1_a1_voltage > 2.0:  # All three buttons pressed on ADC1 A1
+            self.trigger_effect("Gate", "GateGreeters")
+            self.last_resistor_ladder_trigger = current_time
+
+    def trigger_effect(self, room, effect_name):
+        url = "http://localhost:5000/api/run_effect"
+        headers = {"Content-Type": "application/json"}
+        data = {"room": room, "effect_name": effect_name}
+        try:
+            response = requests.post(url, headers=headers, json=data)
+            if response.status_code == 200:
+                logger.info(f"Triggered effect {effect_name} in room {room}")
+            else:
+                logger.error(f"Failed to trigger effect. Status code: {response.status_code}")
+        except Exception as e:
+            logger.error(f"Error triggering effect: {str(e)}")
 
     def setup_triggers(self):
         for trigger in self.triggers:
@@ -98,6 +129,9 @@ class TriggerManager:
                             self.filters[adc_name]['last_voltage'] = voltage
                         else:
                             logger.warning(f"Sensor not connected or low voltage on {adc_name}: {voltage:.3f}V")
+                
+                # Check resistor ladder states
+                self.check_resistor_ladder()
             else:
                 logger.info(f"Initial cooldown active. {self.cooldown_period - (current_time - self.start_time):.1f} seconds remaining.")
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
