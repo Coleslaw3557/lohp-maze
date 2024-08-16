@@ -180,12 +180,12 @@ def read_adc_with_retry(adc, channel, analog_in, max_attempts=5, delay=0.5):
             voltage = analog_in.voltage
             return f"Value: {value}, Voltage: {voltage:.2f}V"
         except Exception as e:
-            logging.error(f"Error reading {adc} {channel}: {e}")
+            logging.debug(f"Error reading {adc} {channel}: {e}")
             if attempt < max_attempts - 1:
                 time.sleep(delay)
     
-    logging.error(f"Failed to read {adc} {channel} after {max_attempts} attempts")
-    return "Failed after multiple attempts"
+    logging.warning(f"Failed to read {adc} {channel} after {max_attempts} attempts")
+    return "Reading failed"
 
 def display_tui(prev_data=None):
     data = get_sensor_data()
