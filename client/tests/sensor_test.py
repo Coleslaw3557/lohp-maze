@@ -128,7 +128,7 @@ def initialize_adc():
     # Add more detailed debugging information
     if ads1:
         print(f"\nADC1 (0x48) Debug Info:")
-        print(f"  Address: 0x{ads1.address:02X}")
+        print(f"  Address: 0x48")
         print(f"  Data Rate: {ads1.data_rate}")
         print(f"  Gain: {ads1.gain}")
     else:
@@ -136,7 +136,7 @@ def initialize_adc():
 
     if ads2:
         print(f"\nADC2 (0x49) Debug Info:")
-        print(f"  Address: 0x{ads2.address:02X}")
+        print(f"  Address: 0x49")
         print(f"  Data Rate: {ads2.data_rate}")
         print(f"  Gain: {ads2.gain}")
     else:
@@ -191,10 +191,10 @@ def get_sensor_data():
         data.append((adc, channel, room, status))
     
     # Add ADC debug information
-    for adc, name in [(ads1, "ADC1"), (ads2, "ADC2")]:
+    for adc, name, address in [(ads1, "ADC1", "0x48"), (ads2, "ADC2", "0x49")]:
         if adc:
             try:
-                data.append((f"{name} Debug", "Info", "All", f"Address: 0x{adc._address:02X}, Data rate: {adc.data_rate}, Gain: {adc.gain}"))
+                data.append((f"{name} Debug", "Info", "All", f"Address: {address}, Data rate: {adc.data_rate}, Gain: {adc.gain}"))
             except Exception as e:
                 data.append((f"{name} Debug", "Info", "All", f"Error: {str(e)}"))
         else:
