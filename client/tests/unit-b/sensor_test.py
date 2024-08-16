@@ -210,35 +210,35 @@ def get_sensor_data():
                 value = analog_in.value
                 voltage = analog_in.voltage
                 
-                if voltage > CONNECTED_THRESHOLD:
-                    # Calculate the change in voltage
-                    voltage_change = abs(voltage - filters[adc].get('last_voltage', voltage))
+                # Calculate the change in voltage
+                voltage_change = abs(voltage - filters[adc].get('last_voltage', voltage))
+            
+                if adc.startswith("ADC1"):  # Resistor ladder switches
+                    button_status = "No button pressed"
+                    if voltage_change > RESISTOR_LADDER_THRESHOLD:
+                        button_status = f"Button pressed! Voltage: {voltage:.3f}V"
+                    status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {button_status}"
+                else:  # Other sensors (including piezo)
+                    knock_status = "No knock"
+                    if voltage_change > DEBUG_THRESHOLD:
+                        debug_status = f"Debug: Change detected: {voltage_change:.3f}V"
+                        if voltage > KNOCK_THRESHOLD and voltage_change > VOLTAGE_CHANGE_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
+                            knock_status = "KNOCK DETECTED"
+                            filters[adc]['last_knock'] = current_time
+                    else:
+                        debug_status = ""
                 
-                    if adc in ["ADC1 A0", "ADC1 A1"]:  # Resistor ladder switches
-                        button_status = "No button pressed"
-                        if voltage_change > RESISTOR_LADDER_THRESHOLD:
-                            button_status = f"Button pressed! Voltage: {voltage:.3f}V"
-                        status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {button_status}"
-                    else:  # Other sensors (including piezo)
-                        knock_status = "No knock"
-                        if voltage_change > DEBUG_THRESHOLD:
-                            debug_status = f"Debug: Change detected: {voltage_change:.3f}V"
-                            if voltage > KNOCK_THRESHOLD and voltage_change > VOLTAGE_CHANGE_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
-                                knock_status = "KNOCK DETECTED"
-                                filters[adc]['last_knock'] = current_time
-                        else:
-                            debug_status = ""
-                    
-                        status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {knock_status}"
-                        if debug_status:
-                            status += f", {debug_status}"
-                    
-                    filters[adc]['last_voltage'] = voltage
-                else:
-                    status = f"Value: {value}, Voltage: {voltage:.3f}V, Sensor not connected"
+                    status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {knock_status}"
+                    if debug_status:
+                        status += f", {debug_status}"
+                
+                filters[adc]['last_voltage'] = voltage
             except Exception as e:
-                status = f"Reading failed: {str(e)}"
-                print(f"Error reading {adc} {channel}: {str(e)}")
+                if adc.startswith("ADC1"):
+                    status = f"Value: {value}, Voltage: {voltage:.3f}V"
+                else:
+                    status = f"Reading failed: {str(e)}"
+                    print(f"Error reading {adc} {channel}: {str(e)}")
         else:
             status = "Not initialized"
         data.append((adc, channel, room, status))
