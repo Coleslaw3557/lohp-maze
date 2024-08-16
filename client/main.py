@@ -7,6 +7,7 @@ import traceback
 import random
 import RPi.GPIO as GPIO
 import requests
+import threading
 from websocket_client import WebSocketClient
 from audio_manager import AudioManager
 from trigger_manager import TriggerManager
@@ -59,7 +60,7 @@ def execute_action(action, server_ip):
         except Exception as e:
             logger.error(f"Error executing action: {str(e)}")
 
-async def monitor_triggers(config):
+def monitor_triggers(config, trigger_queue):
     last_trigger_time = {}
     rate_limit = config.get('rate_limit', 5)
     
@@ -73,12 +74,20 @@ async def monitor_triggers(config):
                     current_time = time.time()
                     if trigger_name not in last_trigger_time or (current_time - last_trigger_time[trigger_name]) > rate_limit:
                         logger.info(f"Trigger activated: {trigger_name}")
-                        execute_action(trigger['action'], config.get('server_ip'))
+                        trigger_queue.put((trigger_name, trigger['action']))
                         last_trigger_time[trigger_name] = current_time
                 elif current_state == GPIO.HIGH:
                     last_trigger_time.pop(trigger_name, None)
         
-        await asyncio.sleep(0.1)  # Check every 100ms
+        time.sleep(0.01)  # Check every 10ms
+
+async def process_triggers(trigger_queue, config):
+    while True:
+        try:
+            trigger_name, action = trigger_queue.get_nowait()
+            execute_action(action, config.get('server_ip'))
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(0.01)
 
 async def main():
     try:
@@ -102,13 +111,18 @@ async def main():
             sync_manager
         )
 
-        # Remove the setup_gpio call as it's now handled by TriggerManager
-
         # Background music is not started automatically
         logger.info("Background music is ready to be started manually")
 
         uri = f"ws://{config.get('server_ip')}:{config.get('server_port', 8765)}"
         
+        trigger_queue = asyncio.Queue()
+        
+        # Start the GPIO monitoring in a separate thread
+        gpio_thread = threading.Thread(target=monitor_triggers, args=(config, trigger_queue))
+        gpio_thread.daemon = True
+        gpio_thread.start()
+
         async def handle_connection():
             try:
                 logger.info(f"Attempting to connect to WebSocket server at {uri}")
@@ -119,7 +133,7 @@ async def main():
                     logger.info("Starting WebSocket listener and trigger monitor")
                     await asyncio.gather(
                         ws_client.listen(),
-                        monitor_triggers(config)
+                        process_triggers(trigger_queue, config)
                     )
             except websockets.exceptions.WebSocketException as e:
                 logger.error(f"WebSocket connection error: {e}")

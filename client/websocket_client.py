@@ -164,7 +164,12 @@ class WebSocketClient:
 
         if handler:
             logger.info(f"Handling message type: {message_type}")
-            await handler(message)
+            if message_type in ['play_effect_audio', 'play_cached_audio', 'audio_start']:
+                # Process audio-related messages immediately
+                await handler(message)
+            else:
+                # Process other messages in the background
+                asyncio.create_task(handler(message))
         elif message_type is None:
             logger.warning("Received message without 'type' field")
             await self.handle_typeless_message(message)
