@@ -85,13 +85,14 @@ def monitor_triggers_thread(config):
                 
                 if current_state == GPIO.LOW:
                     if trigger_name not in last_trigger_time or (current_time - last_trigger_time[trigger_name]) > rate_limit:
-                        logger.info(f"Trigger activated: {trigger_name}")
+                        logger.info(f"Laser beam broken: {trigger_name} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
                         execute_action(trigger['action'], config.get('server_ip'))
                         last_trigger_time[trigger_name] = current_time
                 elif current_state == GPIO.HIGH:
                     # Only remove from last_trigger_time if it's been more than rate_limit seconds
                     if trigger_name in last_trigger_time and (current_time - last_trigger_time[trigger_name]) > rate_limit:
                         last_trigger_time.pop(trigger_name, None)
+                        logger.debug(f"Laser beam restored: {trigger_name} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
         
         time.sleep(0.01)  # Check every 10ms
 
