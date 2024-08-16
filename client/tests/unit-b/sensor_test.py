@@ -12,7 +12,7 @@ KNOCK_THRESHOLD = 0.05  # Lowered threshold for more sensitivity with piezo
 VOLTAGE_CHANGE_THRESHOLD = 0.01  # Lowered minimum voltage change to consider as a knock
 COOLDOWN_TIME = 0.2  # Reduced cooldown time for quicker response
 DEBUG_THRESHOLD = 0.005  # Lowered threshold for more detailed debug output
-CONNECTED_THRESHOLD = 0.01  # Lowered threshold for detecting connected sensors
+CONNECTED_THRESHOLD = 0.3  # Adjusted threshold for detecting connected sensors
 
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
