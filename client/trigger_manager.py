@@ -126,7 +126,8 @@ class TriggerManager:
                             logger.info(f"Laser beam broken: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
                             await callback(trigger['name'])
                             self.set_trigger_cooldown(trigger['name'], current_time)
-                        self.laser_intact_times[trigger['name']] = None  # Reset intact time when beam is broken
+                        else:
+                            logger.debug(f"Laser beam broken but in cooldown: {trigger['name']}")
                     else:
                         # Beam is intact
                         if self.laser_intact_times.get(trigger['name']) is None:
@@ -201,18 +202,12 @@ class TriggerManager:
 
     def check_laser_cooldown(self, trigger_name, current_time):
         last_trigger_time = self.trigger_cooldowns.get(trigger_name, 0)
-        intact_time = self.laser_intact_times.get(trigger_name)
         
-        if intact_time is None:
-            return False  # Beam is currently broken or was recently broken
+        # Check if the cooldown period has passed
+        if current_time - last_trigger_time > 15:  # 15-second cooldown
+            return True
         
-        if current_time - intact_time < 15:
-            return False  # Beam hasn't been intact for 15 seconds yet
-        
-        if current_time - last_trigger_time <= 15:  # 15-second cooldown
-            return False  # Still in cooldown period
-        
-        return True
+        return False
 
     def check_trigger_cooldown(self, trigger_name, current_time):
         last_trigger_time = self.trigger_cooldowns.get(trigger_name, 0)
