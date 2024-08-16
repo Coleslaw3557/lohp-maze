@@ -73,14 +73,24 @@ CONNECTED_THRESHOLD = 100
 
 def initialize_adc():
     global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3, filters, CONNECTED_THRESHOLD
+    adc_available = False
     try:
         ads1 = ADS.ADS1115(i2c, address=0x48, gain=1)  # ADC1 for Gate Room
-        ads2 = ADS.ADS1115(i2c, address=0x49, gain=1)  # ADC2 for Porto Room
-        
-        # Set the data rate to the slowest setting
         ads1.data_rate = 8
-        ads2.data_rate = 8
+        logging.info("ADC1 (Gate Room) initialized successfully")
+    except OSError as e:
+        logging.error(f"Failed to initialize ADC1 (Gate Room). Error: {e}")
+        return
 
+    try:
+        ads2 = ADS.ADS1115(i2c, address=0x49, gain=1)  # ADC2 for Porto Room
+        ads2.data_rate = 8
+        logging.info("ADC2 (Porto Room) initialized successfully")
+    except OSError as e:
+        logging.error(f"Failed to initialize ADC2 (Porto Room). Error: {e}")
+        return
+
+    try:
         # Set up analog inputs
         gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
         gate_resistor_ladder2 = AnalogIn(ads1, ADS.P1)
@@ -88,8 +98,7 @@ def initialize_adc():
         porto_piezo1 = AnalogIn(ads2, ADS.P0)
         porto_piezo2 = AnalogIn(ads2, ADS.P1)
         porto_piezo3 = AnalogIn(ads2, ADS.P2)
-        adc_available = True
-
+        
         # Set up low-pass filters for each analog input
         filter_size = 10
         filters = {
@@ -104,10 +113,11 @@ def initialize_adc():
         # Define thresholds for connected vs unconnected states
         global CONNECTED_THRESHOLD
         CONNECTED_THRESHOLD = 100  # Adjust this value based on your specific setup
-        logging.info("ADCs initialized successfully")
-    except OSError as e:
-        logging.error(f"Failed to initialize ADCs. Error: {e}")
-        adc_available = False
+        
+        adc_available = True
+        logging.info("All ADC inputs initialized successfully")
+    except Exception as e:
+        logging.error(f"Failed to set up ADC inputs. Error: {e}")
 
 initialize_adc()
 
