@@ -81,13 +81,13 @@ def is_connected(value):
 def get_button_state(value):
     if not is_connected(value):
         return "Disconnected"
-    elif value < 5000:
+    elif value < 8192:  # 1/4 of max value (32768)
         return "Button 1"
-    elif value < 10000:
+    elif value < 16384:  # 1/2 of max value
         return "Button 2"
-    elif value < 15000:
+    elif value < 24576:  # 3/4 of max value
         return "Button 3"
-    elif value < 20000:
+    elif value < 32768:  # Max value
         return "Button 4"
     else:
         return "No button"
@@ -116,8 +116,14 @@ def get_sensor_data():
                 filtered_value = get_filtered_value(f"{room.lower()}_{sensor.lower().replace(' ', '_')}", analog_in.value)
                 if sensor == "Buttons":
                     value = get_button_state(filtered_value)
+                elif sensor.startswith("Resistor Ladder"):
+                    resistance = (32768 - filtered_value) / filtered_value * 10000  # Calculate resistance
+                    value = f"{filtered_value:.0f} ({resistance:.0f} Ω)"
                 else:
-                    value = f"{filtered_value:.0f} ({analog_in.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
+                    value = f"{filtered_value:.0f} ({analog_in.voltage:.2f}V)"
+                
+                if not is_connected(filtered_value):
+                    value += " - Disconnected"
             except Exception as e:
                 value = f"Error: {e}"
         else:
