@@ -87,6 +87,16 @@ def test_level_shifter(input_pin, output_pin):
     
     return results
 
+def switch_unit():
+    global current_unit
+    units = list(UNIT_CONFIGS.keys())
+    current_index = units.index(current_unit)
+    next_index = (current_index + 1) % len(units)
+    current_unit = units[next_index]
+    print(f"Switched to {UNIT_CONFIGS[current_unit]['name']}")
+    setup_gpio()
+    initialize_adc()
+
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
