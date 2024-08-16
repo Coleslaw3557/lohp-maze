@@ -111,6 +111,15 @@ initialize_adc()
 # Set up Terminal for TUI
 term = Terminal()
 
+def check_i2c_devices():
+    print("Checking I2C devices...")
+    try:
+        import subprocess
+        result = subprocess.run(['i2cdetect', '-y', '1'], capture_output=True, text=True)
+        print(result.stdout)
+    except Exception as e:
+        print(f"Error checking I2C devices: {str(e)}")
+
 def get_sensor_data():
     data = []
     
@@ -165,8 +174,8 @@ def display_tui():
 
 try:
     setup_gpio()  # Ensure GPIO is set up before the main loop
-    initialize_adc()  # Initialize ADCs
     check_i2c_devices()  # Check I2C devices
+    initialize_adc()  # Initialize ADCs
     with term.cbreak(), term.hidden_cursor():
         display_tui()  # Initial display
         while True:
