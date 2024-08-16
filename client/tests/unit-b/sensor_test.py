@@ -8,9 +8,10 @@ from blessed import Terminal
 from collections import deque
 
 # Constants for knock detection
-KNOCK_THRESHOLD = 0.5  # Increased threshold based on resting voltage
-VOLTAGE_CHANGE_THRESHOLD = 0.05  # Minimum voltage change to consider as a knock
+KNOCK_THRESHOLD = 0.1  # Lowered threshold for more sensitivity
+VOLTAGE_CHANGE_THRESHOLD = 0.02  # Lowered minimum voltage change to consider as a knock
 COOLDOWN_TIME = 0.5  # Cooldown time between knocks (in seconds)
+DEBUG_THRESHOLD = 0.01  # Threshold for debug output
 
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
@@ -212,15 +213,20 @@ def get_sensor_data():
                     # Calculate the change in voltage
                     voltage_change = abs(voltage - filters[adc].get('last_voltage', voltage))
                 
-                    if voltage > KNOCK_THRESHOLD and voltage_change > VOLTAGE_CHANGE_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
-                        knock_status = "KNOCK DETECTED"
-                        filters[adc]['last_knock'] = current_time
+                    knock_status = "No knock"
+                    if voltage_change > DEBUG_THRESHOLD:
+                        debug_status = f"Debug: Change detected: {voltage_change:.3f}V"
+                        if voltage > KNOCK_THRESHOLD and voltage_change > VOLTAGE_CHANGE_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
+                            knock_status = "KNOCK DETECTED"
+                            filters[adc]['last_knock'] = current_time
                     else:
-                        knock_status = "No knock"
+                        debug_status = ""
                 
                     filters[adc]['last_voltage'] = voltage
                 
                     status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {knock_status}"
+                    if debug_status:
+                        status += f", {debug_status}"
                 else:
                     status = f"Value: {value}, Voltage: {voltage:.3f}V"
             except Exception as e:
