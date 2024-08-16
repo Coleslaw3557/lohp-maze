@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  sensor-test:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: sensor-test:latest
+    privileged: true
+    devices:
+      - "/dev/gpiomem:/dev/gpiomem"
+      - "/dev/i2c-1:/dev/i2c-1"
+    volumes:
+      - ./sensor_test.py:/app/sensor_test.py
+    restart: unless-stopped
+
