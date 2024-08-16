@@ -11,23 +11,15 @@ import logging
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
     
-    results = []
-    for _ in range(5):  # Test 5 times
-        # Test HIGH state
-        GPIO.output(input_pin, GPIO.HIGH)
+    for state in [GPIO.HIGH, GPIO.LOW]:
+        GPIO.output(input_pin, state)
         time.sleep(0.1)
-        
-        # Test LOW state
-        GPIO.output(input_pin, GPIO.LOW)
-        time.sleep(0.1)
-        
-        results.append((GPIO.HIGH, GPIO.LOW))
-        logging.debug(f"Test iteration - Input Pin: {input_pin}, Output Pin: {output_pin} (not connected)")
+        logging.debug(f"Set Input Pin {input_pin} to {state}")
     
     GPIO.setup(input_pin, GPIO.IN)
     
-    logging.info(f"Level Shifter Test Result: Input Pin {input_pin}, Output Pin {output_pin} (not connected)")
-    return 1.0, results  # Always return 100% success rate since we can't verify the output
+    logging.info(f"Level Shifter Test: Input Pin {input_pin} tested, Output Pin {output_pin} not connected")
+    return f"Input {input_pin} tested, Output {output_pin} not connected"
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
@@ -143,10 +135,8 @@ def get_sensor_data():
     data = []
     
     # Test level shifters
-    ls1_rate, ls1_results = test_level_shifter(17, 27)
-    ls2_rate, ls2_results = test_level_shifter(24, 25)
-    ls1_status = f"Input tested (17), Output not connected (27)"
-    ls2_status = f"Input tested (24), Output not connected (25)"
+    ls1_status = test_level_shifter(17, 27)
+    ls2_status = test_level_shifter(24, 25)
     data.append(("LS1", "Level Shifter 1", "All", ls1_status))
     data.append(("LS2", "Level Shifter 2", "All", ls2_status))
     
