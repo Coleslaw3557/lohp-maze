@@ -60,7 +60,7 @@ def execute_action(action, server_ip):
         except Exception as e:
             logger.error(f"Error executing action: {str(e)}")
 
-def monitor_triggers(config, trigger_queue):
+async def monitor_triggers(config, trigger_queue):
     last_trigger_time = {}
     rate_limit = config.get('rate_limit', 5)
     
@@ -74,12 +74,12 @@ def monitor_triggers(config, trigger_queue):
                     current_time = time.time()
                     if trigger_name not in last_trigger_time or (current_time - last_trigger_time[trigger_name]) > rate_limit:
                         logger.info(f"Trigger activated: {trigger_name}")
-                        trigger_queue.put((trigger_name, trigger['action']))
+                        await trigger_queue.put((trigger_name, trigger['action']))
                         last_trigger_time[trigger_name] = current_time
                 elif current_state == GPIO.HIGH:
                     last_trigger_time.pop(trigger_name, None)
         
-        time.sleep(0.01)  # Check every 10ms
+        await asyncio.sleep(0.01)  # Check every 10ms
 
 async def process_triggers(trigger_queue, config):
     while True:
@@ -118,10 +118,8 @@ async def main():
         
         trigger_queue = asyncio.Queue()
         
-        # Start the GPIO monitoring in a separate thread
-        gpio_thread = threading.Thread(target=monitor_triggers, args=(config, trigger_queue))
-        gpio_thread.daemon = True
-        gpio_thread.start()
+        # Start the GPIO monitoring as a coroutine
+        monitor_task = asyncio.create_task(monitor_triggers(config, trigger_queue))
 
         async def handle_connection():
             try:
@@ -133,7 +131,8 @@ async def main():
                     logger.info("Starting WebSocket listener and trigger monitor")
                     await asyncio.gather(
                         ws_client.listen(),
-                        process_triggers(trigger_queue, config)
+                        process_triggers(trigger_queue, config),
+                        monitor_triggers(config, trigger_queue)
                     )
             except websockets.exceptions.WebSocketException as e:
                 logger.error(f"WebSocket connection error: {e}")
