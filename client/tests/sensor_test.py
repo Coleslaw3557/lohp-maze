@@ -61,7 +61,7 @@ filters = {}
 CONNECTED_THRESHOLD = 100
 
 def initialize_adc():
-    global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3, filters, CONNECTED_THRESHOLD
+    global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3
     adc_available = False
     try:
         ads1 = ADS.ADS1115(i2c, address=0x48, gain=1)  # ADC1 for Gate Room
@@ -77,50 +77,15 @@ def initialize_adc():
         porto_piezo2 = AnalogIn(ads2, ADS.P1)
         porto_piezo3 = AnalogIn(ads2, ADS.P2)
         
-        # Set up low-pass filters for each analog input
-        filter_size = 10
-        filters = {
-            'gate_resistor_ladder1': deque(maxlen=filter_size),
-            'gate_resistor_ladder2': deque(maxlen=filter_size),
-            'gate_buttons': deque(maxlen=filter_size),
-            'porto_piezo1': deque(maxlen=filter_size),
-            'porto_piezo2': deque(maxlen=filter_size),
-            'porto_piezo3': deque(maxlen=filter_size),
-        }
-
-        # Define thresholds for connected vs unconnected states
-        global CONNECTED_THRESHOLD
-        CONNECTED_THRESHOLD = 100  # Adjust this value based on your specific setup
-        
         adc_available = True
-    except Exception:
-        pass
+        print("ADC initialization successful")
+    except Exception as e:
+        print(f"ADC initialization failed: {str(e)}")
 
 initialize_adc()
 
 # Set up Terminal for TUI
 term = Terminal()
-
-def get_filtered_value(sensor_name, raw_value):
-    filters[sensor_name].append(raw_value)
-    return sum(filters[sensor_name]) / len(filters[sensor_name])
-
-def is_connected(value):
-    return value > CONNECTED_THRESHOLD
-
-def get_button_state(value):
-    if not is_connected(value):
-        return "Disconnected"
-    elif value < 8192:  # 1/4 of max value (32768)
-        return "Button 1"
-    elif value < 16384:  # 1/2 of max value
-        return "Button 2"
-    elif value < 24576:  # 3/4 of max value
-        return "Button 3"
-    elif value < 32768:  # Max value
-        return "Button 4"
-    else:
-        return "No button"
 
 def get_sensor_data():
     data = []
@@ -147,8 +112,8 @@ def get_sensor_data():
                 value = analog_in.value
                 voltage = analog_in.voltage
                 status = f"Value: {value}, Voltage: {voltage:.2f}V"
-            except Exception:
-                status = "Reading failed"
+            except Exception as e:
+                status = f"Reading failed: {str(e)}"
         else:
             status = "Offline"
         data.append((adc, channel, room, status))
@@ -174,10 +139,16 @@ try:
             key = term.inkey(timeout=0.1)
             if key == 'q':
                 break
-            display_tui()
+            try:
+                display_tui()
+            except Exception as e:
+                print(f"Error in display_tui: {str(e)}")
+                time.sleep(1)  # Wait a bit before trying again
 
 except KeyboardInterrupt:
-    pass
+    print("Program interrupted by user")
+except Exception as e:
+    print(f"Unexpected error: {str(e)}")
 finally:
     # Turn off all lasers
     for pin in laser_transmitters.values():
