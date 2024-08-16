@@ -74,44 +74,41 @@ def initialize_adc():
     adc_available = False
     ads1 = ads2 = None
 
-    try:
-        # Try to initialize ADC1
-        ads1 = ADS.ADS1115(i2c, address=0x48, gain=1)
-        ads1.data_rate = 8
-        print(f"ADC1 initialized at address 0x48")
-    except Exception as e:
-        print(f"Failed to initialize ADC1 at address 0x48: {str(e)}")
-        ads1 = None
+    def init_adc(address):
+        try:
+            adc = ADS.ADS1115(i2c, address=address, gain=1)
+            adc.data_rate = 8
+            print(f"ADC initialized at address 0x{address:02X}")
+            return adc
+        except Exception as e:
+            print(f"Failed to initialize ADC at address 0x{address:02X}: {str(e)}")
+            return None
 
-    try:
-        # Try to initialize ADC2
-        ads2 = ADS.ADS1115(i2c, address=0x49, gain=1)
-        ads2.data_rate = 8
-        print(f"ADC2 initialized at address 0x49")
-    except Exception as e:
-        print(f"Failed to initialize ADC2 at address 0x49: {str(e)}")
-        ads2 = None
+    ads1 = init_adc(0x48)
+    ads2 = init_adc(0x49)
 
     if ads1 is None and ads2 is None:
         print("Failed to initialize both ADCs")
         return
 
-    # Set up analog inputs
-    try:
-        if ads1 is not None:
-            gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
-            gate_resistor_ladder2 = AnalogIn(ads1, ADS.P1)
-            gate_buttons = AnalogIn(ads1, ADS.P2)
-        if ads2 is not None:
-            porto_piezo1 = AnalogIn(ads2, ADS.P0)
-            porto_piezo2 = AnalogIn(ads2, ADS.P1)
-            porto_piezo3 = AnalogIn(ads2, ADS.P2)
-        
-        adc_available = True
-        print("ADC initialization successful")
-    except Exception as e:
-        print(f"Error setting up analog inputs: {str(e)}")
-        adc_available = False
+    def setup_analog_in(adc, channel):
+        if adc is not None:
+            try:
+                return AnalogIn(adc, channel)
+            except Exception as e:
+                print(f"Error setting up AnalogIn for ADC 0x{adc._address:02X}, channel {channel}: {str(e)}")
+                return None
+        return None
+
+    gate_resistor_ladder1 = setup_analog_in(ads1, ADS.P0)
+    gate_resistor_ladder2 = setup_analog_in(ads1, ADS.P1)
+    gate_buttons = setup_analog_in(ads1, ADS.P2)
+    porto_piezo1 = setup_analog_in(ads2, ADS.P0)
+    porto_piezo2 = setup_analog_in(ads2, ADS.P1)
+    porto_piezo3 = setup_analog_in(ads2, ADS.P2)
+
+    adc_available = any([gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3])
+    print(f"ADC initialization {'successful' if adc_available else 'failed'}")
 
 # Call these functions to initialize I2C and ADCs
 check_i2c_devices()
@@ -149,7 +146,7 @@ def get_sensor_data():
     ]
     
     for adc, channel, room, analog_in in adc_data:
-        if adc_available:
+        if analog_in is not None:
             try:
                 value = analog_in.value
                 voltage = analog_in.voltage
@@ -158,14 +155,16 @@ def get_sensor_data():
                 status = f"Reading failed: {str(e)}"
                 print(f"Error reading {adc} {channel}: {str(e)}")
         else:
-            status = "Offline"
+            status = "Not initialized"
         data.append((adc, channel, room, status))
     
     # Add ADC debug information
-    if ads1:
-        data.append(("ADC1 Debug", "Info", "All", f"Address: 0x{ads1._address:02X}, Data rate: {ads1.data_rate}"))
-    if ads2:
-        data.append(("ADC2 Debug", "Info", "All", f"Address: 0x{ads2._address:02X}, Data rate: {ads2.data_rate}"))
+    for adc, name in [(ads1, "ADC1"), (ads2, "ADC2")]:
+        if adc:
+            try:
+                data.append((f"{name} Debug", "Info", "All", f"Address: 0x{adc._address:02X}, Data rate: {adc.data_rate}"))
+            except AttributeError as e:
+                data.append((f"{name} Debug", "Info", "All", f"Error: {str(e)}"))
     
     return data
 
