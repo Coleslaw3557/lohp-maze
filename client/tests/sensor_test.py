@@ -12,17 +12,23 @@ def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
     GPIO.setup(output_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     
+    # Test HIGH state
     GPIO.output(input_pin, GPIO.HIGH)
     time.sleep(0.1)
     high_state = GPIO.input(output_pin)
+    logging.debug(f"Level Shifter Test: Input Pin {input_pin} HIGH, Output Pin {output_pin} reads {high_state}")
     
+    # Test LOW state
     GPIO.output(input_pin, GPIO.LOW)
     time.sleep(0.1)
     low_state = GPIO.input(output_pin)
+    logging.debug(f"Level Shifter Test: Input Pin {input_pin} LOW, Output Pin {output_pin} reads {low_state}")
     
     GPIO.setup(input_pin, GPIO.IN)
     
-    return high_state == GPIO.HIGH and low_state == GPIO.LOW
+    result = high_state == GPIO.HIGH and low_state == GPIO.LOW
+    logging.info(f"Level Shifter Test Result: Input Pin {input_pin}, Output Pin {output_pin}, Working: {result}")
+    return result
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
@@ -136,8 +142,8 @@ def get_sensor_data():
     # Test level shifters
     ls1_status = "Working" if test_level_shifter(17, 27) else "Not Working"
     ls2_status = "Working" if test_level_shifter(24, 25) else "Not Working"
-    data.append(("LS1", "Level Shifter 1", "All", ls1_status))
-    data.append(("LS2", "Level Shifter 2", "All", ls2_status))
+    data.append(("LS1", "Level Shifter 1", "All", f"{ls1_status} (17->27)"))
+    data.append(("LS2", "Level Shifter 2", "All", f"{ls2_status} (24->25)"))
     
     # Test ADCs
     adc_data = [
