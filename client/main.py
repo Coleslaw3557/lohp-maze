@@ -9,6 +9,7 @@ import RPi.GPIO as GPIO
 import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
+import asyncio
 from websocket_client import WebSocketClient
 from audio_manager import AudioManager
 from trigger_manager import TriggerManager
@@ -51,17 +52,21 @@ def execute_action(action, server_ip):
     if action['type'] == 'curl':
         url = action['url'].replace('${server_ip}', server_ip)
         try:
-            response = requests.request(
-                action['method'],
-                url,
-                headers=action['headers'],
-                json=action['data']
-            )
-            logger.info(f"Action executed: {response.status_code}")
+            # Use a separate thread to execute the request
+            def make_request():
+                response = requests.request(
+                    action['method'],
+                    url,
+                    headers=action['headers'],
+                    json=action['data']
+                )
+                logger.info(f"Action executed: {response.status_code}")
+            
+            threading.Thread(target=make_request).start()
         except Exception as e:
             logger.error(f"Error executing action: {str(e)}")
 
-def monitor_triggers_thread(config, trigger_queue):
+def monitor_triggers_thread(config):
     last_trigger_time = {}
     rate_limit = config.get('rate_limit', 5)
     
@@ -75,7 +80,7 @@ def monitor_triggers_thread(config, trigger_queue):
                     current_time = time.time()
                     if trigger_name not in last_trigger_time or (current_time - last_trigger_time[trigger_name]) > rate_limit:
                         logger.info(f"Trigger activated: {trigger_name}")
-                        trigger_queue.put_nowait((trigger_name, trigger['action']))
+                        execute_action(trigger['action'], config.get('server_ip'))
                         last_trigger_time[trigger_name] = current_time
                 elif current_state == GPIO.HIGH:
                     last_trigger_time.pop(trigger_name, None)
@@ -122,11 +127,9 @@ async def main():
 
         uri = f"ws://{config.get('server_ip')}:{config.get('server_port', 8765)}"
         
-        trigger_queue = asyncio.Queue()
-        
         # Start the GPIO monitoring in a separate thread
         executor = ThreadPoolExecutor(max_workers=1)
-        monitor_future = executor.submit(monitor_triggers_thread, config, trigger_queue)
+        monitor_future = executor.submit(monitor_triggers_thread, config)
 
         async def handle_connection():
             try:
@@ -135,11 +138,8 @@ async def main():
                     logger.info(f"Connected to WebSocket server at {uri}")
                     await ws_client.set_websocket(websocket)
                     logger.debug(f"WebSocket connection details: {websocket.remote_address}")
-                    logger.info("Starting WebSocket listener and trigger monitor")
-                    await asyncio.gather(
-                        ws_client.listen(),
-                        process_triggers(trigger_queue, config)
-                    )
+                    logger.info("Starting WebSocket listener")
+                    await ws_client.listen()
             except websockets.exceptions.WebSocketException as e:
                 logger.error(f"WebSocket connection error: {e}")
                 logger.critical("Connection lost. Exiting process.")
