@@ -166,24 +166,26 @@ def get_sensor_data():
     
     for adc, channel, room, analog_in in adc_data:
         if adc_available:
-            for attempt in range(5):  # Try up to 5 times
-                try:
-                    value = analog_in.value
-                    voltage = analog_in.voltage
-                    status = f"Value: {value}, Voltage: {voltage:.2f}V"
-                    break
-                except Exception as e:
-                    logging.error(f"Error reading {adc} {channel}: {e}")
-                    status = f"Error: {e}"
-                    time.sleep(0.2)  # Longer delay before retry
-            else:
-                logging.error(f"Failed to read {adc} {channel} after 5 attempts")
-                status = "Failed after 5 attempts"
+            status = read_adc_with_retry(adc, channel, analog_in)
         else:
             status = "Offline"
         data.append((adc, channel, room, status))
     
     return data
+
+def read_adc_with_retry(adc, channel, analog_in, max_attempts=5, delay=0.2):
+    for attempt in range(max_attempts):
+        try:
+            value = analog_in.value
+            voltage = analog_in.voltage
+            return f"Value: {value}, Voltage: {voltage:.2f}V"
+        except Exception as e:
+            logging.error(f"Error reading {adc} {channel}: {e}")
+            if attempt < max_attempts - 1:
+                time.sleep(delay)
+    
+    logging.error(f"Failed to read {adc} {channel} after {max_attempts} attempts")
+    return "Failed after multiple attempts"
 
 def display_tui():
     print(term.clear())
