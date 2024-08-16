@@ -8,6 +8,7 @@ import RPi.GPIO as GPIO
 from adafruit_blinka.microcontroller.generic_linux.i2c import I2C
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
+from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,20 @@ class TriggerManager:
         self.laser_cooldowns = {}  # Dictionary to store cooldown times for each laser
         self.piezo_attempts = 0
         self.setup_adc()
+        
+        # Constants for knock detection
+        self.KNOCK_THRESHOLD = 0.05
+        self.VOLTAGE_CHANGE_THRESHOLD = 0.01
+        self.COOLDOWN_TIME = 0.2
+        self.DEBUG_THRESHOLD = 0.005
+        self.CONNECTED_THRESHOLD = 0.3
+        
+        # Initialize filters for knock detection
+        self.filters = {
+            "ADC2 A0": {'last_voltage': 0, 'last_knock': 0},
+            "ADC2 A1": {'last_voltage': 0, 'last_knock': 0},
+            "ADC2 A2": {'last_voltage': 0, 'last_knock': 0}
+        }
 
     def setup_triggers(self):
         for trigger in self.triggers:
@@ -39,7 +54,11 @@ class TriggerManager:
     def setup_adc(self):
         i2c = busio.I2C(board.SCL, board.SDA)
         self.ads = ADS.ADS1115(i2c)
-        self.piezo_channels = [AnalogIn(self.ads, ADS.P0), AnalogIn(self.ads, ADS.P1), AnalogIn(self.ads, ADS.P2)]
+        self.piezo_channels = [
+            AnalogIn(self.ads, ADS.P0),
+            AnalogIn(self.ads, ADS.P1),
+            AnalogIn(self.ads, ADS.P2)
+        ]
         logger.info("ADC setup completed")
 
     async def monitor_triggers(self, callback):
@@ -60,11 +79,28 @@ class TriggerManager:
                             await callback(trigger['name'])
                     elif trigger['type'] == 'piezo':
                         channel = self.piezo_channels[trigger['adc_channel']]
-                        if channel.voltage > trigger['threshold']:
-                            await self.handle_piezo_trigger(trigger, callback)
+                        adc_name = f"ADC2 A{trigger['adc_channel']}"
+                        voltage = channel.voltage
+                        
+                        if voltage > self.CONNECTED_THRESHOLD:
+                            voltage_change = abs(voltage - self.filters[adc_name]['last_voltage'])
+                            
+                            if voltage_change > self.DEBUG_THRESHOLD:
+                                logger.debug(f"Debug: Change detected on {adc_name}: {voltage_change:.3f}V")
+                                
+                                if (voltage > self.KNOCK_THRESHOLD and 
+                                    voltage_change > self.VOLTAGE_CHANGE_THRESHOLD and 
+                                    current_time - self.filters[adc_name]['last_knock'] > self.COOLDOWN_TIME):
+                                    logger.info(f"Knock detected on {adc_name}")
+                                    self.filters[adc_name]['last_knock'] = current_time
+                                    await self.handle_piezo_trigger(trigger, callback)
+                            
+                            self.filters[adc_name]['last_voltage'] = voltage
+                        else:
+                            logger.warning(f"Sensor not connected or low voltage on {adc_name}: {voltage:.3f}V")
             else:
                 logger.info(f"Initial cooldown active. {self.cooldown_period - (current_time - self.start_time):.1f} seconds remaining.")
-            await asyncio.sleep(0.1)  # Check every 100ms
+            await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
     async def handle_piezo_trigger(self, trigger, callback):
         self.piezo_attempts += 1
