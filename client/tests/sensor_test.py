@@ -173,22 +173,25 @@ def read_adc_with_retry(adc, channel, analog_in, max_attempts=5, delay=0.2):
     logging.error(f"Failed to read {adc} {channel} after {max_attempts} attempts")
     return "Failed after multiple attempts"
 
-def display_tui():
-    print(term.clear())
-    print(term.move_y(0) + term.center("LoHP Maze Hardware Test"))
-    print(term.move_y(2) + term.center("Press 'q' to quit"))
-    
+def display_tui(prev_data=None):
     data = get_sensor_data()
-    for i, (component, description, location, status) in enumerate(data):
-        y = i + 4
-        print(term.move_xy(0, y) + f"{component:<10} {description:<20} {location:<15} {status}")
+    if data != prev_data:
+        print(term.clear())
+        print(term.move_y(0) + term.center("LoHP Maze Hardware Test"))
+        print(term.move_y(2) + term.center("Press 'q' to quit"))
+        
+        for i, (component, description, location, status) in enumerate(data):
+            y = i + 4
+            print(term.move_xy(0, y) + f"{component:<10} {description:<20} {location:<15} {status}")
+    return data
 
 try:
     with term.cbreak(), term.hidden_cursor():
+        prev_data = None
         while True:
-            display_tui()
-            
-            if term.inkey(timeout=0.5) == 'q':
+            prev_data = display_tui(prev_data)
+            key = term.inkey(timeout=1)
+            if key == 'q':
                 break
 
 except KeyboardInterrupt:
