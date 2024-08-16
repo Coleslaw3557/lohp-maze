@@ -418,6 +418,23 @@ async def stop_music():
         logger.error(f"Error stopping background music: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/api/shutdown', methods=['POST'])
+async def shutdown():
+    logger.info("Shutdown request received")
+    response = {"status": "success", "message": "Shutdown initiated"}
+    
+    # Send shutdown signal to all connected clients
+    shutdown_message = json.dumps({"type": "shutdown"})
+    await asyncio.gather(*[client.send(shutdown_message) for client in connected_clients])
+    
+    # Wait for clients to disconnect
+    await asyncio.sleep(5)  # Give clients time to shut down
+    
+    # Shutdown the server
+    asyncio.get_event_loop().stop()
+    
+    return jsonify(response)
+
 @app.route('/api/kill_process', methods=['POST'])
 async def kill_process():
     logger.info("Kill process request received")
@@ -557,9 +574,21 @@ if __name__ == '__main__':
             await initialize_remote_hosts()
             websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
             quart_server = serve(app, config)
-            await asyncio.gather(websocket_server.wait_closed(), quart_server)
+            
+            # Create a shutdown event
+            shutdown_event = asyncio.Event()
+            
+            # Start a task to monitor the shutdown event
+            shutdown_task = asyncio.create_task(monitor_shutdown(shutdown_event))
+            
+            await asyncio.gather(websocket_server.wait_closed(), quart_server, shutdown_task)
         except Exception as e:
             log_and_exit(f"Server crashed: {str(e)}")
+
+    async def monitor_shutdown(shutdown_event):
+        await shutdown_event.wait()
+        logger.info("Shutdown signal received. Stopping the server...")
+        os._exit(0)
 
     print("Starting server on http://0.0.0.0:5000")
     try:

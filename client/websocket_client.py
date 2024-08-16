@@ -154,7 +154,8 @@ class WebSocketClient:
             'play_effect_audio': self.handle_play_effect_audio,
             'audio_files_to_download': self.handle_audio_files_to_download,
             'start_background_music': self.handle_start_background_music,
-            'stop_background_music': self.handle_stop_background_music
+            'stop_background_music': self.handle_stop_background_music,
+            'shutdown': self.handle_shutdown
         }
 
         message_type = message.get('type')
@@ -168,6 +169,12 @@ class WebSocketClient:
             await self.handle_typeless_message(message)
         else:
             logger.warning(f"Unknown message type received: {message_type}")
+
+    async def handle_shutdown(self, message):
+        logger.info("Received shutdown command from server")
+        await self.disconnect()
+        logger.info("Shutting down client...")
+        os._exit(0)
 
     async def handle_play_cached_audio(self, message):
         audio_data = message.get('data', {})
