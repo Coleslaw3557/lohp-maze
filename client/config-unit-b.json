@@ -41,6 +41,24 @@
       }
     },
     {
+      "name": "Guy Line Laser",
+      "type": "laser",
+      "tx_pin": 24,
+      "rx_pin": 25,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Guy Line Climb",
+          "effect_name": "GuyLineClimb"
+        }
+      }
+    },
+    {
       "name": "Sparkle Pony Laser",
       "type": "laser",
       "tx_pin": 5,
@@ -55,6 +73,24 @@
         "data": {
           "room": "Sparkle Pony Room",
           "effect_name": "SparkPony"
+        }
+      }
+    },
+    {
+      "name": "Porto Laser",
+      "type": "laser",
+      "tx_pin": 13,
+      "rx_pin": 19,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Porto Room",
+          "effect_name": "PortoEffect"
         }
       }
     },
