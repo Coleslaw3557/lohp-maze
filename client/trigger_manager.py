@@ -133,10 +133,10 @@ class TriggerManager:
                             self.laser_intact_times[trigger['name']] = current_time
                         GPIO.output(trigger['tx_pin'], GPIO.HIGH)
                         logger.debug(f"Laser beam intact: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
-                    elif trigger['type'] == 'gpio':
-                        if 'pin' in trigger:
-                            pin_state = GPIO.input(trigger['pin'])
-                            if pin_state == GPIO.LOW:
+                elif trigger['type'] == 'gpio':
+                    if 'pin' in trigger:
+                        pin_state = GPIO.input(trigger['pin'])
+                        if pin_state == GPIO.LOW:
                                 if self.check_trigger_cooldown(f"{trigger['name']}_gpio", current_time):
                                     logger.info(f"GPIO trigger activated: {trigger['name']} (GPIO{trigger['pin']})")
                                     await callback(trigger['name'])
