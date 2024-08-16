@@ -71,19 +71,21 @@ def monitor_triggers_thread(config):
     rate_limit = config.get('rate_limit', 5)
     
     while True:
+        current_time = time.time()
         for trigger in config.get('triggers', []):
             if trigger['type'] == 'laser':
                 current_state = GPIO.input(trigger['rx_pin'])
                 trigger_name = trigger['name']
                 
-                if current_state == GPIO.LOW and trigger_name not in last_trigger_time:
-                    current_time = time.time()
+                if current_state == GPIO.LOW:
                     if trigger_name not in last_trigger_time or (current_time - last_trigger_time[trigger_name]) > rate_limit:
                         logger.info(f"Trigger activated: {trigger_name}")
                         execute_action(trigger['action'], config.get('server_ip'))
                         last_trigger_time[trigger_name] = current_time
                 elif current_state == GPIO.HIGH:
-                    last_trigger_time.pop(trigger_name, None)
+                    # Only remove from last_trigger_time if it's been more than rate_limit seconds
+                    if trigger_name in last_trigger_time and (current_time - last_trigger_time[trigger_name]) > rate_limit:
+                        last_trigger_time.pop(trigger_name, None)
         
         time.sleep(0.01)  # Check every 10ms
 
