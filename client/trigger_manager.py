@@ -51,6 +51,7 @@ class TriggerManager:
 
         # Define voltage ranges for each button combination
         voltage_ranges = {
+            (0.0, 0.2): "No Button",
             (0.3, 0.5): "Button 1",
             (0.6, 0.8): "Button 2",
             (0.9, 1.1): "Button 3",
@@ -63,9 +64,11 @@ class TriggerManager:
         for ladder, voltage in [("Ladder 1", adc1_a0_voltage), ("Ladder 2", adc1_a1_voltage)]:
             for (lower, upper), button_combo in voltage_ranges.items():
                 if lower <= voltage <= upper:
-                    logger.info(f"Resistor {ladder}: {button_combo} pressed")
-                    self.trigger_effect("Gate", f"Gate{button_combo.replace(' ', '')}")
-                    self.last_resistor_ladder_trigger = current_time
+                    if button_combo != "No Button":
+                        logger.info(f"Resistor {ladder}: {button_combo} pressed")
+                        effect_name = f"Gate{button_combo.replace(' ', '').replace('and', 'And')}"
+                        self.trigger_effect("Gate", effect_name)
+                        self.last_resistor_ladder_trigger = current_time
                     return
 
     def trigger_effect(self, room, effect_name):
