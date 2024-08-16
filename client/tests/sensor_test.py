@@ -128,7 +128,7 @@ def initialize_adc():
     # Add more detailed debugging information
     if ads1:
         print(f"\nADC1 (0x48) Debug Info:")
-        print(f"  Address: 0x{ads1._address:02X}")
+        print(f"  Address: 0x{ads1.address:02X}")
         print(f"  Data Rate: {ads1.data_rate}")
         print(f"  Gain: {ads1.gain}")
     else:
@@ -136,7 +136,7 @@ def initialize_adc():
 
     if ads2:
         print(f"\nADC2 (0x49) Debug Info:")
-        print(f"  Address: 0x{ads2._address:02X}")
+        print(f"  Address: 0x{ads2.address:02X}")
         print(f"  Data Rate: {ads2.data_rate}")
         print(f"  Gain: {ads2.gain}")
     else:
