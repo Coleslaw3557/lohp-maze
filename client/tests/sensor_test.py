@@ -24,11 +24,12 @@ def test_level_shifter(input_pin, output_pin):
         time.sleep(0.1)
         low_state = GPIO.input(output_pin)
         
-        results.append((high_state == GPIO.HIGH, low_state == GPIO.LOW))
+        results.append((high_state, low_state))
+        logging.debug(f"Test iteration - Input Pin: {input_pin}, Output Pin: {output_pin}, High: {high_state}, Low: {low_state}")
     
     GPIO.setup(input_pin, GPIO.IN)
     
-    success_rate = sum(all(result) for result in results) / len(results)
+    success_rate = sum(result[0] == GPIO.HIGH and result[1] == GPIO.LOW for result in results) / len(results)
     logging.info(f"Level Shifter Test Result: Input Pin {input_pin}, Output Pin {output_pin}, Success Rate: {success_rate:.2f}")
     return success_rate, results
 
@@ -66,6 +67,10 @@ setup_gpio()
 # Set up logging
 logging.basicConfig(filename='sensor_test.log', level=logging.DEBUG, 
                     format='%(asctime)s - %(levelname)s - %(message)s')
+# Add a stream handler to print DEBUG messages to console
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+logging.getLogger('').addHandler(console_handler)
 
 # Set up I2C for ADS1115
 i2c = busio.I2C(board.SCL, board.SDA)
