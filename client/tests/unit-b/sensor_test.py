@@ -69,7 +69,7 @@ ads2 = None
 gate_resistor_ladder1 = gate_resistor_ladder2 = gate_buttons = None
 porto_piezo1 = porto_piezo2 = porto_piezo3 = None
 filters = {}
-CONNECTED_THRESHOLD = 100
+CONNECTED_THRESHOLD = 0.3
 
 def check_i2c_devices():
     print("Checking I2C devices...")
