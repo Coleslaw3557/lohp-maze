@@ -209,7 +209,7 @@ class TriggerManager:
         if current_time - intact_time < 15:
             return False  # Beam hasn't been intact for 15 seconds yet
         
-        if current_time - last_trigger_time <= self.cooldown_period:
+        if current_time - last_trigger_time <= 15:  # 15-second cooldown
             return False  # Still in cooldown period
         
         return True
