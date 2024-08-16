@@ -279,7 +279,7 @@ def display_tui():
         y = i + 4
         print(term.move_xy(0, y) + f"{component:<20} {description:<10} {location:<20} {status}")
     
-    print(term.move_xy(0, term.height - 1))
+    print(term.move_y(len(data) + 4) + term.center("Press 'q' to quit, 'b' for button test, 'u' to switch unit"))
 
 def button_test():
     print(term.home + term.clear)
