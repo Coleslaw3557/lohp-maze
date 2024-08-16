@@ -110,8 +110,10 @@ async def main():
         await audio_manager.initialize()  # Initialize and download audio files
         logger.info("AudioManager initialization complete")
         try:
-            trigger_manager = TriggerManager(config.get('triggers', []), config.get('piezo_settings', {}))
-            logger.info(f"TriggerManager initialized with {len(config.get('triggers', []))} triggers")
+            triggers = config.get('triggers', [])
+            piezo_settings = config.get('piezo_settings', {})
+            trigger_manager = TriggerManager(triggers, piezo_settings)
+            logger.info(f"TriggerManager initialized with {len(triggers)} triggers and piezo settings: {piezo_settings}")
         except Exception as e:
             logger.error(f"Failed to initialize TriggerManager: {str(e)}")
             trigger_manager = None
