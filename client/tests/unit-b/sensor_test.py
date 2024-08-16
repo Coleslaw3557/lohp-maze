@@ -288,19 +288,21 @@ def button_test():
     print(term.move_y(2) + "Press each button one at a time. Press 'q' to quit.")
     
     button_values = {}
+    last_value = 0
     while True:
-        print(term.move_y(4) + "Waiting for button press...")
-        key = term.inkey()
-        if key.lower() == 'q':
-            break
-        
         adc_value = gate_resistor_ladder1.value if gate_resistor_ladder1 else 0
         voltage = gate_resistor_ladder1.voltage if gate_resistor_ladder1 else 0
         
-        button_name = f"Button {len(button_values) + 1}"
-        button_values[button_name] = (adc_value, voltage)
+        if abs(adc_value - last_value) > 100:  # Detect significant change in ADC value
+            button_name = f"Button {len(button_values) + 1}"
+            button_values[button_name] = (adc_value, voltage)
+            print(term.move_y(6 + len(button_values)) + f"{button_name}: ADC Value = {adc_value}, Voltage = {voltage:.3f}V")
+            last_value = adc_value
         
-        print(term.move_y(6 + len(button_values)) + f"{button_name}: ADC Value = {adc_value}, Voltage = {voltage:.3f}V")
+        print(term.move_xy(0, 4) + f"Current ADC Value: {adc_value}, Voltage: {voltage:.3f}V" + " " * 20)
+        
+        if term.inkey(timeout=0.1) == 'q':
+            break
     
     print(term.move_y(6 + len(button_values) + 2) + "Button Test Complete. Press any key to return to main menu.")
     term.inkey()
