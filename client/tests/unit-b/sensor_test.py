@@ -355,6 +355,8 @@ try:
                 switch_unit()
             elif key == 'u':
                 switch_unit()
+            elif key == 'u':
+                switch_unit()
 except KeyboardInterrupt:
     print("Program interrupted by user")
 except Exception as e:
