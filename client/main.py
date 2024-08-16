@@ -69,9 +69,15 @@ def execute_action(action, server_ip):
 def monitor_triggers_thread(config):
     last_trigger_time = {}
     rate_limit = config.get('rate_limit', 5)
+    startup_delay = 10  # 10 seconds startup delay
+    start_time = time.time()
     
     while True:
         current_time = time.time()
+        if current_time - start_time < startup_delay:
+            time.sleep(0.1)  # Sleep for 100ms during startup delay
+            continue
+        
         for trigger in config.get('triggers', []):
             if trigger['type'] == 'laser':
                 current_state = GPIO.input(trigger['rx_pin'])

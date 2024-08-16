@@ -21,6 +21,7 @@ class TriggerManager:
         self.setup_triggers()
         self.start_time = time.time()
         self.cooldown_period = 5  # 5 seconds cooldown
+        self.startup_delay = 10  # 10 seconds startup delay
         self.laser_cooldowns = {}  # Dictionary to store cooldown times for each laser
         self.piezo_attempts = 0
         self.setup_adc()
@@ -95,6 +96,10 @@ class TriggerManager:
     async def monitor_triggers(self, callback):
         while True:
             current_time = time.time()
+            if current_time - self.start_time < self.startup_delay:
+                await asyncio.sleep(0.1)  # Sleep for 100ms during startup delay
+                continue
+            
             if current_time - self.start_time > self.cooldown_period:
                 for trigger in self.triggers:
                     if trigger['type'] == 'laser':
