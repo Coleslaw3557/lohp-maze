@@ -176,7 +176,7 @@ def get_sensor_data():
         data.append((f"{room} Laser", "Laser System", room, status))
         
         # Add debug information
-        data.append((f"{room} Debug", "Laser Debug", room, f"TX Pin: {tx_pin}, RX Pin: {rx_pin}, RX Status: {rx_status}"))
+        data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {tx_pin}, RX GPIO: {rx_pin}, RX Status: {rx_status}"))
     
     # Test ADCs
     adc_data = [
