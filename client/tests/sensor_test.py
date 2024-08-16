@@ -28,10 +28,10 @@ def setup_gpio():
     
     for pin in laser_transmitters.values():
         GPIO.setup(pin, GPIO.OUT)
-        GPIO.output(pin, GPIO.HIGH)  # Turn on all lasers
+        GPIO.output(pin, GPIO.LOW)  # Initially turn off all lasers
 
     for pin in laser_receivers.values():
-        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Use pull-down resistor
 
 # Define laser transmitter and receiver pins
 laser_transmitters = {
@@ -165,17 +165,22 @@ def check_i2c_devices():
 def get_sensor_data():
     data = []
     
-    # Test level shifters
-    cop_dodge_ls = test_level_shifter(17, 27)
-    ls2_status = test_level_shifter(24, 25)
-    
-    cop_dodge_status = "Cop Dodge LS: "
-    for input_state, output_state in cop_dodge_ls:
-        cop_dodge_status += f"Input {input_state} -> Output {output_state}, "
-    cop_dodge_status = cop_dodge_status.rstrip(", ")
-    
-    data.append(("LS1", "Level Shifter 1", "Cop Dodge", cop_dodge_status))
-    data.append(("LS2", "Level Shifter 2", "All", ls2_status))
+    # Test laser transmitters and receivers
+    for room, tx_pin in laser_transmitters.items():
+        rx_pin = laser_receivers[room]
+        
+        # Turn on laser
+        GPIO.output(tx_pin, GPIO.HIGH)
+        time.sleep(0.1)  # Give some time for the receiver to detect the laser
+        
+        # Read receiver status
+        rx_status = GPIO.input(rx_pin)
+        
+        # Turn off laser
+        GPIO.output(tx_pin, GPIO.LOW)
+        
+        status = f"Transmitter: {'ON' if GPIO.input(tx_pin) else 'OFF'}, Receiver: {'Detected' if rx_status else 'Not Detected'}"
+        data.append((f"{room} Laser", "Laser System", room, status))
     
     # Test ADCs
     adc_data = [
