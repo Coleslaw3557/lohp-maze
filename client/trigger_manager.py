@@ -137,14 +137,14 @@ class TriggerManager:
                     if 'pin' in trigger:
                         pin_state = GPIO.input(trigger['pin'])
                         if pin_state == GPIO.LOW:
-                                if self.check_trigger_cooldown(f"{trigger['name']}_gpio", current_time):
-                                    logger.info(f"GPIO trigger activated: {trigger['name']} (GPIO{trigger['pin']})")
-                                    await callback(trigger['name'])
-                                    self.set_trigger_cooldown(f"{trigger['name']}_gpio", current_time)
-                            else:
-                                # Reset the cooldown when the GPIO state changes back to HIGH
-                                self.set_trigger_cooldown(f"{trigger['name']}_gpio", 0)
-                    elif trigger['type'] == 'piezo':
+                            if self.check_trigger_cooldown(f"{trigger['name']}_gpio", current_time):
+                                logger.info(f"GPIO trigger activated: {trigger['name']} (GPIO{trigger['pin']})")
+                                await callback(trigger['name'])
+                                self.set_trigger_cooldown(f"{trigger['name']}_gpio", current_time)
+                        else:
+                            # Reset the cooldown when the GPIO state changes back to HIGH
+                            self.set_trigger_cooldown(f"{trigger['name']}_gpio", 0)
+                elif trigger['type'] == 'piezo':
                         await self.check_piezo_trigger(trigger, callback, current_time)
             
             # Check resistor ladder states
