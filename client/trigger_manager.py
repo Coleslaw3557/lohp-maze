@@ -85,7 +85,7 @@ class TriggerManager:
             if trigger['type'] == 'laser':
                 GPIO.setup(trigger['tx_pin'], GPIO.OUT)
                 GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
-                GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+                GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Use pull-up resistor
                 logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']}, RX pin {trigger['rx_pin']}")
             elif trigger['type'] == 'gpio':
                 if 'pin' in trigger:
@@ -121,7 +121,7 @@ class TriggerManager:
                 for trigger in self.triggers:
                     if trigger['type'] == 'laser':
                         beam_status = GPIO.input(trigger['rx_pin'])
-                        if beam_status == GPIO.LOW:  # Beam is broken
+                        if beam_status == GPIO.LOW:  # Beam is broken (LOW when using pull-up resistor)
                             if self.check_laser_cooldown(trigger['name'], current_time):
                                 logger.info(f"Laser beam broken: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
                                 await callback(trigger['name'])
