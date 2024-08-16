@@ -4,6 +4,7 @@ import board
 import busio
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
+from adafruit_ads1x15.analog_in import AnalogIn
 
 # Set up GPIO
 GPIO.setmode(GPIO.BCM)
@@ -35,7 +36,7 @@ for pin in laser_receivers.values():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Set up I2C for ADS1115
-i2c = busio.I2C(board.SCL, board.SDA)
+i2c = board.I2C()
 ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Gate Room
 ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for Porto Room
 
