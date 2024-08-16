@@ -7,6 +7,22 @@ from adafruit_ads1x15.analog_in import AnalogIn
 from blessed import Terminal
 from collections import deque
 
+def test_level_shifter(input_pin, output_pin):
+    GPIO.setup(input_pin, GPIO.OUT)
+    GPIO.setup(output_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    
+    GPIO.output(input_pin, GPIO.HIGH)
+    time.sleep(0.1)
+    high_state = GPIO.input(output_pin)
+    
+    GPIO.output(input_pin, GPIO.LOW)
+    time.sleep(0.1)
+    low_state = GPIO.input(output_pin)
+    
+    GPIO.setup(input_pin, GPIO.IN)
+    
+    return high_state == GPIO.HIGH and low_state == GPIO.LOW
+
 # Set up GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
@@ -94,53 +110,46 @@ def get_button_state(value):
 
 def get_sensor_data():
     data = []
-    for room, pin in laser_receivers.items():
-        try:
-            status = "Intact" if GPIO.input(pin) == GPIO.LOW else "Broken"
-        except Exception as e:
-            status = f"Error: {e}"
-        data.append((f"GPIO {pin}", f"{room} Laser", room, status))
     
+    # Test level shifters
+    ls1_status = "Working" if test_level_shifter(17, 27) else "Not Working"
+    ls2_status = "Working" if test_level_shifter(24, 25) else "Not Working"
+    data.append(("LS1", "Level Shifter 1", "All", ls1_status))
+    data.append(("LS2", "Level Shifter 2", "All", ls2_status))
+    
+    # Test ADCs
     adc_data = [
-        ("ADC1 A0", "Resistor Ladder 1", "Gate", gate_resistor_ladder1),
-        ("ADC1 A1", "Resistor Ladder 2", "Gate", gate_resistor_ladder2),
-        ("ADC1 A2", "Buttons", "Gate", gate_buttons),
-        ("ADC2 A0", "Piezo 1", "Porto", porto_piezo1),
-        ("ADC2 A1", "Piezo 2", "Porto", porto_piezo2),
-        ("ADC2 A2", "Piezo 3", "Porto", porto_piezo3)
+        ("ADC1 A0", "Channel 0", "Gate", gate_resistor_ladder1),
+        ("ADC1 A1", "Channel 1", "Gate", gate_resistor_ladder2),
+        ("ADC1 A2", "Channel 2", "Gate", gate_buttons),
+        ("ADC2 A0", "Channel 0", "Porto", porto_piezo1),
+        ("ADC2 A1", "Channel 1", "Porto", porto_piezo2),
+        ("ADC2 A2", "Channel 2", "Porto", porto_piezo3)
     ]
     
-    for adc, sensor, room, analog_in in adc_data:
+    for adc, channel, room, analog_in in adc_data:
         if adc_available:
             try:
-                filtered_value = get_filtered_value(f"{room.lower()}_{sensor.lower().replace(' ', '_')}", analog_in.value)
-                if sensor == "Buttons":
-                    value = get_button_state(filtered_value)
-                elif sensor.startswith("Resistor Ladder"):
-                    resistance = (32768 - filtered_value) / filtered_value * 10000  # Calculate resistance
-                    value = f"{filtered_value:.0f} ({resistance:.0f} Ω)"
-                else:
-                    value = f"{filtered_value:.0f} ({analog_in.voltage:.2f}V)"
-                
-                if not is_connected(filtered_value):
-                    value += " - Disconnected"
+                value = analog_in.value
+                voltage = analog_in.voltage
+                status = f"Value: {value}, Voltage: {voltage:.2f}V"
             except Exception as e:
-                value = f"Error: {e}"
+                status = f"Error: {e}"
         else:
-            value = "Offline"
-        data.append((adc, sensor, room, value))
+            status = "Offline"
+        data.append((adc, channel, room, status))
     
     return data
 
 def display_tui():
     print(term.clear())
-    print(term.move_y(0) + term.center("LoHP Maze Sensor Data"))
+    print(term.move_y(0) + term.center("LoHP Maze Hardware Test"))
     print(term.move_y(2) + term.center("Press 'q' to quit"))
     
     data = get_sensor_data()
-    for i, (pin, sensor, room, value) in enumerate(data):
+    for i, (component, description, location, status) in enumerate(data):
         y = i + 4
-        print(term.move_xy(0, y) + f"{pin:<10} {sensor:<20} {room:<15} {value}")
+        print(term.move_xy(0, y) + f"{component:<10} {description:<20} {location:<15} {status}")
 
 try:
     with term.cbreak(), term.hidden_cursor():
