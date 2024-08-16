@@ -67,9 +67,11 @@ ads1 = None
 ads2 = None
 gate_resistor_ladder1 = gate_resistor_ladder2 = gate_buttons = None
 porto_piezo1 = porto_piezo2 = porto_piezo3 = None
+filters = {}
+CONNECTED_THRESHOLD = 100
 
 def initialize_adc():
-    global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3
+    global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3, filters, CONNECTED_THRESHOLD
     try:
         ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Gate Room
         ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for Porto Room
@@ -95,6 +97,7 @@ def initialize_adc():
         }
 
         # Define thresholds for connected vs unconnected states
+        global CONNECTED_THRESHOLD
         CONNECTED_THRESHOLD = 100  # Adjust this value based on your specific setup
         logging.info("ADCs initialized successfully")
     except OSError as e:
