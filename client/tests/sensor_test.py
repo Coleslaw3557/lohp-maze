@@ -4,7 +4,7 @@ import board
 import busio
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
-from adafruit_ads1x15.analog_in import AnalogIn
+from blessed import Terminal
 
 # Set up GPIO
 GPIO.setmode(GPIO.BCM)
@@ -47,79 +47,46 @@ porto_piezo1 = AnalogIn(ads2, ADS.P0)
 porto_piezo2 = AnalogIn(ads2, ADS.P1)
 porto_piezo3 = AnalogIn(ads2, ADS.P2)
 
-def check_adc_connection():
-    try:
-        ads1.gain
-        print("ADC1 (Gate Room) connected successfully")
-    except Exception as e:
-        print(f"Error connecting to ADC1 (Gate Room): {e}")
+# Set up Terminal for TUI
+term = Terminal()
 
-    try:
-        ads2.gain
-        print("ADC2 (Porto Room) connected successfully")
-    except Exception as e:
-        print(f"Error connecting to ADC2 (Porto Room): {e}")
-
-def check_laser_receivers():
+def get_sensor_data():
+    data = []
     for room, pin in laser_receivers.items():
-        if GPIO.input(pin) == GPIO.LOW:
-            print(f"{room} laser beam intact.")
-        else:
-            print(f"{room} laser beam broken!")
+        status = "Intact" if GPIO.input(pin) == GPIO.LOW else "Broken"
+        data.append((f"GPIO {pin}", f"{room} Laser", room, status))
+    
+    data.append(("ADC1 A0", "Resistor Ladder 1", "Gate", gate_resistor_ladder1.value))
+    data.append(("ADC1 A1", "Resistor Ladder 2", "Gate", gate_resistor_ladder2.value))
+    data.append(("ADC2 A0", "Piezo 1", "Porto", porto_piezo1.value))
+    data.append(("ADC2 A1", "Piezo 2", "Porto", porto_piezo2.value))
+    data.append(("ADC2 A2", "Piezo 3", "Porto", porto_piezo3.value))
+    
+    return data
 
-def check_analog_sensors():
-    try:
-        print(f"Gate Resistor Ladder 1: {gate_resistor_ladder1.value}")
-        print(f"Gate Resistor Ladder 2: {gate_resistor_ladder2.value}")
-    except Exception as e:
-        print(f"Error reading Gate Room sensors: {e}")
-
-    try:
-        print(f"Porto Piezo 1: {porto_piezo1.value}")
-        print(f"Porto Piezo 2: {porto_piezo2.value}")
-        print(f"Porto Piezo 3: {porto_piezo3.value}")
-    except Exception as e:
-        print(f"Error reading Porto Room sensors: {e}")
-
-def test_laser_transmitters():
-    for room, tx_pin in laser_transmitters.items():
-        rx_pin = laser_receivers[room]
-        print(f"\nTesting {room} laser:")
-        
-        # Turn off the laser
-        GPIO.output(tx_pin, GPIO.LOW)
-        time.sleep(0.5)
-        if GPIO.input(rx_pin) == GPIO.HIGH:
-            print(f"  {room} laser OFF test: PASSED")
-        else:
-            print(f"  {room} laser OFF test: FAILED")
-        
-        # Turn on the laser
-        GPIO.output(tx_pin, GPIO.HIGH)
-        time.sleep(0.5)
-        if GPIO.input(rx_pin) == GPIO.LOW:
-            print(f"  {room} laser ON test: PASSED")
-        else:
-            print(f"  {room} laser ON test: FAILED")
+def display_tui():
+    print(term.clear())
+    print(term.move_y(0) + term.center("LoHP Maze Sensor Data"))
+    print(term.move_y(2) + term.center("Press 'q' to quit"))
+    
+    data = get_sensor_data()
+    for i, (pin, sensor, room, value) in enumerate(data):
+        y = i + 4
+        print(term.move_xy(0, y) + f"{pin:<10} {sensor:<20} {room:<15} {value}")
 
 try:
-    print("\n--- Checking ADC Connections ---")
-    check_adc_connection()
-
-    while True:
-        print("\n--- Checking Sensors ---")
-        check_laser_receivers()
-        check_analog_sensors()
-        
-        print("\n--- Testing Laser Transmitters ---")
-        test_laser_transmitters()
-        
-        time.sleep(5)
+    with term.cbreak(), term.hidden_cursor():
+        while True:
+            display_tui()
+            
+            if term.inkey(timeout=0.5) == 'q':
+                break
 
 except KeyboardInterrupt:
-    print("\nExiting...")
+    pass
 finally:
     # Turn off all lasers
     for pin in laser_transmitters.values():
         GPIO.output(pin, GPIO.LOW)
     GPIO.cleanup()
+    print(term.clear())

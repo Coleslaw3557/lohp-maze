@@ -2,3 +2,4 @@ RPi.GPIO==0.7.1
 adafruit-blinka==6.20.1
 adafruit-circuitpython-ads1x15==2.2.12
 adafruit-circuitpython-busdevice==5.1.1
+blessed==1.19.1
