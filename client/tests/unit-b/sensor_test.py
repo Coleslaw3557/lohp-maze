@@ -274,13 +274,36 @@ def display_tui():
     data = get_sensor_data()
     print(term.home + term.clear)
     print(term.move_y(0) + term.center("LoHP Maze Hardware Test"))
-    print(term.move_y(2) + term.center("Press 'q' to quit"))
+    print(term.move_y(2) + term.center("Press 'q' to quit, 'b' for button test"))
     
     for i, (component, description, location, status) in enumerate(data):
         y = i + 4
         print(term.move_xy(0, y) + f"{component:<10} {description:<20} {location:<15} {status}")
     
     print(term.move_xy(0, term.height - 1))
+
+def button_test():
+    print(term.home + term.clear)
+    print(term.move_y(0) + term.center("Button Test Mode"))
+    print(term.move_y(2) + "Press each button one at a time. Press 'q' to quit.")
+    
+    button_values = {}
+    while True:
+        print(term.move_y(4) + "Waiting for button press...")
+        key = term.inkey()
+        if key.lower() == 'q':
+            break
+        
+        adc_value = gate_resistor_ladder1.value if gate_resistor_ladder1 else 0
+        voltage = gate_resistor_ladder1.voltage if gate_resistor_ladder1 else 0
+        
+        button_name = f"Button {len(button_values) + 1}"
+        button_values[button_name] = (adc_value, voltage)
+        
+        print(term.move_y(6 + len(button_values)) + f"{button_name}: ADC Value = {adc_value}, Voltage = {voltage:.3f}V")
+    
+    print(term.move_y(6 + len(button_values) + 2) + "Button Test Complete. Press any key to return to main menu.")
+    term.inkey()
 
 try:
     setup_gpio()  # Ensure GPIO is set up before the main loop
@@ -292,6 +315,8 @@ try:
             key = term.inkey(timeout=0.1)
             if key == 'q':
                 break
+            elif key == 'b':
+                button_test()
             try:
                 display_tui()
             except Exception as e:
