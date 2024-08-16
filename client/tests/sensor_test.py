@@ -71,26 +71,41 @@ def get_button_state(value):
 def get_sensor_data():
     data = []
     for room, pin in laser_receivers.items():
-        status = "Intact" if GPIO.input(pin) == GPIO.LOW else "Broken"
+        try:
+            status = "Intact" if GPIO.input(pin) == GPIO.LOW else "Broken"
+        except:
+            status = "Error"
         data.append((f"GPIO {pin}", f"{room} Laser", room, status))
     
-    if adc_available:
-        try:
-            data.append(("ADC1 A0", "Resistor Ladder 1", "Gate", f"{gate_resistor_ladder1.value} ({gate_resistor_ladder1.voltage:.2f}V)"))
-            data.append(("ADC1 A1", "Resistor Ladder 2", "Gate", f"{gate_resistor_ladder2.value} ({gate_resistor_ladder2.voltage:.2f}V)"))
-            data.append(("ADC1 A2", "Buttons", "Gate", get_button_state(gate_buttons.value)))
-            data.append(("ADC2 A0", "Piezo 1", "Porto", f"{porto_piezo1.value} ({porto_piezo1.voltage:.2f}V)"))
-            data.append(("ADC2 A1", "Piezo 2", "Porto", f"{porto_piezo2.value} ({porto_piezo2.voltage:.2f}V)"))
-            data.append(("ADC2 A2", "Piezo 3", "Porto", f"{porto_piezo3.value} ({porto_piezo3.voltage:.2f}V)"))
-        except OSError:
-            print("Error reading from ADCs. Analog sensor data may be unavailable.")
-    else:
-        data.append(("ADC1 A0", "Resistor Ladder 1", "Gate", "N/A"))
-        data.append(("ADC1 A1", "Resistor Ladder 2", "Gate", "N/A"))
-        data.append(("ADC1 A2", "Buttons", "Gate", "N/A"))
-        data.append(("ADC2 A0", "Piezo 1", "Porto", "N/A"))
-        data.append(("ADC2 A1", "Piezo 2", "Porto", "N/A"))
-        data.append(("ADC2 A2", "Piezo 3", "Porto", "N/A"))
+    adc_data = [
+        ("ADC1 A0", "Resistor Ladder 1", "Gate"),
+        ("ADC1 A1", "Resistor Ladder 2", "Gate"),
+        ("ADC1 A2", "Buttons", "Gate"),
+        ("ADC2 A0", "Piezo 1", "Porto"),
+        ("ADC2 A1", "Piezo 2", "Porto"),
+        ("ADC2 A2", "Piezo 3", "Porto")
+    ]
+    
+    for adc, sensor, room in adc_data:
+        if adc_available:
+            try:
+                if adc == "ADC1 A0":
+                    value = f"{gate_resistor_ladder1.value} ({gate_resistor_ladder1.voltage:.2f}V)"
+                elif adc == "ADC1 A1":
+                    value = f"{gate_resistor_ladder2.value} ({gate_resistor_ladder2.voltage:.2f}V)"
+                elif adc == "ADC1 A2":
+                    value = get_button_state(gate_buttons.value)
+                elif adc == "ADC2 A0":
+                    value = f"{porto_piezo1.value} ({porto_piezo1.voltage:.2f}V)"
+                elif adc == "ADC2 A1":
+                    value = f"{porto_piezo2.value} ({porto_piezo2.voltage:.2f}V)"
+                elif adc == "ADC2 A2":
+                    value = f"{porto_piezo3.value} ({porto_piezo3.voltage:.2f}V)"
+            except:
+                value = "Error"
+        else:
+            value = "Offline"
+        data.append((adc, sensor, room, value))
     
     return data
 
