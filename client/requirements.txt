@@ -7,3 +7,4 @@ hypercorn==0.14.3
 aiohttp==3.8.5
 python-vlc==3.0.18122
 requests==2.26.0
+requests==2.26.0
