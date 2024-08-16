@@ -5,24 +5,6 @@
   "audio_output_device": "default",
   "triggers": [
     {
-      "name": "Entrance Laser",
-      "type": "laser",
-      "tx_pin": 17,
-      "rx_pin": 27,
-      "action": {
-        "type": "curl",
-        "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "data": {
-          "room": "Entrance",
-          "effect_name": "Entrance"
-        }
-      }
-    },
-    {
       "name": "Cop Dodge Laser",
       "type": "laser",
       "tx_pin": 22,
