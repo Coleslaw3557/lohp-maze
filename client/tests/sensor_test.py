@@ -47,6 +47,19 @@ porto_piezo1 = AnalogIn(ads2, ADS.P0)
 porto_piezo2 = AnalogIn(ads2, ADS.P1)
 porto_piezo3 = AnalogIn(ads2, ADS.P2)
 
+def check_adc_connection():
+    try:
+        ads1.gain
+        print("ADC1 (Gate Room) connected successfully")
+    except Exception as e:
+        print(f"Error connecting to ADC1 (Gate Room): {e}")
+
+    try:
+        ads2.gain
+        print("ADC2 (Porto Room) connected successfully")
+    except Exception as e:
+        print(f"Error connecting to ADC2 (Porto Room): {e}")
+
 def check_laser_receivers():
     for room, pin in laser_receivers.items():
         if GPIO.input(pin) == GPIO.LOW:
@@ -55,11 +68,18 @@ def check_laser_receivers():
             print(f"{room} laser beam broken!")
 
 def check_analog_sensors():
-    print(f"Gate Resistor Ladder 1: {gate_resistor_ladder1.value}")
-    print(f"Gate Resistor Ladder 2: {gate_resistor_ladder2.value}")
-    print(f"Porto Piezo 1: {porto_piezo1.value}")
-    print(f"Porto Piezo 2: {porto_piezo2.value}")
-    print(f"Porto Piezo 3: {porto_piezo3.value}")
+    try:
+        print(f"Gate Resistor Ladder 1: {gate_resistor_ladder1.value}")
+        print(f"Gate Resistor Ladder 2: {gate_resistor_ladder2.value}")
+    except Exception as e:
+        print(f"Error reading Gate Room sensors: {e}")
+
+    try:
+        print(f"Porto Piezo 1: {porto_piezo1.value}")
+        print(f"Porto Piezo 2: {porto_piezo2.value}")
+        print(f"Porto Piezo 3: {porto_piezo3.value}")
+    except Exception as e:
+        print(f"Error reading Porto Room sensors: {e}")
 
 def test_laser_transmitters():
     for room, tx_pin in laser_transmitters.items():
@@ -83,6 +103,9 @@ def test_laser_transmitters():
             print(f"  {room} laser ON test: FAILED")
 
 try:
+    print("\n--- Checking ADC Connections ---")
+    check_adc_connection()
+
     while True:
         print("\n--- Checking Sensors ---")
         check_laser_receivers()
