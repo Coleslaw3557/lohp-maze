@@ -21,7 +21,7 @@ class TriggerManager:
         self.start_time = time.time()
         self.cooldown_period = config.get('cooldown_period', 5)
         self.startup_delay = config.get('startup_delay', 10)
-        self.laser_cooldowns = {}
+        self.trigger_cooldowns = {}
         self.piezo_attempts = 0
         self.setup_adc()
         self.resistor_ladder_cooldown = config.get('resistor_ladder_cooldown', 1)
@@ -117,15 +117,14 @@ class TriggerManager:
                 await asyncio.sleep(0.1)  # Sleep for 100ms during startup delay
                 continue
             
-            if current_time - self.start_time > self.cooldown_period:
-                for trigger in self.triggers:
+            for trigger in self.triggers:
+                if self.check_trigger_cooldown(trigger['name'], current_time):
                     if trigger['type'] == 'laser':
                         beam_status = GPIO.input(trigger['rx_pin'])
                         if beam_status == GPIO.LOW:  # Beam is broken (LOW when using pull-up resistor)
-                            if self.check_laser_cooldown(trigger['name'], current_time):
-                                logger.info(f"Laser beam broken: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
-                                await callback(trigger['name'])
-                                self.set_laser_cooldown(trigger['name'], current_time)
+                            logger.info(f"Laser beam broken: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
+                            await callback(trigger['name'])
+                            self.set_trigger_cooldown(trigger['name'], current_time)
                         else:
                             # Ensure laser is on and beam is intact
                             GPIO.output(trigger['tx_pin'], GPIO.HIGH)
@@ -134,13 +133,13 @@ class TriggerManager:
                         if 'pin' in trigger and GPIO.input(trigger['pin']) == GPIO.LOW:
                             logger.info(f"GPIO trigger activated: {trigger['name']} (GPIO{trigger['pin']})")
                             await callback(trigger['name'])
+                            self.set_trigger_cooldown(trigger['name'], current_time)
                     elif trigger['type'] == 'piezo':
                         await self.check_piezo_trigger(trigger, callback, current_time)
-                
-                # Check resistor ladder states
-                self.check_resistor_ladder()
-            else:
-                logger.info(f"Initial cooldown active. {self.cooldown_period - (current_time - self.start_time):.1f} seconds remaining.")
+            
+            # Check resistor ladder states
+            self.check_resistor_ladder()
+            
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
     async def check_piezo_trigger(self, trigger, callback, current_time):
@@ -190,12 +189,12 @@ class TriggerManager:
         if effect_name == "WrongAnswer" and self.piezo_attempts >= self.piezo_settings['attempts_required']:
             self.piezo_attempts = 0
 
-    def check_laser_cooldown(self, laser_name, current_time):
-        last_trigger_time = self.laser_cooldowns.get(laser_name, 0)
-        return current_time - last_trigger_time > 5  # 5 seconds cooldown
+    def check_trigger_cooldown(self, trigger_name, current_time):
+        last_trigger_time = self.trigger_cooldowns.get(trigger_name, 0)
+        return current_time - last_trigger_time > self.cooldown_period
 
-    def set_laser_cooldown(self, laser_name, current_time):
-        self.laser_cooldowns[laser_name] = current_time
+    def set_trigger_cooldown(self, trigger_name, current_time):
+        self.trigger_cooldowns[trigger_name] = current_time
 
     def cleanup(self):
         GPIO.cleanup()
