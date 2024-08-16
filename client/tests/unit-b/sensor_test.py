@@ -15,6 +15,53 @@ DEBUG_THRESHOLD = 0.005  # Lowered threshold for more detailed debug output
 CONNECTED_THRESHOLD = 0.3  # Adjusted threshold for detecting connected sensors
 RESISTOR_LADDER_ADC = "ADC1 A0"  # Specify which ADC is used for the resistor ladder
 
+# Define unit configurations
+UNIT_CONFIGS = {
+    'A': {
+        'name': 'UNIT-A',
+        'lasers': {
+            'Entrance': {'LT': 4, 'LR': 17},
+            'Cuddle Cross': {'LT': 18, 'LR': 27},
+            'Photo Bomb': {'LT': 22, 'LR': 23},
+            'No Friends Monday': {'LT': 24, 'LR': 25},
+            'Exit': {'LT': 5, 'LR': 6}
+        },
+        'adc': {
+            'Cuddle Cross': {'adc': 'ads1', 'channel': ADS.P0}
+        }
+    },
+    'B': {
+        'name': 'UNIT-B',
+        'lasers': {
+            'Cop Dodge': {'LT': 17, 'LR': 27},
+            'Gate': {'LT': 22, 'LR': 5},
+            'Guy Line': {'LT': 24, 'LR': 6},
+            'Sparkle Pony': {'LT': 25, 'LR': 13},
+            'Porto': {'LT': 19, 'LR': 26}
+        },
+        'adc': {
+            'Gate': {'adc': 'ads1', 'channel': ADS.P0},
+            'Porto': {'adc': 'ads2', 'channel': ADS.P0}
+        }
+    },
+    'C': {
+        'name': 'UNIT-C',
+        'lasers': {
+            'Temple': {'LT': 4, 'LR': 17},
+            'Deep Playa Handshake': {'LT': 18, 'LR': 27},
+            'Bike Lock': {'LT': 22, 'LR': 23},
+            'Vertical Moop March': {'LT': 24, 'LR': 25},
+            'Monkey': {'LT': 5, 'LR': 6}
+        },
+        'adc': {
+            'Deep Playa Handshake': {'adc': 'ads1', 'channel': ADS.P0}
+        }
+    }
+}
+
+# Initialize current unit
+current_unit = 'B'  # Default to Unit B
+
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
     GPIO.setup(output_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -34,29 +81,11 @@ def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     
-    for pin in laser_transmitters.values():
-        GPIO.setup(pin, GPIO.OUT)
-        GPIO.output(pin, GPIO.HIGH)  # Turn on all lasers
-
-    for pin in laser_receivers.values():
-        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Use pull-down resistor
-
-# Define laser transmitter and receiver pins
-laser_transmitters = {
-    'Cop Dodge': 17,
-    'Gate': 22,
-    'Guy Line': 24,
-    'Sparkle Pony': 5,
-    'Porto': 13
-}
-
-laser_receivers = {
-    'Cop Dodge': 27,
-    'Gate': 23,
-    'Guy Line': 25,
-    'Sparkle Pony': 6,
-    'Porto': 19
-}
+    config = UNIT_CONFIGS[current_unit]
+    for room, pins in config['lasers'].items():
+        GPIO.setup(pins['LT'], GPIO.OUT)
+        GPIO.output(pins['LT'], GPIO.HIGH)  # Turn on all lasers
+        GPIO.setup(pins['LR'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Use pull-down resistor
 
 # Set up GPIO
 setup_gpio()
@@ -67,8 +96,7 @@ i2c = busio.I2C(board.SCL, board.SDA, frequency=100000)  # Lower the I2C frequen
 adc_available = False
 ads1 = None
 ads2 = None
-gate_resistor_ladder1 = gate_resistor_ladder2 = gate_buttons = None
-porto_piezo1 = porto_piezo2 = porto_piezo3 = None
+analog_inputs = {}
 filters = {}
 CONNECTED_THRESHOLD = 0.3
 RESISTOR_LADDER_THRESHOLD = 0.1  # Adjust this value based on your resistor ladder setup
