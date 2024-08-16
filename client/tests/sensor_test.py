@@ -99,7 +99,8 @@ def initialize_adc():
                 _ = analog_in.value
                 return analog_in
             except Exception as e:
-                print(f"Error setting up or reading AnalogIn for ADC 0x{adc.address:02X}, channel {channel}: {str(e)}")
+                adc_id = "0x48" if adc == ads1 else "0x49" if adc == ads2 else "Unknown"
+                print(f"Error setting up or reading AnalogIn for ADC {adc_id}, channel {channel}: {str(e)}")
                 return None
         return None
 
