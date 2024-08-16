@@ -78,7 +78,7 @@ def initialize_adc():
         
         # Try to initialize ADC2
         for address in [0x49, 0x48]:
-            if address != ads1.address:
+            if ads1 is None or address != ads1._address:
                 try:
                     ads2 = ADS.ADS1115(i2c, address=address, gain=1)
                     ads2.data_rate = 8
@@ -87,16 +87,18 @@ def initialize_adc():
                 except Exception as e:
                     print(f"Failed to initialize ADC2 at address 0x{address:02X}: {str(e)}")
 
-        if ads1 is None or ads2 is None:
+        if ads1 is None and ads2 is None:
             raise Exception("Failed to initialize both ADCs")
 
         # Set up analog inputs
-        gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
-        gate_resistor_ladder2 = AnalogIn(ads1, ADS.P1)
-        gate_buttons = AnalogIn(ads1, ADS.P2)
-        porto_piezo1 = AnalogIn(ads2, ADS.P0)
-        porto_piezo2 = AnalogIn(ads2, ADS.P1)
-        porto_piezo3 = AnalogIn(ads2, ADS.P2)
+        if ads1 is not None:
+            gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
+            gate_resistor_ladder2 = AnalogIn(ads1, ADS.P1)
+            gate_buttons = AnalogIn(ads1, ADS.P2)
+        if ads2 is not None:
+            porto_piezo1 = AnalogIn(ads2, ADS.P0)
+            porto_piezo2 = AnalogIn(ads2, ADS.P1)
+            porto_piezo3 = AnalogIn(ads2, ADS.P2)
         
         adc_available = True
         print("ADC initialization successful")
@@ -161,6 +163,7 @@ def display_tui():
     print(term.move_xy(0, term.height - 1))
 
 try:
+    setup_gpio()  # Ensure GPIO is set up before the main loop
     with term.cbreak(), term.hidden_cursor():
         display_tui()  # Initial display
         while True:
@@ -178,11 +181,15 @@ except KeyboardInterrupt:
 except Exception as e:
     print(f"Unexpected error: {str(e)}")
 finally:
-    # Turn off all lasers
-    for pin in laser_transmitters.values():
-        GPIO.output(pin, GPIO.LOW)
-    GPIO.cleanup()
-    print(term.clear())
+    try:
+        # Turn off all lasers
+        for pin in laser_transmitters.values():
+            GPIO.output(pin, GPIO.LOW)
+    except Exception as e:
+        print(f"Error turning off lasers: {str(e)}")
+    finally:
+        GPIO.cleanup()
+        print(term.clear())
 def check_i2c_devices():
     print("Checking I2C devices...")
     try:
