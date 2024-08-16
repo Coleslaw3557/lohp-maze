@@ -44,6 +44,7 @@ try:
     # Set up analog inputs
     gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
     gate_resistor_ladder2 = AnalogIn(ads1, ADS.P1)
+    gate_buttons = AnalogIn(ads1, ADS.P2)
     porto_piezo1 = AnalogIn(ads2, ADS.P0)
     porto_piezo2 = AnalogIn(ads2, ADS.P1)
     porto_piezo3 = AnalogIn(ads2, ADS.P2)
@@ -55,6 +56,18 @@ except OSError:
 # Set up Terminal for TUI
 term = Terminal()
 
+def get_button_state(value):
+    if value < 5000:
+        return "Button 1"
+    elif value < 10000:
+        return "Button 2"
+    elif value < 15000:
+        return "Button 3"
+    elif value < 20000:
+        return "Button 4"
+    else:
+        return "No button"
+
 def get_sensor_data():
     data = []
     for room, pin in laser_receivers.items():
@@ -63,16 +76,18 @@ def get_sensor_data():
     
     if adc_available:
         try:
-            data.append(("ADC1 A0", "Resistor Ladder 1", "Gate", gate_resistor_ladder1.value))
-            data.append(("ADC1 A1", "Resistor Ladder 2", "Gate", gate_resistor_ladder2.value))
-            data.append(("ADC2 A0", "Piezo 1", "Porto", porto_piezo1.value))
-            data.append(("ADC2 A1", "Piezo 2", "Porto", porto_piezo2.value))
-            data.append(("ADC2 A2", "Piezo 3", "Porto", porto_piezo3.value))
+            data.append(("ADC1 A0", "Resistor Ladder 1", "Gate", f"{gate_resistor_ladder1.value} ({gate_resistor_ladder1.voltage:.2f}V)"))
+            data.append(("ADC1 A1", "Resistor Ladder 2", "Gate", f"{gate_resistor_ladder2.value} ({gate_resistor_ladder2.voltage:.2f}V)"))
+            data.append(("ADC1 A2", "Buttons", "Gate", get_button_state(gate_buttons.value)))
+            data.append(("ADC2 A0", "Piezo 1", "Porto", f"{porto_piezo1.value} ({porto_piezo1.voltage:.2f}V)"))
+            data.append(("ADC2 A1", "Piezo 2", "Porto", f"{porto_piezo2.value} ({porto_piezo2.voltage:.2f}V)"))
+            data.append(("ADC2 A2", "Piezo 3", "Porto", f"{porto_piezo3.value} ({porto_piezo3.voltage:.2f}V)"))
         except OSError:
             print("Error reading from ADCs. Analog sensor data may be unavailable.")
     else:
         data.append(("ADC1 A0", "Resistor Ladder 1", "Gate", "N/A"))
         data.append(("ADC1 A1", "Resistor Ladder 2", "Gate", "N/A"))
+        data.append(("ADC1 A2", "Buttons", "Gate", "N/A"))
         data.append(("ADC2 A0", "Piezo 1", "Porto", "N/A"))
         data.append(("ADC2 A1", "Piezo 2", "Porto", "N/A"))
         data.append(("ADC2 A2", "Piezo 3", "Porto", "N/A"))
