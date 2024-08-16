@@ -11,14 +11,20 @@ class ConfigManager:
     def load_config(self):
         try:
             with open(self.config_file, 'r') as f:
-                config = json.load(f)
+                config_content = f.read()
+            config = json.loads(config_content)
             logger.info(f"Configuration loaded from {self.config_file}")
             return config
         except FileNotFoundError:
             logger.error(f"Configuration file {self.config_file} not found.")
             return {}
-        except json.JSONDecodeError:
-            logger.error(f"Error decoding JSON from {self.config_file}.")
+        except json.JSONDecodeError as e:
+            logger.error(f"Error decoding JSON from {self.config_file}: {str(e)}")
+            logger.error(f"Content of {self.config_file}:")
+            logger.error(config_content)
+            return {}
+        except Exception as e:
+            logger.error(f"Unexpected error loading config from {self.config_file}: {str(e)}")
             return {}
 
     def get(self, key, default=None):

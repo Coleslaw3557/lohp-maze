@@ -5,25 +5,6 @@
   "audio_output_device": "default",
   "triggers": [
     {
-      "name": "Button1",
-      "type": "gpio",
-      "pin": 17
-    },
-    {
-      "name": "Sensor1",
-      "type": "gpio",
-      "pin": 18
-    }
-  ],
-  "cache_dir": "/app/cache"
-}
-{
-  "server_ip": "192.168.1.238",
-  "unit_name": "LOHP-UNIT-B",
-  "associated_rooms": ["Cop Dodge", "Gate", "Guy Line Climb", "Sparkle Pony Room", "Porto Room"],
-  "audio_output_device": "default",
-  "triggers": [
-    {
       "name": "Cop Dodge Laser",
       "type": "laser",
       "tx_pin": 17,
@@ -78,5 +59,6 @@
       }
     }
   ],
-  "rate_limit": 5
+  "rate_limit": 5,
+  "cache_dir": "/app/cache"
 }
