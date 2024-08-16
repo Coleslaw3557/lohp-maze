@@ -125,6 +125,23 @@ def initialize_adc():
     print(f"  Piezo 2 (A1): {'Connected' if porto_piezo2 else 'Failed'}")
     print(f"  Piezo 3 (A2): {'Connected' if porto_piezo3 else 'Failed'}")
 
+    # Add more detailed debugging information
+    if ads1:
+        print(f"\nADC1 (0x48) Debug Info:")
+        print(f"  Address: 0x{ads1._address:02X}")
+        print(f"  Data Rate: {ads1.data_rate}")
+        print(f"  Gain: {ads1.gain}")
+    else:
+        print("\nADC1 (0x48) is not initialized")
+
+    if ads2:
+        print(f"\nADC2 (0x49) Debug Info:")
+        print(f"  Address: 0x{ads2._address:02X}")
+        print(f"  Data Rate: {ads2.data_rate}")
+        print(f"  Gain: {ads2.gain}")
+    else:
+        print("\nADC2 (0x49) is not initialized")
+
 # Call these functions to initialize I2C and ADCs
 check_i2c_devices()
 initialize_adc()
@@ -177,7 +194,7 @@ def get_sensor_data():
     for adc, name in [(ads1, "ADC1"), (ads2, "ADC2")]:
         if adc:
             try:
-                data.append((f"{name} Debug", "Info", "All", f"Address: 0x{adc.address:02X}, Data rate: {adc.data_rate}, Gain: {adc.gain}"))
+                data.append((f"{name} Debug", "Info", "All", f"Address: 0x{adc._address:02X}, Data rate: {adc.data_rate}, Gain: {adc.gain}"))
             except Exception as e:
                 data.append((f"{name} Debug", "Info", "All", f"Error: {str(e)}"))
         else:
