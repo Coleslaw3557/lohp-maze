@@ -67,30 +67,28 @@ def initialize_adc():
 
     try:
         # Try to initialize ADC1
-        for address in [0x48, 0x49]:
-            try:
-                ads1 = ADS.ADS1115(i2c, address=address, gain=1)
-                ads1.data_rate = 8
-                print(f"ADC1 initialized at address 0x{address:02X}")
-                break
-            except Exception as e:
-                print(f"Failed to initialize ADC1 at address 0x{address:02X}: {str(e)}")
-        
+        ads1 = ADS.ADS1115(i2c, address=0x48, gain=1)
+        ads1.data_rate = 8
+        print(f"ADC1 initialized at address 0x48")
+    except Exception as e:
+        print(f"Failed to initialize ADC1 at address 0x48: {str(e)}")
+        ads1 = None
+
+    try:
         # Try to initialize ADC2
-        for address in [0x49, 0x48]:
-            if ads1 is None or address != ads1.address:
-                try:
-                    ads2 = ADS.ADS1115(i2c, address=address, gain=1)
-                    ads2.data_rate = 8
-                    print(f"ADC2 initialized at address 0x{address:02X}")
-                    break
-                except Exception as e:
-                    print(f"Failed to initialize ADC2 at address 0x{address:02X}: {str(e)}")
+        ads2 = ADS.ADS1115(i2c, address=0x49, gain=1)
+        ads2.data_rate = 8
+        print(f"ADC2 initialized at address 0x49")
+    except Exception as e:
+        print(f"Failed to initialize ADC2 at address 0x49: {str(e)}")
+        ads2 = None
 
-        if ads1 is None and ads2 is None:
-            raise Exception("Failed to initialize both ADCs")
+    if ads1 is None and ads2 is None:
+        print("Failed to initialize both ADCs")
+        return
 
-        # Set up analog inputs
+    # Set up analog inputs
+    try:
         if ads1 is not None:
             gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
             gate_resistor_ladder2 = AnalogIn(ads1, ADS.P1)
@@ -103,9 +101,11 @@ def initialize_adc():
         adc_available = True
         print("ADC initialization successful")
     except Exception as e:
-        print(f"ADC initialization failed: {str(e)}")
+        print(f"Error setting up analog inputs: {str(e)}")
         adc_available = False
 
+# Call this function before initializing ADCs
+check_i2c_devices()
 initialize_adc()
 
 # Set up Terminal for TUI
@@ -154,9 +154,9 @@ def get_sensor_data():
     
     # Add ADC debug information
     if ads1:
-        data.append(("ADC1 Debug", "Info", "All", f"Address: 0x{ads1.address:02X}, Data rate: {ads1.data_rate}"))
+        data.append(("ADC1 Debug", "Info", "All", f"Address: 0x{ads1._address:02X}, Data rate: {ads1.data_rate}"))
     if ads2:
-        data.append(("ADC2 Debug", "Info", "All", f"Address: 0x{ads2.address:02X}, Data rate: {ads2.data_rate}"))
+        data.append(("ADC2 Debug", "Info", "All", f"Address: 0x{ads2._address:02X}, Data rate: {ads2.data_rate}"))
     
     return data
 
