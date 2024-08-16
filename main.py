@@ -431,9 +431,13 @@ async def shutdown():
     await asyncio.gather(*[client.send(shutdown_message) for client in connected_clients])
     
     # Schedule the server shutdown
-    asyncio.get_event_loop().call_at(shutdown_time, asyncio.get_event_loop().stop)
+    asyncio.get_event_loop().call_at(shutdown_time, shutdown_host_system)
     
     return jsonify(response)
+
+def shutdown_host_system():
+    logger.info("Shutting down host system")
+    os.system('chroot /host shutdown -h now')
 
 @app.route('/api/kill_process', methods=['POST'])
 async def kill_process():

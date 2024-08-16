@@ -9,6 +9,9 @@ services:
     volumes:
       - ./:/app
       - ./cache:/app/cache
+      - /:/host
+    cap_add:
+      - SYS_BOOT
     environment:
       - PYTHONUNBUFFERED=1
     restart: always

@@ -12,6 +12,9 @@ services:
     privileged: true
     volumes:
       - .:/app
+      - /:/host
+    cap_add:
+      - SYS_BOOT
     environment:
       - FLASK_ENV=production
     restart: always
