@@ -200,18 +200,21 @@ class TriggerManager:
 
     def check_laser_cooldown(self, trigger_name, current_time):
         last_trigger_time = self.trigger_cooldowns.get(trigger_name, 0)
+        cooldown_period = 15  # 15-second cooldown
         
         # Check if the cooldown period has passed
-        if current_time - last_trigger_time > 15:  # 15-second cooldown
+        if current_time - last_trigger_time > cooldown_period:
             return True
         
-        logger.debug(f"Laser {trigger_name} in cooldown. Time since last trigger: {current_time - last_trigger_time:.2f}s")
+        time_left = cooldown_period - (current_time - last_trigger_time)
+        logger.debug(f"Laser {trigger_name} in cooldown. Time left: {time_left:.2f}s")
         return False
 
     def check_trigger_cooldown(self, trigger_name, current_time):
         last_trigger_time = self.trigger_cooldowns.get(trigger_name, 0)
         if trigger_name.startswith('laser_'):
-            return current_time - last_trigger_time > 15  # 15-second cooldown for laser triggers
+            cooldown_period = 15  # 15-second cooldown for laser triggers
+            return current_time - last_trigger_time > cooldown_period
         return True  # No cooldown for other triggers
 
     def set_trigger_cooldown(self, trigger_name, current_time):
