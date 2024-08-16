@@ -70,6 +70,7 @@ gate_resistor_ladder1 = gate_resistor_ladder2 = gate_buttons = None
 porto_piezo1 = porto_piezo2 = porto_piezo3 = None
 filters = {}
 CONNECTED_THRESHOLD = 0.3
+RESISTOR_LADDER_THRESHOLD = 0.1  # Adjust this value based on your resistor ladder setup
 
 def check_i2c_devices():
     print("Checking I2C devices...")
@@ -213,20 +214,26 @@ def get_sensor_data():
                     # Calculate the change in voltage
                     voltage_change = abs(voltage - filters[adc].get('last_voltage', voltage))
                 
-                    knock_status = "No knock"
-                    if voltage_change > DEBUG_THRESHOLD:
-                        debug_status = f"Debug: Change detected: {voltage_change:.3f}V"
-                        if voltage > KNOCK_THRESHOLD and voltage_change > VOLTAGE_CHANGE_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
-                            knock_status = "KNOCK DETECTED"
-                            filters[adc]['last_knock'] = current_time
-                    else:
-                        debug_status = ""
-                
+                    if adc in ["ADC1 A0", "ADC1 A1"]:  # Resistor ladder switches
+                        button_status = "No button pressed"
+                        if voltage_change > RESISTOR_LADDER_THRESHOLD:
+                            button_status = f"Button pressed! Voltage: {voltage:.3f}V"
+                        status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {button_status}"
+                    else:  # Other sensors (including piezo)
+                        knock_status = "No knock"
+                        if voltage_change > DEBUG_THRESHOLD:
+                            debug_status = f"Debug: Change detected: {voltage_change:.3f}V"
+                            if voltage > KNOCK_THRESHOLD and voltage_change > VOLTAGE_CHANGE_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
+                                knock_status = "KNOCK DETECTED"
+                                filters[adc]['last_knock'] = current_time
+                        else:
+                            debug_status = ""
+                    
+                        status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {knock_status}"
+                        if debug_status:
+                            status += f", {debug_status}"
+                    
                     filters[adc]['last_voltage'] = voltage
-                
-                    status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {knock_status}"
-                    if debug_status:
-                        status += f", {debug_status}"
                 else:
                     status = f"Value: {value}, Voltage: {voltage:.3f}V, Sensor not connected"
             except Exception as e:
