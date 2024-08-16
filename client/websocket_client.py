@@ -4,6 +4,7 @@ import websockets
 import asyncio
 import time
 import sys
+import os
 
 logger = logging.getLogger(__name__)
 
