@@ -206,10 +206,13 @@ class TriggerManager:
         if intact_time is None:
             return False  # Beam is currently broken or was recently broken
         
-        if current_time - intact_time < 10:
-            return False  # Beam hasn't been intact for 10 seconds yet
+        if current_time - intact_time < 15:
+            return False  # Beam hasn't been intact for 15 seconds yet
         
-        return current_time - last_trigger_time > self.cooldown_period
+        if current_time - last_trigger_time <= self.cooldown_period:
+            return False  # Still in cooldown period
+        
+        return True
 
     def check_trigger_cooldown(self, trigger_name, current_time):
         last_trigger_time = self.trigger_cooldowns.get(trigger_name, 0)
