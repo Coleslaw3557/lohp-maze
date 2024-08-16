@@ -111,6 +111,7 @@ async def main():
         logger.info("AudioManager initialization complete")
         try:
             trigger_manager = TriggerManager(config.get('triggers', []), config.get('piezo_settings', {}))
+            logger.info(f"TriggerManager initialized with {len(config.get('triggers', []))} triggers")
         except Exception as e:
             logger.error(f"Failed to initialize TriggerManager: {str(e)}")
             trigger_manager = None
