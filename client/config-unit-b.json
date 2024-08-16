@@ -17,3 +17,66 @@
   ],
   "cache_dir": "/app/cache"
 }
+{
+  "server_ip": "192.168.1.238",
+  "unit_name": "LOHP-UNIT-B",
+  "associated_rooms": ["Cop Dodge", "Gate", "Guy Line Climb", "Sparkle Pony Room", "Porto Room"],
+  "audio_output_device": "default",
+  "triggers": [
+    {
+      "name": "Cop Dodge Laser",
+      "type": "laser",
+      "tx_pin": 17,
+      "rx_pin": 27,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Cop Dodge",
+          "effect_name": "PoliceLights"
+        }
+      }
+    },
+    {
+      "name": "Gate Laser",
+      "type": "laser",
+      "tx_pin": 22,
+      "rx_pin": 23,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Gate",
+          "effect_name": "GateInspection"
+        }
+      }
+    },
+    {
+      "name": "Sparkle Pony Laser",
+      "type": "laser",
+      "tx_pin": 5,
+      "rx_pin": 6,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Sparkle Pony Room",
+          "effect_name": "SparkPony"
+        }
+      }
+    }
+  ],
+  "rate_limit": 5
+}
