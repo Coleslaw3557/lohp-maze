@@ -289,15 +289,23 @@ def button_test():
     
     button_values = {}
     last_value = 0
+    debounce_time = 0.5  # 500ms debounce
+    last_press_time = 0
+    
     while True:
         adc_value = gate_resistor_ladder1.value if gate_resistor_ladder1 else 0
         voltage = gate_resistor_ladder1.voltage if gate_resistor_ladder1 else 0
         
-        if abs(adc_value - last_value) > 100:  # Detect significant change in ADC value
+        current_time = time.time()
+        
+        if abs(adc_value - last_value) > 100 and (current_time - last_press_time) > debounce_time:
+            # Detect significant change in ADC value and apply debounce
             button_name = f"Button {len(button_values) + 1}"
-            button_values[button_name] = (adc_value, voltage)
-            print(term.move_y(6 + len(button_values)) + f"{button_name}: ADC Value = {adc_value}, Voltage = {voltage:.3f}V")
-            last_value = adc_value
+            if adc_value not in [v[0] for v in button_values.values()]:
+                button_values[button_name] = (adc_value, voltage)
+                print(term.move_y(6 + len(button_values)) + f"{button_name}: ADC Value = {adc_value}, Voltage = {voltage:.3f}V")
+                last_value = adc_value
+                last_press_time = current_time
         
         print(term.move_xy(0, 4) + f"Current ADC Value: {adc_value}, Voltage: {voltage:.3f}V" + " " * 20)
         
