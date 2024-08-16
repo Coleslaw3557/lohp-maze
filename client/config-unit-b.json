@@ -7,8 +7,8 @@
     {
       "name": "Cop Dodge Laser",
       "type": "laser",
-      "tx_pin": 22,
-      "rx_pin": 23,
+      "tx_pin": 17,
+      "rx_pin": 27,
       "action": {
         "type": "curl",
         "method": "POST",
