@@ -291,6 +291,8 @@ def button_test():
     last_value = 0
     debounce_time = 0.5  # 500ms debounce
     last_press_time = 0
+    stable_count = 0
+    stable_threshold = 10  # Number of stable readings required
     
     while True:
         adc_value = gate_resistor_ladder1.value if gate_resistor_ladder1 else 0
@@ -298,19 +300,32 @@ def button_test():
         
         current_time = time.time()
         
-        if abs(adc_value - last_value) > 100 and (current_time - last_press_time) > debounce_time:
-            # Detect significant change in ADC value and apply debounce
-            button_name = f"Button {len(button_values) + 1}"
-            if adc_value not in [v[0] for v in button_values.values()]:
+        if abs(adc_value - last_value) > 100:
+            stable_count = 0
+        else:
+            stable_count += 1
+        
+        if stable_count >= stable_threshold and (current_time - last_press_time) > debounce_time:
+            # Detect stable ADC value and apply debounce
+            rounded_adc = round(adc_value, -2)  # Round to nearest 100
+            if rounded_adc not in [round(v[0], -2) for v in button_values.values()]:
+                button_name = f"Button {len(button_values) + 1}"
                 button_values[button_name] = (adc_value, voltage)
                 print(term.move_y(6 + len(button_values)) + f"{button_name}: ADC Value = {adc_value}, Voltage = {voltage:.3f}V")
-                last_value = adc_value
                 last_press_time = current_time
+        
+        last_value = adc_value
         
         print(term.move_xy(0, 4) + f"Current ADC Value: {adc_value}, Voltage: {voltage:.3f}V" + " " * 20)
         
-        if term.inkey(timeout=0.1) == 'q':
+        key = term.inkey(timeout=0.1)
+        if key == 'q':
             break
+        elif key == 'r':
+            button_values.clear()
+            print(term.clear())
+            print(term.move_y(0) + term.center("Button Test Mode"))
+            print(term.move_y(2) + "Press each button one at a time. Press 'q' to quit. Press 'r' to reset.")
     
     print(term.move_y(6 + len(button_values) + 2) + "Button Test Complete. Press any key to return to main menu.")
     term.inkey()
