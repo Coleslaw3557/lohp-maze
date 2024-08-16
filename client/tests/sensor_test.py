@@ -61,7 +61,7 @@ console_handler.setLevel(logging.DEBUG)
 logging.getLogger('').addHandler(console_handler)
 
 # Set up I2C for ADS1115
-i2c = busio.I2C(board.SCL, board.SDA)
+i2c = busio.I2C(board.SCL, board.SDA, frequency=100000)  # Lower the I2C frequency to 100 kHz
 # Set up ADCs and analog inputs
 adc_available = False
 ads1 = None
@@ -74,8 +74,12 @@ CONNECTED_THRESHOLD = 100
 def initialize_adc():
     global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3, filters, CONNECTED_THRESHOLD
     try:
-        ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Gate Room
-        ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for Porto Room
+        ads1 = ADS.ADS1115(i2c, address=0x48, gain=1)  # ADC1 for Gate Room
+        ads2 = ADS.ADS1115(i2c, address=0x49, gain=1)  # ADC2 for Porto Room
+        
+        # Set the data rate to the slowest setting
+        ads1.data_rate = 8
+        ads2.data_rate = 8
 
         # Set up analog inputs
         gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
@@ -159,7 +163,7 @@ def get_sensor_data():
     
     return data
 
-def read_adc_with_retry(adc, channel, analog_in, max_attempts=5, delay=0.2):
+def read_adc_with_retry(adc, channel, analog_in, max_attempts=5, delay=0.5):
     for attempt in range(max_attempts):
         try:
             value = analog_in.value
