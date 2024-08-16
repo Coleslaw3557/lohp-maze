@@ -9,6 +9,7 @@ services:
     devices:
       - "/dev/ttyUSB0:/dev/ttyUSB0"
       - "/dev/snd:/dev/snd"
+      - "/dev/i2c-1:/dev/i2c-1"
     privileged: true
     volumes:
       - .:/app

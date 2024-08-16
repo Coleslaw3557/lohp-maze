@@ -2,6 +2,8 @@ import json
 import logging
 import asyncio
 import os
+import os
+import sys
 import time
 from effects import (
     create_lightning_effect, create_police_lights_effect, create_gate_inspection_effect,
