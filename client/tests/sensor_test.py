@@ -23,9 +23,16 @@ def test_level_shifter(input_pin, output_pin):
     
     return high_state == GPIO.HIGH and low_state == GPIO.LOW
 
-# Set up GPIO
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
+def setup_gpio():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    
+    for pin in laser_transmitters.values():
+        GPIO.setup(pin, GPIO.OUT)
+        GPIO.output(pin, GPIO.HIGH)  # Turn on all lasers
+
+    for pin in laser_receivers.values():
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Define laser transmitter and receiver pins
 laser_transmitters = {
@@ -44,16 +51,18 @@ laser_receivers = {
     'Porto': 19
 }
 
-# Set up laser transmitter pins as outputs and receiver pins as inputs
-for pin in laser_transmitters.values():
-    GPIO.setup(pin, GPIO.OUT)
-    GPIO.output(pin, GPIO.HIGH)  # Turn on all lasers
-
-for pin in laser_receivers.values():
-    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+# Set up GPIO
+setup_gpio()
 
 # Set up I2C for ADS1115
-i2c = board.I2C()
+i2c = busio.I2C(board.SCL, board.SDA)
+# Set up ADCs and analog inputs
+adc_available = False
+ads1 = None
+ads2 = None
+gate_resistor_ladder1 = gate_resistor_ladder2 = gate_buttons = None
+porto_piezo1 = porto_piezo2 = porto_piezo3 = None
+
 try:
     ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Gate Room
     ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for Porto Room
@@ -82,7 +91,6 @@ try:
     CONNECTED_THRESHOLD = 100  # Adjust this value based on your specific setup
 except OSError as e:
     print(f"Failed to initialize ADCs. Error: {e}")
-    adc_available = False
 
 # Set up Terminal for TUI
 term = Terminal()
