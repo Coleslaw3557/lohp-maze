@@ -63,11 +63,32 @@ CONNECTED_THRESHOLD = 100
 def initialize_adc():
     global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3
     adc_available = False
+    ads1 = ads2 = None
+
     try:
-        ads1 = ADS.ADS1115(i2c, address=0x48, gain=1)  # ADC1 for Gate Room
-        ads1.data_rate = 8
-        ads2 = ADS.ADS1115(i2c, address=0x49, gain=1)  # ADC2 for Porto Room
-        ads2.data_rate = 8
+        # Try to initialize ADC1
+        for address in [0x48, 0x49]:
+            try:
+                ads1 = ADS.ADS1115(i2c, address=address, gain=1)
+                ads1.data_rate = 8
+                print(f"ADC1 initialized at address 0x{address:02X}")
+                break
+            except Exception as e:
+                print(f"Failed to initialize ADC1 at address 0x{address:02X}: {str(e)}")
+        
+        # Try to initialize ADC2
+        for address in [0x49, 0x48]:
+            if address != ads1.address:
+                try:
+                    ads2 = ADS.ADS1115(i2c, address=address, gain=1)
+                    ads2.data_rate = 8
+                    print(f"ADC2 initialized at address 0x{address:02X}")
+                    break
+                except Exception as e:
+                    print(f"Failed to initialize ADC2 at address 0x{address:02X}: {str(e)}")
+
+        if ads1 is None or ads2 is None:
+            raise Exception("Failed to initialize both ADCs")
 
         # Set up analog inputs
         gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
@@ -114,9 +135,16 @@ def get_sensor_data():
                 status = f"Value: {value}, Voltage: {voltage:.2f}V"
             except Exception as e:
                 status = f"Reading failed: {str(e)}"
+                print(f"Error reading {adc} {channel}: {str(e)}")
         else:
             status = "Offline"
         data.append((adc, channel, room, status))
+    
+    # Add ADC debug information
+    if ads1:
+        data.append(("ADC1 Debug", "Info", "All", f"Address: 0x{ads1.address:02X}, Data rate: {ads1.data_rate}"))
+    if ads2:
+        data.append(("ADC2 Debug", "Info", "All", f"Address: 0x{ads2.address:02X}, Data rate: {ads2.data_rate}"))
     
     return data
 
@@ -155,3 +183,14 @@ finally:
         GPIO.output(pin, GPIO.LOW)
     GPIO.cleanup()
     print(term.clear())
+def check_i2c_devices():
+    print("Checking I2C devices...")
+    try:
+        import subprocess
+        result = subprocess.run(['i2cdetect', '-y', '1'], capture_output=True, text=True)
+        print(result.stdout)
+    except Exception as e:
+        print(f"Error checking I2C devices: {str(e)}")
+
+# Call this function before initializing ADCs
+check_i2c_devices()
