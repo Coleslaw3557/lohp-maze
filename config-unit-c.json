@@ -1,0 +1,50 @@
+{
+  "server_ip": "192.168.1.238",
+  "unit_name": "LOHP-UNIT-C",
+  "associated_rooms": ["Temple Room", "Deep Playa Handshake", "Bike Lock Room", "Vertical Moop March", "Monkey Room"],
+  "audio_output_device": "default",
+  "triggers": [
+    {
+      "name": "DeepPlayaHandshakeButton1",
+      "type": "adc",
+      "channel": 0,
+      "adc_address": "0x48"
+    },
+    {
+      "name": "DeepPlayaHandshakeButton2",
+      "type": "adc",
+      "channel": 1,
+      "adc_address": "0x48"
+    },
+    {
+      "name": "DeepPlayaHandshakeButton3",
+      "type": "adc",
+      "channel": 2,
+      "adc_address": "0x48"
+    },
+    {
+      "name": "DeepPlayaHandshakeButton4",
+      "type": "adc",
+      "channel": 3,
+      "adc_address": "0x48"
+    },
+    {
+      "name": "MonkeyRoomButton",
+      "type": "gpio",
+      "pin": 12
+    }
+  ],
+  "lasers": [
+    {"name": "TempleRoomLT", "gpio": 4},
+    {"name": "TempleRoomLR", "gpio": 17},
+    {"name": "DeepPlayaHandshakeLT", "gpio": 18},
+    {"name": "DeepPlayaHandshakeLR", "gpio": 27},
+    {"name": "BikeLockRoomLT", "gpio": 22},
+    {"name": "BikeLockRoomLR", "gpio": 23},
+    {"name": "VerticalMoopMarchLT", "gpio": 24},
+    {"name": "VerticalMoopMarchLR", "gpio": 25},
+    {"name": "MonkeyRoomLT", "gpio": 5},
+    {"name": "MonkeyRoomLR", "gpio": 6}
+  ],
+  "cache_dir": "/app/cache"
+}

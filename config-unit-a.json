@@ -5,15 +5,23 @@
   "audio_output_device": "default",
   "triggers": [
     {
-      "name": "Button1",
-      "type": "gpio",
-      "pin": 17
-    },
-    {
-      "name": "Sensor1",
-      "type": "gpio",
-      "pin": 18
+      "name": "CuddleCrossResistorLadder",
+      "type": "adc",
+      "channel": 0,
+      "adc_address": "0x48"
     }
+  ],
+  "lasers": [
+    {"name": "EntranceLT", "gpio": 4},
+    {"name": "EntranceLR", "gpio": 17},
+    {"name": "CuddleCrossLT", "gpio": 18},
+    {"name": "CuddleCrossLR", "gpio": 27},
+    {"name": "PhotoBombLT", "gpio": 22},
+    {"name": "PhotoBombLR", "gpio": 23},
+    {"name": "NoFriendsMondayLT", "gpio": 24},
+    {"name": "NoFriendsMondayLR", "gpio": 25},
+    {"name": "ExitLT", "gpio": 5},
+    {"name": "ExitLR", "gpio": 6}
   ],
   "cache_dir": "/app/cache"
 }
