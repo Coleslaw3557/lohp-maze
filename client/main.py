@@ -87,7 +87,7 @@ async def main():
         logger.info("Initializing AudioManager")
         await audio_manager.initialize()  # Initialize and download audio files
         logger.info("AudioManager initialization complete")
-        trigger_manager = TriggerManager(config.get('triggers'))
+        trigger_manager = TriggerManager(config.get('triggers', []))
         sync_manager = SyncManager()
         
         ws_client = WebSocketClient(
@@ -97,7 +97,7 @@ async def main():
             sync_manager
         )
 
-        setup_gpio(config)
+        # Remove the setup_gpio call as it's now handled by TriggerManager
 
         # Background music is not started automatically
         logger.info("Background music is ready to be started manually")
