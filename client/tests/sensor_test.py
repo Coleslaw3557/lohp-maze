@@ -12,23 +12,25 @@ def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
     GPIO.setup(output_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     
-    # Test HIGH state
-    GPIO.output(input_pin, GPIO.HIGH)
-    time.sleep(0.1)
-    high_state = GPIO.input(output_pin)
-    logging.debug(f"Level Shifter Test: Input Pin {input_pin} HIGH, Output Pin {output_pin} reads {high_state}")
-    
-    # Test LOW state
-    GPIO.output(input_pin, GPIO.LOW)
-    time.sleep(0.1)
-    low_state = GPIO.input(output_pin)
-    logging.debug(f"Level Shifter Test: Input Pin {input_pin} LOW, Output Pin {output_pin} reads {low_state}")
+    results = []
+    for _ in range(5):  # Test 5 times
+        # Test HIGH state
+        GPIO.output(input_pin, GPIO.HIGH)
+        time.sleep(0.1)
+        high_state = GPIO.input(output_pin)
+        
+        # Test LOW state
+        GPIO.output(input_pin, GPIO.LOW)
+        time.sleep(0.1)
+        low_state = GPIO.input(output_pin)
+        
+        results.append((high_state == GPIO.HIGH, low_state == GPIO.LOW))
     
     GPIO.setup(input_pin, GPIO.IN)
     
-    result = high_state == GPIO.HIGH and low_state == GPIO.LOW
-    logging.info(f"Level Shifter Test Result: Input Pin {input_pin}, Output Pin {output_pin}, Working: {result}")
-    return result
+    success_rate = sum(all(result) for result in results) / len(results)
+    logging.info(f"Level Shifter Test Result: Input Pin {input_pin}, Output Pin {output_pin}, Success Rate: {success_rate:.2f}")
+    return success_rate, results
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
@@ -140,10 +142,12 @@ def get_sensor_data():
     data = []
     
     # Test level shifters
-    ls1_status = "Working" if test_level_shifter(17, 27) else "Not Working"
-    ls2_status = "Working" if test_level_shifter(24, 25) else "Not Working"
-    data.append(("LS1", "Level Shifter 1", "All", f"{ls1_status} (17->27)"))
-    data.append(("LS2", "Level Shifter 2", "All", f"{ls2_status} (24->25)"))
+    ls1_rate, ls1_results = test_level_shifter(17, 27)
+    ls2_rate, ls2_results = test_level_shifter(24, 25)
+    ls1_status = f"Success Rate: {ls1_rate:.2f} (17->27) {ls1_results}"
+    ls2_status = f"Success Rate: {ls2_rate:.2f} (24->25) {ls2_results}"
+    data.append(("LS1", "Level Shifter 1", "All", ls1_status))
+    data.append(("LS2", "Level Shifter 2", "All", ls2_status))
     
     # Test ADCs
     adc_data = [
@@ -157,7 +161,7 @@ def get_sensor_data():
     
     for adc, channel, room, analog_in in adc_data:
         if adc_available:
-            for attempt in range(3):  # Try up to 3 times
+            for attempt in range(5):  # Try up to 5 times
                 try:
                     value = analog_in.value
                     voltage = analog_in.voltage
@@ -166,9 +170,10 @@ def get_sensor_data():
                 except Exception as e:
                     logging.error(f"Error reading {adc} {channel}: {e}")
                     status = f"Error: {e}"
-                    time.sleep(0.1)  # Short delay before retry
+                    time.sleep(0.2)  # Longer delay before retry
             else:
-                logging.error(f"Failed to read {adc} {channel} after 3 attempts")
+                logging.error(f"Failed to read {adc} {channel} after 5 attempts")
+                status = "Failed after 5 attempts"
         else:
             status = "Offline"
         data.append((adc, channel, room, status))
