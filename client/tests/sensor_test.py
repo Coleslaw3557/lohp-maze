@@ -28,7 +28,7 @@ def setup_gpio():
     
     for pin in laser_transmitters.values():
         GPIO.setup(pin, GPIO.OUT)
-        GPIO.output(pin, GPIO.LOW)  # Initially turn off all lasers
+        GPIO.output(pin, GPIO.HIGH)  # Turn on all lasers
 
     for pin in laser_receivers.values():
         GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Use pull-down resistor
@@ -165,26 +165,18 @@ def check_i2c_devices():
 def get_sensor_data():
     data = []
     
-    # Test laser transmitters and receivers
-    for room, tx_pin in laser_transmitters.items():
-        rx_pin = laser_receivers[room]
+    # Monitor laser receivers
+    for room, rx_pin in laser_receivers.items():
+        tx_pin = laser_transmitters[room]
         
-        # Turn on laser
-        GPIO.output(tx_pin, GPIO.HIGH)
-        time.sleep(0.5)  # Increased delay to 0.5 seconds
-        
-        # Read transmitter and receiver status
-        tx_status = GPIO.input(tx_pin)
+        # Read receiver status
         rx_status = GPIO.input(rx_pin)
         
-        # Turn off laser
-        GPIO.output(tx_pin, GPIO.LOW)
-        
-        status = f"Transmitter: {'ON' if tx_status else 'OFF'}, Receiver: {'Detected' if rx_status else 'Not Detected'}"
+        status = f"Beam: {'Intact' if rx_status else 'Broken'}"
         data.append((f"{room} Laser", "Laser System", room, status))
         
         # Add debug information
-        data.append((f"{room} Debug", "Laser Debug", room, f"TX Pin: {tx_pin}, RX Pin: {rx_pin}, TX Status: {tx_status}, RX Status: {rx_status}"))
+        data.append((f"{room} Debug", "Laser Debug", room, f"TX Pin: {tx_pin}, RX Pin: {rx_pin}, RX Status: {rx_status}"))
     
     # Test ADCs
     adc_data = [
@@ -254,16 +246,8 @@ except KeyboardInterrupt:
 except Exception as e:
     print(f"Unexpected error: {str(e)}")
 finally:
-    try:
-        # Turn off all lasers
-        for pin in laser_transmitters.values():
-            if GPIO.gpio_function(pin) == GPIO.OUT:
-                GPIO.output(pin, GPIO.LOW)
-    except Exception as e:
-        print(f"Error turning off lasers: {str(e)}")
-    finally:
-        GPIO.cleanup()
-        print(term.clear())
+    GPIO.cleanup()
+    print(term.clear())
 def check_i2c_devices():
     print("Checking I2C devices...")
     try:
