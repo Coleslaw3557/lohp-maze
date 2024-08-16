@@ -25,8 +25,8 @@
     {
       "name": "Gate Laser",
       "type": "laser",
-      "tx_pin": 24,
-      "rx_pin": 25,
+      "tx_pin": 22,
+      "rx_pin": 23,
       "action": {
         "type": "curl",
         "method": "POST",
@@ -43,8 +43,8 @@
     {
       "name": "Guy Line Laser",
       "type": "laser",
-      "tx_pin": 5,
-      "rx_pin": 6,
+      "tx_pin": 24,
+      "rx_pin": 25,
       "action": {
         "type": "curl",
         "method": "POST",
@@ -61,8 +61,8 @@
     {
       "name": "Sparkle Pony Laser",
       "type": "laser",
-      "tx_pin": 13,
-      "rx_pin": 19,
+      "tx_pin": 5,
+      "rx_pin": 6,
       "action": {
         "type": "curl",
         "method": "POST",
@@ -79,8 +79,8 @@
     {
       "name": "Porto Laser",
       "type": "laser",
-      "tx_pin": 26,
-      "rx_pin": 20,
+      "tx_pin": 13,
+      "rx_pin": 19,
       "action": {
         "type": "curl",
         "method": "POST",
