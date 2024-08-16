@@ -171,16 +171,20 @@ def get_sensor_data():
         
         # Turn on laser
         GPIO.output(tx_pin, GPIO.HIGH)
-        time.sleep(0.1)  # Give some time for the receiver to detect the laser
+        time.sleep(0.5)  # Increased delay to 0.5 seconds
         
-        # Read receiver status
+        # Read transmitter and receiver status
+        tx_status = GPIO.input(tx_pin)
         rx_status = GPIO.input(rx_pin)
         
         # Turn off laser
         GPIO.output(tx_pin, GPIO.LOW)
         
-        status = f"Transmitter: {'ON' if GPIO.input(tx_pin) else 'OFF'}, Receiver: {'Detected' if rx_status else 'Not Detected'}"
+        status = f"Transmitter: {'ON' if tx_status else 'OFF'}, Receiver: {'Detected' if rx_status else 'Not Detected'}"
         data.append((f"{room} Laser", "Laser System", room, status))
+        
+        # Add debug information
+        data.append((f"{room} Debug", "Laser Debug", room, f"TX Pin: {tx_pin}, RX Pin: {rx_pin}, TX Status: {tx_status}, RX Status: {rx_status}"))
     
     # Test ADCs
     adc_data = [
