@@ -156,22 +156,25 @@ def get_sensor_data():
     return data
 
 def display_tui():
-    print(term.clear())
+    data = get_sensor_data()
+    print(term.home + term.clear)
     print(term.move_y(0) + term.center("LoHP Maze Hardware Test"))
     print(term.move_y(2) + term.center("Press 'q' to quit"))
     
-    data = get_sensor_data()
     for i, (component, description, location, status) in enumerate(data):
         y = i + 4
         print(term.move_xy(0, y) + f"{component:<10} {description:<20} {location:<15} {status}")
+    
+    print(term.move_xy(0, term.height - 1))
 
 try:
     with term.cbreak(), term.hidden_cursor():
+        display_tui()  # Initial display
         while True:
-            display_tui()
-            key = term.inkey(timeout=1)
+            key = term.inkey(timeout=0.1)
             if key == 'q':
                 break
+            display_tui()
 
 except KeyboardInterrupt:
     pass
