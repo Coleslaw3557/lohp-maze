@@ -17,7 +17,10 @@ class TriggerManager:
                 GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
                 GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
             elif trigger['type'] == 'gpio':
-                GPIO.setup(trigger['pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                if 'pin' in trigger:
+                    GPIO.setup(trigger['pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                else:
+                    logger.warning(f"GPIO trigger {trigger['name']} is missing 'pin' configuration")
         logger.info("GPIO triggers set up")
 
     async def monitor_triggers(self, callback):
@@ -27,7 +30,7 @@ class TriggerManager:
                     if GPIO.input(trigger['rx_pin']) == GPIO.LOW:
                         await callback(trigger['name'])
                 elif trigger['type'] == 'gpio':
-                    if GPIO.input(trigger['pin']) == GPIO.LOW:
+                    if 'pin' in trigger and GPIO.input(trigger['pin']) == GPIO.LOW:
                         await callback(trigger['name'])
             await asyncio.sleep(0.1)  # Check every 100ms
 

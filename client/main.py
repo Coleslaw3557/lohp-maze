@@ -87,7 +87,12 @@ async def main():
         logger.info("Initializing AudioManager")
         await audio_manager.initialize()  # Initialize and download audio files
         logger.info("AudioManager initialization complete")
-        trigger_manager = TriggerManager(config.get('triggers', []))
+        try:
+            trigger_manager = TriggerManager(config.get('triggers', []))
+        except Exception as e:
+            logger.error(f"Failed to initialize TriggerManager: {str(e)}")
+            trigger_manager = None
+
         sync_manager = SyncManager()
         
         ws_client = WebSocketClient(
