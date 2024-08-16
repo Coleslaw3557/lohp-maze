@@ -115,8 +115,17 @@ class TriggerManager:
         else:
             effect_name = "WrongAnswer"
 
+        logger.info(f"Triggering effect: {effect_name}")
         trigger['action']['data']['effect_name'] = effect_name
-        await callback(trigger['name'])
+        try:
+            await callback(trigger['name'])
+            logger.info(f"Successfully triggered effect: {effect_name}")
+        except Exception as e:
+            logger.error(f"Failed to trigger effect {effect_name}: {str(e)}")
+
+        # Reset attempts if it's a wrong answer and we've reached the required attempts
+        if effect_name == "WrongAnswer" and self.piezo_attempts >= self.piezo_settings['attempts_required']:
+            self.piezo_attempts = 0
 
     def check_laser_cooldown(self, laser_name, current_time):
         last_trigger_time = self.laser_cooldowns.get(laser_name, 0)
