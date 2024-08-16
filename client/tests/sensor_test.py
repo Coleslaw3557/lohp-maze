@@ -9,14 +9,18 @@ from collections import deque
 
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
+    GPIO.setup(output_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     
+    results = []
     for state in [GPIO.HIGH, GPIO.LOW]:
         GPIO.output(input_pin, state)
         time.sleep(0.1)
+        output_state = GPIO.input(output_pin)
+        results.append((state, output_state))
     
     GPIO.setup(input_pin, GPIO.IN)
     
-    return f"Input {input_pin} tested, Output {output_pin} not connected"
+    return results
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
@@ -162,9 +166,15 @@ def get_sensor_data():
     data = []
     
     # Test level shifters
-    ls1_status = test_level_shifter(17, 27)
+    cop_dodge_ls = test_level_shifter(17, 27)
     ls2_status = test_level_shifter(24, 25)
-    data.append(("LS1", "Level Shifter 1", "All", ls1_status))
+    
+    cop_dodge_status = "Cop Dodge LS: "
+    for input_state, output_state in cop_dodge_ls:
+        cop_dodge_status += f"Input {input_state} -> Output {output_state}, "
+    cop_dodge_status = cop_dodge_status.rstrip(", ")
+    
+    data.append(("LS1", "Level Shifter 1", "Cop Dodge", cop_dodge_status))
     data.append(("LS2", "Level Shifter 2", "All", ls2_status))
     
     # Test ADCs
