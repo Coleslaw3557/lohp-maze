@@ -8,7 +8,8 @@ from blessed import Terminal
 from collections import deque
 
 # Constants for knock detection
-KNOCK_THRESHOLD = 0.1  # Adjust this value based on your piezo sensitivity
+KNOCK_THRESHOLD = 0.5  # Increased threshold based on resting voltage
+VOLTAGE_CHANGE_THRESHOLD = 0.05  # Minimum voltage change to consider as a knock
 COOLDOWN_TIME = 0.5  # Cooldown time between knocks (in seconds)
 
 def test_level_shifter(input_pin, output_pin):
@@ -208,16 +209,17 @@ def get_sensor_data():
                 
                 # Knock detection for piezo sensors
                 if room == "Porto":
-                    if voltage > KNOCK_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
+                    # Calculate the change in voltage
+                    voltage_change = abs(voltage - filters[adc].get('last_voltage', voltage))
+                
+                    if voltage > KNOCK_THRESHOLD and voltage_change > VOLTAGE_CHANGE_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
                         knock_status = "KNOCK DETECTED"
                         filters[adc]['last_knock'] = current_time
                     else:
                         knock_status = "No knock"
-                    
-                    # Calculate and display the change in voltage
-                    voltage_change = voltage - filters[adc].get('last_voltage', voltage)
+                
                     filters[adc]['last_voltage'] = voltage
-                    
+                
                     status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {knock_status}"
                 else:
                     status = f"Value: {value}, Voltage: {voltage:.3f}V"
