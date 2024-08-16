@@ -83,7 +83,7 @@ def check_i2c_devices():
         print(f"Error checking I2C devices: {str(e)}")
 
 def initialize_adc():
-    global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3
+    global adc_available, ads1, ads2, analog_inputs
     adc_available = False
     ads1 = ads2 = None
 
@@ -117,129 +117,63 @@ def initialize_adc():
                 return None
         return None
 
-    gate_resistor_ladder1 = setup_analog_in(ads1, ADS.P0)
-    gate_resistor_ladder2 = setup_analog_in(ads1, ADS.P1)
-    gate_buttons = setup_analog_in(ads1, ADS.P2)
-    porto_piezo1 = setup_analog_in(ads2, ADS.P0)
-    porto_piezo2 = setup_analog_in(ads2, ADS.P1)
-    porto_piezo3 = setup_analog_in(ads2, ADS.P2)
+    config = UNIT_CONFIGS[current_unit]
+    for room, adc_config in config['adc'].items():
+        adc = ads1 if adc_config['adc'] == 'ads1' else ads2
+        analog_inputs[room] = setup_analog_in(adc, adc_config['channel'])
 
-    adc_available = any([gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3])
+    adc_available = any(analog_inputs.values())
     print(f"ADC initialization {'successful' if adc_available else 'failed'}")
 
     # Print detailed status of each analog input
     print("\nDetailed ADC status:")
-    print(f"ADC1 (0x48) - Gate Room:")
-    print(f"  Resistor Ladder 1 (A0): {'Connected' if gate_resistor_ladder1 else 'Failed'}")
-    print(f"  Resistor Ladder 2 (A1): {'Connected' if gate_resistor_ladder2 else 'Failed'}")
-    print(f"  Buttons (A2): {'Connected' if gate_buttons else 'Failed'}")
-    print(f"ADC2 (0x49) - Porto Room:")
-    print(f"  Piezo 1 (A0): {'Connected' if porto_piezo1 else 'Failed'}")
-    print(f"  Piezo 2 (A1): {'Connected' if porto_piezo2 else 'Failed'}")
-    print(f"  Piezo 3 (A2): {'Connected' if porto_piezo3 else 'Failed'}")
+    for room, analog_in in analog_inputs.items():
+        print(f"{room}: {'Connected' if analog_in else 'Failed'}")
 
     # Add more detailed debugging information
-    if ads1:
-        print(f"\nADC1 (0x48) Debug Info:")
-        print(f"  Address: 0x48")
-        print(f"  Data Rate: {ads1.data_rate}")
-        print(f"  Gain: {ads1.gain}")
-    else:
-        print("\nADC1 (0x48) is not initialized")
-
-    if ads2:
-        print(f"\nADC2 (0x49) Debug Info:")
-        print(f"  Address: 0x49")
-        print(f"  Data Rate: {ads2.data_rate}")
-        print(f"  Gain: {ads2.gain}")
-    else:
-        print("\nADC2 (0x49) is not initialized")
-
-# Call these functions to initialize I2C and ADCs
-check_i2c_devices()
-initialize_adc()
+    for adc, name in [(ads1, "ADC1 (0x48)"), (ads2, "ADC2 (0x49)")]:
+        if adc:
+            print(f"\n{name} Debug Info:")
+            print(f"  Data Rate: {adc.data_rate}")
+            print(f"  Gain: {adc.gain}")
+        else:
+            print(f"\n{name} is not initialized")
 
 # Set up Terminal for TUI
 term = Terminal()
 
-# Initialize filters for knock detection
-filters = {
-    "ADC2 A0": {'last_voltage': 0, 'last_knock': 0},
-    "ADC2 A1": {'last_voltage': 0, 'last_knock': 0},
-    "ADC2 A2": {'last_voltage': 0, 'last_knock': 0}
-}
-
-def check_i2c_devices():
-    print("Checking I2C devices...")
-    try:
-        import subprocess
-        result = subprocess.run(['i2cdetect', '-y', '1'], capture_output=True, text=True)
-        print(result.stdout)
-    except Exception as e:
-        print(f"Error checking I2C devices: {str(e)}")
-
 def get_sensor_data():
     data = []
+    config = UNIT_CONFIGS[current_unit]
     
     # Monitor laser receivers
-    for room, rx_pin in laser_receivers.items():
-        tx_pin = laser_transmitters[room]
-        
-        # Read receiver status
-        rx_status = GPIO.input(rx_pin)
-        
+    for room, pins in config['lasers'].items():
+        rx_status = GPIO.input(pins['LR'])
         status = f"Beam: {'Intact' if rx_status else 'Broken'}"
         data.append((f"{room} Laser", "Laser System", room, status))
-        
-        # Add debug information
-        data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {tx_pin}, RX GPIO: {rx_pin}, RX Status: {rx_status}"))
+        data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {pins['LT']}, RX GPIO: {pins['LR']}, RX Status: {rx_status}"))
     
     # Test ADCs
-    adc_data = [
-        (RESISTOR_LADDER_ADC, "Channel 0", "Gate", gate_resistor_ladder1),
-        ("ADC1 A1", "Channel 1", "Gate", gate_resistor_ladder2),
-        ("ADC1 A2", "Channel 2", "Gate", gate_buttons),
-        ("ADC2 A0", "Channel 0", "Porto", porto_piezo1),
-        ("ADC2 A1", "Channel 1", "Porto", porto_piezo2),
-        ("ADC2 A2", "Channel 2", "Porto", porto_piezo3)
-    ]
-    
     current_time = time.time()
-    for adc, channel, room, analog_in in adc_data:
+    for room, analog_in in analog_inputs.items():
         if analog_in is not None:
             try:
                 value = analog_in.value
                 voltage = analog_in.voltage
                 
                 # Calculate the change in voltage
-                voltage_change = abs(voltage - filters[adc].get('last_voltage', voltage))
+                voltage_change = abs(voltage - filters.get(room, {}).get('last_voltage', voltage))
             
-                if adc.startswith("ADC1"):  # Resistor ladder switches
-                    button_status = "No button pressed"
-                    if voltage < 0.1:
-                        button_status = "Error: Voltage too low"
-                    elif voltage < 0.4:
-                        button_status = "Button 1 pressed"
-                    elif voltage < 0.7:
-                        button_status = "Button 2 pressed"
-                    elif voltage < 1.0:
-                        button_status = "Button 3 pressed"
-                    elif voltage < 1.3:
-                        button_status = "Buttons 1 and 2 pressed"
-                    elif voltage < 1.6:
-                        button_status = "Buttons 1 and 3 pressed"
-                    elif voltage < 1.9:
-                        button_status = "Buttons 2 and 3 pressed"
-                    elif voltage < 2.2:
-                        button_status = "All buttons pressed"
+                if room in ['Gate', 'Cuddle Cross', 'Deep Playa Handshake']:  # Resistor ladder switches
+                    button_status = get_button_status(voltage)
                     status = f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"
                 else:  # Other sensors (including piezo)
                     knock_status = "No knock"
                     if voltage_change > DEBUG_THRESHOLD:
                         debug_status = f"Debug: Change detected: {voltage_change:.3f}V"
-                        if voltage > KNOCK_THRESHOLD and voltage_change > VOLTAGE_CHANGE_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
+                        if voltage > KNOCK_THRESHOLD and voltage_change > VOLTAGE_CHANGE_THRESHOLD and current_time - filters.get(room, {}).get('last_knock', 0) > COOLDOWN_TIME:
                             knock_status = "KNOCK DETECTED"
-                            filters[adc]['last_knock'] = current_time
+                            filters.setdefault(room, {})['last_knock'] = current_time
                     else:
                         debug_status = ""
                 
@@ -247,22 +181,19 @@ def get_sensor_data():
                     if debug_status:
                         status += f", {debug_status}"
                 
-                filters[adc]['last_voltage'] = voltage
+                filters.setdefault(room, {})['last_voltage'] = voltage
             except Exception as e:
-                if adc.startswith("ADC1"):
-                    status = f"Value: {value}, Voltage: {voltage:.3f}V"
-                else:
-                    status = f"Reading failed: {str(e)}"
-                    print(f"Error reading {adc} {channel}: {str(e)}")
+                status = f"Reading failed: {str(e)}"
+                print(f"Error reading {room}: {str(e)}")
         else:
             status = "Not initialized"
-        data.append((adc, channel, room, status))
+        data.append((room, "ADC", room, status))
     
     # Add ADC debug information
-    for adc, name, address in [(ads1, "ADC1", "0x48"), (ads2, "ADC2", "0x49")]:
+    for adc, name in [(ads1, "ADC1"), (ads2, "ADC2")]:
         if adc:
             try:
-                data.append((f"{name} Debug", "Info", "All", f"Address: {address}, Data rate: {adc.data_rate}, Gain: {adc.gain}"))
+                data.append((f"{name} Debug", "Info", "All", f"Address: {'0x48' if name == 'ADC1' else '0x49'}, Data rate: {adc.data_rate}, Gain: {adc.gain}"))
             except Exception as e:
                 data.append((f"{name} Debug", "Info", "All", f"Error: {str(e)}"))
         else:
@@ -270,15 +201,35 @@ def get_sensor_data():
     
     return data
 
+def get_button_status(voltage):
+    if voltage < 0.1:
+        return "Error: Voltage too low"
+    elif voltage < 0.4:
+        return "Button 1 pressed"
+    elif voltage < 0.7:
+        return "Button 2 pressed"
+    elif voltage < 1.0:
+        return "Button 3 pressed"
+    elif voltage < 1.3:
+        return "Buttons 1 and 2 pressed"
+    elif voltage < 1.6:
+        return "Buttons 1 and 3 pressed"
+    elif voltage < 1.9:
+        return "Buttons 2 and 3 pressed"
+    elif voltage < 2.2:
+        return "All buttons pressed"
+    else:
+        return "No button pressed"
+
 def display_tui():
     data = get_sensor_data()
     print(term.home + term.clear)
-    print(term.move_y(0) + term.center("LoHP Maze Hardware Test"))
-    print(term.move_y(2) + term.center("Press 'q' to quit, 'b' for button test"))
+    print(term.move_y(0) + term.center(f"LoHP Maze Hardware Test - {UNIT_CONFIGS[current_unit]['name']}"))
+    print(term.move_y(2) + term.center("Press 'q' to quit, 'b' for button test, 'u' to switch unit"))
     
     for i, (component, description, location, status) in enumerate(data):
         y = i + 4
-        print(term.move_xy(0, y) + f"{component:<10} {description:<20} {location:<15} {status}")
+        print(term.move_xy(0, y) + f"{component:<20} {description:<10} {location:<20} {status}")
     
     print(term.move_xy(0, term.height - 1))
 
@@ -294,9 +245,19 @@ def button_test():
     stable_count = 0
     stable_threshold = 10  # Number of stable readings required
     
+    config = UNIT_CONFIGS[current_unit]
+    resistor_ladder_room = next((room for room, adc_config in config['adc'].items() if room in ['Gate', 'Cuddle Cross', 'Deep Playa Handshake']), None)
+    
+    if not resistor_ladder_room or resistor_ladder_room not in analog_inputs:
+        print(term.move_y(4) + "No resistor ladder found for this unit. Press any key to return.")
+        term.inkey()
+        return
+
+    analog_in = analog_inputs[resistor_ladder_room]
+    
     while True:
-        adc_value = gate_resistor_ladder1.value if gate_resistor_ladder1 else 0
-        voltage = gate_resistor_ladder1.voltage if gate_resistor_ladder1 else 0
+        adc_value = analog_in.value
+        voltage = analog_in.voltage
         
         current_time = time.time()
         
@@ -330,24 +291,30 @@ def button_test():
     print(term.move_y(6 + len(button_values) + 2) + "Button Test Complete. Press any key to return to main menu.")
     term.inkey()
 
+def switch_unit():
+    global current_unit
+    units = list(UNIT_CONFIGS.keys())
+    current_index = units.index(current_unit)
+    next_index = (current_index + 1) % len(units)
+    current_unit = units[next_index]
+    print(f"Switched to {UNIT_CONFIGS[current_unit]['name']}")
+    setup_gpio()
+    initialize_adc()
+
 try:
-    setup_gpio()  # Ensure GPIO is set up before the main loop
-    check_i2c_devices()  # Check I2C devices
-    initialize_adc()  # Initialize ADCs
+    setup_gpio()
+    check_i2c_devices()
+    initialize_adc()
     with term.cbreak(), term.hidden_cursor():
-        display_tui()  # Initial display
         while True:
+            display_tui()
             key = term.inkey(timeout=0.1)
             if key == 'q':
                 break
             elif key == 'b':
                 button_test()
-            try:
-                display_tui()
-            except Exception as e:
-                print(f"Error in display_tui: {str(e)}")
-                time.sleep(1)  # Wait a bit before trying again
-
+            elif key == 'u':
+                switch_unit()
 except KeyboardInterrupt:
     print("Program interrupted by user")
 except Exception as e:
@@ -355,14 +322,6 @@ except Exception as e:
 finally:
     GPIO.cleanup()
     print(term.clear())
-def check_i2c_devices():
-    print("Checking I2C devices...")
-    try:
-        import subprocess
-        result = subprocess.run(['i2cdetect', '-y', '1'], capture_output=True, text=True)
-        print(result.stdout)
-    except Exception as e:
-        print(f"Error checking I2C devices: {str(e)}")
 
 # Call this function before initializing ADCs
 check_i2c_devices()
