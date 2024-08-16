@@ -6,6 +6,7 @@ import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 from blessed import Terminal
 from collections import deque
+import logging
 
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
@@ -54,6 +55,10 @@ laser_receivers = {
 # Set up GPIO
 setup_gpio()
 
+# Set up logging
+logging.basicConfig(filename='sensor_test.log', level=logging.DEBUG, 
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
 # Set up I2C for ADS1115
 i2c = busio.I2C(board.SCL, board.SDA)
 # Set up ADCs and analog inputs
@@ -63,34 +68,40 @@ ads2 = None
 gate_resistor_ladder1 = gate_resistor_ladder2 = gate_buttons = None
 porto_piezo1 = porto_piezo2 = porto_piezo3 = None
 
-try:
-    ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Gate Room
-    ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for Porto Room
+def initialize_adc():
+    global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3
+    try:
+        ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Gate Room
+        ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for Porto Room
 
-    # Set up analog inputs
-    gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
-    gate_resistor_ladder2 = AnalogIn(ads1, ADS.P1)
-    gate_buttons = AnalogIn(ads1, ADS.P2)
-    porto_piezo1 = AnalogIn(ads2, ADS.P0)
-    porto_piezo2 = AnalogIn(ads2, ADS.P1)
-    porto_piezo3 = AnalogIn(ads2, ADS.P2)
-    adc_available = True
+        # Set up analog inputs
+        gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
+        gate_resistor_ladder2 = AnalogIn(ads1, ADS.P1)
+        gate_buttons = AnalogIn(ads1, ADS.P2)
+        porto_piezo1 = AnalogIn(ads2, ADS.P0)
+        porto_piezo2 = AnalogIn(ads2, ADS.P1)
+        porto_piezo3 = AnalogIn(ads2, ADS.P2)
+        adc_available = True
 
-    # Set up low-pass filters for each analog input
-    filter_size = 10
-    filters = {
-        'gate_resistor_ladder1': deque(maxlen=filter_size),
-        'gate_resistor_ladder2': deque(maxlen=filter_size),
-        'gate_buttons': deque(maxlen=filter_size),
-        'porto_piezo1': deque(maxlen=filter_size),
-        'porto_piezo2': deque(maxlen=filter_size),
-        'porto_piezo3': deque(maxlen=filter_size),
-    }
+        # Set up low-pass filters for each analog input
+        filter_size = 10
+        filters = {
+            'gate_resistor_ladder1': deque(maxlen=filter_size),
+            'gate_resistor_ladder2': deque(maxlen=filter_size),
+            'gate_buttons': deque(maxlen=filter_size),
+            'porto_piezo1': deque(maxlen=filter_size),
+            'porto_piezo2': deque(maxlen=filter_size),
+            'porto_piezo3': deque(maxlen=filter_size),
+        }
 
-    # Define thresholds for connected vs unconnected states
-    CONNECTED_THRESHOLD = 100  # Adjust this value based on your specific setup
-except OSError as e:
-    print(f"Failed to initialize ADCs. Error: {e}")
+        # Define thresholds for connected vs unconnected states
+        CONNECTED_THRESHOLD = 100  # Adjust this value based on your specific setup
+        logging.info("ADCs initialized successfully")
+    except OSError as e:
+        logging.error(f"Failed to initialize ADCs. Error: {e}")
+        adc_available = False
+
+initialize_adc()
 
 # Set up Terminal for TUI
 term = Terminal()
@@ -137,12 +148,18 @@ def get_sensor_data():
     
     for adc, channel, room, analog_in in adc_data:
         if adc_available:
-            try:
-                value = analog_in.value
-                voltage = analog_in.voltage
-                status = f"Value: {value}, Voltage: {voltage:.2f}V"
-            except Exception as e:
-                status = f"Error: {e}"
+            for attempt in range(3):  # Try up to 3 times
+                try:
+                    value = analog_in.value
+                    voltage = analog_in.voltage
+                    status = f"Value: {value}, Voltage: {voltage:.2f}V"
+                    break
+                except Exception as e:
+                    logging.error(f"Error reading {adc} {channel}: {e}")
+                    status = f"Error: {e}"
+                    time.sleep(0.1)  # Short delay before retry
+            else:
+                logging.error(f"Failed to read {adc} {channel} after 3 attempts")
         else:
             status = "Offline"
         data.append((adc, channel, room, status))
