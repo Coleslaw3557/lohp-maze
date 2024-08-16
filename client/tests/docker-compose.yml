@@ -10,8 +10,11 @@ services:
     devices:
       - "/dev/gpiomem:/dev/gpiomem"
       - "/dev/i2c-1:/dev/i2c-1"
+      - "/dev/mem:/dev/mem"
     volumes:
       - ./sensor_test.py:/app/sensor_test.py
+      - /sys/class/gpio:/sys/class/gpio
+      - /sys/devices/platform/soc/3f200000.gpio:/sys/devices/platform/soc/3f200000.gpio
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
