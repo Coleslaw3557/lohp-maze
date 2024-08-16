@@ -22,6 +22,7 @@ class TriggerManager:
         self.cooldown_period = config.get('cooldown_period', 5)
         self.startup_delay = config.get('startup_delay', 10)
         self.trigger_cooldowns = {}
+        self.laser_intact_times = {}  # New attribute to track when laser beams became intact
         self.piezo_attempts = 0
         self.setup_adc()
         self.resistor_ladder_cooldown = config.get('resistor_ladder_cooldown', 1)
@@ -118,17 +119,20 @@ class TriggerManager:
                 continue
             
             for trigger in self.triggers:
-                if self.check_trigger_cooldown(trigger['name'], current_time):
-                    if trigger['type'] == 'laser':
-                        beam_status = GPIO.input(trigger['rx_pin'])
-                        if beam_status == GPIO.LOW:  # Beam is broken (LOW when using pull-up resistor)
+                if trigger['type'] == 'laser':
+                    beam_status = GPIO.input(trigger['rx_pin'])
+                    if beam_status == GPIO.LOW:  # Beam is broken (LOW when using pull-up resistor)
+                        if self.check_laser_cooldown(trigger['name'], current_time):
                             logger.info(f"Laser beam broken: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
                             await callback(trigger['name'])
                             self.set_trigger_cooldown(trigger['name'], current_time)
-                        else:
-                            # Ensure laser is on and beam is intact
-                            GPIO.output(trigger['tx_pin'], GPIO.HIGH)
-                            logger.debug(f"Laser beam intact: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
+                        self.laser_intact_times[trigger['name']] = None  # Reset intact time when beam is broken
+                    else:
+                        # Beam is intact
+                        if self.laser_intact_times.get(trigger['name']) is None:
+                            self.laser_intact_times[trigger['name']] = current_time
+                        GPIO.output(trigger['tx_pin'], GPIO.HIGH)
+                        logger.debug(f"Laser beam intact: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
                     elif trigger['type'] == 'gpio':
                         if 'pin' in trigger:
                             pin_state = GPIO.input(trigger['pin'])
@@ -194,6 +198,18 @@ class TriggerManager:
         # Reset attempts if it's a wrong answer and we've reached the required attempts
         if effect_name == "WrongAnswer" and self.piezo_attempts >= self.piezo_settings['attempts_required']:
             self.piezo_attempts = 0
+
+    def check_laser_cooldown(self, trigger_name, current_time):
+        last_trigger_time = self.trigger_cooldowns.get(trigger_name, 0)
+        intact_time = self.laser_intact_times.get(trigger_name)
+        
+        if intact_time is None:
+            return False  # Beam is currently broken or was recently broken
+        
+        if current_time - intact_time < 10:
+            return False  # Beam hasn't been intact for 10 seconds yet
+        
+        return current_time - last_trigger_time > self.cooldown_period
 
     def check_trigger_cooldown(self, trigger_name, current_time):
         last_trigger_time = self.trigger_cooldowns.get(trigger_name, 0)
