@@ -49,7 +49,7 @@ class TriggerManager:
 
     def check_laser_cooldown(self, laser_name, current_time):
         last_trigger_time = self.laser_cooldowns.get(laser_name, 0)
-        return current_time - last_trigger_time > 10  # 10 seconds cooldown
+        return current_time - last_trigger_time > 5  # 5 seconds cooldown
 
     def set_laser_cooldown(self, laser_name, current_time):
         self.laser_cooldowns[laser_name] = current_time
