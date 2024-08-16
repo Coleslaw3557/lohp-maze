@@ -12,5 +12,7 @@ services:
       - "/dev/i2c-1:/dev/i2c-1"
     volumes:
       - ./sensor_test.py:/app/sensor_test.py
+    environment:
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
 

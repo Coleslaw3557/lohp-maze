@@ -9,7 +9,15 @@ from adafruit_ads1x15.analog_in import AnalogIn
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
-# Define laser receiver pins
+# Define laser transmitter and receiver pins
+laser_transmitters = {
+    'Cop Dodge': 17,
+    'Gate': 22,
+    'Guy Line': 24,
+    'Sparkle Pony': 5,
+    'Porto': 13
+}
+
 laser_receivers = {
     'Cop Dodge': 27,
     'Gate': 23,
@@ -18,7 +26,11 @@ laser_receivers = {
     'Porto': 19
 }
 
-# Set up laser receiver pins as inputs
+# Set up laser transmitter pins as outputs and receiver pins as inputs
+for pin in laser_transmitters.values():
+    GPIO.setup(pin, GPIO.OUT)
+    GPIO.output(pin, GPIO.HIGH)  # Turn on all lasers
+
 for pin in laser_receivers.values():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
@@ -37,9 +49,9 @@ porto_piezo3 = AnalogIn(ads2, ADS.P2)
 def check_laser_receivers():
     for room, pin in laser_receivers.items():
         if GPIO.input(pin) == GPIO.LOW:
-            print(f"{room} laser beam broken!")
-        else:
             print(f"{room} laser beam intact.")
+        else:
+            print(f"{room} laser beam broken!")
 
 def check_analog_sensors():
     print(f"Gate Resistor Ladder 1: {gate_resistor_ladder1.value}")
@@ -48,14 +60,42 @@ def check_analog_sensors():
     print(f"Porto Piezo 2: {porto_piezo2.value}")
     print(f"Porto Piezo 3: {porto_piezo3.value}")
 
+def test_laser_transmitters():
+    for room, tx_pin in laser_transmitters.items():
+        rx_pin = laser_receivers[room]
+        print(f"\nTesting {room} laser:")
+        
+        # Turn off the laser
+        GPIO.output(tx_pin, GPIO.LOW)
+        time.sleep(0.5)
+        if GPIO.input(rx_pin) == GPIO.HIGH:
+            print(f"  {room} laser OFF test: PASSED")
+        else:
+            print(f"  {room} laser OFF test: FAILED")
+        
+        # Turn on the laser
+        GPIO.output(tx_pin, GPIO.HIGH)
+        time.sleep(0.5)
+        if GPIO.input(rx_pin) == GPIO.LOW:
+            print(f"  {room} laser ON test: PASSED")
+        else:
+            print(f"  {room} laser ON test: FAILED")
+
 try:
     while True:
         print("\n--- Checking Sensors ---")
         check_laser_receivers()
         check_analog_sensors()
-        time.sleep(1)
+        
+        print("\n--- Testing Laser Transmitters ---")
+        test_laser_transmitters()
+        
+        time.sleep(5)
 
 except KeyboardInterrupt:
     print("\nExiting...")
 finally:
+    # Turn off all lasers
+    for pin in laser_transmitters.values():
+        GPIO.output(pin, GPIO.LOW)
     GPIO.cleanup()
