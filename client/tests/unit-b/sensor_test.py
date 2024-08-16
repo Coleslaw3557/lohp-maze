@@ -7,6 +7,10 @@ from adafruit_ads1x15.analog_in import AnalogIn
 from blessed import Terminal
 from collections import deque
 
+# Constants for knock detection
+KNOCK_THRESHOLD = 0.1  # Adjust this value based on your piezo sensitivity
+COOLDOWN_TIME = 0.5  # Cooldown time between knocks (in seconds)
+
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
     GPIO.setup(output_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -153,6 +157,13 @@ initialize_adc()
 # Set up Terminal for TUI
 term = Terminal()
 
+# Initialize filters for knock detection
+filters = {
+    "ADC2 A0": {'last_voltage': 0, 'last_knock': 0},
+    "ADC2 A1": {'last_voltage': 0, 'last_knock': 0},
+    "ADC2 A2": {'last_voltage': 0, 'last_knock': 0}
+}
+
 def check_i2c_devices():
     print("Checking I2C devices...")
     try:
@@ -188,12 +199,28 @@ def get_sensor_data():
         ("ADC2 A2", "Channel 2", "Porto", porto_piezo3)
     ]
     
+    current_time = time.time()
     for adc, channel, room, analog_in in adc_data:
         if analog_in is not None:
             try:
                 value = analog_in.value
                 voltage = analog_in.voltage
-                status = f"Value: {value}, Voltage: {voltage:.2f}V"
+                
+                # Knock detection for piezo sensors
+                if room == "Porto":
+                    if voltage > KNOCK_THRESHOLD and current_time - filters[adc].get('last_knock', 0) > COOLDOWN_TIME:
+                        knock_status = "KNOCK DETECTED"
+                        filters[adc]['last_knock'] = current_time
+                    else:
+                        knock_status = "No knock"
+                    
+                    # Calculate and display the change in voltage
+                    voltage_change = voltage - filters[adc].get('last_voltage', voltage)
+                    filters[adc]['last_voltage'] = voltage
+                    
+                    status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {knock_status}"
+                else:
+                    status = f"Value: {value}, Voltage: {voltage:.3f}V"
             except Exception as e:
                 status = f"Reading failed: {str(e)}"
                 print(f"Error reading {adc} {channel}: {str(e)}")
