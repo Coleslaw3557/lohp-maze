@@ -8,10 +8,11 @@ from blessed import Terminal
 from collections import deque
 
 # Constants for knock detection
-KNOCK_THRESHOLD = 0.1  # Lowered threshold for more sensitivity
-VOLTAGE_CHANGE_THRESHOLD = 0.02  # Lowered minimum voltage change to consider as a knock
-COOLDOWN_TIME = 0.5  # Cooldown time between knocks (in seconds)
-DEBUG_THRESHOLD = 0.01  # Threshold for debug output
+KNOCK_THRESHOLD = 0.05  # Lowered threshold for more sensitivity with piezo
+VOLTAGE_CHANGE_THRESHOLD = 0.01  # Lowered minimum voltage change to consider as a knock
+COOLDOWN_TIME = 0.2  # Reduced cooldown time for quicker response
+DEBUG_THRESHOLD = 0.005  # Lowered threshold for more detailed debug output
+CONNECTED_THRESHOLD = 0.01  # Lowered threshold for detecting connected sensors
 
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
@@ -208,8 +209,7 @@ def get_sensor_data():
                 value = analog_in.value
                 voltage = analog_in.voltage
                 
-                # Knock detection for piezo sensors
-                if room == "Porto":
+                if voltage > CONNECTED_THRESHOLD:
                     # Calculate the change in voltage
                     voltage_change = abs(voltage - filters[adc].get('last_voltage', voltage))
                 
@@ -228,7 +228,7 @@ def get_sensor_data():
                     if debug_status:
                         status += f", {debug_status}"
                 else:
-                    status = f"Value: {value}, Voltage: {voltage:.3f}V"
+                    status = f"Value: {value}, Voltage: {voltage:.3f}V, Sensor not connected"
             except Exception as e:
                 status = f"Reading failed: {str(e)}"
                 print(f"Error reading {adc} {channel}: {str(e)}")
