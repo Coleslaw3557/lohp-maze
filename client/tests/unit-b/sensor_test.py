@@ -13,6 +13,7 @@ VOLTAGE_CHANGE_THRESHOLD = 0.01  # Lowered minimum voltage change to consider as
 COOLDOWN_TIME = 0.2  # Reduced cooldown time for quicker response
 DEBUG_THRESHOLD = 0.005  # Lowered threshold for more detailed debug output
 CONNECTED_THRESHOLD = 0.3  # Adjusted threshold for detecting connected sensors
+RESISTOR_LADDER_ADC = "ADC1 A0"  # Specify which ADC is used for the resistor ladder
 
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
@@ -195,7 +196,7 @@ def get_sensor_data():
     
     # Test ADCs
     adc_data = [
-        ("ADC1 A0", "Channel 0", "Gate", gate_resistor_ladder1),
+        (RESISTOR_LADDER_ADC, "Channel 0", "Gate", gate_resistor_ladder1),
         ("ADC1 A1", "Channel 1", "Gate", gate_resistor_ladder2),
         ("ADC1 A2", "Channel 2", "Gate", gate_buttons),
         ("ADC2 A0", "Channel 0", "Porto", porto_piezo1),
@@ -215,9 +216,23 @@ def get_sensor_data():
             
                 if adc.startswith("ADC1"):  # Resistor ladder switches
                     button_status = "No button pressed"
-                    if voltage_change > RESISTOR_LADDER_THRESHOLD:
-                        button_status = f"Button pressed! Voltage: {voltage:.3f}V"
-                    status = f"Value: {value}, Voltage: {voltage:.3f}V, Change: {voltage_change:.3f}V, {button_status}"
+                    if voltage < 0.1:
+                        button_status = "Error: Voltage too low"
+                    elif voltage < 0.4:
+                        button_status = "Button 1 pressed"
+                    elif voltage < 0.7:
+                        button_status = "Button 2 pressed"
+                    elif voltage < 1.0:
+                        button_status = "Button 3 pressed"
+                    elif voltage < 1.3:
+                        button_status = "Buttons 1 and 2 pressed"
+                    elif voltage < 1.6:
+                        button_status = "Buttons 1 and 3 pressed"
+                    elif voltage < 1.9:
+                        button_status = "Buttons 2 and 3 pressed"
+                    elif voltage < 2.2:
+                        button_status = "All buttons pressed"
+                    status = f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"
                 else:  # Other sensors (including piezo)
                     knock_status = "No knock"
                     if voltage_change > DEBUG_THRESHOLD:
