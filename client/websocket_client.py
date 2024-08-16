@@ -179,9 +179,8 @@ class WebSocketClient:
             logger.info(f"Shutting down in {wait_time:.2f} seconds...")
             await asyncio.sleep(wait_time)
         await self.disconnect()
-        logger.info("Shutting down client...")
-        # Instead of using 'halt', we'll exit the Python process
-        sys.exit(0)
+        logger.info("Shutting down client and host system...")
+        os.system('sudo shutdown -h now')
 
     async def handle_play_cached_audio(self, message):
         audio_data = message.get('data', {})
