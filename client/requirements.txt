@@ -9,3 +9,4 @@ python-vlc==3.0.18122
 requests==2.26.0
 adafruit-blinka==6.20.1
 adafruit-circuitpython-ads1x15==2.2.12
+adafruit-circuitpython-busdevice==5.1.1

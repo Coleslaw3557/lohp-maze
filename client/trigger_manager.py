@@ -5,6 +5,7 @@ import random
 import board
 import busio
 import RPi.GPIO as GPIO
+from adafruit_blinka.microcontroller.generic_linux.i2c import I2C
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 
