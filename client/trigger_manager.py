@@ -76,12 +76,14 @@ class TriggerManager:
                 GPIO.setup(trigger['tx_pin'], GPIO.OUT)
                 GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
                 GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+                logger.info(f"Laser trigger set up: TX pin {trigger['tx_pin']}, RX pin {trigger['rx_pin']}")
             elif trigger['type'] == 'gpio':
                 if 'pin' in trigger:
                     GPIO.setup(trigger['pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                    logger.info(f"GPIO trigger set up: pin {trigger['pin']}")
                 else:
                     logger.warning(f"GPIO trigger {trigger['name']} is missing 'pin' configuration")
-        logger.info("GPIO triggers set up")
+        logger.info("All triggers set up")
 
     def setup_adc(self):
         i2c = busio.I2C(board.SCL, board.SDA)
@@ -103,43 +105,50 @@ class TriggerManager:
             if current_time - self.start_time > self.cooldown_period:
                 for trigger in self.triggers:
                     if trigger['type'] == 'laser':
-                        if GPIO.input(trigger['rx_pin']) == GPIO.LOW:
+                        beam_status = GPIO.input(trigger['rx_pin'])
+                        if beam_status == GPIO.LOW:  # Beam is broken
                             if self.check_laser_cooldown(trigger['name'], current_time):
+                                logger.info(f"Laser beam broken: {trigger['name']}")
                                 await callback(trigger['name'])
                                 self.set_laser_cooldown(trigger['name'], current_time)
                         else:
-                            # Ensure laser is on and ready
+                            # Ensure laser is on and beam is intact
                             GPIO.output(trigger['tx_pin'], GPIO.HIGH)
+                            logger.debug(f"Laser beam intact: {trigger['name']}")
                     elif trigger['type'] == 'gpio':
                         if 'pin' in trigger and GPIO.input(trigger['pin']) == GPIO.LOW:
+                            logger.info(f"GPIO trigger activated: {trigger['name']}")
                             await callback(trigger['name'])
                     elif trigger['type'] == 'piezo':
-                        channel = self.piezo_channels[trigger['adc_channel']]
-                        adc_name = f"ADC2 A{trigger['adc_channel']}"
-                        voltage = channel.voltage
-                        
-                        if voltage > self.CONNECTED_THRESHOLD:
-                            voltage_change = abs(voltage - self.filters[adc_name]['last_voltage'])
-                            
-                            if voltage_change > self.DEBUG_THRESHOLD:
-                                logger.debug(f"Debug: Change detected on {adc_name}: {voltage_change:.3f}V")
-                                
-                                if (voltage > self.KNOCK_THRESHOLD and 
-                                    voltage_change > self.VOLTAGE_CHANGE_THRESHOLD and 
-                                    current_time - self.filters[adc_name]['last_knock'] > self.COOLDOWN_TIME):
-                                    logger.info(f"Knock detected on {adc_name}")
-                                    self.filters[adc_name]['last_knock'] = current_time
-                                    await self.handle_piezo_trigger(trigger, callback)
-                            
-                            self.filters[adc_name]['last_voltage'] = voltage
-                        else:
-                            logger.warning(f"Sensor not connected or low voltage on {adc_name}: {voltage:.3f}V")
+                        await self.check_piezo_trigger(trigger, callback, current_time)
                 
                 # Check resistor ladder states
                 self.check_resistor_ladder()
             else:
                 logger.info(f"Initial cooldown active. {self.cooldown_period - (current_time - self.start_time):.1f} seconds remaining.")
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
+
+    async def check_piezo_trigger(self, trigger, callback, current_time):
+        channel = self.piezo_channels[trigger['adc_channel']]
+        adc_name = f"ADC2 A{trigger['adc_channel']}"
+        voltage = channel.voltage
+        
+        if voltage > self.CONNECTED_THRESHOLD:
+            voltage_change = abs(voltage - self.filters[adc_name]['last_voltage'])
+            
+            if voltage_change > self.DEBUG_THRESHOLD:
+                logger.debug(f"Debug: Change detected on {adc_name}: {voltage_change:.3f}V")
+                
+                if (voltage > self.KNOCK_THRESHOLD and 
+                    voltage_change > self.VOLTAGE_CHANGE_THRESHOLD and 
+                    current_time - self.filters[adc_name]['last_knock'] > self.COOLDOWN_TIME):
+                    logger.info(f"Knock detected on {adc_name}")
+                    self.filters[adc_name]['last_knock'] = current_time
+                    await self.handle_piezo_trigger(trigger, callback)
+            
+            self.filters[adc_name]['last_voltage'] = voltage
+        else:
+            logger.warning(f"Sensor not connected or low voltage on {adc_name}: {voltage:.3f}V")
 
     async def handle_piezo_trigger(self, trigger, callback):
         self.piezo_attempts += 1
