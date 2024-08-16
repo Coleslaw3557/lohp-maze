@@ -5,6 +5,7 @@ import busio
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 from blessed import Terminal
+from collections import deque
 
 # Set up GPIO
 GPIO.setmode(GPIO.BCM)
@@ -49,6 +50,20 @@ try:
     porto_piezo2 = AnalogIn(ads2, ADS.P1)
     porto_piezo3 = AnalogIn(ads2, ADS.P2)
     adc_available = True
+
+    # Set up low-pass filters for each analog input
+    filter_size = 10
+    filters = {
+        'gate_resistor_ladder1': deque(maxlen=filter_size),
+        'gate_resistor_ladder2': deque(maxlen=filter_size),
+        'gate_buttons': deque(maxlen=filter_size),
+        'porto_piezo1': deque(maxlen=filter_size),
+        'porto_piezo2': deque(maxlen=filter_size),
+        'porto_piezo3': deque(maxlen=filter_size),
+    }
+
+    # Define thresholds for connected vs unconnected states
+    CONNECTED_THRESHOLD = 100  # Adjust this value based on your specific setup
 except OSError:
     print("Failed to initialize ADCs. Analog sensors will not be available.")
     adc_available = False
@@ -56,8 +71,17 @@ except OSError:
 # Set up Terminal for TUI
 term = Terminal()
 
+def get_filtered_value(sensor_name, raw_value):
+    filters[sensor_name].append(raw_value)
+    return sum(filters[sensor_name]) / len(filters[sensor_name])
+
+def is_connected(value):
+    return value > CONNECTED_THRESHOLD
+
 def get_button_state(value):
-    if value < 5000:
+    if not is_connected(value):
+        return "Disconnected"
+    elif value < 5000:
         return "Button 1"
     elif value < 10000:
         return "Button 2"
@@ -90,17 +114,23 @@ def get_sensor_data():
         if adc_available:
             try:
                 if adc == "ADC1 A0":
-                    value = f"{gate_resistor_ladder1.value} ({gate_resistor_ladder1.voltage:.2f}V)"
+                    filtered_value = get_filtered_value('gate_resistor_ladder1', gate_resistor_ladder1.value)
+                    value = f"{filtered_value:.0f} ({gate_resistor_ladder1.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
                 elif adc == "ADC1 A1":
-                    value = f"{gate_resistor_ladder2.value} ({gate_resistor_ladder2.voltage:.2f}V)"
+                    filtered_value = get_filtered_value('gate_resistor_ladder2', gate_resistor_ladder2.value)
+                    value = f"{filtered_value:.0f} ({gate_resistor_ladder2.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
                 elif adc == "ADC1 A2":
-                    value = get_button_state(gate_buttons.value)
+                    filtered_value = get_filtered_value('gate_buttons', gate_buttons.value)
+                    value = get_button_state(filtered_value)
                 elif adc == "ADC2 A0":
-                    value = f"{porto_piezo1.value} ({porto_piezo1.voltage:.2f}V)"
+                    filtered_value = get_filtered_value('porto_piezo1', porto_piezo1.value)
+                    value = f"{filtered_value:.0f} ({porto_piezo1.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
                 elif adc == "ADC2 A1":
-                    value = f"{porto_piezo2.value} ({porto_piezo2.voltage:.2f}V)"
+                    filtered_value = get_filtered_value('porto_piezo2', porto_piezo2.value)
+                    value = f"{filtered_value:.0f} ({porto_piezo2.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
                 elif adc == "ADC2 A2":
-                    value = f"{porto_piezo3.value} ({porto_piezo3.voltage:.2f}V)"
+                    filtered_value = get_filtered_value('porto_piezo3', porto_piezo3.value)
+                    value = f"{filtered_value:.0f} ({porto_piezo3.voltage:.2f}V)" if is_connected(filtered_value) else "Disconnected"
             except:
                 value = "Error"
         else:
