@@ -114,6 +114,17 @@ def initialize_adc():
     adc_available = any([gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3])
     print(f"ADC initialization {'successful' if adc_available else 'failed'}")
 
+    # Print detailed status of each analog input
+    print("\nDetailed ADC status:")
+    print(f"ADC1 (0x48) - Gate Room:")
+    print(f"  Resistor Ladder 1 (A0): {'Connected' if gate_resistor_ladder1 else 'Failed'}")
+    print(f"  Resistor Ladder 2 (A1): {'Connected' if gate_resistor_ladder2 else 'Failed'}")
+    print(f"  Buttons (A2): {'Connected' if gate_buttons else 'Failed'}")
+    print(f"ADC2 (0x49) - Porto Room:")
+    print(f"  Piezo 1 (A0): {'Connected' if porto_piezo1 else 'Failed'}")
+    print(f"  Piezo 2 (A1): {'Connected' if porto_piezo2 else 'Failed'}")
+    print(f"  Piezo 3 (A2): {'Connected' if porto_piezo3 else 'Failed'}")
+
 # Call these functions to initialize I2C and ADCs
 check_i2c_devices()
 initialize_adc()
