@@ -216,7 +216,7 @@ class TriggerManager:
 
     def check_trigger_cooldown(self, trigger_name, current_time):
         last_trigger_time = self.trigger_cooldowns.get(trigger_name, 0)
-        return current_time - last_trigger_time > self.cooldown_period
+        return current_time - last_trigger_time > 15  # 15-second cooldown for all triggers
 
     def set_trigger_cooldown(self, trigger_name, current_time):
         self.trigger_cooldowns[trigger_name] = current_time
