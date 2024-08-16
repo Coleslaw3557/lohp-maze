@@ -94,9 +94,12 @@ def initialize_adc():
     def setup_analog_in(adc, channel):
         if adc is not None:
             try:
-                return AnalogIn(adc, channel)
+                analog_in = AnalogIn(adc, channel)
+                # Test read to ensure the channel is working
+                _ = analog_in.value
+                return analog_in
             except Exception as e:
-                print(f"Error setting up AnalogIn for ADC 0x{adc._address:02X}, channel {channel}: {str(e)}")
+                print(f"Error setting up or reading AnalogIn for ADC 0x{adc.address:02X}, channel {channel}: {str(e)}")
                 return None
         return None
 
@@ -162,9 +165,11 @@ def get_sensor_data():
     for adc, name in [(ads1, "ADC1"), (ads2, "ADC2")]:
         if adc:
             try:
-                data.append((f"{name} Debug", "Info", "All", f"Address: 0x{adc._address:02X}, Data rate: {adc.data_rate}"))
-            except AttributeError as e:
+                data.append((f"{name} Debug", "Info", "All", f"Address: 0x{adc.address:02X}, Data rate: {adc.data_rate}, Gain: {adc.gain}"))
+            except Exception as e:
                 data.append((f"{name} Debug", "Info", "All", f"Error: {str(e)}"))
+        else:
+            data.append((f"{name} Debug", "Info", "All", "ADC not initialized"))
     
     return data
 
