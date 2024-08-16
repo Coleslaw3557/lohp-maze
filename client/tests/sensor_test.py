@@ -78,7 +78,7 @@ def initialize_adc():
         
         # Try to initialize ADC2
         for address in [0x49, 0x48]:
-            if ads1 is None or address != ads1._address:
+            if ads1 is None or address != ads1.address:
                 try:
                     ads2 = ADS.ADS1115(i2c, address=address, gain=1)
                     ads2.data_rate = 8
@@ -104,6 +104,7 @@ def initialize_adc():
         print("ADC initialization successful")
     except Exception as e:
         print(f"ADC initialization failed: {str(e)}")
+        adc_available = False
 
 initialize_adc()
 
@@ -164,6 +165,8 @@ def display_tui():
 
 try:
     setup_gpio()  # Ensure GPIO is set up before the main loop
+    initialize_adc()  # Initialize ADCs
+    check_i2c_devices()  # Check I2C devices
     with term.cbreak(), term.hidden_cursor():
         display_tui()  # Initial display
         while True:
@@ -184,7 +187,8 @@ finally:
     try:
         # Turn off all lasers
         for pin in laser_transmitters.values():
-            GPIO.output(pin, GPIO.LOW)
+            if GPIO.gpio_function(pin) == GPIO.OUT:
+                GPIO.output(pin, GPIO.LOW)
     except Exception as e:
         print(f"Error turning off lasers: {str(e)}")
     finally:
