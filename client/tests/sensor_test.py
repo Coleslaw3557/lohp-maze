@@ -60,6 +60,15 @@ porto_piezo1 = porto_piezo2 = porto_piezo3 = None
 filters = {}
 CONNECTED_THRESHOLD = 100
 
+def check_i2c_devices():
+    print("Checking I2C devices...")
+    try:
+        import subprocess
+        result = subprocess.run(['i2cdetect', '-y', '1'], capture_output=True, text=True)
+        print(result.stdout)
+    except Exception as e:
+        print(f"Error checking I2C devices: {str(e)}")
+
 def initialize_adc():
     global adc_available, ads1, ads2, gate_resistor_ladder1, gate_resistor_ladder2, gate_buttons, porto_piezo1, porto_piezo2, porto_piezo3
     adc_available = False
@@ -104,7 +113,7 @@ def initialize_adc():
         print(f"Error setting up analog inputs: {str(e)}")
         adc_available = False
 
-# Call this function before initializing ADCs
+# Call these functions to initialize I2C and ADCs
 check_i2c_devices()
 initialize_adc()
 
