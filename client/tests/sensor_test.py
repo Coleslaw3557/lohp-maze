@@ -6,7 +6,6 @@ import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 from blessed import Terminal
 from collections import deque
-import logging
 
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
@@ -14,11 +13,9 @@ def test_level_shifter(input_pin, output_pin):
     for state in [GPIO.HIGH, GPIO.LOW]:
         GPIO.output(input_pin, state)
         time.sleep(0.1)
-        logging.debug(f"Set Input Pin {input_pin} to {state}")
     
     GPIO.setup(input_pin, GPIO.IN)
     
-    logging.info(f"Level Shifter Test: Input Pin {input_pin} tested, Output Pin {output_pin} not connected")
     return f"Input {input_pin} tested, Output {output_pin} not connected"
 
 def setup_gpio():
@@ -52,14 +49,6 @@ laser_receivers = {
 # Set up GPIO
 setup_gpio()
 
-# Set up logging
-logging.basicConfig(filename='sensor_test.log', level=logging.DEBUG, 
-                    format='%(asctime)s - %(levelname)s - %(message)s')
-# Add a stream handler to print DEBUG messages to console
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-logging.getLogger('').addHandler(console_handler)
-
 # Set up I2C for ADS1115
 i2c = busio.I2C(board.SCL, board.SDA, frequency=100000)  # Lower the I2C frequency to 100 kHz
 # Set up ADCs and analog inputs
@@ -77,20 +66,9 @@ def initialize_adc():
     try:
         ads1 = ADS.ADS1115(i2c, address=0x48, gain=1)  # ADC1 for Gate Room
         ads1.data_rate = 8
-        logging.info("ADC1 (Gate Room) initialized successfully")
-    except OSError as e:
-        logging.error(f"Failed to initialize ADC1 (Gate Room). Error: {e}")
-        return
-
-    try:
         ads2 = ADS.ADS1115(i2c, address=0x49, gain=1)  # ADC2 for Porto Room
         ads2.data_rate = 8
-        logging.info("ADC2 (Porto Room) initialized successfully")
-    except OSError as e:
-        logging.error(f"Failed to initialize ADC2 (Porto Room). Error: {e}")
-        return
 
-    try:
         # Set up analog inputs
         gate_resistor_ladder1 = AnalogIn(ads1, ADS.P0)
         gate_resistor_ladder2 = AnalogIn(ads1, ADS.P1)
@@ -115,9 +93,8 @@ def initialize_adc():
         CONNECTED_THRESHOLD = 100  # Adjust this value based on your specific setup
         
         adc_available = True
-        logging.info("All ADC inputs initialized successfully")
-    except Exception as e:
-        logging.error(f"Failed to set up ADC inputs. Error: {e}")
+    except Exception:
+        pass
 
 initialize_adc()
 
@@ -166,44 +143,32 @@ def get_sensor_data():
     
     for adc, channel, room, analog_in in adc_data:
         if adc_available:
-            status = read_adc_with_retry(adc, channel, analog_in)
+            try:
+                value = analog_in.value
+                voltage = analog_in.voltage
+                status = f"Value: {value}, Voltage: {voltage:.2f}V"
+            except Exception:
+                status = "Reading failed"
         else:
             status = "Offline"
         data.append((adc, channel, room, status))
     
     return data
 
-def read_adc_with_retry(adc, channel, analog_in, max_attempts=5, delay=0.5):
-    for attempt in range(max_attempts):
-        try:
-            value = analog_in.value
-            voltage = analog_in.voltage
-            return f"Value: {value}, Voltage: {voltage:.2f}V"
-        except Exception as e:
-            logging.debug(f"Error reading {adc} {channel}: {e}")
-            if attempt < max_attempts - 1:
-                time.sleep(delay)
+def display_tui():
+    print(term.clear())
+    print(term.move_y(0) + term.center("LoHP Maze Hardware Test"))
+    print(term.move_y(2) + term.center("Press 'q' to quit"))
     
-    logging.warning(f"Failed to read {adc} {channel} after {max_attempts} attempts")
-    return "Reading failed"
-
-def display_tui(prev_data=None):
     data = get_sensor_data()
-    if data != prev_data:
-        print(term.clear())
-        print(term.move_y(0) + term.center("LoHP Maze Hardware Test"))
-        print(term.move_y(2) + term.center("Press 'q' to quit"))
-        
-        for i, (component, description, location, status) in enumerate(data):
-            y = i + 4
-            print(term.move_xy(0, y) + f"{component:<10} {description:<20} {location:<15} {status}")
-    return data
+    for i, (component, description, location, status) in enumerate(data):
+        y = i + 4
+        print(term.move_xy(0, y) + f"{component:<10} {description:<20} {location:<15} {status}")
 
 try:
     with term.cbreak(), term.hidden_cursor():
-        prev_data = None
         while True:
-            prev_data = display_tui(prev_data)
+            display_tui()
             key = term.inkey(timeout=1)
             if key == 'q':
                 break
