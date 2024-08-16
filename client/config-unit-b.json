@@ -57,8 +57,66 @@
           "effect_name": "SparkPony"
         }
       }
+    },
+    {
+      "name": "Porto Room Piezo 1",
+      "type": "piezo",
+      "adc_channel": 0,
+      "threshold": 0.5,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Porto Room",
+          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+        }
+      }
+    },
+    {
+      "name": "Porto Room Piezo 2",
+      "type": "piezo",
+      "adc_channel": 1,
+      "threshold": 0.5,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Porto Room",
+          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+        }
+      }
+    },
+    {
+      "name": "Porto Room Piezo 3",
+      "type": "piezo",
+      "adc_channel": 2,
+      "threshold": 0.5,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Porto Room",
+          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+        }
+      }
     }
   ],
   "rate_limit": 5,
-  "cache_dir": "/app/cache"
+  "cache_dir": "/app/cache",
+  "piezo_settings": {
+    "correct_answer_probability": 0.25,
+    "attempts_required": 3
+  }
 }
