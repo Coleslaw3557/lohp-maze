@@ -75,7 +75,7 @@ def monitor_triggers_thread(config, trigger_queue):
                     current_time = time.time()
                     if trigger_name not in last_trigger_time or (current_time - last_trigger_time[trigger_name]) > rate_limit:
                         logger.info(f"Trigger activated: {trigger_name}")
-                        asyncio.run_coroutine_threadsafe(trigger_queue.put((trigger_name, trigger['action'])), asyncio.get_event_loop())
+                        trigger_queue.put_nowait((trigger_name, trigger['action']))
                         last_trigger_time[trigger_name] = current_time
                 elif current_state == GPIO.HIGH:
                     last_trigger_time.pop(trigger_name, None)
@@ -89,10 +89,11 @@ async def monitor_triggers(config, trigger_queue):
 async def process_triggers(trigger_queue, config):
     while True:
         try:
-            trigger_name, action = trigger_queue.get_nowait()
+            trigger_name, action = await trigger_queue.get()
             execute_action(action, config.get('server_ip'))
-        except asyncio.QueueEmpty:
-            await asyncio.sleep(0.01)
+        except Exception as e:
+            logger.error(f"Error processing trigger: {str(e)}")
+        await asyncio.sleep(0.01)
 
 async def main():
     try:
