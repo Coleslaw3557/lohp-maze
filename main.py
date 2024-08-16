@@ -423,15 +423,15 @@ async def shutdown():
     logger.info("Shutdown request received")
     response = {"status": "success", "message": "Shutdown initiated"}
     
-    # Send shutdown signal to all connected clients
-    shutdown_message = json.dumps({"type": "shutdown"})
+    # Calculate the shutdown time (3 seconds from now)
+    shutdown_time = time.time() + 3
+    
+    # Send shutdown signal to all connected clients with the exact shutdown time
+    shutdown_message = json.dumps({"type": "shutdown", "shutdown_time": shutdown_time})
     await asyncio.gather(*[client.send(shutdown_message) for client in connected_clients])
     
-    # Wait for clients to disconnect
-    await asyncio.sleep(5)  # Give clients time to shut down
-    
-    # Shutdown the server
-    asyncio.get_event_loop().stop()
+    # Schedule the server shutdown
+    asyncio.get_event_loop().call_at(shutdown_time, asyncio.get_event_loop().stop)
     
     return jsonify(response)
 

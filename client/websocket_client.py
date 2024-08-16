@@ -173,6 +173,11 @@ class WebSocketClient:
 
     async def handle_shutdown(self, message):
         logger.info("Received shutdown command from server")
+        shutdown_time = message.get('shutdown_time')
+        if shutdown_time:
+            wait_time = max(0, shutdown_time - time.time())
+            logger.info(f"Shutting down in {wait_time:.2f} seconds...")
+            await asyncio.sleep(wait_time)
         await self.disconnect()
         logger.info("Shutting down client...")
         os._exit(0)
