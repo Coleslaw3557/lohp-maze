@@ -7,7 +7,7 @@ import busio
 import RPi.GPIO as GPIO
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
-import requests
+import aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +157,7 @@ class TriggerManager:
         else:
             logger.warning(f"Unexpected button status for {trigger['name']}: {button_status}")
 
-    def trigger_effect(self, trigger_name):
+    async def trigger_effect(self, trigger_name):
         trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
         if not trigger:
             logger.error(f"No trigger found with name: {trigger_name}")
@@ -173,11 +173,13 @@ class TriggerManager:
             headers = action.get('headers', {})
             data = action.get('data', {})
             try:
-                response = requests.request(action['method'], url, headers=headers, json=data)
-                if response.status_code == 200:
-                    logger.info(f"Triggered action for {trigger_name}. Response: {response.text}")
-                else:
-                    logger.error(f"Failed to trigger action for {trigger_name}. Status code: {response.status_code}")
+                async with aiohttp.ClientSession() as session:
+                    async with session.request(action['method'], url, headers=headers, json=data) as response:
+                        if response.status == 200:
+                            response_text = await response.text()
+                            logger.info(f"Triggered action for {trigger_name}. Response: {response_text}")
+                        else:
+                            logger.error(f"Failed to trigger action for {trigger_name}. Status code: {response.status}")
             except Exception as e:
                 logger.error(f"Error triggering action for {trigger_name}: {str(e)}")
         else:
