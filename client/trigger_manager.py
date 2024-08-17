@@ -23,9 +23,12 @@ class TriggerManager:
         self.laser_intact_times = {}
         
         # Constants for detection
-        self.COOLDOWN_TIME = config.get('cooldown_time', 0.2)
-        self.CONNECTED_THRESHOLD = config.get('connected_threshold', 0.3)
-        self.PIEZO_THRESHOLD = config.get('piezo_threshold', 0.5)
+        self.COOLDOWN_TIME = 0.2
+        self.CONNECTED_THRESHOLD = 0.5
+        self.PIEZO_THRESHOLD = 2.0
+        self.KNOCK_THRESHOLD = 2.5
+        self.VOLTAGE_CHANGE_THRESHOLD = 0.5
+        self.DEBUG_THRESHOLD = 0.1
         
         # Initialize piezo-related attributes only if piezo triggers are configured
         if any(trigger['type'] == 'piezo' for trigger in self.triggers):
