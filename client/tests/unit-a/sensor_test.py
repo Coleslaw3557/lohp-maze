@@ -81,14 +81,10 @@ def get_sensor_data():
     
     # Monitor laser receivers
     for room, pins in current_unit['lasers'].items():
-        if room == 'Entrance':
-            rx_status = GPIO.input(pins['LR'])
-            status = f"Beam: {'Broken' if rx_status else 'Intact'}"
-            data.append((f"{room} Laser", "Laser System", room, status))
-            data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {pins['LT']}, RX GPIO: {pins['LR']}, RX Status: {rx_status}"))
-        else:
-            data.append((f"{room} Laser", "Laser System", room, "Not Connected"))
-            data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {pins['LT']}, RX GPIO: {pins['LR']}, Not Connected"))
+        rx_status = GPIO.input(pins['LR'])
+        status = f"Beam: {'Broken' if rx_status else 'Intact'}"
+        data.append((f"{room} Laser", "Laser System", room, status))
+        data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {pins['LT']}, RX GPIO: {pins['LR']}, RX Status: {rx_status}"))
     
     # Test ADC for button presses
     for button, channel in current_unit['adc']['Cuddle Cross']['channels'].items():
