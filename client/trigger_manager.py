@@ -86,12 +86,12 @@ class TriggerManager:
         if voltage < 0.1:
             logger.debug(f"Button pressed: Voltage {voltage:.3f}V")
             return "Button pressed"
-        elif voltage > 0.5:
+        elif voltage > 0.8:
             logger.debug(f"Button not pressed: Voltage {voltage:.3f}V")
             return "Button not pressed"
         else:
-            logger.warning(f"Voltage in undefined range: {voltage:.3f}V")
-            return "Error: Voltage in undefined range"
+            logger.warning(f"Voltage in transition range: {voltage:.3f}V")
+            return "Transition"
 
     def trigger_effect(self, trigger_name):
         trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
@@ -216,7 +216,7 @@ class TriggerManager:
         
         button_status = self.get_button_status(voltage)
         
-        logger.debug(f"ADC {trigger['name']}: Value: {raw_value}, Voltage: {voltage:.3f}V, Status: {button_status}")
+        logger.info(f"ADC {trigger['name']}: Value: {raw_value}, Voltage: {voltage:.3f}V, Status: {button_status}")
         
         if button_status == "Button pressed":
             if self.check_trigger_cooldown(trigger['name'], current_time):
@@ -224,8 +224,8 @@ class TriggerManager:
                 self.set_trigger_cooldown(trigger['name'], current_time)
                 await callback(trigger['name'])
                 await self.trigger_effect(trigger['name'])
-        elif button_status == "Error: Voltage in undefined range":
-            logger.warning(f"Possible hardware issue with {trigger['name']}: Value: {raw_value}, Voltage: {voltage:.3f}V")
+        elif button_status == "Transition":
+            logger.debug(f"Button {trigger['name']} in transition state: Value: {raw_value}, Voltage: {voltage:.3f}V")
 
     async def monitor_triggers(self, callback):
         while True:
