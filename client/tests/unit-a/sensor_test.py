@@ -4,7 +4,6 @@ import board
 import busio
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
-import time
 from blessed import Terminal
 
 # Constants
@@ -37,30 +36,15 @@ UNIT_A_CONFIG = {
 # Initialize current unit
 current_unit = UNIT_A_CONFIG
 
-def test_level_shifter(input_pin, output_pin):
-    GPIO.setup(input_pin, GPIO.OUT)
-    GPIO.setup(output_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    
-    results = []
-    for state in [GPIO.HIGH, GPIO.LOW]:
-        GPIO.output(input_pin, state)
-        time.sleep(0.1)
-        output_state = GPIO.input(output_pin)
-        results.append((state, output_state))
-    
-    GPIO.setup(input_pin, GPIO.IN)
-    
-    return results
-
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     
     for room, pins in current_unit['lasers'].items():
         GPIO.setup(pins['LT'], GPIO.OUT)
-        GPIO.output(pins['LT'], GPIO.LOW)  # Turn off all lasers
+        GPIO.output(pins['LT'], GPIO.LOW)  # Turn off all lasers initially
         GPIO.setup(pins['LR'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Use pull-down resistor
-        print(f"Setting up {room} laser: LT (GPIO {pins['LT']}) set to HIGH, LR (GPIO {pins['LR']}) set as INPUT")
+        print(f"Setting up {room} laser: LT (GPIO {pins['LT']}) set to LOW, LR (GPIO {pins['LR']}) set as INPUT")
 
 # Set up GPIO
 setup_gpio()
@@ -82,9 +66,11 @@ def get_sensor_data():
     # Monitor laser receivers
     for room, pins in current_unit['lasers'].items():
         rx_status = GPIO.input(pins['LR'])
-        status = f"Beam: {'Intact' if rx_status else 'Broken'}"
-        data.append((f"{room} Laser", "Laser System", room, status))
-        data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {pins['LT']}, RX GPIO: {pins['LR']}, RX Status: {rx_status}"))
+        tx_status = GPIO.input(pins['LT'])
+        status = f"Beam: {'Broken' if rx_status else 'Intact'}"  # Inverted logic
+        tx_state = f"TX: {'ON' if tx_status else 'OFF'}"
+        raw_status = f"Raw RX: {'HIGH' if rx_status else 'LOW'}"
+        data.append((f"{room} Laser", "Laser System", room, f"{status}, {tx_state}, {raw_status}"))
     
     # Test ADC for button presses
     for button, channel in current_unit['adc']['Cuddle Cross']['channels'].items():
@@ -104,17 +90,24 @@ def get_button_status(voltage):
     else:
         return "Error: Voltage in undefined range"
 
+def toggle_laser(room):
+    pins = current_unit['lasers'][room]
+    current_state = GPIO.input(pins['LT'])
+    new_state = not current_state
+    GPIO.output(pins['LT'], GPIO.HIGH if new_state else GPIO.LOW)
+    return f"{room} laser {'turned ON' if new_state else 'turned OFF'}"
+
 def display_tui():
     data = get_sensor_data()
     print(term.home + term.clear)
     print(term.move_y(0) + term.center(f"LoHP Maze Hardware Test - {UNIT_A_CONFIG['name']}"))
-    print(term.move_y(2) + term.center("Press 'q' to quit, 'b' for button test"))
+    print(term.move_y(2) + term.center("Press 'q' to quit, 'b' for button test, '1'-'5' to toggle lasers"))
     
     for i, (component, description, location, status) in enumerate(data):
         y = i + 4
         print(term.move_xy(0, y) + f"{component:<20} {description:<10} {location:<20} {status}")
     
-    print(term.move_y(len(data) + 4) + term.center("Press 'q' to quit, 'b' for button test"))
+    print(term.move_y(len(data) + 5) + term.center("Laser Control: 1=Entrance, 2=Cuddle Cross, 3=Photo Bomb, 4=No Friends Monday, 5=Exit"))
 
 def button_test():
     print(term.home + term.clear)
@@ -155,6 +148,12 @@ try:
                 break
             elif key == 'b':
                 button_test()
+            elif key in ['1', '2', '3', '4', '5']:
+                room_index = int(key) - 1
+                room = list(current_unit['lasers'].keys())[room_index]
+                result = toggle_laser(room)
+                print(term.move_y(term.height - 1) + term.center(result))
+                time.sleep(1)  # Show the result for 1 second
             time.sleep(0.1)  # Add a small delay to prevent too rapid GPIO reading
 except KeyboardInterrupt:
     print("Program interrupted by user")
