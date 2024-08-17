@@ -153,8 +153,7 @@ class TriggerManager:
         try:
             i2c = busio.I2C(board.SCL, board.SDA)
             self.ads_devices = {}
-            self.button_channels = {}
-            self.piezo_channels = {}
+            self.adc_channels = {}
             
             for trigger in self.triggers:
                 if trigger['type'] in ['adc', 'piezo']:
@@ -167,32 +166,30 @@ class TriggerManager:
                     
                     if channel is not None:
                         sensor_channel = AnalogIn(ads, getattr(ADS, f'P{channel}'))
-                        if trigger['type'] == 'adc':
-                            self.button_channels[trigger['name']] = sensor_channel
-                        else:  # piezo
-                            self.piezo_channels[trigger['name']] = sensor_channel
+                        self.adc_channels[trigger['name']] = {
+                            'channel': sensor_channel,
+                            'type': trigger['type']
+                        }
                         logger.info(f"Set up {trigger['type']} channel for {trigger['name']} on address {adc_address}, channel {channel}")
                     else:
                         logger.warning(f"No channel specified for trigger: {trigger['name']}")
             
             logger.info("ADC setup completed for configured triggers")
             logger.info(f"ADC devices: {list(self.ads_devices.keys())}")
-            logger.info(f"Button channels: {list(self.button_channels.keys())}")
-            logger.info(f"Piezo channels: {list(self.piezo_channels.keys())}")
+            logger.info(f"ADC channels: {list(self.adc_channels.keys())}")
 
             # Test reading from each channel
-            for name, channel in self.button_channels.items():
+            for name, channel_info in self.adc_channels.items():
                 try:
-                    voltage = channel.voltage
-                    logger.info(f"Initial reading for {name}: {voltage:.3f}V")
+                    voltage = channel_info['channel'].voltage
+                    logger.info(f"Initial reading for {name} ({channel_info['type']}): {voltage:.3f}V")
                 except Exception as e:
                     logger.error(f"Error reading initial value for {name}: {str(e)}")
 
         except Exception as e:
             logger.error(f"Error setting up ADC: {str(e)}")
             self.ads_devices = {}
-            self.button_channels = {}
-            self.piezo_channels = {}
+            self.adc_channels = {}
 
         # Schedule ADC reading
         asyncio.create_task(self.read_adc_continuously())
@@ -250,10 +247,14 @@ class TriggerManager:
     async def read_adc_continuously(self):
         while True:
             current_time = time.time()
-            for trigger in self.triggers:
-                if trigger['type'] == 'adc':
-                    await self.check_adc_trigger(trigger, self.trigger_effect, current_time)
-            await asyncio.sleep(0.1)  # Check every 100ms
+            for trigger_name, channel_info in self.adc_channels.items():
+                trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
+                if trigger:
+                    if channel_info['type'] == 'adc':
+                        await self.check_button_trigger(trigger, channel_info['channel'], current_time)
+                    elif channel_info['type'] == 'piezo':
+                        await self.check_piezo_trigger(trigger, channel_info['channel'], current_time)
+            await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
     async def monitor_triggers(self, callback):
         while True:
@@ -363,3 +364,31 @@ class TriggerManager:
             if trigger['type'] in ['adc', 'piezo']:
                 self.filters[trigger['name']] = {'last_voltage': 0, 'last_trigger': 0}
         logger.info("Filters initialized for configured triggers")
+    async def check_button_trigger(self, trigger, channel, current_time):
+        try:
+            voltage = channel.voltage
+            button_status = self.get_button_status(voltage)
+            
+            logger.debug(f"Button {trigger['name']}: Value: {channel.value}, Voltage: {voltage:.3f}V, Status: {button_status}")
+            
+            if button_status == "Button pressed":
+                if self.check_trigger_cooldown(trigger['name'], current_time):
+                    logger.info(f"Button pressed: {trigger['name']}")
+                    self.set_trigger_cooldown(trigger['name'], current_time)
+                    await self.trigger_effect(trigger['name'])
+        except Exception as e:
+            logger.error(f"Error checking button trigger {trigger['name']}: {str(e)}")
+
+    async def check_piezo_trigger(self, trigger, channel, current_time):
+        try:
+            voltage = channel.voltage
+            
+            logger.debug(f"Piezo {trigger['name']}: Value: {channel.value}, Voltage: {voltage:.3f}V")
+            
+            if voltage > self.PIEZO_THRESHOLD:
+                if self.check_trigger_cooldown(trigger['name'], current_time):
+                    logger.info(f"Piezo triggered: {trigger['name']}")
+                    self.set_trigger_cooldown(trigger['name'], current_time)
+                    await self.handle_piezo_trigger(trigger)
+        except Exception as e:
+            logger.error(f"Error checking piezo trigger {trigger['name']}: {str(e)}")
