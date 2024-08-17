@@ -201,7 +201,9 @@ class TriggerManager:
                 logger.info(f"Laser beam broken: {trigger['name']}")
                 self.set_trigger_cooldown(trigger['name'], current_time)
                 if callback:
-                    await callback(trigger['name'])
+                    result = callback(trigger['name'])
+                    if asyncio.iscoroutine(result):
+                        await result
                 else:
                     logger.warning(f"No callback provided for trigger: {trigger['name']}")
         else:
