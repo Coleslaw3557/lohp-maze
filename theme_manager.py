@@ -158,22 +158,17 @@ class ThemeManager:
     async def set_current_theme_async(self, theme_name):
         logger.info(f"Setting theme to: {theme_name}")
         if theme_name in self.themes:
-            try:
-                async with self.theme_lock:
-                    old_theme = self.current_theme
-                    await self.stop_current_theme_async()
-                    self.current_theme = theme_name
-                    self.stop_theme.clear()
-                    await asyncio.sleep(0.1)  # Add a small delay before starting the new theme
-                    self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
-                    self.theme_thread.start()
-                    # Reset temporary theme values
-                    self.temporary_theme_values = {}
-                logger.info(f"Theme changed from {old_theme} to: {theme_name}")
-                return True
-            except Exception as e:
-                logger.error(f"Error setting theme: {str(e)}")
-                return False
+            with self.theme_lock:
+                old_theme = self.current_theme
+                await self.stop_current_theme_async()
+                self.current_theme = theme_name
+                self.stop_theme.clear()
+                self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
+                self.theme_thread.start()
+                # Reset temporary theme values
+                self.temporary_theme_values = {}
+            logger.info(f"Theme changed from {old_theme} to: {theme_name}")
+            return True
         else:
             logger.warning(f"Theme not found: {theme_name}")
             return False
@@ -201,18 +196,14 @@ class ThemeManager:
             return None
 
         current_index = self.theme_list.index(self.current_theme) if self.current_theme in self.theme_list else -1
-        start_index = current_index
-        while True:
-            next_index = (start_index + 1) % len(self.theme_list)
+        for i in range(len(self.theme_list)):
+            next_index = (current_index + i + 1) % len(self.theme_list)
             next_theme = self.theme_list[next_index]
             if next_theme != self.current_theme:
                 success = await self.set_current_theme_async(next_theme)
                 if success:
                     logger.info(f"Successfully set next theme to: {next_theme}")
                     return next_theme
-            if next_index == current_index:
-                break
-            start_index = next_index
         
         logger.error("Failed to set any theme after trying all available themes")
         return None
