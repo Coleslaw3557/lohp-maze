@@ -158,18 +158,22 @@ class ThemeManager:
     async def set_current_theme_async(self, theme_name):
         logger.info(f"Setting theme to: {theme_name}")
         if theme_name in self.themes:
-            with self.theme_lock:
-                old_theme = self.current_theme
-                await self.stop_current_theme_async()
-                self.current_theme = theme_name
-                self.stop_theme.clear()
-                await asyncio.sleep(0.1)  # Add a small delay before starting the new theme
-                self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
-                self.theme_thread.start()
-                # Reset temporary theme values
-                self.temporary_theme_values = {}
-            logger.info(f"Theme changed from {old_theme} to: {theme_name}")
-            return True
+            try:
+                async with self.theme_lock:
+                    old_theme = self.current_theme
+                    await self.stop_current_theme_async()
+                    self.current_theme = theme_name
+                    self.stop_theme.clear()
+                    await asyncio.sleep(0.1)  # Add a small delay before starting the new theme
+                    self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
+                    self.theme_thread.start()
+                    # Reset temporary theme values
+                    self.temporary_theme_values = {}
+                logger.info(f"Theme changed from {old_theme} to: {theme_name}")
+                return True
+            except Exception as e:
+                logger.error(f"Error setting theme: {str(e)}")
+                return False
         else:
             logger.warning(f"Theme not found: {theme_name}")
             return False

@@ -222,7 +222,7 @@ async def set_theme():
             
             logger.info(f"Setting theme to: {theme_name}")
             try:
-                success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=2.0)
+                success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=5.0)
                 if success:
                     logger.info(f"Theme set successfully to: {theme_name}")
                     return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
@@ -235,7 +235,7 @@ async def set_theme():
         
         return jsonify({'status': 'error', 'message': 'Theme name or next_theme flag is required'}), 400
     except Exception as e:
-        logger.error(f"Error setting theme: {str(e)}")
+        logger.error(f"Error setting theme: {str(e)}", exc_info=True)
         return jsonify({'status': 'error', 'message': f'An error occurred while setting the theme: {str(e)}'}), 500
 
 import time
