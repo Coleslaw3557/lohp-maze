@@ -217,6 +217,10 @@ class TriggerManager:
             self.ads_devices = {}
             self.adc_channels = {}
 
+        # Log the associated rooms for debugging
+        associated_rooms = self.config.get('associated_rooms', [])
+        logger.info(f"Associated rooms for this unit: {associated_rooms}")
+
         # Schedule ADC reading
         asyncio.create_task(self.read_adc_continuously())
 
