@@ -86,7 +86,7 @@ class TriggerManager:
         if voltage < 0.1:
             logger.debug(f"Button pressed: Voltage {voltage:.3f}V")
             return "Button pressed"
-        elif voltage > 0.8:
+        elif voltage > 0.5:
             logger.debug(f"Button not pressed: Voltage {voltage:.3f}V")
             return "Button not pressed"
         else:
