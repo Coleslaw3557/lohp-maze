@@ -97,14 +97,8 @@ class TriggerManager:
         self.laser_tx_pins.append(trigger['tx_pin'])  # Add TX pin to the list
 
     def keep_lasers_on(self):
-        while True:
-            for pin in self.laser_tx_pins:
-                GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0.01)  # Small delay to prevent excessive CPU usage
-
-    def start_laser_thread(self):
-        self.laser_thread = threading.Thread(target=self.keep_lasers_on, daemon=True)
-        self.laser_thread.start()
+        for pin in self.laser_tx_pins:
+            GPIO.output(pin, GPIO.HIGH)
 
     def setup_gpio_trigger(self, trigger):
         if 'pin' in trigger:
