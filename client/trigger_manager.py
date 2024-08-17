@@ -120,9 +120,9 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage < 0.3:  # Button press detected between 0.3V and 0.8V
+        if voltage < 0.5:  # Adjusted threshold for button press
             return "Button pressed"
-        elif voltage > 0.8:
+        elif voltage > 1.0:  # Adjusted threshold for button not pressed
             return "Button not pressed"
         else:
             return "Unknown"  # Voltage in between thresholds
@@ -292,36 +292,21 @@ class TriggerManager:
     async def check_adc_trigger(self, trigger, callback, current_time):
         channel_info = self.adc_channels.get(trigger['name'])
         if channel_info is None:
-            logger.warning(f"No channel found for trigger {trigger['name']}")
             return
 
         try:
             voltage = channel_info['channel'].voltage
-        except Exception as e:
-            logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
-            return
-
-        button_status = self.get_button_status(voltage)
-        
-        # Add debug logging for voltage readings
-        if button_status == "Button pressed":
-            logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V, Status: {button_status}")
-            if self.check_trigger_cooldown(trigger['name'], current_time):
-                if not channel_info.get('press_start_time'):
-                    channel_info['press_start_time'] = current_time
-                elif current_time - channel_info['press_start_time'] > 0.05:  # 50ms debounce
+            button_status = self.get_button_status(voltage)
+            
+            if button_status == "Button pressed":
+                if self.check_trigger_cooldown(trigger['name'], current_time):
                     logger.info(f"Button pressed: {trigger['name']}")
                     self.set_trigger_cooldown(trigger['name'], current_time)
                     await callback(trigger['name'])
-                    channel_info['press_start_time'] = None
-        elif button_status == "Button not pressed":
-            # Reset the cooldown and press start time when the button is released
-            self.trigger_cooldowns.pop(trigger['name'], None)
-            channel_info['press_start_time'] = None
-        
-        # Reset cooldown if the button is not pressed
-        if button_status != "Button pressed":
-            self.trigger_cooldowns.pop(trigger['name'], None)
+            elif button_status == "Button not pressed":
+                self.trigger_cooldowns.pop(trigger['name'], None)
+        except Exception as e:
+            logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
 
     async def read_adc_continuously(self):
         while True:
@@ -329,7 +314,7 @@ class TriggerManager:
             for trigger in self.triggers:
                 if trigger['type'] == 'adc':
                     await self.check_adc_trigger(trigger, self.trigger_effect, current_time)
-            await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
+            await asyncio.sleep(0.05)  # Check every 50ms to reduce CPU usage
 
     async def monitor_triggers(self, callback):
         while True:
