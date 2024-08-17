@@ -120,13 +120,12 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage < 0.1:
+        if voltage < 0.5:  # Adjusted threshold for button press
             return "Button pressed"
-        elif voltage > 0.9:
+        elif voltage > 0.7:  # Adjusted threshold for button not pressed
             return "Button not pressed"
         else:
-            logger.warning(f"Unexpected voltage reading: {voltage}V")
-            return "Unknown"
+            return "Unknown"  # Voltage in between thresholds
 
     async def check_adc_trigger(self, trigger, callback, current_time):
         channel_info = self.adc_channels.get(trigger['name'])
@@ -306,7 +305,13 @@ class TriggerManager:
             if self.check_trigger_cooldown(trigger['name'], current_time):
                 logger.info(f"Button pressed: {trigger['name']}")
                 self.set_trigger_cooldown(trigger['name'], current_time)
-                callback(trigger['name'])
+                await callback(trigger['name'])
+        elif button_status == "Button not pressed":
+            # Reset the cooldown when the button is released
+            self.trigger_cooldowns.pop(trigger['name'], None)
+        
+        # Add debug logging for voltage readings
+        logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V, Status: {button_status}")
 
     async def read_adc_continuously(self):
         while True:
