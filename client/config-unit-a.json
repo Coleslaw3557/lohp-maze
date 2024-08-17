@@ -61,5 +61,17 @@
       "channel": 3
     }
   ],
+  "lasers": [
+    {"name": "EntranceLT", "gpio": 17},
+    {"name": "EntranceLR", "gpio": 27},
+    {"name": "CuddleCrossLT", "gpio": 22},
+    {"name": "CuddleCrossLR", "gpio": 5},
+    {"name": "PhotoBombLT", "gpio": 24},
+    {"name": "PhotoBombLR", "gpio": 6},
+    {"name": "NoFriendsMondayLT", "gpio": 25},
+    {"name": "NoFriendsMondayLR", "gpio": 13},
+    {"name": "ExitLT", "gpio": 19},
+    {"name": "ExitLR", "gpio": 26}
+  ],
   "cache_dir": "/app/cache"
 }
