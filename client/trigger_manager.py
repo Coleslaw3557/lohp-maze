@@ -228,14 +228,14 @@ class TriggerManager:
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
     async def check_adc_trigger(self, trigger, callback, current_time):
-        channel = self.button_channels.get(trigger['name'])
+        channel = self.adc_channels.get(trigger['name'])
         if channel is None:
             logger.warning(f"No channel found for trigger {trigger['name']}")
             return
 
         try:
-            voltage = channel.voltage
-            raw_value = channel.value
+            voltage = channel['channel'].voltage
+            raw_value = channel['channel'].value
         except Exception as e:
             logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
             return
@@ -251,22 +251,15 @@ class TriggerManager:
                 logger.info(f"Button pressed: {trigger['name']}")
                 self.set_trigger_cooldown(trigger['name'], current_time)
                 await callback(trigger['name'])
-                await self.trigger_effect(trigger['name'])
         elif button_status == "Button not pressed":
             logger.debug(f"Button {trigger['name']} not pressed: Value: {raw_value}, Voltage: {voltage:.3f}V")
-        elif button_status == "Transition":
-            logger.debug(f"Button {trigger['name']} in transition state: Value: {raw_value}, Voltage: {voltage:.3f}V")
 
     async def read_adc_continuously(self):
         while True:
             current_time = time.time()
-            for trigger_name, channel_info in self.adc_channels.items():
-                trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
-                if trigger:
-                    if channel_info['type'] == 'adc':
-                        await self.check_button_trigger(trigger, channel_info['channel'], current_time)
-                    elif channel_info['type'] == 'piezo':
-                        await self.check_piezo_trigger(trigger, channel_info['channel'], current_time)
+            for trigger in self.triggers:
+                if trigger['type'] == 'adc':
+                    await self.check_adc_trigger(trigger, self.trigger_effect, current_time)
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
     async def monitor_triggers(self, callback):
