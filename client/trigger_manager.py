@@ -120,9 +120,9 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage < 0.5:  # Adjusted threshold for button press
+        if voltage < 0.3:  # Lowered threshold for button press
             return "Button pressed"
-        elif voltage > 0.7:  # Adjusted threshold for button not pressed
+        elif voltage > 0.8:  # Increased threshold for button not pressed
             return "Button not pressed"
         else:
             return "Unknown"  # Voltage in between thresholds
@@ -303,17 +303,22 @@ class TriggerManager:
 
         button_status = self.get_button_status(voltage)
         
-        if button_status == "Button pressed":
-            if self.check_trigger_cooldown(trigger['name'], current_time):
-                logger.info(f"Button pressed: {trigger['name']}")
-                self.set_trigger_cooldown(trigger['name'], current_time)
-                await callback(trigger['name'])
-        elif button_status == "Button not pressed":
-            # Reset the cooldown when the button is released
-            self.trigger_cooldowns.pop(trigger['name'], None)
-        
         # Add debug logging for voltage readings
         logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V, Status: {button_status}")
+
+        if button_status == "Button pressed":
+            if self.check_trigger_cooldown(trigger['name'], current_time):
+                if not channel_info.get('press_start_time'):
+                    channel_info['press_start_time'] = current_time
+                elif current_time - channel_info['press_start_time'] > 0.05:  # 50ms debounce
+                    logger.info(f"Button pressed: {trigger['name']}")
+                    self.set_trigger_cooldown(trigger['name'], current_time)
+                    await callback(trigger['name'])
+                    channel_info['press_start_time'] = None
+        elif button_status == "Button not pressed":
+            # Reset the cooldown and press start time when the button is released
+            self.trigger_cooldowns.pop(trigger['name'], None)
+            channel_info['press_start_time'] = None
 
     async def read_adc_continuously(self):
         while True:
