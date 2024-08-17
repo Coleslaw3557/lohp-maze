@@ -5,10 +5,71 @@
   "audio_output_device": "default",
   "triggers": [
     {
-      "name": "CuddleCrossResistorLadder",
+      "name": "Button 1",
       "type": "adc",
       "channel": 0,
-      "adc_address": "0x48"
+      "adc_address": "0x48",
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/set_theme",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "next_theme": true
+        }
+      }
+    },
+    {
+      "name": "Button 2",
+      "type": "adc",
+      "channel": 1,
+      "adc_address": "0x48",
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect_all_rooms",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "effect_name": "Lightning"
+        }
+      }
+    },
+    {
+      "name": "Button 3",
+      "type": "adc",
+      "channel": 2,
+      "adc_address": "0x48",
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/start_music",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {}
+      }
+    },
+    {
+      "name": "Button 4",
+      "type": "adc",
+      "channel": 3,
+      "adc_address": "0x48",
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Cuddle Cross",
+          "effect_name": "CuddleCrossEffect"
+        }
+      }
     }
   ],
   "lasers": [

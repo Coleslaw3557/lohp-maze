@@ -49,7 +49,7 @@ class TriggerManager:
                     if current_time - self.filters[button_name]['last_press'] > self.COOLDOWN_TIME:
                         logger.info(f"{button_name} pressed")
                         self.filters[button_name]['last_press'] = current_time
-                        self.trigger_effect("Cuddle Cross", button_name)
+                        self.trigger_effect(button_name)
                 elif button_status == "Button not pressed":
                     if self.filters[button_name]['last_voltage'] < 0.1:
                         logger.info(f"{button_name} released")
@@ -67,18 +67,31 @@ class TriggerManager:
             logger.warning(f"Voltage in undefined range: {voltage:.3f}V")
             return "Error: Voltage in undefined range"
 
-    def trigger_effect(self, room, effect_name):
-        url = "http://localhost:5000/api/run_effect"
-        headers = {"Content-Type": "application/json"}
-        data = {"room": room, "effect_name": effect_name}
-        try:
-            response = requests.post(url, headers=headers, json=data)
-            if response.status_code == 200:
-                logger.info(f"Triggered effect {effect_name} in room {room}")
-            else:
-                logger.error(f"Failed to trigger effect. Status code: {response.status_code}")
-        except Exception as e:
-            logger.error(f"Error triggering effect: {str(e)}")
+    def trigger_effect(self, trigger_name):
+        trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
+        if not trigger:
+            logger.error(f"No trigger found with name: {trigger_name}")
+            return
+
+        action = trigger.get('action')
+        if not action:
+            logger.error(f"No action defined for trigger: {trigger_name}")
+            return
+
+        if action['type'] == 'curl':
+            url = action['url'].replace('${server_ip}', self.config.get('server_ip'))
+            headers = action.get('headers', {})
+            data = action.get('data', {})
+            try:
+                response = requests.request(action['method'], url, headers=headers, json=data)
+                if response.status_code == 200:
+                    logger.info(f"Triggered action for {trigger_name}. Response: {response.text}")
+                else:
+                    logger.error(f"Failed to trigger action for {trigger_name}. Status code: {response.status_code}")
+            except Exception as e:
+                logger.error(f"Error triggering action for {trigger_name}: {str(e)}")
+        else:
+            logger.error(f"Unsupported action type for trigger {trigger_name}: {action['type']}")
 
     def setup_triggers(self):
         for trigger in self.triggers:
