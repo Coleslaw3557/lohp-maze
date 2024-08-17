@@ -94,15 +94,12 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage < 0.1:
+        if voltage < 1.5:  # Adjust this threshold based on your button setup
             logger.debug(f"Button pressed: Voltage {voltage:.3f}V")
             return "Button pressed"
-        elif voltage > 0.5:
+        else:
             logger.debug(f"Button not pressed: Voltage {voltage:.3f}V")
             return "Button not pressed"
-        else:
-            logger.debug(f"Voltage in transition range: {voltage:.3f}V")
-            return "Transition"
 
     def trigger_effect(self, trigger_name):
         trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
@@ -179,7 +176,9 @@ class TriggerManager:
                         sensor_channel = AnalogIn(ads, getattr(ADS, f'P{channel}'))
                         self.adc_channels[trigger['name']] = {
                             'channel': sensor_channel,
-                            'type': trigger['type']
+                            'type': trigger['type'],
+                            'last_trigger_time': 0,
+                            'last_value': 0
                         }
                         logger.info(f"Set up {trigger['type']} channel for {trigger['name']} on address {adc_address}, channel {channel}")
                     else:
@@ -262,9 +261,9 @@ class TriggerManager:
                 trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
                 if trigger:
                     if channel_info['type'] == 'adc':
-                        await self.check_button_trigger(trigger, channel_info['channel'], current_time)
+                        await self.check_button_trigger(trigger, channel_info, current_time)
                     elif channel_info['type'] == 'piezo':
-                        await self.check_piezo_trigger(trigger, channel_info['channel'], current_time)
+                        await self.check_piezo_trigger(trigger, channel_info, current_time)
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
     async def monitor_triggers(self, callback):
@@ -376,18 +375,20 @@ class TriggerManager:
             if trigger['type'] in ['adc', 'piezo']:
                 self.filters[trigger['name']] = {'last_voltage': 0, 'last_trigger': 0}
         logger.info("Filters initialized for configured triggers")
-    async def check_button_trigger(self, trigger, channel, current_time):
+    async def check_button_trigger(self, trigger, channel_info, current_time):
         try:
-            voltage = channel.voltage
+            voltage = channel_info['channel'].voltage
             button_status = self.get_button_status(voltage)
             
-            logger.debug(f"Button {trigger['name']}: Value: {channel.value}, Voltage: {voltage:.3f}V, Status: {button_status}")
+            logger.debug(f"Button {trigger['name']}: Value: {channel_info['channel'].value}, Voltage: {voltage:.3f}V, Status: {button_status}")
             
-            if button_status == "Button pressed":
+            if button_status == "Button pressed" and channel_info['last_value'] != "Button pressed":
                 if self.check_trigger_cooldown(trigger['name'], current_time):
                     logger.info(f"Button pressed: {trigger['name']}")
                     self.set_trigger_cooldown(trigger['name'], current_time)
                     await self.trigger_effect(trigger['name'])
+            
+            channel_info['last_value'] = button_status
         except Exception as e:
             logger.error(f"Error checking button trigger {trigger['name']}: {str(e)}")
 
