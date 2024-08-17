@@ -41,7 +41,6 @@ class TriggerManager:
         self.setup_piezo()
         self.setup_triggers()
         self.initialize_filters()
-        self.start_laser_thread()  # Start the laser maintenance thread
 
     async def setup(self):
         await self.setup_adc()
