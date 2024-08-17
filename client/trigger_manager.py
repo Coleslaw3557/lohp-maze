@@ -168,6 +168,20 @@ class TriggerManager:
         
         channel_info['last_value'] = voltage
 
+    def check_trigger_cooldown(self, trigger_name, current_time):
+        last_trigger_time, is_pressed = self.trigger_cooldowns.get(trigger_name, (0, False))
+        cooldown_period = 1  # 1-second cooldown for buttons
+        can_trigger = current_time - last_trigger_time > cooldown_period
+        return can_trigger, is_pressed
+
+    def set_trigger_cooldown(self, trigger_name, current_time, is_pressed):
+        self.trigger_cooldowns[trigger_name] = (current_time, is_pressed)
+
+    def reset_trigger_state(self, trigger_name):
+        if trigger_name in self.trigger_cooldowns:
+            last_time, _ = self.trigger_cooldowns[trigger_name]
+            self.trigger_cooldowns[trigger_name] = (last_time, False)
+
     async def trigger_effect(self, trigger_name):
         trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
         if not trigger:
@@ -493,15 +507,26 @@ class TriggerManager:
             url = action['url'].replace('${server_ip}', self.config.get('server_ip'))
             headers = action.get('headers', {})
             data = action.get('data', {})
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.request(action['method'], url, headers=headers, json=data) as response:
-                        if response.status == 200:
-                            response_text = await response.text()
-                            logger.info(f"Triggered action for {trigger['name']}. Response: {response_text}")
-                        else:
-                            logger.error(f"Failed to trigger action for {trigger['name']}. Status code: {response.status}")
-            except Exception as e:
-                logger.error(f"Error triggering action for {trigger['name']}: {str(e)}")
+            max_retries = 3
+            retry_delay = 1
+
+            for attempt in range(max_retries):
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.request(action['method'], url, headers=headers, json=data) as response:
+                            if response.status == 200:
+                                response_text = await response.text()
+                                logger.info(f"Triggered action for {trigger['name']}. Response: {response_text}")
+                                return
+                            else:
+                                logger.warning(f"Failed to trigger action for {trigger['name']}. Status code: {response.status}. Attempt {attempt + 1}/{max_retries}")
+                except Exception as e:
+                    logger.error(f"Error triggering action for {trigger['name']}: {str(e)}. Attempt {attempt + 1}/{max_retries}")
+
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+
+            logger.error(f"Failed to trigger action for {trigger['name']} after {max_retries} attempts")
         else:
             logger.error(f"Unsupported action type for trigger {trigger['name']}: {action['type']}")
