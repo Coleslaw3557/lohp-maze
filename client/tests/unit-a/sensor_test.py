@@ -28,16 +28,6 @@ UNIT_A_CONFIG = {
 # Initialize current unit
 current_unit = UNIT_A_CONFIG
 
-def switch_unit():
-    global current_unit
-    units = list(UNIT_CONFIGS.keys())
-    current_index = units.index(current_unit)
-    next_index = (current_index + 1) % len(units)
-    current_unit = units[next_index]
-    print(f"Switched to {UNIT_CONFIGS[current_unit]['name']}")
-    setup_gpio()
-    initialize_adc()
-
 def test_level_shifter(input_pin, output_pin):
     GPIO.setup(input_pin, GPIO.OUT)
     GPIO.setup(output_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -110,7 +100,7 @@ def get_button_status(voltage):
 def display_tui():
     data = get_sensor_data()
     print(term.home + term.clear)
-    print(term.move_y(0) + term.center(f"LoHP Maze Hardware Test - {current_unit['name']}"))
+    print(term.move_y(0) + term.center(f"LoHP Maze Hardware Test - {UNIT_A_CONFIG['name']}"))
     print(term.move_y(2) + term.center("Press 'q' to quit, 'b' for button test"))
     
     for i, (component, description, location, status) in enumerate(data):
