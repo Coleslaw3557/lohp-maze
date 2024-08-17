@@ -43,13 +43,16 @@ class TriggerManager:
                 voltage = channel.voltage
                 button_status = self.get_button_status(voltage)
                 
-                logger.debug(f"{button_name}: Value: {value}, Voltage: {voltage:.3f}V, Status: {button_status}")
+                logger.info(f"{button_name}: Value: {value}, Voltage: {voltage:.3f}V, Status: {button_status}")
                 
                 if button_status == "Button pressed":
                     if current_time - self.filters[button_name]['last_press'] > self.COOLDOWN_TIME:
                         logger.info(f"{button_name} pressed")
                         self.filters[button_name]['last_press'] = current_time
                         self.trigger_effect("Cuddle Cross", button_name)
+                elif button_status == "Button not pressed":
+                    if self.filters[button_name]['last_voltage'] < 0.1:
+                        logger.info(f"{button_name} released")
                 
                 self.filters[button_name]['last_voltage'] = voltage
             except Exception as e:
@@ -58,9 +61,10 @@ class TriggerManager:
     def get_button_status(self, voltage):
         if voltage < 0.1:
             return "Button pressed"
-        elif voltage > 0.9:
+        elif voltage > 0.5:  # Changed from 0.9 to 0.5 for more sensitivity
             return "Button not pressed"
         else:
+            logger.warning(f"Voltage in undefined range: {voltage:.3f}V")
             return "Error: Voltage in undefined range"
 
     def trigger_effect(self, room, effect_name):
