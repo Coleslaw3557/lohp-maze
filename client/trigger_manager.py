@@ -24,12 +24,16 @@ class TriggerManager:
         self.laser_intact_times = {}  # New attribute to track when laser beams became intact
         self.setup_adc()
         
-        # Constants for button detection
+        # Constants for button and piezo detection
         self.COOLDOWN_TIME = config.get('cooldown_time', 0.2)
         self.CONNECTED_THRESHOLD = config.get('connected_threshold', 0.3)
+        self.PIEZO_THRESHOLD = config.get('piezo_threshold', 0.5)
         
-        # Initialize filters for button detection
-        self.filters = {f"Button {i+1}": {'last_voltage': 0, 'last_press': 0} for i in range(4)}
+        # Initialize filters for button and piezo detection
+        self.filters = {
+            **{f"Button {i+1}": {'last_voltage': 0, 'last_press': 0} for i in range(4)},
+            **{f"Piezo {i}": {'last_voltage': 0, 'last_trigger': 0} for i in range(3)}
+        }
 
     def check_cuddle_cross_buttons(self):
         if not self.button_channels:
@@ -57,6 +61,29 @@ class TriggerManager:
                 self.filters[button_name]['last_voltage'] = voltage
             except Exception as e:
                 logger.error(f"Error reading {button_name}: {str(e)}")
+
+    def check_piezo_sensors(self):
+        if not self.piezo_channels:
+            logger.warning("No piezo channels available. ADC might not be set up correctly.")
+            return
+
+        current_time = time.time()
+        for piezo_name, channel in self.piezo_channels.items():
+            try:
+                value = channel.value
+                voltage = channel.voltage
+                
+                logger.debug(f"Piezo {piezo_name}: Value: {value}, Voltage: {voltage:.3f}V")
+                
+                if voltage > self.PIEZO_THRESHOLD:
+                    if current_time - self.filters[f'Piezo {piezo_name}']['last_trigger'] > self.COOLDOWN_TIME:
+                        logger.info(f"Piezo {piezo_name} triggered")
+                        self.filters[f'Piezo {piezo_name}']['last_trigger'] = current_time
+                        self.trigger_effect(f"Porto Room Piezo {piezo_name + 1}")
+                
+                self.filters[f'Piezo {piezo_name}']['last_voltage'] = voltage
+            except Exception as e:
+                logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
         if voltage < 0.1:
@@ -112,6 +139,7 @@ class TriggerManager:
         try:
             i2c = busio.I2C(board.SCL, board.SDA)
             self.ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Cuddle Cross buttons
+            self.ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for piezo sensors
             
             self.button_channels = {
                 'Button 1': AnalogIn(self.ads1, ADS.P0),
@@ -119,11 +147,20 @@ class TriggerManager:
                 'Button 3': AnalogIn(self.ads1, ADS.P2),
                 'Button 4': AnalogIn(self.ads1, ADS.P3)
             }
-            logger.info("ADC setup completed for Cuddle Cross buttons (0x48)")
+            
+            self.piezo_channels = {
+                0: AnalogIn(self.ads2, ADS.P0),
+                1: AnalogIn(self.ads2, ADS.P1),
+                2: AnalogIn(self.ads2, ADS.P2)
+            }
+            
+            logger.info("ADC setup completed for Cuddle Cross buttons (0x48) and piezo sensors (0x49)")
         except Exception as e:
             logger.error(f"Error setting up ADC: {str(e)}")
             self.ads1 = None
+            self.ads2 = None
             self.button_channels = {}
+            self.piezo_channels = {}
 
     async def monitor_triggers(self, callback):
         while True:
@@ -148,6 +185,8 @@ class TriggerManager:
                         logger.debug(f"Laser beam intact: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
                 elif trigger['type'] == 'adc':
                     self.check_cuddle_cross_buttons()
+                elif trigger['type'] == 'piezo':
+                    self.check_piezo_sensors()
             
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
