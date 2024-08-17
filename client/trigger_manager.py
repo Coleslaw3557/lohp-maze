@@ -122,7 +122,7 @@ class TriggerManager:
             if trigger['type'] == 'laser':
                 GPIO.setup(trigger['tx_pin'], GPIO.OUT)
                 GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
-                GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
                 logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']}, RX pin {trigger['rx_pin']}")
             elif trigger['type'] == 'gpio':
                 if 'pin' in trigger:
@@ -130,6 +130,8 @@ class TriggerManager:
                     logger.info(f"GPIO trigger set up: {trigger['name']}, pin {trigger['pin']}")
                 else:
                     logger.warning(f"GPIO trigger {trigger['name']} is missing 'pin' configuration")
+            elif trigger['type'] in ['adc', 'piezo']:
+                logger.info(f"ADC/Piezo trigger registered: {trigger['name']}")
         logger.info("All configured triggers set up")
 
     def setup_adc(self):
@@ -180,6 +182,17 @@ class TriggerManager:
                     await self.check_piezo_trigger(trigger, callback, current_time)
             
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
+
+    async def check_laser_trigger(self, trigger, callback, current_time):
+        rx_state = GPIO.input(trigger['rx_pin'])
+        if rx_state == GPIO.LOW:  # Laser beam is broken
+            if self.check_trigger_cooldown(trigger['name'], current_time):
+                logger.info(f"Laser beam broken: {trigger['name']}")
+                self.set_trigger_cooldown(trigger['name'], current_time)
+                await callback(trigger['name'])
+        else:
+            # Reset the cooldown if the beam is restored
+            self.trigger_cooldowns.pop(trigger['name'], None)
 
     async def check_piezo_trigger(self, trigger, callback, current_time):
         channel = self.piezo_channels[trigger['adc_channel']]
