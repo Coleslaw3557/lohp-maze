@@ -27,6 +27,13 @@ class TriggerManager:
         self.CONNECTED_THRESHOLD = config.get('connected_threshold', 0.3)
         self.PIEZO_THRESHOLD = config.get('piezo_threshold', 0.5)
         
+        # Initialize piezo-related attributes
+        self.piezo_attempts = 0
+        self.piezo_settings = config.get('piezo_settings', {
+            'attempts_required': 3,
+            'correct_answer_probability': 0.25
+        })
+        
         # Initialize based on configured triggers
         self.setup_triggers()
         asyncio.create_task(self.setup_adc())
@@ -322,7 +329,8 @@ class TriggerManager:
             effect_name = "WrongAnswer"
 
         logger.info(f"Triggering effect: {effect_name}")
-        trigger['action']['data']['effect_name'] = effect_name
+        action_data = trigger['action']['data'].copy()  # Create a copy of the original data
+        action_data['effect_name'] = effect_name
         try:
             await callback(trigger['name'])
             logger.info(f"Successfully triggered effect: {effect_name}")
