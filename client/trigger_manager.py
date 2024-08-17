@@ -328,21 +328,21 @@ async def execute_curl_action(self, trigger, action):
 
         logger.error(f"Failed to trigger action for {trigger['name']} after {max_retries} attempts")
 
-    async def trigger_effect(self, trigger_name):
-        trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
-        if not trigger:
-            logger.error(f"No trigger found with name: {trigger_name}")
-            return
+async def trigger_effect(self, trigger_name):
+    trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
+    if not trigger:
+        logger.error(f"No trigger found with name: {trigger_name}")
+        return
 
-        action = trigger.get('action')
-        if not action:
-            logger.error(f"No action defined for trigger: {trigger_name}")
-            return
+    action = trigger.get('action')
+    if not action:
+        logger.error(f"No action defined for trigger: {trigger_name}")
+        return
 
-        if action['type'] == 'curl':
-            await self.execute_curl_action(trigger, action)
-        else:
-            logger.error(f"Unsupported action type for trigger {trigger_name}: {action['type']}")
+    if action['type'] == 'curl':
+        await self.execute_curl_action(trigger, action)
+    else:
+        logger.error(f"Unsupported action type for trigger {trigger_name}: {action['type']}")
 
 def cleanup(self):
         GPIO.cleanup()
