@@ -16,12 +16,6 @@ services:
       - /sys/devices/platform/soc/3f200000.gpio:/sys/devices/platform/soc/3f200000.gpio
       - /dev/i2c-1:/dev/i2c-1
     privileged: true
-    volumes:
-      - ./:/app
-      - ./cache:/app/cache
-      - /:/host
-      - /sys/class/gpio:/sys/class/gpio
-      - /sys/devices/platform/soc/3f200000.gpio:/sys/devices/platform/soc/3f200000.gpio
     cap_add:
       - SYS_BOOT
     environment:
