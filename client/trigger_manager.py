@@ -146,22 +146,23 @@ class TriggerManager:
         button_status = self.get_button_status(voltage)
         logger.debug(f"Button status for {trigger['name']}: {button_status}")
         
-        can_trigger, is_pressed = self.check_trigger_cooldown(trigger['name'], current_time)
+        can_trigger, was_pressed = self.check_trigger_cooldown(trigger['name'], current_time)
         
         if button_status == "Button pressed":
-            if not is_pressed and can_trigger:
-                logger.info(f"Button pressed and action triggered: {trigger['name']}")
-                self.set_trigger_cooldown(trigger['name'], current_time, True)
-                try:
-                    await self.execute_trigger_action(trigger)
-                except Exception as e:
-                    logger.error(f"Error executing action for {trigger['name']}: {str(e)}")
-            elif is_pressed:
-                logger.debug(f"Button {trigger['name']} still pressed, no action")
+            if not was_pressed:
+                if can_trigger:
+                    logger.info(f"Button pressed and action triggered: {trigger['name']}")
+                    self.set_trigger_cooldown(trigger['name'], current_time, True)
+                    try:
+                        await self.execute_trigger_action(trigger)
+                    except Exception as e:
+                        logger.error(f"Error executing action for {trigger['name']}: {str(e)}")
+                else:
+                    logger.debug(f"Button {trigger['name']} pressed but in cooldown period")
             else:
-                logger.debug(f"Button {trigger['name']} in cooldown period")
+                logger.debug(f"Button {trigger['name']} still pressed, no action")
         elif button_status == "Button not pressed":
-            if is_pressed:
+            if was_pressed:
                 logger.debug(f"Button {trigger['name']} released")
                 self.reset_trigger_state(trigger['name'])
         
@@ -432,9 +433,8 @@ class TriggerManager:
     def check_trigger_cooldown(self, trigger_name, current_time):
         last_trigger_time, is_pressed = self.trigger_cooldowns.get(trigger_name, (0, False))
         cooldown_period = 5  # 5-second cooldown for all triggers
-        if current_time - last_trigger_time > cooldown_period:
-            return True, is_pressed
-        return False, is_pressed
+        can_trigger = current_time - last_trigger_time > cooldown_period
+        return can_trigger, is_pressed
 
     def set_trigger_cooldown(self, trigger_name, current_time, is_pressed):
         self.trigger_cooldowns[trigger_name] = (current_time, is_pressed)
@@ -443,6 +443,9 @@ class TriggerManager:
         if trigger_name in self.trigger_cooldowns:
             last_time, _ = self.trigger_cooldowns[trigger_name]
             self.trigger_cooldowns[trigger_name] = (last_time, False)
+
+    def get_trigger_state(self, trigger_name):
+        return self.trigger_cooldowns.get(trigger_name, (0, False))
 
     def cleanup(self):
         GPIO.cleanup()
