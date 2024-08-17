@@ -137,7 +137,6 @@ class TriggerManager:
             return
 
         try:
-            value = channel_info['channel'].value
             voltage = channel_info['channel'].voltage
         except Exception as e:
             logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
@@ -146,25 +145,21 @@ class TriggerManager:
         button_status = self.get_button_status(voltage)
         logger.debug(f"Button status for {trigger['name']}: {button_status}")
         
-        can_trigger, was_pressed = self.check_trigger_cooldown(trigger['name'], current_time)
+        last_time, was_pressed = self.get_trigger_state(trigger['name'])
         
         if button_status == "Button pressed":
-            if not was_pressed:
-                if can_trigger:
-                    logger.info(f"Button pressed and action triggered: {trigger['name']}")
-                    self.set_trigger_cooldown(trigger['name'], current_time, True)
-                    try:
-                        await self.execute_trigger_action(trigger)
-                    except Exception as e:
-                        logger.error(f"Error executing action for {trigger['name']}: {str(e)}")
-                else:
-                    logger.debug(f"Button {trigger['name']} pressed but in cooldown period")
+            if not was_pressed and self.is_button_press_valid(trigger['name'], current_time):
+                logger.info(f"Button pressed and action triggered: {trigger['name']}")
+                self.set_trigger_cooldown(trigger['name'], current_time, True)
+                try:
+                    await self.execute_trigger_action(trigger)
+                except Exception as e:
+                    logger.error(f"Error executing action for {trigger['name']}: {str(e)}")
             else:
-                logger.debug(f"Button {trigger['name']} still pressed, no action")
-        elif button_status == "Button not pressed":
-            if was_pressed:
-                logger.debug(f"Button {trigger['name']} released")
-                self.reset_trigger_state(trigger['name'])
+                logger.debug(f"Button {trigger['name']} still pressed or debouncing, no action")
+        elif button_status == "Button not pressed" and was_pressed:
+            logger.debug(f"Button {trigger['name']} released")
+            self.reset_trigger_state(trigger['name'])
         
         channel_info['last_value'] = voltage
 
@@ -446,7 +441,7 @@ class TriggerManager:
 
     def check_trigger_cooldown(self, trigger_name, current_time):
         last_trigger_time, is_pressed = self.trigger_cooldowns.get(trigger_name, (0, False))
-        cooldown_period = 5  # 5-second cooldown for all triggers
+        cooldown_period = 0.5  # 500ms cooldown for debounce
         can_trigger = current_time - last_trigger_time > cooldown_period
         return can_trigger, is_pressed
 
@@ -460,6 +455,12 @@ class TriggerManager:
 
     def get_trigger_state(self, trigger_name):
         return self.trigger_cooldowns.get(trigger_name, (0, False))
+
+    def is_button_press_valid(self, trigger_name, current_time):
+        last_time, is_pressed = self.get_trigger_state(trigger_name)
+        if not is_pressed and current_time - last_time > 0.05:  # 50ms debounce
+            return True
+        return False
 
     def cleanup(self):
         GPIO.cleanup()
