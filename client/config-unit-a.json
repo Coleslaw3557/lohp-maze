@@ -18,7 +18,7 @@
         },
         "data": {
           "room": "Entrance",
-          "effect_name": "EntranceEffect"
+          "effect_name": "Entrance"
         }
       }
     },
@@ -36,7 +36,7 @@
         },
         "data": {
           "room": "Cuddle Cross",
-          "effect_name": "CuddleCrossEffect"
+          "effect_name": "CuddlePuddle"
         }
       }
     },
@@ -54,7 +54,7 @@
         },
         "data": {
           "room": "Photo Bomb Room",
-          "effect_name": "PhotoBombEffect"
+          "effect_name": "PhotoBomb-Spot"
         }
       }
     },
@@ -72,7 +72,7 @@
         },
         "data": {
           "room": "No Friends Monday",
-          "effect_name": "NoFriendsMondayEffect"
+          "effect_name": "NoFriendsMonday"
         }
       }
     },
@@ -90,7 +90,7 @@
         },
         "data": {
           "room": "Exit",
-          "effect_name": "ExitEffect"
+          "effect_name": "Lightning"
         }
       }
     },
@@ -151,14 +151,11 @@
       "action": {
         "type": "curl",
         "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
+        "url": "http://${server_ip}:5000/api/stop_music",
         "headers": {
           "Content-Type": "application/json"
         },
-        "data": {
-          "room": "Cuddle Cross",
-          "effect_name": "Button4Effect"
-        }
+        "data": {}
       }
     }
   ],
