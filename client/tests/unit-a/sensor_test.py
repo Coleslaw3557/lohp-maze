@@ -69,7 +69,7 @@ def get_sensor_data():
     for room, pins in current_unit['lasers'].items():
         rx_status = GPIO.input(pins['LR'])
         tx_status = GPIO.input(pins['LT'])
-        status = f"Beam: {'Broken' if rx_status else 'Intact'}"  # Inverted logic
+        status = f"Beam: {'Intact' if rx_status else 'Broken'}"  # Corrected logic
         tx_state = f"TX: {'ON' if tx_status else 'OFF'}"
         raw_status = f"Raw RX: {'HIGH' if rx_status else 'LOW'}"
         data.append((f"{room} Laser", "Laser System", room, f"{status}, {tx_state}, {raw_status}"))
