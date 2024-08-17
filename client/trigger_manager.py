@@ -298,7 +298,14 @@ class TriggerManager:
         else:
             logger.error(f"Unsupported action type for trigger {trigger_name}: {action['type']}")
 
-async def execute_curl_action(self, trigger, action):
+    def get_action(self, trigger_name):
+        for trigger in self.triggers:
+            if trigger['name'] == trigger_name:
+                return trigger.get('action')
+        logger.warning(f"No action found for trigger: {trigger_name}")
+        return None
+
+    async def execute_curl_action(self, trigger, action):
         url = action['url'].replace('${server_ip}', self.config.get('server_ip'))
         headers = action.get('headers', {})
         data = action.get('data', {})
