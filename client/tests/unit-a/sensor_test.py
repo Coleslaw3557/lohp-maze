@@ -46,6 +46,9 @@ def setup_gpio():
         GPIO.setup(pins['LR'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Use pull-down resistor
         print(f"Setting up {room} laser: LT (GPIO {pins['LT']}) set to HIGH, LR (GPIO {pins['LR']}) set as INPUT")
     
+    # Explicitly set Entrance LR as input with pull-down
+    GPIO.setup(current_unit['lasers']['Entrance']['LR'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    
     print("GPIO setup complete")
 
 # Set up GPIO
@@ -72,6 +75,11 @@ def get_sensor_data():
         status = f"Beam: {'Intact' if rx_status else 'Broken'}"  # Corrected logic
         tx_state = f"TX: {'ON' if tx_status else 'OFF'}"
         raw_status = f"Raw RX: {'HIGH' if rx_status else 'LOW'}"
+        
+        # Add debug print for Entrance laser
+        if room == 'Entrance':
+            print(f"Debug - Entrance LR (GPIO {pins['LR']}) status: {rx_status}")
+        
         data.append((f"{room} Laser", "Laser System", room, f"{status}, {tx_state}, {raw_status}"))
     
     # Test ADC for button presses
