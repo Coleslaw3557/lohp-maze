@@ -137,7 +137,6 @@ class TriggerManager:
         try:
             value = channel_info['channel'].value
             voltage = channel_info['channel'].voltage
-            logger.debug(f"ADC reading for {trigger['name']}: Value: {value}, Voltage: {voltage:.3f}V")
         except Exception as e:
             logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
             return
