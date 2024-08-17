@@ -8,6 +8,13 @@ services:
       - "/dev/gpiomem:/dev/gpiomem"
       - "/dev/i2c-1:/dev/i2c-1"
       - "/dev/mem:/dev/mem"
+    volumes:
+      - ./:/app
+      - ./cache:/app/cache
+      - /:/host
+      - /sys/class/gpio:/sys/class/gpio
+      - /sys/devices/platform/soc/3f200000.gpio:/sys/devices/platform/soc/3f200000.gpio
+      - /dev/i2c-1:/dev/i2c-1
     privileged: true
     volumes:
       - ./:/app

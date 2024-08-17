@@ -165,12 +165,50 @@ class TriggerManager:
                     self.piezo_channels[channel] = AnalogIn(self.ads2, getattr(ADS, f'P{channel}'))
             
             logger.info("ADC setup completed for configured triggers")
+            logger.info(f"Button channels: {self.button_channels}")
+            logger.info(f"Piezo channels: {self.piezo_channels}")
         except Exception as e:
             logger.error(f"Error setting up ADC: {str(e)}")
             self.ads1 = None
             self.ads2 = None
             self.button_channels = {}
             self.piezo_channels = {}
+
+    async def monitor_triggers(self, callback):
+        while True:
+            current_time = time.time()
+            if current_time - self.start_time < self.startup_delay:
+                await asyncio.sleep(0.1)  # Sleep for 100ms during startup delay
+                continue
+            
+            for trigger in self.active_triggers:
+                if trigger['type'] == 'laser':
+                    await self.check_laser_trigger(trigger, callback, current_time)
+                elif trigger['type'] == 'gpio':
+                    await self.check_gpio_trigger(trigger, callback, current_time)
+                elif trigger['type'] == 'adc':
+                    await self.check_adc_trigger(trigger, callback, current_time)
+                elif trigger['type'] == 'piezo':
+                    await self.check_piezo_trigger(trigger, callback, current_time)
+            
+            await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
+
+    async def check_adc_trigger(self, trigger, callback, current_time):
+        channel = self.button_channels.get(trigger['name'])
+        if channel is None:
+            logger.warning(f"No channel found for trigger {trigger['name']}")
+            return
+
+        voltage = channel.voltage
+        button_status = self.get_button_status(voltage)
+        
+        logger.debug(f"ADC {trigger['name']}: Voltage: {voltage:.3f}V, Status: {button_status}")
+        
+        if button_status == "Button pressed":
+            if self.check_trigger_cooldown(trigger['name'], current_time):
+                logger.info(f"Button pressed: {trigger['name']}")
+                self.set_trigger_cooldown(trigger['name'], current_time)
+                await callback(trigger['name'])
 
     async def monitor_triggers(self, callback):
         while True:
