@@ -84,8 +84,10 @@ class TriggerManager:
 
     def get_button_status(self, voltage):
         if voltage < 0.1:
+            logger.debug(f"Button pressed: Voltage {voltage:.3f}V")
             return "Button pressed"
-        elif voltage > 0.5:  # Changed from 0.9 to 0.5 for more sensitivity
+        elif voltage > 0.5:
+            logger.debug(f"Button not pressed: Voltage {voltage:.3f}V")
             return "Button not pressed"
         else:
             logger.warning(f"Voltage in undefined range: {voltage:.3f}V")
@@ -209,9 +211,12 @@ class TriggerManager:
             return
 
         voltage = channel.voltage
+        raw_value = channel.value
+        logger.debug(f"Raw ADC data for {trigger['name']}: Value: {raw_value}, Voltage: {voltage:.3f}V")
+        
         button_status = self.get_button_status(voltage)
         
-        logger.debug(f"ADC {trigger['name']}: Voltage: {voltage:.3f}V, Status: {button_status}")
+        logger.debug(f"ADC {trigger['name']}: Value: {raw_value}, Voltage: {voltage:.3f}V, Status: {button_status}")
         
         if button_status == "Button pressed":
             if self.check_trigger_cooldown(trigger['name'], current_time):
@@ -219,6 +224,8 @@ class TriggerManager:
                 self.set_trigger_cooldown(trigger['name'], current_time)
                 await callback(trigger['name'])
                 await self.trigger_effect(trigger['name'])
+        elif button_status == "Error: Voltage in undefined range":
+            logger.warning(f"Possible hardware issue with {trigger['name']}: Value: {raw_value}, Voltage: {voltage:.3f}V")
 
     async def monitor_triggers(self, callback):
         while True:

@@ -66,7 +66,7 @@ def execute_action(action, server_ip):
         except Exception as e:
             logger.error(f"Error executing action: {str(e)}")
 
-def monitor_triggers_thread(config):
+def monitor_triggers_thread(config, trigger_manager):
     last_trigger_time = {}
     rate_limit = config.get('rate_limit', 5)
     startup_delay = 10  # 10 seconds startup delay
@@ -93,6 +93,8 @@ def monitor_triggers_thread(config):
                     if trigger_name in last_trigger_time and (current_time - last_trigger_time[trigger_name]) > rate_limit:
                         last_trigger_time.pop(trigger_name, None)
                         logger.debug(f"Laser beam restored: {trigger_name} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
+            elif trigger['type'] == 'adc':
+                asyncio.run(trigger_manager.check_adc_trigger(trigger, lambda name: execute_action(trigger['action'], config.get('server_ip')), current_time))
         
         time.sleep(0.01)  # Check every 10ms
 
@@ -120,6 +122,7 @@ async def main():
             trigger_manager = TriggerManager(config)
             logger.info(f"TriggerManager initialized with configuration from config file")
             await trigger_manager.setup_adc()  # Ensure ADC is set up asynchronously
+            logger.info("ADC setup completed")
         except Exception as e:
             logger.error(f"Failed to initialize TriggerManager: {str(e)}")
             trigger_manager = None
