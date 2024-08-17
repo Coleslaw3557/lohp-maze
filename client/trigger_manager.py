@@ -23,6 +23,7 @@ class TriggerManager:
         self.cooldown_period = self.config.get('cooldown_period', 5)
         self.startup_delay = self.config.get('startup_delay', 10)
         self.trigger_cooldowns = {}
+        self.laser_states = {}  # To keep track of laser beam states
 
         # Constants for detection
         self.COOLDOWN_TIME = 0.2
@@ -196,18 +197,27 @@ class TriggerManager:
 
     async def check_laser_trigger(self, trigger, callback, current_time):
         rx_state = GPIO.input(trigger['rx_pin'])
-        if rx_state == GPIO.LOW:  # Laser beam is broken
-            if self.check_trigger_cooldown(trigger['name'], current_time):
-                logger.info(f"Laser beam broken: {trigger['name']}")
-                self.set_trigger_cooldown(trigger['name'], current_time)
+        trigger_name = trigger['name']
+        
+        if trigger_name not in self.laser_states:
+            self.laser_states[trigger_name] = rx_state
+            return  # Initialize state without triggering
+
+        previous_state = self.laser_states[trigger_name]
+        self.laser_states[trigger_name] = rx_state
+
+        if previous_state == GPIO.HIGH and rx_state == GPIO.LOW:  # Laser beam was intact and is now broken
+            if self.check_trigger_cooldown(trigger_name, current_time):
+                logger.info(f"Laser beam broken: {trigger_name}")
+                self.set_trigger_cooldown(trigger_name, current_time)
                 if callback:
-                    result = callback(trigger['name'])
+                    result = callback(trigger_name)
                     if asyncio.iscoroutine(result):
                         await result
                 else:
-                    logger.warning(f"No callback provided for trigger: {trigger['name']}")
-        else:
-            self.trigger_cooldowns.pop(trigger['name'], None)
+                    logger.warning(f"No callback provided for trigger: {trigger_name}")
+        elif rx_state == GPIO.HIGH:
+            self.trigger_cooldowns.pop(trigger_name, None)
 
     async def check_gpio_trigger(self, trigger, callback, current_time):
         # Implementation for GPIO trigger check
@@ -286,6 +296,13 @@ class TriggerManager:
 
         if effect_name == "WrongAnswer" and self.piezo_attempts >= self.piezo_settings['attempts_required']:
             self.piezo_attempts = 0
+
+    def is_associated_room(self, room):
+        return room in self.associated_rooms
+
+    def cleanup(self):
+        GPIO.cleanup()
+        logger.info("GPIO cleanup completed")
 
     async def trigger_effect(self, trigger_name):
         trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
