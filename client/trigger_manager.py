@@ -36,6 +36,7 @@ class TriggerManager:
         self.KNOCK_THRESHOLD = 2.5
         self.VOLTAGE_CHANGE_THRESHOLD = 0.5
         self.DEBUG_THRESHOLD = 0.1
+        self.BUTTON_DEBOUNCE_TIME = 0.1
         
         # Determine the ADC configuration based on the unit's config
         self.adc_config = self.determine_adc_config()
@@ -120,12 +121,12 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage < 0.1:  # Adjusted threshold for button press
+        if voltage < 0.1:
             return "Button pressed"
-        elif voltage > 3.0:  # Adjusted threshold for button not pressed
+        elif voltage > 0.9:
             return "Button not pressed"
         else:
-            return "Unknown"  # Voltage in between thresholds
+            return "Unknown"  # Voltage in undefined range
 
     async def check_adc_trigger(self, trigger, callback, current_time):
         channel_info = self.adc_channels.get(trigger['name'])
@@ -134,8 +135,9 @@ class TriggerManager:
             return
 
         try:
+            value = channel_info['channel'].value
             voltage = channel_info['channel'].voltage
-            logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V")
+            logger.debug(f"ADC reading for {trigger['name']}: Value: {value}, Voltage: {voltage:.3f}V")
         except Exception as e:
             logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
             return
@@ -144,18 +146,17 @@ class TriggerManager:
         logger.debug(f"Button status for {trigger['name']}: {button_status}")
         
         if button_status == "Button pressed":
-            if self.check_trigger_cooldown(trigger['name'], current_time):
+            if current_time - channel_info['last_trigger_time'] > self.BUTTON_DEBOUNCE_TIME:
                 logger.info(f"Button pressed: {trigger['name']}")
-                self.set_trigger_cooldown(trigger['name'], current_time)
+                channel_info['last_trigger_time'] = current_time
                 await callback(trigger['name'])
             else:
-                logger.debug(f"Button {trigger['name']} in cooldown period")
+                logger.debug(f"Button {trigger['name']} debounced")
         elif button_status == "Button not pressed":
-            if trigger['name'] in self.trigger_cooldowns:
-                logger.debug(f"Button {trigger['name']} released, resetting cooldown")
-                self.trigger_cooldowns.pop(trigger['name'], None)
-        else:
-            logger.warning(f"Unexpected button status for {trigger['name']}: {button_status}")
+            if channel_info['last_value'] < 0.1:
+                logger.debug(f"Button {trigger['name']} released")
+        
+        channel_info['last_value'] = voltage
 
     async def trigger_effect(self, trigger_name):
         trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
