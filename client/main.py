@@ -10,6 +10,7 @@ import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
+import os
 from websocket_client import WebSocketClient
 from audio_manager import AudioManager
 from trigger_manager import TriggerManager
