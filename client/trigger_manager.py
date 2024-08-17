@@ -441,7 +441,7 @@ class TriggerManager:
 
     def check_trigger_cooldown(self, trigger_name, current_time):
         last_trigger_time, is_pressed = self.trigger_cooldowns.get(trigger_name, (0, False))
-        cooldown_period = 0.5  # 500ms cooldown for debounce
+        cooldown_period = 1.0  # 1 second cooldown for debounce
         can_trigger = current_time - last_trigger_time > cooldown_period
         return can_trigger, is_pressed
 
@@ -458,7 +458,7 @@ class TriggerManager:
 
     def is_button_press_valid(self, trigger_name, current_time):
         last_time, is_pressed = self.get_trigger_state(trigger_name)
-        if not is_pressed and current_time - last_time > 0.05:  # 50ms debounce
+        if not is_pressed and current_time - last_time > 1.0:  # 1 second debounce
             return True
         return False
 
@@ -515,12 +515,12 @@ class TriggerManager:
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.request(action['method'], url, headers=headers, json=data) as response:
+                            response_text = await response.text()
                             if response.status == 200:
-                                response_text = await response.text()
                                 logger.info(f"Triggered action for {trigger['name']}. Response: {response_text}")
                                 return
                             else:
-                                logger.warning(f"Failed to trigger action for {trigger['name']}. Status code: {response.status}. Attempt {attempt + 1}/{max_retries}")
+                                logger.warning(f"Failed to trigger action for {trigger['name']}. Status code: {response.status}. Response: {response_text}. Attempt {attempt + 1}/{max_retries}")
                 except Exception as e:
                     logger.error(f"Error triggering action for {trigger['name']}: {str(e)}. Attempt {attempt + 1}/{max_retries}")
 
