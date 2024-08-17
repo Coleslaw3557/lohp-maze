@@ -120,7 +120,7 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage < 1.5:  # Adjust this threshold based on your button setup
+        if voltage > 2.5:  # Adjust this threshold based on your button setup
             logger.debug(f"Button pressed: Voltage {voltage:.3f}V")
             return "Button pressed"
         else:
@@ -213,6 +213,9 @@ class TriggerManager:
             logger.info("ADC setup completed for configured triggers")
             logger.info(f"ADC devices: {list(self.ads_devices.keys())}")
             logger.info(f"ADC channels: {list(self.adc_channels.keys())}")
+
+            # Add a delay to allow ADC readings to stabilize
+            await asyncio.sleep(2)
 
             # Test reading from each channel
             for name, channel_info in self.adc_channels.items():
