@@ -120,9 +120,9 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage <= 0.3:  # Button pressed: 0 to 0.3V
+        if voltage < 0.1:
             return "Button pressed"
-        elif voltage >= 0.6:  # Button not pressed: 0.6V and above
+        elif voltage > 0.9:
             return "Button not pressed"
         else:
             logger.warning(f"Unexpected voltage reading: {voltage}V")
@@ -142,15 +142,21 @@ class TriggerManager:
             return
 
         button_status = self.get_button_status(voltage)
+        logger.debug(f"Button status for {trigger['name']}: {button_status}")
         
         if button_status == "Button pressed":
             if self.check_trigger_cooldown(trigger['name'], current_time):
                 logger.info(f"Button pressed: {trigger['name']}")
                 self.set_trigger_cooldown(trigger['name'], current_time)
                 await callback(trigger['name'])
+            else:
+                logger.debug(f"Button {trigger['name']} in cooldown period")
         elif button_status == "Button not pressed":
-            # Reset cooldown when button is released
-            self.trigger_cooldowns.pop(trigger['name'], None)
+            if trigger['name'] in self.trigger_cooldowns:
+                logger.debug(f"Button {trigger['name']} released, resetting cooldown")
+                self.trigger_cooldowns.pop(trigger['name'], None)
+        else:
+            logger.warning(f"Unexpected button status for {trigger['name']}: {button_status}")
 
     def trigger_effect(self, trigger_name):
         trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
