@@ -5,11 +5,100 @@
   "audio_output_device": "default",
   "triggers": [
     {
+      "name": "EntranceLaser",
+      "type": "laser",
+      "tx_pin": 17,
+      "rx_pin": 27,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Entrance",
+          "effect_name": "EntranceEffect"
+        }
+      }
+    },
+    {
+      "name": "CuddleCrossLaser",
+      "type": "laser",
+      "tx_pin": 22,
+      "rx_pin": 5,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Cuddle Cross",
+          "effect_name": "CuddleCrossEffect"
+        }
+      }
+    },
+    {
+      "name": "PhotoBombLaser",
+      "type": "laser",
+      "tx_pin": 24,
+      "rx_pin": 6,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Photo Bomb Room",
+          "effect_name": "PhotoBombEffect"
+        }
+      }
+    },
+    {
+      "name": "NoFriendsMondayLaser",
+      "type": "laser",
+      "tx_pin": 25,
+      "rx_pin": 13,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "No Friends Monday",
+          "effect_name": "NoFriendsMondayEffect"
+        }
+      }
+    },
+    {
+      "name": "ExitLaser",
+      "type": "laser",
+      "tx_pin": 19,
+      "rx_pin": 26,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Exit",
+          "effect_name": "ExitEffect"
+        }
+      }
+    },
+    {
       "name": "CuddleCrossButton1",
       "type": "adc",
       "adc_address": "0x48",
       "channel": 0,
-      "room": "Cuddle Cross",
       "action": {
         "type": "curl",
         "method": "POST",
@@ -58,20 +147,20 @@
       "name": "CuddleCrossButton4",
       "type": "adc",
       "adc_address": "0x48",
-      "channel": 3
+      "channel": 3,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Cuddle Cross",
+          "effect_name": "Button4Effect"
+        }
+      }
     }
-  ],
-  "lasers": [
-    {"name": "EntranceLT", "gpio": 17},
-    {"name": "EntranceLR", "gpio": 27},
-    {"name": "CuddleCrossLT", "gpio": 22},
-    {"name": "CuddleCrossLR", "gpio": 5},
-    {"name": "PhotoBombLT", "gpio": 24},
-    {"name": "PhotoBombLR", "gpio": 6},
-    {"name": "NoFriendsMondayLT", "gpio": 25},
-    {"name": "NoFriendsMondayLR", "gpio": 13},
-    {"name": "ExitLT", "gpio": 19},
-    {"name": "ExitLR", "gpio": 26}
   ],
   "cache_dir": "/app/cache"
 }
