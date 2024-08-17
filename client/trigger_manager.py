@@ -351,7 +351,7 @@ async def trigger_effect(self, trigger_name):
     else:
         logger.error(f"Unsupported action type for trigger {trigger_name}: {action['type']}")
 
-def cleanup(self):
+    def cleanup(self):
         GPIO.cleanup()
         logger.info("GPIO cleanup completed")
 
