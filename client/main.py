@@ -93,7 +93,7 @@ async def main():
         logger.info("TriggerManager setup completed")
         
         # Start monitoring triggers
-        asyncio.create_task(trigger_manager.monitor_triggers(lambda name: execute_action(trigger_manager.get_action(name), config.get('server_ip'))))
+        asyncio.create_task(trigger_manager.monitor_triggers(lambda action: execute_action(action, config.get('server_ip')) if action else None))
         logger.info("Started trigger monitoring task")
 
         sync_manager = SyncManager()
