@@ -16,24 +16,21 @@ class TriggerManager:
         self.config = config
         self.triggers = config.get('triggers', [])
         GPIO.setmode(GPIO.BCM)
-        self.setup_triggers()
         self.start_time = time.time()
         self.cooldown_period = config.get('cooldown_period', 5)
         self.startup_delay = config.get('startup_delay', 10)
         self.trigger_cooldowns = {}
-        self.laser_intact_times = {}  # New attribute to track when laser beams became intact
-        self.setup_adc()
+        self.laser_intact_times = {}
         
-        # Constants for button and piezo detection
+        # Constants for detection
         self.COOLDOWN_TIME = config.get('cooldown_time', 0.2)
         self.CONNECTED_THRESHOLD = config.get('connected_threshold', 0.3)
         self.PIEZO_THRESHOLD = config.get('piezo_threshold', 0.5)
         
-        # Initialize filters for button and piezo detection
-        self.filters = {
-            **{f"Button {i+1}": {'last_voltage': 0, 'last_press': 0} for i in range(4)},
-            **{f"Piezo {i}": {'last_voltage': 0, 'last_trigger': 0} for i in range(3)}
-        }
+        # Initialize based on configured triggers
+        self.setup_triggers()
+        self.setup_adc()
+        self.initialize_filters()
 
     def check_cuddle_cross_buttons(self):
         if not self.button_channels:
@@ -125,7 +122,7 @@ class TriggerManager:
             if trigger['type'] == 'laser':
                 GPIO.setup(trigger['tx_pin'], GPIO.OUT)
                 GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
-                GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Use pull-up resistor
+                GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)
                 logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']}, RX pin {trigger['rx_pin']}")
             elif trigger['type'] == 'gpio':
                 if 'pin' in trigger:
@@ -133,28 +130,31 @@ class TriggerManager:
                     logger.info(f"GPIO trigger set up: {trigger['name']}, pin {trigger['pin']}")
                 else:
                     logger.warning(f"GPIO trigger {trigger['name']} is missing 'pin' configuration")
-        logger.info("All triggers set up")
+        logger.info("All configured triggers set up")
 
     def setup_adc(self):
+        adc_needed = any(trigger['type'] in ['adc', 'piezo'] for trigger in self.triggers)
+        if not adc_needed:
+            logger.info("No ADC triggers configured, skipping ADC setup")
+            return
+
         try:
             i2c = busio.I2C(board.SCL, board.SDA)
-            self.ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Cuddle Cross buttons
+            self.ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for buttons
             self.ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for piezo sensors
             
-            self.button_channels = {
-                'Button 1': AnalogIn(self.ads1, ADS.P0),
-                'Button 2': AnalogIn(self.ads1, ADS.P1),
-                'Button 3': AnalogIn(self.ads1, ADS.P2),
-                'Button 4': AnalogIn(self.ads1, ADS.P3)
-            }
+            self.button_channels = {}
+            self.piezo_channels = {}
             
-            self.piezo_channels = {
-                0: AnalogIn(self.ads2, ADS.P0),
-                1: AnalogIn(self.ads2, ADS.P1),
-                2: AnalogIn(self.ads2, ADS.P2)
-            }
+            for trigger in self.triggers:
+                if trigger['type'] == 'adc':
+                    channel = trigger['channel']
+                    self.button_channels[trigger['name']] = AnalogIn(self.ads1, getattr(ADS, f'P{channel}'))
+                elif trigger['type'] == 'piezo':
+                    channel = trigger['adc_channel']
+                    self.piezo_channels[channel] = AnalogIn(self.ads2, getattr(ADS, f'P{channel}'))
             
-            logger.info("ADC setup completed for Cuddle Cross buttons (0x48) and piezo sensors (0x49)")
+            logger.info("ADC setup completed for configured triggers")
         except Exception as e:
             logger.error(f"Error setting up ADC: {str(e)}")
             self.ads1 = None
@@ -171,22 +171,13 @@ class TriggerManager:
             
             for trigger in self.triggers:
                 if trigger['type'] == 'laser':
-                    beam_status = GPIO.input(trigger['rx_pin'])
-                    if beam_status == GPIO.LOW:  # Beam is broken (LOW when using pull-down resistor)
-                        if self.check_laser_cooldown(trigger['name'], current_time):
-                            logger.info(f"Laser beam broken: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
-                            await callback(trigger['name'])
-                            self.set_trigger_cooldown(trigger['name'], current_time)
-                        else:
-                            logger.debug(f"Laser beam broken but in cooldown: {trigger['name']}")
-                    else:
-                        # Beam is intact
-                        GPIO.output(trigger['tx_pin'], GPIO.HIGH)
-                        logger.debug(f"Laser beam intact: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
+                    await self.check_laser_trigger(trigger, callback, current_time)
+                elif trigger['type'] == 'gpio':
+                    await self.check_gpio_trigger(trigger, callback, current_time)
                 elif trigger['type'] == 'adc':
-                    self.check_cuddle_cross_buttons()
+                    await self.check_adc_trigger(trigger, callback, current_time)
                 elif trigger['type'] == 'piezo':
-                    self.check_piezo_sensors()
+                    await self.check_piezo_trigger(trigger, callback, current_time)
             
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
@@ -262,3 +253,9 @@ class TriggerManager:
     def cleanup(self):
         GPIO.cleanup()
         logger.info("GPIO cleanup completed")
+    def initialize_filters(self):
+        self.filters = {}
+        for trigger in self.triggers:
+            if trigger['type'] in ['adc', 'piezo']:
+                self.filters[trigger['name']] = {'last_voltage': 0, 'last_trigger': 0}
+        logger.info("Filters initialized for configured triggers")
