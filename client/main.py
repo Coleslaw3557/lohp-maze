@@ -89,7 +89,7 @@ async def main():
         # Initialize TriggerManager with the new setup
         trigger_manager = TriggerManager(config)
         logger.info(f"TriggerManager initialized with configuration from config file")
-        await trigger_manager.setup()  # New setup method that includes ADC setup
+        await trigger_manager.setup()
         logger.info("TriggerManager setup completed")
         
         # Start monitoring triggers

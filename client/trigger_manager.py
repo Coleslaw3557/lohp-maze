@@ -36,8 +36,10 @@ class TriggerManager:
         self.adc_config = self.determine_adc_config()
         self.setup_piezo()
         self.setup_triggers()
-        asyncio.create_task(self.setup_adc())
         self.initialize_filters()
+
+    async def setup(self):
+        await self.setup_adc()
 
     def log_trigger_info(self):
         logger.info(f"Associated rooms: {self.associated_rooms}")
