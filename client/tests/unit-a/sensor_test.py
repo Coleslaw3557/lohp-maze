@@ -83,7 +83,7 @@ def get_sensor_data():
     for room, pins in current_unit['lasers'].items():
         if room == 'Entrance':
             rx_status = GPIO.input(pins['LR'])
-            status = f"Beam: {'Intact' if rx_status else 'Broken'}"
+            status = f"Beam: {'Broken' if rx_status else 'Intact'}"
             data.append((f"{room} Laser", "Laser System", room, status))
             data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {pins['LT']}, RX GPIO: {pins['LR']}, RX Status: {rx_status}"))
         else:
@@ -159,6 +159,7 @@ try:
                 break
             elif key == 'b':
                 button_test()
+            time.sleep(0.1)  # Add a small delay to prevent too rapid GPIO reading
 except KeyboardInterrupt:
     print("Program interrupted by user")
 except Exception as e:
