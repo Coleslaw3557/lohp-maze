@@ -113,7 +113,8 @@ async def process_triggers(trigger_queue, config):
 
 async def main():
     try:
-        config = ConfigManager('config-unit-b.json')
+        config_file = os.environ.get('UNIT_CONFIG', 'config-unit-a.json')
+        config = ConfigManager(config_file)
         audio_manager = AudioManager(config.get('cache_dir'), config)
         logger.info("Initializing AudioManager")
         await audio_manager.initialize()  # Initialize and download audio files
