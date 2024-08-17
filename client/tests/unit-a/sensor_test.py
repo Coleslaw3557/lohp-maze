@@ -60,9 +60,11 @@ def setup_gpio():
         GPIO.setup(pins['LT'], GPIO.OUT)
         GPIO.output(pins['LT'], GPIO.HIGH)  # Turn on all lasers
         GPIO.setup(pins['LR'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Use pull-down resistor
+        print(f"Setting up {room} laser: LT (GPIO {pins['LT']}) set to HIGH, LR (GPIO {pins['LR']}) set as INPUT")
 
 # Set up GPIO
 setup_gpio()
+print("GPIO setup complete")
 
 # Set up I2C for ADS1115
 i2c = busio.I2C(board.SCL, board.SDA)
