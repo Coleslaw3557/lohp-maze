@@ -464,7 +464,7 @@ class TriggerManager:
             if button_status == "Button pressed":
                 if self.check_trigger_cooldown(trigger['name'], current_time):
                     logger.info(f"Button pressed: {trigger['name']}")
-                    self.set_trigger_cooldown(trigger['name'], current_time)
+                    self.set_trigger_cooldown(trigger['name'], current_time, True)
                     await self.trigger_effect(trigger['name'])
         except Exception as e:
             logger.error(f"Error checking button trigger {trigger['name']}: {str(e)}")
