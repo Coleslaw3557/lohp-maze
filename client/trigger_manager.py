@@ -51,12 +51,15 @@ class TriggerManager:
 
     def determine_adc_config(self):
         adc_config = {}
+        associated_rooms = self.config.get('associated_rooms', [])
         for trigger in self.triggers:
             if trigger['type'] in ['adc', 'piezo']:
-                adc_address = trigger.get('adc_address', '0x48')
-                if adc_address not in adc_config:
-                    adc_config[adc_address] = []
-                adc_config[adc_address].append(trigger)
+                # Only include triggers for associated rooms
+                if 'room' not in trigger or trigger['room'] in associated_rooms:
+                    adc_address = trigger.get('adc_address', '0x48')
+                    if adc_address not in adc_config:
+                        adc_config[adc_address] = []
+                    adc_config[adc_address].append(trigger)
         return adc_config
 
     def check_cuddle_cross_buttons(self):
