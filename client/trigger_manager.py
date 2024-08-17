@@ -324,7 +324,6 @@ class TriggerManager:
     async def read_and_check_adc(self, trigger, channel_info, current_time):
         try:
             voltage = channel_info['channel'].voltage
-            logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V")
             await self.check_adc_trigger(trigger, self.trigger_effect, current_time)
         except Exception as e:
             logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
