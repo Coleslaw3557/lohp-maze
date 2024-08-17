@@ -185,7 +185,13 @@ class TriggerManager:
             self.button_channels = {}
             self.piezo_channels = {}
 
+        # Schedule ADC reading
+        asyncio.create_task(self.read_adc_continuously())
+
     async def monitor_triggers(self, callback):
+        # Start the continuous ADC reading task
+        asyncio.create_task(self.read_adc_continuously())
+
         while True:
             current_time = time.time()
             if current_time - self.start_time < self.startup_delay:
@@ -197,8 +203,6 @@ class TriggerManager:
                     await self.check_laser_trigger(trigger, callback, current_time)
                 elif trigger['type'] == 'gpio':
                     await self.check_gpio_trigger(trigger, callback, current_time)
-                elif trigger['type'] == 'adc':
-                    await self.check_adc_trigger(trigger, callback, current_time)
                 elif trigger['type'] == 'piezo':
                     await self.check_piezo_trigger(trigger, callback, current_time)
             
@@ -226,6 +230,14 @@ class TriggerManager:
                 await self.trigger_effect(trigger['name'])
         elif button_status == "Transition":
             logger.debug(f"Button {trigger['name']} in transition state: Value: {raw_value}, Voltage: {voltage:.3f}V")
+
+    async def read_adc_continuously(self):
+        while True:
+            current_time = time.time()
+            for trigger in self.triggers:
+                if trigger['type'] == 'adc':
+                    await self.check_adc_trigger(trigger, self.trigger_effect, current_time)
+            await asyncio.sleep(0.1)  # Check every 100ms
 
     async def monitor_triggers(self, callback):
         while True:
