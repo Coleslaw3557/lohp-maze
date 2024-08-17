@@ -30,6 +30,9 @@ class TriggerManager:
         self.VOLTAGE_CHANGE_THRESHOLD = 0.5
         self.DEBUG_THRESHOLD = 0.1
         
+        # Determine the ADC configuration based on the unit's config
+        self.adc_config = self.determine_adc_config()
+        
         # Initialize piezo-related attributes only if piezo triggers are configured
         if any(trigger['type'] == 'piezo' for trigger in self.triggers):
             self.piezo_attempts = 0
@@ -45,6 +48,16 @@ class TriggerManager:
         self.setup_triggers()
         asyncio.create_task(self.setup_adc())
         self.initialize_filters()
+
+    def determine_adc_config(self):
+        adc_config = {}
+        for trigger in self.triggers:
+            if trigger['type'] in ['adc', 'piezo']:
+                adc_address = trigger.get('adc_address', '0x48')
+                if adc_address not in adc_config:
+                    adc_config[adc_address] = []
+                adc_config[adc_address].append(trigger)
+        return adc_config
 
     def check_cuddle_cross_buttons(self):
         if not self.button_channels:
@@ -156,8 +169,7 @@ class TriggerManager:
         logger.info(f"Set up {len(self.active_triggers)} triggers for associated rooms: {associated_rooms}")
 
     async def setup_adc(self):
-        adc_needed = any(trigger['type'] in ['adc', 'piezo'] for trigger in self.triggers)
-        if not adc_needed:
+        if not self.adc_config:
             logger.info("No ADC triggers configured, skipping ADC setup")
             return
 
@@ -166,13 +178,11 @@ class TriggerManager:
             self.ads_devices = {}
             self.adc_channels = {}
             
-            for trigger in self.triggers:
-                if trigger['type'] in ['adc', 'piezo']:
-                    adc_address = trigger.get('adc_address', '0x48')
-                    if adc_address not in self.ads_devices:
-                        self.ads_devices[adc_address] = ADS.ADS1115(i2c, address=int(adc_address, 16))
-                    
-                    ads = self.ads_devices[adc_address]
+            for adc_address, triggers in self.adc_config.items():
+                self.ads_devices[adc_address] = ADS.ADS1115(i2c, address=int(adc_address, 16))
+                ads = self.ads_devices[adc_address]
+                
+                for trigger in triggers:
                     channel = trigger.get('channel') or trigger.get('adc_channel')
                     
                     if channel is not None:
