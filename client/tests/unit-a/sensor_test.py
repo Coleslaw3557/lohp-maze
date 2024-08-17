@@ -58,9 +58,9 @@ def setup_gpio():
     
     for room, pins in current_unit['lasers'].items():
         GPIO.setup(pins['LT'], GPIO.OUT)
-        GPIO.output(pins['LT'], GPIO.HIGH)  # Turn on all lasers
+        GPIO.output(pins['LT'], GPIO.LOW)  # Turn off all lasers
         GPIO.setup(pins['LR'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Use pull-down resistor
-        print(f"Setting up {room} laser: LT (GPIO {pins['LT']}) set to HIGH, LR (GPIO {pins['LR']}) set as INPUT")
+        print(f"Setting up {room} laser: LT (GPIO {pins['LT']}) set to LOW, LR (GPIO {pins['LR']}) set as INPUT")
 
 # Set up GPIO
 setup_gpio()
@@ -82,7 +82,7 @@ def get_sensor_data():
     # Monitor laser receivers
     for room, pins in current_unit['lasers'].items():
         rx_status = GPIO.input(pins['LR'])
-        status = f"Beam: {'Broken' if rx_status else 'Intact'}"
+        status = f"Beam: {'Intact' if rx_status else 'Broken'}"
         data.append((f"{room} Laser", "Laser System", room, status))
         data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {pins['LT']}, RX GPIO: {pins['LR']}, RX Status: {rx_status}"))
     
