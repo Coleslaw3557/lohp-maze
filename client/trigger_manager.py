@@ -41,6 +41,7 @@ class TriggerManager:
     def check_resistor_ladder(self):
         current_time = time.time()
         if current_time - self.last_resistor_ladder_trigger < self.resistor_ladder_cooldown:
+            logger.debug("Resistor ladder check skipped due to cooldown")
             return
 
         adc1_a0_voltage = self.gate_resistor_ladder1.voltage if self.gate_resistor_ladder1 else 0
@@ -62,14 +63,19 @@ class TriggerManager:
         }
 
         for ladder, voltage in [("Ladder 1", adc1_a0_voltage), ("Ladder 2", adc1_a1_voltage)]:
+            logger.debug(f"Checking {ladder} with voltage: {voltage:.2f}V")
             for (lower, upper), button_combo in voltage_ranges.items():
                 if lower <= voltage <= upper:
+                    logger.debug(f"{ladder}: Voltage {voltage:.2f}V matches {button_combo}")
                     if button_combo != "No Button":
                         logger.info(f"Resistor {ladder}: {button_combo} pressed")
                         effect_name = f"Gate{button_combo.replace(' ', '').replace('and', 'And')}"
+                        logger.debug(f"Triggering effect: {effect_name}")
                         self.trigger_effect("Gate", effect_name)
                         self.last_resistor_ladder_trigger = current_time
                     return
+        
+        logger.warning(f"No button combination matched for voltages: Ladder 1 = {adc1_a0_voltage:.2f}V, Ladder 2 = {adc1_a1_voltage:.2f}V")
 
     def trigger_effect(self, room, effect_name):
         url = "http://localhost:5000/api/run_effect"
