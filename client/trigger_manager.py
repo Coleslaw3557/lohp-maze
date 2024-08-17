@@ -8,6 +8,7 @@ import RPi.GPIO as GPIO
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 import aiohttp
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,8 @@ class TriggerManager:
         self.startup_delay = self.config.get('startup_delay', 10)
         self.trigger_cooldowns = {}
         self.laser_states = {}  # To keep track of laser beam states
+        self.laser_tx_pins = []  # To store all laser transmitter pins
+        self.laser_thread = None
 
         # Constants for detection
         self.COOLDOWN_TIME = 0.2
@@ -90,6 +93,17 @@ class TriggerManager:
         logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']} (ON), RX pin {trigger['rx_pin']}, Room: {trigger.get('room', 'Not specified')}")
         self.active_triggers.append(trigger)
         self.laser_states[trigger['name']] = GPIO.input(trigger['rx_pin'])  # Initialize laser state
+        self.laser_tx_pins.append(trigger['tx_pin'])  # Add TX pin to the list
+
+    def keep_lasers_on(self):
+        while True:
+            for pin in self.laser_tx_pins:
+                GPIO.output(pin, GPIO.HIGH)
+            time.sleep(0.01)  # Small delay to prevent excessive CPU usage
+
+    def start_laser_thread(self):
+        self.laser_thread = threading.Thread(target=self.keep_lasers_on, daemon=True)
+        self.laser_thread.start()
 
     def setup_gpio_trigger(self, trigger):
         if 'pin' in trigger:
