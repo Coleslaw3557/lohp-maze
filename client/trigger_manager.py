@@ -312,7 +312,7 @@ class TriggerManager:
             if button_status == "Button pressed":
                 if self.check_trigger_cooldown(trigger['name'], current_time):
                     logger.info(f"Button pressed: {trigger['name']}")
-                    self.set_trigger_cooldown(trigger['name'], current_time)
+                    self.set_trigger_cooldown(trigger['name'], current_time, True)
                     await callback(trigger['name'])
             elif button_status == "Button not pressed":
                 self.trigger_cooldowns.pop(trigger['name'], None)
