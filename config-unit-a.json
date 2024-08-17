@@ -61,14 +61,11 @@
       "action": {
         "type": "curl",
         "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
+        "url": "http://${server_ip}:5000/api/stop_music",
         "headers": {
           "Content-Type": "application/json"
         },
-        "data": {
-          "room": "Cuddle Cross",
-          "effect_name": "CuddleCrossEffect"
-        }
+        "data": {}
       }
     }
   ],
