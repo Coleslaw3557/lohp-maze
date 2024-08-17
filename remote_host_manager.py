@@ -366,8 +366,13 @@ class RemoteHostManager:
     async def start_background_music(self):
         logger.info("Starting background music on all connected clients")
         if self.background_music_task is not None:
-            logger.info("Background music task already running")
-            return True
+            logger.info("Cancelling existing background music task")
+            self.background_music_task.cancel()
+            try:
+                await self.background_music_task
+            except asyncio.CancelledError:
+                pass
+            self.background_music_task = None
 
         success = True
         music_file = self.get_random_music_file()
@@ -412,6 +417,15 @@ class RemoteHostManager:
 
     async def stop_background_music(self):
         logger.info("Stopping background music on all connected clients")
+        if self.background_music_task is not None:
+            logger.info("Cancelling background music task")
+            self.background_music_task.cancel()
+            try:
+                await self.background_music_task
+            except asyncio.CancelledError:
+                pass
+            self.background_music_task = None
+
         success = True
         for client_ip in self.connected_clients:
             result = await self.send_audio_command(None, 'stop_background_music', {})

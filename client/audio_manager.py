@@ -268,5 +268,6 @@ class AudioManager:
             self.background_music_player.stop()
             self.background_music_player.release()
             self.background_music_player = None
+        self.last_music_change_time = 0  # Reset the cooldown timer
         logger.info("Background music stopped")
         return True
