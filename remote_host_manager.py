@@ -69,6 +69,22 @@ class RemoteHostManager:
             audio_success = audio_success and client_success
         return audio_success
 
+    async def play_audio_for_client(self, client, effect_name, audio_params):
+        websocket = self.connected_clients.get(client)
+        if websocket:
+            return await self.send_audio_command_ws(websocket, 'play_effect_audio', {
+                'effect_name': effect_name,
+                'file_name': audio_params.get('file'),
+                'volume': audio_params.get('volume', 1.0),
+                'loop': audio_params.get('loop', False)
+            })
+        else:
+            logger.warning(f"Client {client} not found in connected clients")
+            return False
+
+    def get_connected_clients(self):
+        return list(self.connected_clients.keys())
+
     async def send_audio_command_ws(self, websocket, command, audio_data):
         try:
             message = {
