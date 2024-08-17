@@ -28,6 +28,8 @@ class TriggerManager:
         self.startup_delay = config.get('startup_delay', 10)
         self.trigger_cooldowns = {}
         self.laser_intact_times = {}
+        self.button_cooldowns = {}
+        self.button_cooldown_period = 2  # 2 seconds cooldown for buttons
         
         # Constants for detection
         self.COOLDOWN_TIME = 0.2
@@ -146,12 +148,16 @@ class TriggerManager:
         
         if button_status == "Button pressed":
             if current_time - channel_info['last_trigger_time'] > self.BUTTON_DEBOUNCE_TIME:
-                logger.info(f"Button pressed: {trigger['name']}")
-                channel_info['last_trigger_time'] = current_time
-                try:
-                    await self.execute_trigger_action(trigger)
-                except Exception as e:
-                    logger.error(f"Error executing action for {trigger['name']}: {str(e)}")
+                if current_time - self.button_cooldowns.get(trigger['name'], 0) > self.button_cooldown_period:
+                    logger.info(f"Button pressed: {trigger['name']}")
+                    channel_info['last_trigger_time'] = current_time
+                    self.button_cooldowns[trigger['name']] = current_time
+                    try:
+                        await self.execute_trigger_action(trigger)
+                    except Exception as e:
+                        logger.error(f"Error executing action for {trigger['name']}: {str(e)}")
+                else:
+                    logger.debug(f"Button {trigger['name']} in cooldown period")
             else:
                 logger.debug(f"Button {trigger['name']} debounced")
         elif button_status == "Button not pressed":
