@@ -150,27 +150,35 @@ class TriggerManager:
 
         try:
             i2c = busio.I2C(board.SCL, board.SDA)
-            self.ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for buttons
-            self.ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for piezo sensors
-            
+            self.ads_devices = {}
             self.button_channels = {}
             self.piezo_channels = {}
             
             for trigger in self.triggers:
-                if trigger['type'] == 'adc':
-                    channel = trigger['channel']
-                    self.button_channels[trigger['name']] = AnalogIn(self.ads1, getattr(ADS, f'P{channel}'))
-                elif trigger['type'] == 'piezo':
-                    channel = trigger['adc_channel']
-                    self.piezo_channels[channel] = AnalogIn(self.ads2, getattr(ADS, f'P{channel}'))
+                if trigger['type'] in ['adc', 'piezo']:
+                    adc_address = trigger.get('adc_address', '0x48')
+                    if adc_address not in self.ads_devices:
+                        self.ads_devices[adc_address] = ADS.ADS1115(i2c, address=int(adc_address, 16))
+                    
+                    ads = self.ads_devices[adc_address]
+                    channel = trigger.get('channel') or trigger.get('adc_channel')
+                    
+                    if channel is not None:
+                        sensor_channel = AnalogIn(ads, getattr(ADS, f'P{channel}'))
+                        if trigger['type'] == 'adc':
+                            self.button_channels[trigger['name']] = sensor_channel
+                        else:  # piezo
+                            self.piezo_channels[trigger['name']] = sensor_channel
+                    else:
+                        logger.warning(f"No channel specified for trigger: {trigger['name']}")
             
             logger.info("ADC setup completed for configured triggers")
-            logger.info(f"Button channels: {self.button_channels}")
-            logger.info(f"Piezo channels: {self.piezo_channels}")
+            logger.info(f"ADC devices: {list(self.ads_devices.keys())}")
+            logger.info(f"Button channels: {list(self.button_channels.keys())}")
+            logger.info(f"Piezo channels: {list(self.piezo_channels.keys())}")
         except Exception as e:
             logger.error(f"Error setting up ADC: {str(e)}")
-            self.ads1 = None
-            self.ads2 = None
+            self.ads_devices = {}
             self.button_channels = {}
             self.piezo_channels = {}
 
