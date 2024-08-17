@@ -122,7 +122,7 @@ class TriggerManager:
     def get_button_status(self, voltage):
         if voltage <= 0.3 or voltage == -1:  # Button pressed: -1 to 0.3V
             return "Button pressed"
-        elif 0.6 <= voltage <= 1.0:  # Button not pressed: 0.6V to 1.0V
+        elif voltage >= 0.6:  # Button not pressed: 0.6V and above
             return "Button not pressed"
         else:
             logger.warning(f"Unexpected voltage reading: {voltage}V")
