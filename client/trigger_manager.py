@@ -120,9 +120,9 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage < 0.3:  # Lowered threshold for button press
+        if voltage < 0.3:  # Button press detected between 0.3V and 0.8V
             return "Button pressed"
-        elif voltage > 0.8:  # Increased threshold for button not pressed
+        elif voltage > 0.8:
             return "Button not pressed"
         else:
             return "Unknown"  # Voltage in between thresholds
@@ -319,6 +319,10 @@ class TriggerManager:
             # Reset the cooldown and press start time when the button is released
             self.trigger_cooldowns.pop(trigger['name'], None)
             channel_info['press_start_time'] = None
+        
+        # Reset cooldown if the button is not pressed
+        if button_status != "Button pressed":
+            self.trigger_cooldowns.pop(trigger['name'], None)
 
     async def read_adc_continuously(self):
         while True:
