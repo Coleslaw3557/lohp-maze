@@ -21,7 +21,15 @@ UNIT_A_CONFIG = {
         'Exit': {'LT': 5, 'LR': 6}
     },
     'adc': {
-        'Cuddle Cross': {'adc': 'ads1', 'channel': ADS.P0}
+        'Cuddle Cross': {
+            'adc': 'ads1',
+            'channels': {
+                'Button 1': ADS.P0,
+                'Button 2': ADS.P1,
+                'Button 3': ADS.P2,
+                'Button 4': ADS.P3
+            }
+        }
     }
 }
 
@@ -76,26 +84,22 @@ def get_sensor_data():
         data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {pins['LT']}, RX GPIO: {pins['LR']}, RX Status: {rx_status}"))
     
     # Test ADC for button presses
-    value = analog_input.value
-    voltage = analog_input.voltage
-    button_status = get_button_status(voltage)
-    data.append(("Cuddle Cross", "ADC", "Cuddle Cross", f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"))
+    for button, channel in current_unit['adc']['Cuddle Cross']['channels'].items():
+        analog_input = AnalogIn(ads1, channel)
+        value = analog_input.value
+        voltage = analog_input.voltage
+        button_status = get_button_status(voltage)
+        data.append((f"Cuddle Cross {button}", "ADC", "Cuddle Cross", f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"))
     
     return data
 
 def get_button_status(voltage):
     if voltage < 0.1:
         return "Error: Voltage too low"
-    elif voltage < 0.8:
-        return "Button 1 pressed"
-    elif voltage < 1.5:
-        return "Button 2 pressed"
-    elif voltage < 2.2:
-        return "Button 3 pressed"
-    elif voltage < 2.9:
-        return "Button 4 pressed"
+    elif voltage < 1.65:
+        return "Button pressed"
     else:
-        return "No button pressed"
+        return "Button not pressed"
 
 def display_tui():
     data = get_sensor_data()
