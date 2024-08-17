@@ -15,7 +15,13 @@ class TriggerManager:
     def __init__(self, config):
         self.config = config
         self.associated_rooms = config.get('associated_rooms', [])
-        self.triggers = [trigger for trigger in config.get('triggers', []) if trigger.get('room') in self.associated_rooms]
+        logger.info(f"Associated rooms: {self.associated_rooms}")
+        all_triggers = config.get('triggers', [])
+        logger.info(f"Total triggers in config: {len(all_triggers)}")
+        self.triggers = [trigger for trigger in all_triggers if trigger.get('room') in self.associated_rooms]
+        logger.info(f"Filtered triggers for associated rooms: {len(self.triggers)}")
+        for trigger in self.triggers:
+            logger.info(f"Trigger: {trigger['name']}, Type: {trigger['type']}, Room: {trigger.get('room')}")
         GPIO.setmode(GPIO.BCM)
         self.start_time = time.time()
         self.cooldown_period = config.get('cooldown_period', 5)
@@ -149,7 +155,14 @@ class TriggerManager:
 
     def setup_triggers(self):
         self.active_triggers = []
+        logger.info(f"Setting up triggers for associated rooms: {self.associated_rooms}")
+        logger.info(f"Total triggers in config: {len(self.triggers)}")
         for trigger in self.triggers:
+            trigger_room = trigger.get('room')
+            if trigger_room not in self.associated_rooms:
+                logger.info(f"Skipping trigger {trigger['name']} for room {trigger_room} (not associated)")
+                continue
+            
             if trigger['type'] == 'laser':
                 GPIO.setup(trigger['tx_pin'], GPIO.OUT)
                 GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
@@ -166,6 +179,9 @@ class TriggerManager:
             elif trigger['type'] in ['adc', 'piezo']:
                 logger.info(f"ADC/Piezo trigger registered: {trigger['name']}")
                 self.active_triggers.append(trigger)
+            else:
+                logger.warning(f"Unknown trigger type for {trigger['name']}: {trigger['type']}")
+        
         logger.info(f"Set up {len(self.active_triggers)} triggers for associated rooms: {self.associated_rooms}")
 
     async def setup_adc(self):
