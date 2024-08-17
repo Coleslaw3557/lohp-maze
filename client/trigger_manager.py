@@ -18,10 +18,10 @@ class TriggerManager:
         logger.info(f"Associated rooms: {self.associated_rooms}")
         all_triggers = config.get('triggers', [])
         logger.info(f"Total triggers in config: {len(all_triggers)}")
-        self.triggers = [trigger for trigger in all_triggers if trigger.get('room') in self.associated_rooms]
+        self.triggers = [trigger for trigger in all_triggers if not trigger.get('room') or trigger.get('room') in self.associated_rooms]
         logger.info(f"Filtered triggers for associated rooms: {len(self.triggers)}")
         for trigger in self.triggers:
-            logger.info(f"Trigger: {trigger['name']}, Type: {trigger['type']}, Room: {trigger.get('room')}")
+            logger.info(f"Trigger: {trigger['name']}, Type: {trigger['type']}, Room: {trigger.get('room', 'Not specified')}")
         GPIO.setmode(GPIO.BCM)
         self.start_time = time.time()
         self.cooldown_period = config.get('cooldown_period', 5)
@@ -156,28 +156,25 @@ class TriggerManager:
     def setup_triggers(self):
         self.active_triggers = []
         logger.info(f"Setting up triggers for associated rooms: {self.associated_rooms}")
-        logger.info(f"Total triggers in config: {len(self.triggers)}")
+        logger.info(f"Total triggers to set up: {len(self.triggers)}")
         for trigger in self.triggers:
-            trigger_room = trigger.get('room')
-            if trigger_room not in self.associated_rooms:
-                logger.info(f"Skipping trigger {trigger['name']} for room {trigger_room} (not associated)")
-                continue
+            trigger_room = trigger.get('room', 'Not specified')
             
             if trigger['type'] == 'laser':
                 GPIO.setup(trigger['tx_pin'], GPIO.OUT)
                 GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
                 GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-                logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']}, RX pin {trigger['rx_pin']}")
+                logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']}, RX pin {trigger['rx_pin']}, Room: {trigger_room}")
                 self.active_triggers.append(trigger)
             elif trigger['type'] == 'gpio':
                 if 'pin' in trigger:
                     GPIO.setup(trigger['pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                    logger.info(f"GPIO trigger set up: {trigger['name']}, pin {trigger['pin']}")
+                    logger.info(f"GPIO trigger set up: {trigger['name']}, pin {trigger['pin']}, Room: {trigger_room}")
                     self.active_triggers.append(trigger)
                 else:
                     logger.warning(f"GPIO trigger {trigger['name']} is missing 'pin' configuration")
             elif trigger['type'] in ['adc', 'piezo']:
-                logger.info(f"ADC/Piezo trigger registered: {trigger['name']}")
+                logger.info(f"ADC/Piezo trigger registered: {trigger['name']}, Room: {trigger_room}")
                 self.active_triggers.append(trigger)
             else:
                 logger.warning(f"Unknown trigger type for {trigger['name']}: {trigger['type']}")
