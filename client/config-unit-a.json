@@ -9,6 +9,7 @@
       "type": "adc",
       "adc_address": "0x48",
       "channel": 0,
+      "room": "Cuddle Cross",
       "action": {
         "type": "curl",
         "method": "POST",

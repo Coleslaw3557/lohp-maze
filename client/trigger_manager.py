@@ -118,21 +118,29 @@ class TriggerManager:
             logger.error(f"Unsupported action type for trigger {trigger_name}: {action['type']}")
 
     def setup_triggers(self):
+        associated_rooms = self.config.get('associated_rooms', [])
+        self.active_triggers = []
         for trigger in self.triggers:
-            if trigger['type'] == 'laser':
-                GPIO.setup(trigger['tx_pin'], GPIO.OUT)
-                GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
-                GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-                logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']}, RX pin {trigger['rx_pin']}")
-            elif trigger['type'] == 'gpio':
-                if 'pin' in trigger:
-                    GPIO.setup(trigger['pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                    logger.info(f"GPIO trigger set up: {trigger['name']}, pin {trigger['pin']}")
-                else:
-                    logger.warning(f"GPIO trigger {trigger['name']} is missing 'pin' configuration")
-            elif trigger['type'] in ['adc', 'piezo']:
-                logger.info(f"ADC/Piezo trigger registered: {trigger['name']}")
-        logger.info("All configured triggers set up")
+            if 'room' in trigger and trigger['room'] in associated_rooms:
+                if trigger['type'] == 'laser':
+                    GPIO.setup(trigger['tx_pin'], GPIO.OUT)
+                    GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
+                    GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+                    logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']}, RX pin {trigger['rx_pin']}")
+                    self.active_triggers.append(trigger)
+                elif trigger['type'] == 'gpio':
+                    if 'pin' in trigger:
+                        GPIO.setup(trigger['pin'], GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                        logger.info(f"GPIO trigger set up: {trigger['name']}, pin {trigger['pin']}")
+                        self.active_triggers.append(trigger)
+                    else:
+                        logger.warning(f"GPIO trigger {trigger['name']} is missing 'pin' configuration")
+                elif trigger['type'] in ['adc', 'piezo']:
+                    logger.info(f"ADC/Piezo trigger registered: {trigger['name']}")
+                    self.active_triggers.append(trigger)
+            else:
+                logger.info(f"Trigger {trigger['name']} not associated with this unit's rooms. Skipping setup.")
+        logger.info(f"Set up {len(self.active_triggers)} triggers for associated rooms: {associated_rooms}")
 
     def setup_adc(self):
         adc_needed = any(trigger['type'] in ['adc', 'piezo'] for trigger in self.triggers)
@@ -171,7 +179,7 @@ class TriggerManager:
                 await asyncio.sleep(0.1)  # Sleep for 100ms during startup delay
                 continue
             
-            for trigger in self.triggers:
+            for trigger in self.active_triggers:
                 if trigger['type'] == 'laser':
                     await self.check_laser_trigger(trigger, callback, current_time)
                 elif trigger['type'] == 'gpio':
