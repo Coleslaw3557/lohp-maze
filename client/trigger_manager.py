@@ -83,14 +83,14 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage < 0.1:
+        if voltage < 0.5:
             logger.debug(f"Button pressed: Voltage {voltage:.3f}V")
             return "Button pressed"
-        elif voltage > 0.5:
+        elif voltage > 2.5:
             logger.debug(f"Button not pressed: Voltage {voltage:.3f}V")
             return "Button not pressed"
         else:
-            logger.warning(f"Voltage in transition range: {voltage:.3f}V")
+            logger.debug(f"Voltage in transition range: {voltage:.3f}V")
             return "Transition"
 
     def trigger_effect(self, trigger_name):
@@ -179,6 +179,15 @@ class TriggerManager:
             logger.info(f"ADC devices: {list(self.ads_devices.keys())}")
             logger.info(f"Button channels: {list(self.button_channels.keys())}")
             logger.info(f"Piezo channels: {list(self.piezo_channels.keys())}")
+
+            # Test reading from each channel
+            for name, channel in self.button_channels.items():
+                try:
+                    voltage = channel.voltage
+                    logger.info(f"Initial reading for {name}: {voltage:.3f}V")
+                except Exception as e:
+                    logger.error(f"Error reading initial value for {name}: {str(e)}")
+
         except Exception as e:
             logger.error(f"Error setting up ADC: {str(e)}")
             self.ads_devices = {}
@@ -214,8 +223,13 @@ class TriggerManager:
             logger.warning(f"No channel found for trigger {trigger['name']}")
             return
 
-        voltage = channel.voltage
-        raw_value = channel.value
+        try:
+            voltage = channel.voltage
+            raw_value = channel.value
+        except Exception as e:
+            logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
+            return
+
         logger.debug(f"Raw ADC data for {trigger['name']}: Value: {raw_value}, Voltage: {voltage:.3f}V")
         
         button_status = self.get_button_status(voltage)
@@ -228,6 +242,8 @@ class TriggerManager:
                 self.set_trigger_cooldown(trigger['name'], current_time)
                 await callback(trigger['name'])
                 await self.trigger_effect(trigger['name'])
+        elif button_status == "Button not pressed":
+            logger.debug(f"Button {trigger['name']} not pressed: Value: {raw_value}, Voltage: {voltage:.3f}V")
         elif button_status == "Transition":
             logger.debug(f"Button {trigger['name']} in transition state: Value: {raw_value}, Voltage: {voltage:.3f}V")
 
