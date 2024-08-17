@@ -121,10 +121,8 @@ class TriggerManager:
 
     def get_button_status(self, voltage):
         if voltage > 2.5:  # Adjust this threshold based on your button setup
-            logger.debug(f"Button pressed: Voltage {voltage:.3f}V")
             return "Button pressed"
         else:
-            logger.debug(f"Button not pressed: Voltage {voltage:.3f}V")
             return "Button not pressed"
 
     def trigger_effect(self, trigger_name):
@@ -265,24 +263,17 @@ class TriggerManager:
 
         try:
             voltage = channel_info['channel'].voltage
-            raw_value = channel_info['channel'].value
         except Exception as e:
             logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
             return
 
-        logger.debug(f"Raw ADC data for {trigger['name']}: Value: {raw_value}, Voltage: {voltage:.3f}V")
-        
         button_status = self.get_button_status(voltage)
-        
-        logger.info(f"ADC {trigger['name']}: Value: {raw_value}, Voltage: {voltage:.3f}V, Status: {button_status}")
         
         if button_status == "Button pressed":
             if self.check_trigger_cooldown(trigger['name'], current_time):
                 logger.info(f"Button pressed: {trigger['name']}")
                 self.set_trigger_cooldown(trigger['name'], current_time)
-                callback(trigger['name'])  # Remove await here
-        elif button_status == "Button not pressed":
-            logger.debug(f"Button {trigger['name']} not pressed: Value: {raw_value}, Voltage: {voltage:.3f}V")
+                callback(trigger['name'])
 
     async def read_adc_continuously(self):
         while True:
