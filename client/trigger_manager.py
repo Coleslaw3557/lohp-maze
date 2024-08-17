@@ -18,13 +18,10 @@ class TriggerManager:
         self.triggers = [trigger for trigger in config.get('triggers', []) if not trigger.get('room') or trigger.get('room') in self.associated_rooms]
         self.log_trigger_info()
 
-    def is_associated_room(self, room):
-        return room in self.associated_rooms
-
         GPIO.setmode(GPIO.BCM)
         self.start_time = time.time()
-        self.cooldown_period = config.get('cooldown_period', 5)
-        self.startup_delay = config.get('startup_delay', 10)
+        self.cooldown_period = self.config.get('cooldown_period', 5)
+        self.startup_delay = self.config.get('startup_delay', 10)
         self.trigger_cooldowns = {}
 
         # Constants for detection
