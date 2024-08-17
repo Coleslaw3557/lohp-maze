@@ -83,10 +83,10 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage < 0.5:
+        if voltage < 0.1:
             logger.debug(f"Button pressed: Voltage {voltage:.3f}V")
             return "Button pressed"
-        elif voltage > 2.5:
+        elif voltage > 0.5:
             logger.debug(f"Button not pressed: Voltage {voltage:.3f}V")
             return "Button not pressed"
         else:
