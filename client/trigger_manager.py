@@ -29,7 +29,7 @@ class TriggerManager:
         self.trigger_cooldowns = {}
         self.laser_intact_times = {}
         self.button_cooldowns = {}
-        self.button_cooldown_period = 2  # 2 seconds cooldown for buttons
+        self.button_cooldown_period = 3  # 3 seconds cooldown for buttons
         
         # Constants for detection
         self.COOLDOWN_TIME = 0.2
