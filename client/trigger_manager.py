@@ -25,30 +25,36 @@ class TriggerManager:
         self.setup_adc()
         
         # Constants for button detection
-        self.BUTTON_THRESHOLD = config.get('button_threshold', 0.5)
-        self.VOLTAGE_CHANGE_THRESHOLD = config.get('voltage_change_threshold', 0.01)
         self.COOLDOWN_TIME = config.get('cooldown_time', 0.2)
-        self.DEBUG_THRESHOLD = config.get('debug_threshold', 0.005)
         self.CONNECTED_THRESHOLD = config.get('connected_threshold', 0.3)
         
         # Initialize filters for button detection
-        self.filters = {f"ADC1 A{i}": {'last_voltage': 0, 'last_press': 0} for i in range(4)}
+        self.filters = {f"Button {i+1}": {'last_voltage': 0, 'last_press': 0} for i in range(4)}
 
     def check_cuddle_cross_buttons(self):
         current_time = time.time()
-        for i, channel in enumerate(self.button_channels):
+        for button_name, channel in self.button_channels.items():
+            value = channel.value
             voltage = channel.voltage
-            button_name = f"CuddleCrossButton{i+1}"
+            button_status = self.get_button_status(voltage)
             
-            logger.debug(f"{button_name} voltage: {voltage:.2f}V")
+            logger.debug(f"{button_name}: Value: {value}, Voltage: {voltage:.3f}V, Status: {button_status}")
             
-            if voltage < self.BUTTON_THRESHOLD:
-                if current_time - self.filters[f"ADC1 A{i}"]['last_press'] > self.COOLDOWN_TIME:
+            if button_status == "Button pressed":
+                if current_time - self.filters[button_name]['last_press'] > self.COOLDOWN_TIME:
                     logger.info(f"{button_name} pressed")
-                    self.filters[f"ADC1 A{i}"]['last_press'] = current_time
+                    self.filters[button_name]['last_press'] = current_time
                     self.trigger_effect("Cuddle Cross", button_name)
             
-            self.filters[f"ADC1 A{i}"]['last_voltage'] = voltage
+            self.filters[button_name]['last_voltage'] = voltage
+
+    def get_button_status(self, voltage):
+        if voltage < 0.1:
+            return "Button pressed"
+        elif voltage > 0.9:
+            return "Button not pressed"
+        else:
+            return "Error: Voltage in undefined range"
 
     def trigger_effect(self, room, effect_name):
         url = "http://localhost:5000/api/run_effect"
@@ -82,12 +88,12 @@ class TriggerManager:
         i2c = busio.I2C(board.SCL, board.SDA)
         self.ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Cuddle Cross buttons
         
-        self.button_channels = [
-            AnalogIn(self.ads1, ADS.P0),
-            AnalogIn(self.ads1, ADS.P1),
-            AnalogIn(self.ads1, ADS.P2),
-            AnalogIn(self.ads1, ADS.P3)
-        ]
+        self.button_channels = {
+            'Button 1': AnalogIn(self.ads1, ADS.P0),
+            'Button 2': AnalogIn(self.ads1, ADS.P1),
+            'Button 3': AnalogIn(self.ads1, ADS.P2),
+            'Button 4': AnalogIn(self.ads1, ADS.P3)
+        }
         logger.info("ADC setup completed for Cuddle Cross buttons (0x48)")
 
     async def monitor_triggers(self, callback):
