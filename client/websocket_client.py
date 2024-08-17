@@ -318,10 +318,7 @@ class WebSocketClient:
         volume = audio_data.get('volume', 1.0)
         loop = audio_data.get('loop', False)
 
-        associated_rooms = self.config.get('associated_rooms', [])
-        
-        # Check if the message is for all rooms or an associated room
-        if room is None or room in associated_rooms:
+        if self.trigger_manager.is_associated_room(room):
             if not file_name:
                 logger.warning(f"Received play_effect_audio without file_name for effect '{effect_name}'")
                 return

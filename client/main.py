@@ -13,7 +13,7 @@ import asyncio
 import os
 from websocket_client import WebSocketClient
 from audio_manager import AudioManager
-from trigger_manager import TriggerManager
+from trigger_manager import TriggerManager, setup_gpio
 from config_manager import ConfigManager
 from sync_manager import SyncManager
 
@@ -39,15 +39,7 @@ def log_and_exit(error_message):
     logger.critical(f"Traceback: {traceback.format_exc()}")
     sys.exit(1)
 
-def setup_gpio(config):
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
-    
-    for trigger in config.get('triggers', []):
-        if trigger['type'] == 'laser':
-            GPIO.setup(trigger['tx_pin'], GPIO.OUT)
-            GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
-            GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+# Remove the setup_gpio function as it's now in trigger_manager.py
 
 def execute_action(action, server_ip):
     if action['type'] == 'curl':
@@ -67,37 +59,7 @@ def execute_action(action, server_ip):
         except Exception as e:
             logger.error(f"Error executing action: {str(e)}")
 
-def monitor_triggers_thread(config, trigger_manager):
-    last_trigger_time = {}
-    rate_limit = config.get('rate_limit', 5)
-    startup_delay = 10  # 10 seconds startup delay
-    start_time = time.time()
-    
-    while True:
-        current_time = time.time()
-        if current_time - start_time < startup_delay:
-            time.sleep(0.1)  # Sleep for 100ms during startup delay
-            continue
-        
-        for trigger in config.get('triggers', []):
-            if trigger['type'] == 'laser':
-                current_state = GPIO.input(trigger['rx_pin'])
-                trigger_name = trigger['name']
-                
-                if current_state == GPIO.LOW:
-                    if trigger_name not in last_trigger_time or (current_time - last_trigger_time[trigger_name]) > rate_limit:
-                        logger.info(f"Laser beam broken: {trigger_name} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
-                        execute_action(trigger['action'], config.get('server_ip'))
-                        last_trigger_time[trigger_name] = current_time
-                elif current_state == GPIO.HIGH:
-                    # Only remove from last_trigger_time if it's been more than rate_limit seconds
-                    if trigger_name in last_trigger_time and (current_time - last_trigger_time[trigger_name]) > rate_limit:
-                        last_trigger_time.pop(trigger_name, None)
-                        logger.debug(f"Laser beam restored: {trigger_name} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
-            elif trigger['type'] == 'adc':
-                asyncio.run(trigger_manager.check_adc_trigger(trigger, lambda name: execute_action(trigger['action'], config.get('server_ip')), current_time))
-        
-        time.sleep(0.01)  # Check every 10ms
+# Remove the monitor_triggers_thread function as it's now handled by TriggerManager
 
 async def monitor_triggers(config, trigger_queue):
     # This function is kept for compatibility, but it's not used anymore
@@ -123,14 +85,16 @@ async def main():
             logger.info("AudioManager initialization complete")
         except ValueError as e:
             log_and_exit(f"Configuration error: {str(e)}")
+        
+        # Initialize TriggerManager with the new setup
         trigger_manager = TriggerManager(config)
         logger.info(f"TriggerManager initialized with configuration from config file")
-        await trigger_manager.setup_adc()  # Ensure ADC is set up asynchronously
-        logger.info("ADC setup completed")
+        await trigger_manager.setup()  # New setup method that includes ADC setup
+        logger.info("TriggerManager setup completed")
         
-        # Start the continuous ADC reading task
-        asyncio.create_task(trigger_manager.read_adc_continuously())
-        logger.info("Started continuous ADC reading task")
+        # Start monitoring triggers
+        asyncio.create_task(trigger_manager.monitor_triggers(lambda name: execute_action(trigger_manager.get_action(name), config.get('server_ip'))))
+        logger.info("Started trigger monitoring task")
 
         sync_manager = SyncManager()
         
@@ -145,10 +109,6 @@ async def main():
         logger.info("Background music is ready to be started manually")
 
         uri = f"ws://{config.get('server_ip')}:{config.get('server_port', 8765)}"
-        
-        # Start the GPIO monitoring in a separate thread
-        executor = ThreadPoolExecutor(max_workers=1)
-        monitor_future = executor.submit(monitor_triggers_thread, config)
 
         async def handle_connection():
             try:
@@ -182,8 +142,7 @@ async def main():
             logger.info("Shutting down client...")
         finally:
             await ws_client.disconnect()
-            executor.shutdown(wait=False)
-            GPIO.cleanup()
+            trigger_manager.cleanup()
     except Exception as e:
         log_and_exit(f"Unhandled exception in main: {str(e)}")
 
