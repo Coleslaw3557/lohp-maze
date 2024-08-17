@@ -120,13 +120,37 @@ class TriggerManager:
                 logger.error(f"Error reading Piezo {piezo_name}: {str(e)}")
 
     def get_button_status(self, voltage):
-        if voltage <= 0.3 or voltage == -1:  # Button pressed: -1 to 0.3V
+        if voltage <= 0.3:  # Button pressed: 0 to 0.3V
             return "Button pressed"
         elif voltage >= 0.6:  # Button not pressed: 0.6V and above
             return "Button not pressed"
         else:
             logger.warning(f"Unexpected voltage reading: {voltage}V")
             return "Unknown"
+
+    async def check_adc_trigger(self, trigger, callback, current_time):
+        channel_info = self.adc_channels.get(trigger['name'])
+        if channel_info is None:
+            logger.warning(f"No channel found for trigger {trigger['name']}")
+            return
+
+        try:
+            voltage = channel_info['channel'].voltage
+            logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V")
+        except Exception as e:
+            logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
+            return
+
+        button_status = self.get_button_status(voltage)
+        
+        if button_status == "Button pressed":
+            if self.check_trigger_cooldown(trigger['name'], current_time):
+                logger.info(f"Button pressed: {trigger['name']}")
+                self.set_trigger_cooldown(trigger['name'], current_time)
+                await callback(trigger['name'])
+        elif button_status == "Button not pressed":
+            # Reset cooldown when button is released
+            self.trigger_cooldowns.pop(trigger['name'], None)
 
     def trigger_effect(self, trigger_name):
         trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
