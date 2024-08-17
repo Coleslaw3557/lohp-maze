@@ -221,18 +221,19 @@ async def set_theme():
                 return jsonify({'status': 'success', 'message': 'Theme turned off'})
             
             logger.info(f"Setting theme to: {theme_name}")
-            success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=10.0)
-            if success:
-                logger.info(f"Theme set successfully to: {theme_name}")
-                return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
-            else:
-                logger.error(f"Failed to set theme to: {theme_name}")
-                return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+            try:
+                success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=10.0)
+                if success:
+                    logger.info(f"Theme set successfully to: {theme_name}")
+                    return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+                else:
+                    logger.error(f"Failed to set theme to: {theme_name}")
+                    return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+            except asyncio.TimeoutError:
+                logger.error(f"Timeout while setting theme to: {theme_name}")
+                return jsonify({'status': 'error', 'message': f'Timeout while setting theme to {theme_name}'}), 504
         
         return jsonify({'status': 'error', 'message': 'Theme name or next_theme flag is required'}), 400
-    except asyncio.TimeoutError:
-        logger.error(f"Timeout while setting theme to: {theme_name}")
-        return jsonify({'status': 'error', 'message': f'Timeout while setting theme to {theme_name}'}), 504
     except Exception as e:
         logger.error(f"Error setting theme: {str(e)}")
         return jsonify({'status': 'error', 'message': f'An error occurred while setting the theme: {str(e)}'}), 500
