@@ -149,7 +149,10 @@ class TriggerManager:
             if current_time - channel_info['last_trigger_time'] > self.BUTTON_DEBOUNCE_TIME:
                 logger.info(f"Button pressed: {trigger['name']}")
                 channel_info['last_trigger_time'] = current_time
-                await callback(trigger['name'])
+                try:
+                    await self.execute_trigger_action(trigger)
+                except Exception as e:
+                    logger.error(f"Error executing action for {trigger['name']}: {str(e)}")
             else:
                 logger.debug(f"Button {trigger['name']} debounced")
         elif button_status == "Button not pressed":
@@ -470,3 +473,25 @@ class TriggerManager:
                     await self.handle_piezo_trigger(trigger, self.trigger_effect)
         except Exception as e:
             logger.error(f"Error checking piezo trigger {trigger['name']}: {str(e)}")
+    async def execute_trigger_action(self, trigger):
+        action = trigger.get('action')
+        if not action:
+            logger.error(f"No action defined for trigger: {trigger['name']}")
+            return
+
+        if action['type'] == 'curl':
+            url = action['url'].replace('${server_ip}', self.config.get('server_ip'))
+            headers = action.get('headers', {})
+            data = action.get('data', {})
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.request(action['method'], url, headers=headers, json=data) as response:
+                        if response.status == 200:
+                            response_text = await response.text()
+                            logger.info(f"Triggered action for {trigger['name']}. Response: {response_text}")
+                        else:
+                            logger.error(f"Failed to trigger action for {trigger['name']}. Status code: {response.status}")
+            except Exception as e:
+                logger.error(f"Error triggering action for {trigger['name']}: {str(e)}")
+        else:
+            logger.error(f"Unsupported action type for trigger {trigger['name']}: {action['type']}")
