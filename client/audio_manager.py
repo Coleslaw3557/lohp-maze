@@ -223,6 +223,9 @@ class AudioManager:
                 # Stop any existing background music
                 await self.stop_background_music()
 
+                # Reinitialize VLC instance
+                self.vlc_instance = self.initialize_vlc()
+
                 # Create a new media player
                 self.background_music_player = self.vlc_instance.media_player_new()
                 media = self.vlc_instance.media_new(full_path)
@@ -239,22 +242,18 @@ class AudioManager:
             logger.info(f"Started playing background music: {music_file}")
 
             # Wait for a short time to ensure playback has started
-            await asyncio.sleep(0.1)
+            for _ in range(10):  # Try for up to 1 second
+                await asyncio.sleep(0.1)
+                if self.background_music_player.is_playing():
+                    logger.info(f"Confirmed background music playback started for {music_file}")
+                    self.last_music_change_time = current_time
+                    return True
 
-            if self.background_music_player.is_playing():
-                logger.info(f"Confirmed background music playback started for {music_file}")
-                self.last_music_change_time = current_time
-                return True
-            else:
-                logger.warning(f"Background music playback did not start for {music_file}")
-                # Try to reinitialize VLC instance and retry playback
-                self.vlc_instance = self.initialize_vlc()
-                return await self.start_background_music(music_file)
+            logger.warning(f"Background music playback did not start for {music_file}")
+            return False
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
-            # Try to reinitialize VLC instance
-            self.vlc_instance = self.initialize_vlc()
             return False
 
     def loop_background_music(self, event):
@@ -267,6 +266,7 @@ class AudioManager:
         logger.info("Stopping background music")
         if self.background_music_player:
             self.background_music_player.stop()
+            self.background_music_player.release()
             self.background_music_player = None
         logger.info("Background music stopped")
         return True
