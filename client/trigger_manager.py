@@ -18,6 +18,9 @@ class TriggerManager:
         self.triggers = [trigger for trigger in config.get('triggers', []) if not trigger.get('room') or trigger.get('room') in self.associated_rooms]
         self.log_trigger_info()
 
+    def is_associated_room(self, room):
+        return room in self.associated_rooms
+
         GPIO.setmode(GPIO.BCM)
         self.start_time = time.time()
         self.cooldown_period = config.get('cooldown_period', 5)
@@ -200,7 +203,10 @@ class TriggerManager:
             if self.check_trigger_cooldown(trigger['name'], current_time):
                 logger.info(f"Laser beam broken: {trigger['name']}")
                 self.set_trigger_cooldown(trigger['name'], current_time)
-                await callback(trigger['name'])
+                if callback:
+                    await callback(trigger['name'])
+                else:
+                    logger.warning(f"No callback provided for trigger: {trigger['name']}")
         else:
             self.trigger_cooldowns.pop(trigger['name'], None)
 
