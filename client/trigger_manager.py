@@ -27,12 +27,16 @@ class TriggerManager:
         self.CONNECTED_THRESHOLD = config.get('connected_threshold', 0.3)
         self.PIEZO_THRESHOLD = config.get('piezo_threshold', 0.5)
         
-        # Initialize piezo-related attributes
-        self.piezo_attempts = 0
-        self.piezo_settings = config.get('piezo_settings', {
-            'attempts_required': 3,
-            'correct_answer_probability': 0.25
-        })
+        # Initialize piezo-related attributes only if piezo triggers are configured
+        if any(trigger['type'] == 'piezo' for trigger in self.triggers):
+            self.piezo_attempts = 0
+            self.piezo_settings = config.get('piezo_settings', {
+                'attempts_required': 3,
+                'correct_answer_probability': 0.25
+            })
+        else:
+            self.piezo_attempts = None
+            self.piezo_settings = None
         
         # Initialize based on configured triggers
         self.setup_triggers()
@@ -388,6 +392,9 @@ class TriggerManager:
             logger.error(f"Error checking button trigger {trigger['name']}: {str(e)}")
 
     async def check_piezo_trigger(self, trigger, channel, current_time):
+        if 'piezo' not in self.config.get('triggers', []):
+            return  # Skip if piezo triggers are not configured
+
         try:
             voltage = channel.voltage
             
