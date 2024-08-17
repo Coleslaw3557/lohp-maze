@@ -389,6 +389,6 @@ class TriggerManager:
                 if self.check_trigger_cooldown(trigger['name'], current_time):
                     logger.info(f"Piezo triggered: {trigger['name']}")
                     self.set_trigger_cooldown(trigger['name'], current_time)
-                    await self.handle_piezo_trigger(trigger)
+                    await self.handle_piezo_trigger(trigger, self.trigger_effect)
         except Exception as e:
             logger.error(f"Error checking piezo trigger {trigger['name']}: {str(e)}")
