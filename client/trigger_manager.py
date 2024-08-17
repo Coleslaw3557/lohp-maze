@@ -196,7 +196,7 @@ class TriggerManager:
                 ads = self.ads_devices[adc_address]
                 
                 for trigger in triggers:
-                    channel = trigger.get('channel') or trigger.get('adc_channel')
+                    channel = trigger.get('channel')
                     
                     if channel is not None:
                         sensor_channel = AnalogIn(ads, getattr(ADS, f'P{channel}'))
@@ -208,7 +208,7 @@ class TriggerManager:
                         }
                         logger.info(f"Set up {trigger['type']} channel for {trigger['name']} on address {adc_address}, channel {channel}")
                     else:
-                        logger.warning(f"No channel specified for trigger: {trigger['name']}")
+                        logger.error(f"No channel specified for trigger: {trigger['name']}. Skipping this trigger.")
             
             logger.info("ADC setup completed for configured triggers")
             logger.info(f"ADC devices: {list(self.ads_devices.keys())}")
@@ -255,14 +255,14 @@ class TriggerManager:
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
     async def check_adc_trigger(self, trigger, callback, current_time):
-        channel = self.adc_channels.get(trigger['name'])
-        if channel is None:
+        channel_info = self.adc_channels.get(trigger['name'])
+        if channel_info is None:
             logger.warning(f"No channel found for trigger {trigger['name']}")
             return
 
         try:
-            voltage = channel['channel'].voltage
-            raw_value = channel['channel'].value
+            voltage = channel_info['channel'].voltage
+            raw_value = channel_info['channel'].value
         except Exception as e:
             logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
             return
@@ -277,7 +277,7 @@ class TriggerManager:
             if self.check_trigger_cooldown(trigger['name'], current_time):
                 logger.info(f"Button pressed: {trigger['name']}")
                 self.set_trigger_cooldown(trigger['name'], current_time)
-                await callback(trigger['name'])
+                callback(trigger['name'])  # Remove await here
         elif button_status == "Button not pressed":
             logger.debug(f"Button {trigger['name']} not pressed: Value: {raw_value}, Voltage: {voltage:.3f}V")
 
