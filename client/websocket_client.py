@@ -4,6 +4,7 @@ import websockets
 import asyncio
 import time
 import sys
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +155,8 @@ class WebSocketClient:
             'play_effect_audio': self.handle_play_effect_audio,
             'audio_files_to_download': self.handle_audio_files_to_download,
             'start_background_music': self.handle_start_background_music,
-            'stop_background_music': self.handle_stop_background_music
+            'stop_background_music': self.handle_stop_background_music,
+            'shutdown': self.handle_shutdown
         }
 
         message_type = message.get('type')
@@ -162,12 +164,28 @@ class WebSocketClient:
 
         if handler:
             logger.info(f"Handling message type: {message_type}")
-            await handler(message)
+            if message_type in ['play_effect_audio', 'play_cached_audio', 'audio_start']:
+                # Process audio-related messages immediately
+                await handler(message)
+            else:
+                # Process other messages in the background
+                asyncio.create_task(handler(message))
         elif message_type is None:
             logger.warning("Received message without 'type' field")
             await self.handle_typeless_message(message)
         else:
             logger.warning(f"Unknown message type received: {message_type}")
+
+    async def handle_shutdown(self, message):
+        logger.info("Received shutdown command from server")
+        shutdown_time = message.get('shutdown_time')
+        if shutdown_time:
+            wait_time = max(0, shutdown_time - time.time())
+            logger.info(f"Shutting down in {wait_time:.2f} seconds...")
+            await asyncio.sleep(wait_time)
+        await self.disconnect()
+        logger.info("Shutting down client and host system...")
+        os.system('sudo halt -p -f')
 
     async def handle_play_cached_audio(self, message):
         audio_data = message.get('data', {})
@@ -300,23 +318,22 @@ class WebSocketClient:
         volume = audio_data.get('volume', 1.0)
         loop = audio_data.get('loop', False)
 
-        if room not in self.config.get('associated_rooms', []):
+        if self.trigger_manager.is_associated_room(room):
+            if not file_name:
+                logger.warning(f"Received play_effect_audio without file_name for effect '{effect_name}'")
+                return
+
+            logger.info(f"Attempting to play audio file '{file_name}' for effect '{effect_name}'")
+            try:
+                success = await self.audio_manager.play_effect_audio(file_name, volume, loop)
+                if success:
+                    logger.info(f"Successfully played audio file '{file_name}' for effect '{effect_name}'")
+                else:
+                    logger.error(f"Failed to play audio file '{file_name}' for effect '{effect_name}'")
+            except Exception as e:
+                logger.exception(f"Error playing audio file '{file_name}' for effect '{effect_name}': {str(e)}")
+        else:
             logger.warning(f"Received play_effect_audio for unassociated room: {room}")
-            return
-
-        if not file_name:
-            logger.warning(f"Received play_effect_audio without file_name for effect '{effect_name}' in room '{room}'")
-            return
-
-        logger.info(f"Attempting to play audio file '{file_name}' for effect '{effect_name}' in room '{room}'")
-        try:
-            success = await self.audio_manager.play_effect_audio(file_name, volume, loop)
-            if success:
-                logger.info(f"Successfully played audio file '{file_name}' for effect '{effect_name}' in room '{room}'")
-            else:
-                logger.error(f"Failed to play audio file '{file_name}' for effect '{effect_name}' in room '{room}'")
-        except Exception as e:
-            logger.exception(f"Error playing audio file '{file_name}' for effect '{effect_name}' in room '{room}': {str(e)}")
 
     async def handle_audio_start(self, message):
         audio_data = message.get('data')

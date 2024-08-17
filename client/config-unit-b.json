@@ -5,15 +5,154 @@
   "audio_output_device": "default",
   "triggers": [
     {
-      "name": "Button1",
-      "type": "gpio",
-      "pin": 17
+      "name": "Cop Dodge Laser",
+      "type": "laser",
+      "tx_pin": 17,
+      "rx_pin": 27,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Cop Dodge",
+          "effect_name": "PoliceLights"
+        }
+      }
     },
     {
-      "name": "Sensor1",
-      "type": "gpio",
-      "pin": 18
+      "name": "Gate Laser",
+      "type": "laser",
+      "tx_pin": 22,
+      "rx_pin": 23,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Gate",
+          "effect_name": "GateInspection"
+        }
+      }
+    },
+    {
+      "name": "Guy Line Laser",
+      "type": "laser",
+      "tx_pin": 24,
+      "rx_pin": 25,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Guy Line Climb",
+          "effect_name": "ImageEnhancement"
+        }
+      }
+    },
+    {
+      "name": "Sparkle Pony Laser",
+      "type": "laser",
+      "tx_pin": 5,
+      "rx_pin": 6,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Sparkle Pony Room",
+          "effect_name": "SparkPony"
+        }
+      }
+    },
+    {
+      "name": "Porto Laser",
+      "type": "laser",
+      "tx_pin": 13,
+      "rx_pin": 19,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Porto Room",
+          "effect_name": "PortoStandBy"
+        }
+      }
+    },
+    {
+      "name": "Porto Room Piezo 1",
+      "type": "piezo",
+      "adc_channel": 0,
+      "threshold": 0.5,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Porto Room",
+          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+        }
+      }
+    },
+    {
+      "name": "Porto Room Piezo 2",
+      "type": "piezo",
+      "adc_channel": 1,
+      "threshold": 0.5,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Porto Room",
+          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+        }
+      }
+    },
+    {
+      "name": "Porto Room Piezo 3",
+      "type": "piezo",
+      "adc_channel": 2,
+      "threshold": 0.5,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Porto Room",
+          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+        }
+      }
     }
   ],
-  "cache_dir": "/app/cache"
+  "rate_limit": 5,
+  "cache_dir": "/app/cache",
+  "piezo_settings": {
+    "correct_answer_probability": 0.25,
+    "attempts_required": 3
+  }
 }

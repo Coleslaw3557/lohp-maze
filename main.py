@@ -6,8 +6,9 @@ import websockets
 import sys
 import traceback
 import random
-from quart import Quart, request, jsonify, Response, send_from_directory
+from quart import Quart, request, jsonify, Response, send_from_directory, send_file
 from quart_cors import cors
+import os
 from werkzeug.urls import uri_to_iri, iri_to_uri
 from dmx_state_manager import DMXStateManager
 from dmx_interface import DMXOutputManager
@@ -36,9 +37,13 @@ logging.getLogger('pydub.converter').setLevel(logging.ERROR)
 # Set the root logger to INFO
 logging.getLogger().setLevel(logging.INFO)
 
-app = Quart(__name__)
+app = Quart(__name__, static_folder='frontend/static')
 app = cors(app)
 app.secret_key = SECRET_KEY
+
+@app.route('/')
+async def index():
+    return await send_file('frontend/index.html')
 
 connected_clients = set()
 
@@ -173,6 +178,17 @@ effects_manager.stop_current_theme()
 async def initialize_remote_hosts():
     # Initialize WebSocket connections to remote hosts
     await remote_host_manager.initialize_websocket_connections()
+    
+    # Load and validate client configurations
+    for unit in ['a', 'b', 'c']:
+        config_file = f'client/config-unit-{unit}.json'
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+            logger.info(f"Loaded configuration for Unit {unit.upper()}: {config}")
+            # Here you can add additional validation logic if needed
+        except Exception as e:
+            logger.error(f"Error loading configuration for Unit {unit.upper()}: {str(e)}")
 
 @app.route('/api/set_master_brightness', methods=['POST'])
 async def set_master_brightness():
@@ -189,35 +205,35 @@ async def set_theme():
     theme_name = data.get('theme_name')
     next_theme = data.get('next_theme', False)
 
-    if not theme_name and not next_theme:
-        return jsonify({'status': 'error', 'message': 'Theme name or next_theme flag is required'}), 400
-
     try:
         if next_theme:
             logger.info("Setting next theme")
-            theme_name = await effects_manager.set_next_theme_async()
-            if not theme_name:
-                return jsonify({'status': 'error', 'message': 'Failed to set next theme'}), 400
-        elif theme_name.lower() == 'notheme':
-            logger.info("Turning off theme")
-            await effects_manager.stop_current_theme_async()
-            return jsonify({'status': 'success', 'message': 'Theme turned off'})
-        
-        if theme_name:
-            logger.info(f"Setting theme to: {theme_name}")
-            success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=10.0)
-            if success:
-                logger.info(f"Theme set successfully to: {theme_name}")
-                return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+            next_theme_name = await effects_manager.set_next_theme_async()
+            if next_theme_name:
+                return jsonify({'status': 'success', 'message': f'Theme set to next theme: {next_theme_name}'})
             else:
-                logger.error(f"Failed to set theme to: {theme_name}")
-                return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
-        else:
-            logger.error("No valid theme name provided")
-            return jsonify({'status': 'error', 'message': 'No valid theme name provided'}), 400
-    except asyncio.TimeoutError:
-        logger.error(f"Timeout while setting theme to: {theme_name}")
-        return jsonify({'status': 'error', 'message': f'Timeout while setting theme to {theme_name}'}), 504
+                return jsonify({'status': 'error', 'message': 'Failed to set next theme'}), 400
+
+        if theme_name:
+            if theme_name.lower() == 'notheme':
+                logger.info("Turning off theme")
+                await effects_manager.stop_current_theme_async()
+                return jsonify({'status': 'success', 'message': 'Theme turned off'})
+            
+            logger.info(f"Setting theme to: {theme_name}")
+            try:
+                success = await asyncio.wait_for(effects_manager.set_current_theme_async(theme_name), timeout=2.0)
+                if success:
+                    logger.info(f"Theme set successfully to: {theme_name}")
+                    return jsonify({'status': 'success', 'message': f'Theme set to {theme_name}'})
+                else:
+                    logger.error(f"Failed to set theme to: {theme_name}")
+                    return jsonify({'status': 'error', 'message': f'Failed to set theme to {theme_name}'}), 400
+            except asyncio.TimeoutError:
+                logger.error(f"Timeout while setting theme to: {theme_name}")
+                return jsonify({'status': 'error', 'message': f'Timeout while setting theme to {theme_name}'}), 504
+        
+        return jsonify({'status': 'error', 'message': 'Theme name or next_theme flag is required'}), 400
     except Exception as e:
         logger.error(f"Error setting theme: {str(e)}")
         return jsonify({'status': 'error', 'message': f'An error occurred while setting the theme: {str(e)}'}), 500
@@ -242,18 +258,19 @@ async def run_effect():
     try:
         # Get audio configuration for the effect
         audio_config = audio_manager.get_audio_config(effect_name)
-        if audio_config:
+        if audio_config and audio_config.get('audio_files'):
             audio_file = random.choice(audio_config['audio_files'])
             volume = audio_config.get('volume', audio_manager.audio_config['default_volume'])
         else:
             audio_file = None
-            volume = audio_manager.audio_config['default_volume']
-        
-        # Add audio parameters to effect data
-        effect_data['audio'] = {
-            'file': audio_file,
-            'volume': volume
-        }
+            volume = None
+    
+        # Add audio parameters to effect data only if audio_file exists
+        if audio_file:
+            effect_data['audio'] = {
+                'file': audio_file,
+                'volume': volume
+            }
         
         # Execute the effect immediately
         success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
@@ -314,6 +331,72 @@ def get_light_models():
     light_models = light_config.get_light_models()
     return jsonify(light_models)
 
+@app.route('/api/light_fixtures', methods=['GET'])
+def get_light_fixtures():
+    room_layout = light_config.get_room_layout()
+    output = "ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM\n"
+    output += "COPYRIGHT 2075-2077 ROBCO INDUSTRIES\n"
+    output += "----- LIGHT FIXTURES DATABASE -----\n\n"
+    for room, lights in room_layout.items():
+        output += f"ROOM: {room}\n"
+        for light in lights:
+            output += f"  MODEL: {light['model']}\n"
+            output += f"  START ADDRESS: {light['start_address']}\n"
+        output += "\n"
+    return Response(output, mimetype='text/plain')
+
+@app.route('/api/connected_clients', methods=['GET'])
+def get_connected_clients():
+    clients = remote_host_manager.get_connected_clients_info()
+    return jsonify(clients)
+
+@app.route('/api/terminate_client', methods=['POST'])
+async def terminate_client():
+    data = await request.json
+    client_ip = data.get('ip')
+    if not client_ip:
+        return jsonify({'status': 'error', 'message': 'Client IP is required'}), 400
+    
+    success = await remote_host_manager.terminate_client(client_ip)
+    if success:
+        return jsonify({'status': 'success', 'message': f'Client {client_ip} terminated successfully'})
+    else:
+        return jsonify({'status': 'error', 'message': f'Failed to terminate client {client_ip}'}), 500
+
+@app.route('/api/room_layout', methods=['GET'])
+def get_room_layout():
+    room_layout = light_config.get_room_layout()
+    return jsonify(room_layout)
+
+@app.route('/api/rooms_units_fixtures', methods=['GET'])
+def get_rooms_units_fixtures():
+    room_layout = light_config.get_room_layout()
+    connected_clients = remote_host_manager.get_connected_clients_info()
+    
+    result = {}
+    for room, fixtures in room_layout.items():
+        result[room] = {
+            'fixtures': [{'model': f['model'], 'start_address': f['start_address']} for f in fixtures],
+            'units': [client['name'] for client in connected_clients if room in client['rooms']]
+        }
+    
+    return jsonify(result)
+
+@app.route('/api/update_theme_value', methods=['POST'])
+async def update_theme_value():
+    data = await request.json
+    control_id = data.get('control_id')
+    value = data.get('value')
+    
+    if control_id is None or value is None:
+        return jsonify({'status': 'error', 'message': 'Missing control_id or value'}), 400
+    
+    success = await effects_manager.update_theme_value(control_id, value)
+    if success:
+        return jsonify({'status': 'success', 'message': f'Updated {control_id} to {value}'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Failed to update theme value'}), 500
+
 @app.route('/api/start_music', methods=['POST'])
 async def start_music():
     try:
@@ -346,6 +429,35 @@ async def stop_music():
     except Exception as e:
         logger.error(f"Error stopping background music: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/shutdown', methods=['POST'])
+async def shutdown():
+    logger.info("Shutdown request received")
+    response = {"status": "success", "message": "Shutdown initiated"}
+    
+    # Calculate the shutdown time (3 seconds from now)
+    shutdown_time = time.time() + 3
+    
+    # Send shutdown signal to all connected clients with the exact shutdown time
+    shutdown_message = json.dumps({"type": "shutdown", "shutdown_time": shutdown_time})
+    await asyncio.gather(*[client.send(shutdown_message) for client in connected_clients])
+    
+    # Schedule the server shutdown
+    asyncio.get_event_loop().call_at(shutdown_time, shutdown_host_system)
+    
+    return jsonify(response)
+
+def shutdown_host_system():
+    logger.info("Shutting down host system")
+    os.system('halt')
+
+@app.route('/api/kill_process', methods=['POST'])
+async def kill_process():
+    logger.info("Kill process request received")
+    response = {"status": "success", "message": "Process termination initiated"}
+    await asyncio.sleep(0.1)  # Small delay to allow response to be sent
+    os._exit(0)  # This will immediately terminate the Python process
+    return jsonify(response)  # This line won't be reached, but it's here for completeness
 
 # This route has been removed as it was a duplicate
 
@@ -417,38 +529,35 @@ async def run_effect_all_rooms():
     data = await request.json
     effect_name = data.get('effect_name')
     audio_params = data.get('audio', {})
-    
+        
     if not effect_name:
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
-    
+        
     logger.info(f"Preparing effect: {effect_name} for all rooms")
     effect_data = effects_manager.get_effect(effect_name)
     if not effect_data:
         logger.error(f"Effect not found: {effect_name}")
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
-    
+        
     # Select a random audio file for the effect
     audio_file = audio_manager.get_random_audio_file(effect_name)
     if not audio_file:
         logger.warning(f"No audio file found for effect: {effect_name}")
-    
+        
     # Add audio parameters to effect data
     effect_data['audio'] = {**audio_params, 'file': audio_file}
-    
+        
     try:
-        # Get unique remote units
-        remote_units = remote_host_manager.get_unique_remote_units()
-        
-        # Play the same audio file for all remote units
-        audio_success = await remote_host_manager.play_audio_for_remote_units(remote_units, effect_name, effect_data['audio'])
-        
+        # Play the audio file for all connected clients
+        audio_success = await remote_host_manager.play_audio_for_all_clients(effect_name, effect_data['audio'])
+            
         # Execute the effect immediately for all rooms
         success, message = await effects_manager.apply_effect_to_all_rooms(effect_name, effect_data)
-        
-        if success and audio_success:
+            
+        if success:
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed for all remote units simultaneously'})
         else:
-            error_message = f"Failed to execute effect {effect_name} for all remote units. Audio success: {audio_success}, Lighting success: {success}"
+            error_message = f"Failed to execute effect {effect_name} for all remote units. Message: {message}"
             logger.error(error_message)
             return jsonify({'status': 'error', 'message': error_message}), 500
     except Exception as e:
@@ -474,16 +583,28 @@ if __name__ == '__main__':
     config.use_reloader = DEBUG
     config.accesslog = "-"  # Log to stdout
     config.errorlog = "-"  # Log to stderr
-    config.loglevel = "DEBUG"
+    config.loglevel = "DEBUG" if DEBUG else "INFO"
 
     async def run_server():
         try:
             await initialize_remote_hosts()
             websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
             quart_server = serve(app, config)
-            await asyncio.gather(websocket_server.wait_closed(), quart_server)
+            
+            # Create a shutdown event
+            shutdown_event = asyncio.Event()
+            
+            # Start a task to monitor the shutdown event
+            shutdown_task = asyncio.create_task(monitor_shutdown(shutdown_event))
+            
+            await asyncio.gather(websocket_server.wait_closed(), quart_server, shutdown_task)
         except Exception as e:
             log_and_exit(f"Server crashed: {str(e)}")
+
+    async def monitor_shutdown(shutdown_event):
+        await shutdown_event.wait()
+        logger.info("Shutdown signal received. Stopping the server...")
+        os._exit(0)
 
     print("Starting server on http://0.0.0.0:5000")
     try:

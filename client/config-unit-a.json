@@ -1,18 +1,162 @@
 {
-  "server_ip": "lohp-server",
+  "server_ip": "192.168.1.238",
   "unit_name": "LOHP-UNIT-A",
-  "associated_rooms": ["Entrace", "Cuddle Cross", "Photo Bomb Room", "No Friends Monday", "Exit"],
+  "associated_rooms": ["Entrance", "Cuddle Cross", "Photo Bomb Room", "No Friends Monday", "Exit"],
   "audio_output_device": "default",
   "triggers": [
     {
-      "name": "Button1",
-      "type": "gpio",
-      "pin": 17
+      "name": "EntranceLaser",
+      "type": "laser",
+      "tx_pin": 17,
+      "rx_pin": 27,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Entrance",
+          "effect_name": "Entrance"
+        }
+      }
     },
     {
-      "name": "Sensor1",
-      "type": "gpio",
-      "pin": 18
+      "name": "CuddleCrossLaser",
+      "type": "laser",
+      "tx_pin": 22,
+      "rx_pin": 5,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Cuddle Cross",
+          "effect_name": "CuddlePuddle"
+        }
+      }
+    },
+    {
+      "name": "PhotoBombLaser",
+      "type": "laser",
+      "tx_pin": 24,
+      "rx_pin": 6,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Photo Bomb Room",
+          "effect_name": "PhotoBomb-Spot"
+        }
+      }
+    },
+    {
+      "name": "NoFriendsMondayLaser",
+      "type": "laser",
+      "tx_pin": 25,
+      "rx_pin": 13,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "No Friends Monday",
+          "effect_name": "NoFriendsMonday"
+        }
+      }
+    },
+    {
+      "name": "ExitLaser",
+      "type": "laser",
+      "tx_pin": 19,
+      "rx_pin": 26,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Exit",
+          "effect_name": "Lightning"
+        }
+      }
+    },
+    {
+      "name": "CuddleCrossButton1",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 0,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/set_theme",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "next_theme": true
+        }
+      }
+    },
+    {
+      "name": "CuddleCrossButton2",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 1,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect_all_rooms",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "effect_name": "Lightning"
+        }
+      }
+    },
+    {
+      "name": "CuddleCrossButton3",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 2,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/start_music",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {}
+      }
+    },
+    {
+      "name": "CuddleCrossButton4",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 3,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/stop_music",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {}
+      }
     }
   ],
   "cache_dir": "/app/cache"

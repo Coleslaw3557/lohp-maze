@@ -5,7 +5,7 @@
             "volume": 1.0
         },
         "PoliceLights": {
-            "audio_files": ["gadget-policelights.mp3", "vintage-police.mp3"],
+            "audio_files": ["gadget-policelights.mp3", "vintage-police.mp3", "borg.mp3"],
             "volume": 0.8
         },
         "GateInspection": {
@@ -13,11 +13,11 @@
             "volume": 0.7
         },
         "GateGreeters": {
-            "audio_files": ["greeters-weed.mp3", "greeters-jurasic-park.mp3"],
+            "audio_files": ["greeters-weed.mp3", "greeters-jurasic-park.mp3", "prosper-spock.mp3"],
             "volume": 0.7
         },
         "WrongAnswer": {
-            "audio_files": [],
+            "audio_files": ["fail.mp3", "growl1.mp3", "growl2.mp3", "megaman.mp3", "dinorar.mp3", "spacedoorsclosed.mp3"],
             "volume": 0.8
         },
         "CorrectAnswer": {
@@ -25,7 +25,7 @@
             "volume": 0.8
         },
         "Entrance": {
-            "audio_files": ["greeters-jurasic-park.mp3"],
+            "audio_files": ["entrance.mp3", "doom.mp3", "pornhub.mp3","bjbjbj.mp3"],
             "volume": 0.9
         },
         "GuyLineClimb": {
@@ -33,11 +33,11 @@
             "volume": 0.7
         },
         "SparkPony": {
-            "audio_files": [],
+            "audio_files": ["mcoy-doctor.mp3"],
             "volume": 0.8
         },
         "PortoStandBy": {
-            "audio_files": [],
+            "audio_files": ["elevator.mp3", "bjuice.mp3"],
             "volume": 0.6
         },
         "PortoHit": {
@@ -45,7 +45,7 @@
             "volume": 0.9
         },
         "CuddlePuddle": {
-            "audio_files": [],
+            "audio_files": ["dance.mp3"],
             "volume": 0.7
         },
         "PhotoBomb-BG": {
@@ -53,16 +53,28 @@
             "volume": 0.6
         },
         "PhotoBomb-Spot": {
-            "audio_files": [],
+            "audio_files": ["girls-on-film.mp3", "bearsounds.mp3"],
             "volume": 0.8
         },
         "DeepPlaya-BG": {
-            "audio_files": [],
-            "volume": 0.5
+            "audio_files": ["dance-distance-muffled.mp3"],
+            "volume": 0.8
+        },
+        "DeepPlaya-Hit": {
+            "audio_files": ["drink-with-me.mp3", "tea.mp3", "drink-with-me.mp3", "fail.mp3", "medicalemergency.mp3", "spacedoorsclosed.mp3"],
+            "volume": 0.8
         },
         "ImageEnhancement": {
-            "audio_files": ["mw2-imageenhancement.mp3"],
+            "audio_files": ["mw2-imageenhancement.mp3", "sf64-roll.mp3", "faster.mp3"],
             "volume": 0.7
+        },
+        "BikeLockRoom": {
+            "audio_files": ["ramming-speed.mp3"],
+            "volume": 0.8
+        },
+        "NoFriendsMonday": {
+            "audio_files": ["biggerboat.mp3", "excuses.mp3", "iwillsurvive.mp3"],
+            "volume": 0.8
         }
     },
     "default_volume": 0.7

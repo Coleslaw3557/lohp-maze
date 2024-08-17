@@ -1,4 +1,3 @@
-# Use an official Python runtime as a parent image
 FROM python:3.9-slim-buster
 
 # Set the working directory in the container
@@ -10,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     libusb-1.0-0-dev \
     libasound2-dev \
     portaudio19-dev \
+    i2c-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the current directory contents into the container at /app

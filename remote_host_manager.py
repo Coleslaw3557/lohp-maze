@@ -17,6 +17,7 @@ class RemoteHostManager:
         self.remote_hosts = {}
         self.connected_clients = {}
         self.client_rooms = {}
+        self.room_to_client_ip = {}
         self.prepared_audio = {}
         self.sync_manager = SyncManager()
         self.audio_sent_to_clients = {}
@@ -24,20 +25,98 @@ class RemoteHostManager:
         self.audio_manager = audio_manager
         logger.info("RemoteHostManager initialized")
 
-    def get_unique_remote_units(self):
-        return list(set(self.connected_clients.keys()))
+    def get_connected_clients(self):
+        return list(self.connected_clients.keys())
 
-    async def play_audio_for_remote_units(self, remote_units, effect_name, audio_params):
-        success = True
-        for remote_unit in remote_units:
-            rooms = self.get_rooms_for_remote_unit(remote_unit)
-            if rooms:
-                audio_success = await self.play_audio_in_room(rooms[0], effect_name, audio_params)
-                success = success and audio_success
-        return success
+    def get_connected_clients_info(self):
+        clients_info = []
+        for client_ip, websocket in self.connected_clients.items():
+            client_info = {
+                'ip': client_ip,
+                'rooms': self.client_rooms.get(client_ip, []),
+                'name': self.remote_hosts.get(client_ip, {}).get('name', f'Client-{client_ip}')
+            }
+            clients_info.append(client_info)
+        return clients_info
+
+    async def terminate_client(self, client_ip):
+        if client_ip in self.connected_clients:
+            websocket = self.connected_clients[client_ip]
+            try:
+                await websocket.close()
+                del self.connected_clients[client_ip]
+                if client_ip in self.client_rooms:
+                    del self.client_rooms[client_ip]
+                if client_ip in self.remote_hosts:
+                    del self.remote_hosts[client_ip]
+                logger.info(f"Client {client_ip} terminated successfully")
+                return True
+            except Exception as e:
+                logger.error(f"Error terminating client {client_ip}: {str(e)}")
+        else:
+            logger.warning(f"Client {client_ip} not found in connected clients")
+        return False
+
+    async def play_audio_for_all_clients(self, effect_name, audio_params):
+        audio_success = True
+        for websocket in self.connected_clients.values():
+            client_success = await self.send_audio_command_ws(websocket, 'play_effect_audio', {
+                'effect_name': effect_name,
+                'file_name': audio_params.get('file'),
+                'volume': audio_params.get('volume', 1.0),
+                'loop': audio_params.get('loop', False)
+            })
+            audio_success = audio_success and client_success
+        return audio_success
+
+    async def send_audio_command_ws(self, websocket, command, audio_data):
+        try:
+            message = {
+                "type": command,
+                "data": audio_data
+            }
+            await websocket.send(json.dumps(message))
+            logger.info(f"Successfully sent {command} command to client")
+            return True
+        except Exception as e:
+            logger.error(f"Error sending {command} command to client: {str(e)}")
+            return False
+
+    async def send_audio_command(self, client_ip, command, audio_data=None):
+        if client_ip in self.connected_clients:
+            websocket = self.connected_clients[client_ip]
+            logger.info(f"Sending {command} command to client {client_ip}")
+            try:
+                message = {
+                    "type": command,
+                    "data": audio_data
+                }
+                await websocket.send(json.dumps(message))
+                logger.info(f"Successfully sent {command} command to client {client_ip}")
+                return True
+            except Exception as e:
+                logger.error(f"Error sending {command} command to client {client_ip}: {str(e)}")
+        else:
+            logger.error(f"Client {client_ip} is not connected. Cannot send {command} command.")
+        return False
 
     def get_rooms_for_remote_unit(self, remote_unit):
         return self.client_rooms.get(remote_unit, [])
+
+    def get_client_ip_by_room(self, room):
+        if isinstance(room, list):
+            rooms = room
+        else:
+            rooms = [room]
+        
+        for room in rooms:
+            if room in self.room_to_client_ip:
+                client_ips = self.room_to_client_ip[room]
+                if client_ips:
+                    return next(iter(client_ips))  # Return the first client IP associated with the room
+        
+        logger.warning(f"No client IP found for room(s): {rooms}")
+        return None
 
     def clear_audio_sent_to_clients(self):
         self.audio_sent_to_clients.clear()
@@ -103,7 +182,7 @@ class RemoteHostManager:
             logger.info(f"No audio tasks to execute for effect: {effect_name}")
             return True
 
-    def update_client_rooms(self, unit_name, ip, rooms, websocket, path):
+    def update_client_rooms(self, unit_name, ip, rooms, websocket):
         client_ip = websocket.remote_address[0]  # Get the actual client IP
         self.client_rooms[client_ip] = rooms
         self.connected_clients[client_ip] = websocket  # Store the WebSocket object
@@ -111,13 +190,15 @@ class RemoteHostManager:
         logger.info(f"Updated associated rooms for client {unit_name} ({client_ip}): {rooms}")
         for room in rooms:
             logger.info(f"Associating room {room} with client {unit_name} ({client_ip})")
-            # Ensure each room is associated with a client IP
+        
+        # Update the reverse mapping of rooms to client IPs
+        for room in rooms:
             if room not in self.room_to_client_ip:
-                self.room_to_client_ip[room] = client_ip
-            else:
-                logger.warning(f"Room {room} is already associated with another client. Updating to {client_ip}")
-                self.room_to_client_ip[room] = client_ip
-        logger.debug(f"WebSocket path: {path}")  # Log the path for debugging
+                self.room_to_client_ip[room] = set()
+            self.room_to_client_ip[room].add(client_ip)
+        
+        # Send the list of audio files to download
+        self.send_audio_files_to_download(client_ip)
 
     async def initialize_websocket_connections(self):
         logger.info("WebSocket connections will be initialized when clients connect")
@@ -134,48 +215,22 @@ class RemoteHostManager:
         logger.warning(f"No host configuration found for room: {room}")
         return None
 
-    async def send_audio_command(self, room, command, audio_data=None):
-        client_ip = self.get_client_ip_by_room(room)
-        if client_ip:
-            if client_ip in self.connected_clients:
-                websocket = self.connected_clients[client_ip]
-                logger.info(f"Sending {command} command for room {room} to client {client_ip}")
-                try:
-                    if command == 'audio_start':
-                        message = {
-                            "type": command,
-                            "room": room,
-                            "data": {
-                                "file_name": "audio.mp3",
-                                "volume": 1.0,
-                                "loop": False
-                            }
-                        }
-                        await websocket.send(json.dumps(message))
-                        if isinstance(audio_data, bytes):
-                            await websocket.send(audio_data)
-                    elif command == 'audio_data':
-                        if isinstance(audio_data, bytes):
-                            await websocket.send(audio_data)
-                        else:
-                            logger.error(f"Invalid audio data type for {command} command")
-                            return False
-                    else:
-                        message = {
-                            "type": command,
-                            "room": room,
-                            "data": audio_data
-                        }
-                        await websocket.send(json.dumps(message))
-                    
-                    logger.info(f"Successfully sent {command} command for room {room} to client {client_ip}")
-                    return True
-                except Exception as e:
-                    logger.error(f"Error sending {command} command for room {room} to client {client_ip}: {str(e)}")
-            else:
-                logger.error(f"Client {client_ip} for room {room} is not connected. Cannot send {command} command.")
+    async def send_audio_command(self, client_ip, command, audio_data=None):
+        if client_ip in self.connected_clients:
+            websocket = self.connected_clients[client_ip]
+            logger.info(f"Sending {command} command to client {client_ip}")
+            try:
+                message = {
+                    "type": command,
+                    "data": audio_data
+                }
+                await websocket.send(json.dumps(message))
+                logger.info(f"Successfully sent {command} command to client {client_ip}")
+                return True
+            except Exception as e:
+                logger.error(f"Error sending {command} command to client {client_ip}: {str(e)}")
         else:
-            logger.error(f"No client IP found for room: {room}. Cannot send {command} command.")
+            logger.error(f"Client {client_ip} is not connected. Cannot send {command} command.")
         return False
 
     def update_client_rooms(self, unit_name, ip, rooms, websocket):
@@ -267,24 +322,34 @@ class RemoteHostManager:
         # For example:
         # self.effect_manager.trigger_effect(room, trigger)
 
-    async def play_audio_in_room(self, room, effect_name, audio_params):
-        client_ip = self.get_client_ip_by_room(room)
-        if not client_ip:
-            logger.warning(f"No client IP found for room: {room}. Cannot play audio.")
-            return False
+    async def play_audio_in_room(self, rooms, effect_name, audio_params):
+        if isinstance(rooms, str):
+            rooms = [rooms]
+        
+        success = True
+        for room in rooms:
+            client_ip = self.get_client_ip_by_room(room)
+            if not client_ip:
+                logger.warning(f"No client IP found for room: {room}. Cannot play audio.")
+                success = False
+                continue
 
-        audio_file = self.audio_manager.get_random_audio_file(effect_name)
-        if not audio_file:
-            logger.error(f"No audio file found for effect: {effect_name}")
-            return False
+            audio_file = self.audio_manager.get_random_audio_file(effect_name)
+            if not audio_file:
+                logger.error(f"No audio file found for effect: {effect_name}")
+                success = False
+                continue
 
-        logger.info(f"Instructing client to play audio for effect '{effect_name}' in room {room} (Client IP: {client_ip})")
-        return await self.send_audio_command(room, 'play_effect_audio', {
-            'effect_name': effect_name,
-            'file_name': os.path.basename(audio_file),
-            'volume': audio_params.get('volume', 1.0),
-            'loop': audio_params.get('loop', False)
-        })
+            logger.info(f"Instructing client to play audio for effect '{effect_name}' in room {room} (Client IP: {client_ip})")
+            result = await self.send_audio_command(room, 'play_effect_audio', {
+                'effect_name': effect_name,
+                'file_name': os.path.basename(audio_file),
+                'volume': audio_params.get('volume', 1.0),
+                'loop': audio_params.get('loop', False)
+            })
+            success = success and result
+
+        return success
 
     def __init__(self, audio_manager=None):
         self.remote_hosts = {}

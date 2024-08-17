@@ -47,6 +47,7 @@ def create_strobe_effect():
 
 ```python
 from .strobe import create_strobe_effect
+from .lightning_storm import create_lightning_storm_effect
 ```
 
 3. In `effects_manager.py`, add to the `initialize_effects()` method:
@@ -92,3 +93,72 @@ curl -X POST http://$CONTROLLER_IP:5000/api/run_effect \
 8. When creating new effects, consider how they might interact with the theme system and ensure compatibility.
 
 Remember to test all changes in a development environment before deploying to production. Use the `test_api.py` script to verify that new or modified effects work correctly with the API.
+import RPi.GPIO as GPIO
+import time
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# GPIO pin configurations
+LASER_PINS = {
+    'EntranceLT': 17,
+    'EntranceLR': 27,
+    'CuddleCrossLT': 22,
+    'CuddleCrossLR': 5,
+    'PhotoBombLT': 24,
+    'PhotoBombLR': 6,
+    'NoFriendsMondayLT': 25,
+    'NoFriendsMondayLR': 13,
+    'ExitLT': 19,
+    'ExitLR': 26
+}
+
+BUTTON_PINS = {
+    'EntranceButton': 23,
+    'CuddleCrossButton': 18,
+    'PhotoBombButton': 4,
+    'NoFriendsMondayButton': 12,
+    'ExitButton': 16
+}
+
+def setup_gpio():
+    GPIO.setmode(GPIO.BCM)
+    for pin in LASER_PINS.values():
+        GPIO.setup(pin, GPIO.OUT)
+    for pin in BUTTON_PINS.values():
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+def test_lasers():
+    logger.info("Testing lasers...")
+    for name, pin in LASER_PINS.items():
+        GPIO.output(pin, GPIO.HIGH)
+        logger.info(f"{name} (Pin {pin}) ON")
+        time.sleep(1)
+        GPIO.output(pin, GPIO.LOW)
+        logger.info(f"{name} (Pin {pin}) OFF")
+        time.sleep(0.5)
+
+def test_buttons():
+    logger.info("Testing buttons... Press each button when prompted.")
+    for name, pin in BUTTON_PINS.items():
+        logger.info(f"Press the {name} (Pin {pin})")
+        while GPIO.input(pin) == GPIO.HIGH:
+            time.sleep(0.1)
+        logger.info(f"{name} pressed successfully!")
+        time.sleep(0.5)
+
+def main():
+    try:
+        setup_gpio()
+        test_lasers()
+        test_buttons()
+    except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")
+    finally:
+        GPIO.cleanup()
+        logger.info("GPIO cleaned up")
+
+if __name__ == "__main__":
+    main()
