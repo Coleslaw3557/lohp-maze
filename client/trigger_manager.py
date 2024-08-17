@@ -15,7 +15,6 @@ class TriggerManager:
     def __init__(self, config):
         self.config = config
         self.triggers = config.get('triggers', [])
-        self.piezo_settings = config.get('piezo_settings', {})
         GPIO.setmode(GPIO.BCM)
         self.setup_triggers()
         self.start_time = time.time()
@@ -23,59 +22,33 @@ class TriggerManager:
         self.startup_delay = config.get('startup_delay', 10)
         self.trigger_cooldowns = {}
         self.laser_intact_times = {}  # New attribute to track when laser beams became intact
-        self.piezo_attempts = 0
         self.setup_adc()
-        self.resistor_ladder_cooldown = config.get('resistor_ladder_cooldown', 1)
-        self.last_resistor_ladder_trigger = 0
         
-        # Constants for knock detection
-        self.KNOCK_THRESHOLD = config.get('knock_threshold', 0.05)
+        # Constants for button detection
+        self.BUTTON_THRESHOLD = config.get('button_threshold', 0.5)
         self.VOLTAGE_CHANGE_THRESHOLD = config.get('voltage_change_threshold', 0.01)
         self.COOLDOWN_TIME = config.get('cooldown_time', 0.2)
         self.DEBUG_THRESHOLD = config.get('debug_threshold', 0.005)
         self.CONNECTED_THRESHOLD = config.get('connected_threshold', 0.3)
         
-        # Initialize filters for knock detection
-        self.filters = {f"ADC2 A{i}": {'last_voltage': 0, 'last_knock': 0} for i in range(3)}
+        # Initialize filters for button detection
+        self.filters = {f"ADC1 A{i}": {'last_voltage': 0, 'last_press': 0} for i in range(4)}
 
-    def check_resistor_ladder(self):
+    def check_cuddle_cross_buttons(self):
         current_time = time.time()
-        if current_time - self.last_resistor_ladder_trigger < self.resistor_ladder_cooldown:
-            logger.debug("Resistor ladder check skipped due to cooldown")
-            return
-
-        adc1_a0_voltage = self.gate_resistor_ladder1.voltage if self.gate_resistor_ladder1 else 0
-        adc1_a1_voltage = self.gate_resistor_ladder2.voltage if self.gate_resistor_ladder2 else 0
-
-        logger.debug(f"Resistor Ladder 1 voltage: {adc1_a0_voltage:.2f}V")
-        logger.debug(f"Resistor Ladder 2 voltage: {adc1_a1_voltage:.2f}V")
-
-        # Define voltage ranges for each button combination
-        voltage_ranges = {
-            (0.0, 0.2): "No Button",
-            (0.3, 0.5): "Button 1",
-            (0.6, 0.8): "Button 2",
-            (0.9, 1.1): "Button 3",
-            (1.2, 1.4): "Buttons 1 and 2",
-            (1.5, 1.7): "Buttons 1 and 3",
-            (1.8, 2.0): "Buttons 2 and 3",
-            (2.1, 2.3): "All Buttons"
-        }
-
-        for ladder, voltage in [("Ladder 1", adc1_a0_voltage), ("Ladder 2", adc1_a1_voltage)]:
-            logger.debug(f"Checking {ladder} with voltage: {voltage:.2f}V")
-            for (lower, upper), button_combo in voltage_ranges.items():
-                if lower <= voltage <= upper:
-                    logger.debug(f"{ladder}: Voltage {voltage:.2f}V matches {button_combo}")
-                    if button_combo != "No Button":
-                        logger.info(f"Resistor {ladder}: {button_combo} pressed")
-                        effect_name = f"Gate{button_combo.replace(' ', '').replace('and', 'And')}"
-                        logger.debug(f"Triggering effect: {effect_name}")
-                        self.trigger_effect("Gate", effect_name)
-                        self.last_resistor_ladder_trigger = current_time
-                    return
-        
-        logger.warning(f"No button combination matched for voltages: Ladder 1 = {adc1_a0_voltage:.2f}V, Ladder 2 = {adc1_a1_voltage:.2f}V")
+        for i, channel in enumerate(self.button_channels):
+            voltage = channel.voltage
+            button_name = f"CuddleCrossButton{i+1}"
+            
+            logger.debug(f"{button_name} voltage: {voltage:.2f}V")
+            
+            if voltage < self.BUTTON_THRESHOLD:
+                if current_time - self.filters[f"ADC1 A{i}"]['last_press'] > self.COOLDOWN_TIME:
+                    logger.info(f"{button_name} pressed")
+                    self.filters[f"ADC1 A{i}"]['last_press'] = current_time
+                    self.trigger_effect("Cuddle Cross", button_name)
+            
+            self.filters[f"ADC1 A{i}"]['last_voltage'] = voltage
 
     def trigger_effect(self, room, effect_name):
         url = "http://localhost:5000/api/run_effect"
@@ -107,18 +80,15 @@ class TriggerManager:
 
     def setup_adc(self):
         i2c = busio.I2C(board.SCL, board.SDA)
-        self.ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Gate Room
-        self.ads2 = ADS.ADS1115(i2c, address=0x49)  # ADC2 for Porto Room
+        self.ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Cuddle Cross buttons
         
-        self.gate_resistor_ladder1 = AnalogIn(self.ads1, ADS.P0)
-        self.gate_resistor_ladder2 = AnalogIn(self.ads1, ADS.P1)
-        
-        self.piezo_channels = [
-            AnalogIn(self.ads2, ADS.P0),
-            AnalogIn(self.ads2, ADS.P1),
-            AnalogIn(self.ads2, ADS.P2)
+        self.button_channels = [
+            AnalogIn(self.ads1, ADS.P0),
+            AnalogIn(self.ads1, ADS.P1),
+            AnalogIn(self.ads1, ADS.P2),
+            AnalogIn(self.ads1, ADS.P3)
         ]
-        logger.info("ADC setup completed for Gate Room (0x48) and Porto Room (0x49)")
+        logger.info("ADC setup completed for Cuddle Cross buttons (0x48)")
 
     async def monitor_triggers(self, callback):
         while True:
@@ -141,22 +111,8 @@ class TriggerManager:
                         # Beam is intact
                         GPIO.output(trigger['tx_pin'], GPIO.HIGH)
                         logger.debug(f"Laser beam intact: {trigger['name']} (TX: GPIO{trigger['tx_pin']}, RX: GPIO{trigger['rx_pin']})")
-                elif trigger['type'] == 'gpio':
-                    if 'pin' in trigger:
-                        pin_state = GPIO.input(trigger['pin'])
-                        if pin_state == GPIO.LOW:
-                            if self.check_trigger_cooldown(f"{trigger['name']}_gpio", current_time):
-                                logger.info(f"GPIO trigger activated: {trigger['name']} (GPIO{trigger['pin']})")
-                                await callback(trigger['name'])
-                                self.set_trigger_cooldown(f"{trigger['name']}_gpio", current_time)
-                        else:
-                            # Reset the cooldown when the GPIO state changes back to HIGH
-                            self.set_trigger_cooldown(f"{trigger['name']}_gpio", 0)
-                elif trigger['type'] == 'piezo':
-                        await self.check_piezo_trigger(trigger, callback, current_time)
-            
-            # Check resistor ladder states
-            self.check_resistor_ladder()
+                elif trigger['type'] == 'adc':
+                    self.check_cuddle_cross_buttons()
             
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
