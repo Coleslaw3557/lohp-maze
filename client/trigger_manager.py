@@ -87,8 +87,9 @@ class TriggerManager:
         GPIO.setup(trigger['tx_pin'], GPIO.OUT)
         GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
         GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']}, RX pin {trigger['rx_pin']}, Room: {trigger.get('room', 'Not specified')}")
+        logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']} (ON), RX pin {trigger['rx_pin']}, Room: {trigger.get('room', 'Not specified')}")
         self.active_triggers.append(trigger)
+        self.laser_states[trigger['name']] = GPIO.input(trigger['rx_pin'])  # Initialize laser state
 
     def setup_gpio_trigger(self, trigger):
         if 'pin' in trigger:
