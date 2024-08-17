@@ -164,13 +164,13 @@ class TriggerManager:
             tasks = []
             for trigger in self.active_triggers:
                 if trigger['type'] == 'laser':
-                    tasks.append(self.check_laser_trigger(trigger, callback, current_time))
+                    tasks.append(self.check_laser_trigger(trigger, lambda name: callback(self.get_action(name)), current_time))
                 elif trigger['type'] == 'gpio':
-                    tasks.append(self.check_gpio_trigger(trigger, callback, current_time))
+                    tasks.append(self.check_gpio_trigger(trigger, lambda name: callback(self.get_action(name)), current_time))
                 elif trigger['type'] == 'piezo':
-                    tasks.append(self.check_piezo_trigger(trigger, callback, current_time))
+                    tasks.append(self.check_piezo_trigger(trigger, lambda name: callback(self.get_action(name)), current_time))
                 elif trigger['type'] == 'adc':
-                    tasks.append(self.check_adc_trigger(trigger, callback, current_time))
+                    tasks.append(self.check_adc_trigger(trigger, lambda name: callback(self.get_action(name)), current_time))
 
             await asyncio.gather(*tasks)
             await asyncio.sleep(0.01)
