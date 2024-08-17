@@ -1,5 +1,5 @@
 # LoHP Maze Wiring Guide
-# UNIT - C
+# UNIT - C (Updated)
 
 ## Raspberry Pi Full 40-pin Pinout Connections
 
@@ -106,7 +106,7 @@
 | A6 | Raspberry Pi GPIO 23 (Pi Pin 16) |
 | B6 | Bike Lock Room LR Signal |
 | A7-A8 | Not Connected |
-| B7-B8 | Not Connected |
+| B7-A8 | Not Connected |
 
 ### LS2 (Vertical Moop March and Monkey Room)
 
@@ -141,6 +141,7 @@
 | A1 | Deep Playa Handshake Button 2 |
 | A2 | Deep Playa Handshake Button 3 |
 | A3 | Deep Playa Handshake Button 4 |
+| A4 | Deep Playa Handshake Button 5 |
 | ADDR | GND (Pi Pin 6) (I2C address 0x48) |
 
 ## Laser Modules
@@ -187,8 +188,8 @@
 
 1. All laser modules (LT and LR) have their VCC connected to 5V (Pi Pin 2) and GND connected to the main GND (Pi Pin 6).
 2. All buttons have their VCC connected to 3.3V (Pi Pin 1) and GND connected to the main GND (Pi Pin 6).
-3. The buttons in the Deep Playa Handshake room are connected to the ADS1115 ADC to save GPIO pins on the Raspberry Pi.
-4. The single button in the Monkey Room is directly connected to a GPIO pin for simplicity.
+3. The five SPST buttons in the Deep Playa Handshake room are connected to the ADS1115 ADC (channels A0 to A4) to save GPIO pins on the Raspberry Pi.
+4. The single SPST button in the Monkey Room is directly connected to GPIO 12 (Physical Pin 32) for simplicity.
 5. Ensure all GND connections are properly made to create a common ground for the entire system.
 6. Double-check all connections before powering on the Raspberry Pi to prevent any potential damage to the components.
 7. The UART pins (GPIO 14 and 15, or physical pins 8 and 10) are left unused for console access as requested.

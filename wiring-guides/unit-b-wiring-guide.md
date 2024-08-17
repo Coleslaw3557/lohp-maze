@@ -1,24 +1,22 @@
 # LoHP Maze Wiring Guide
-# UNIT - B
-
+# UNIT - B (Updated)
 
 ## Raspberry Pi Full 40-pin Pinout Connections
 
-
 | Pin | GPIO | Function | Connection |
 |-----|------|----------|------------|
-| 1   | 3V3  | Power    | LS1 VCCA, LS2 VCCA, LS1 OE, LS2 OE, ADS1115_1 VDD, ADS1115_2 VDD, ADS1115_2 ADDR, Resistor Ladders VCC, Piezo Knock Sensors VCC |
+| 1   | 3V3  | Power    | LS1 VCCA, LS2 VCCA, LS1 OE, LS2 OE, ADS1115_1 VDD, ADS1115_2 VDD, ADS1115_2 ADDR, All Buttons VCC |
 | 2   | 5V   | Power    | LS1 VCCB, LS2 VCCB, All Laser Module VCC |
 | 3   | GPIO2| I2C SDA  | ADS1115_1 SDA, ADS1115_2 SDA |
 | 4   | 5V   | Power    | Not used (available if needed) |
 | 5   | GPIO3| I2C SCL  | ADS1115_1 SCL, ADS1115_2 SCL |
-| 6   | GND  | Ground   | LS1 GND, LS2 GND, ADS1115_1 GND, ADS1115_2 GND, ADS1115_1 ADDR, All Laser Module GND, Resistor Ladders GND, Piezo Knock Sensors GND |
+| 6   | GND  | Ground   | LS1 GND, LS2 GND, ADS1115_1 GND, ADS1115_2 GND, ADS1115_1 ADDR, All Laser Module GND, All Buttons GND |
 | 7   | GPIO4| GPIO     | Not used |
 | 8   | GPIO14| UART TXD| Not used (reserved for console access) |
 | 9   | GND  | Ground   | Not used (available if needed) |
 | 10  | GPIO15| UART RXD| Not used (reserved for console access) |
 | 11  | GPIO17| GPIO    | Cop Dodge LT (via LS1) |
-| 12  | GPIO18| GPIO    | Not used |
+| 12  | GPIO18| GPIO    | Button 5 |
 | 13  | GPIO27| GPIO    | Cop Dodge LR (via LS1) |
 | 14  | GND  | Ground   | Not used (available if needed) |
 | 15  | GPIO22| GPIO    | Gate LT (via LS1) |
@@ -38,7 +36,7 @@
 | 29  | GPIO5 | GPIO    | Sparkle Pony LT (via LS2) |
 | 30  | GND  | Ground   | Not used (available if needed) |
 | 31  | GPIO6 | GPIO    | Sparkle Pony LR (via LS2) |
-| 32  | GPIO12| GPIO    | Not used |
+| 32  | GPIO12| GPIO    | Button 6 |
 | 33  | GPIO13| GPIO    | Porto LT (via LS2) |
 | 34  | GND  | Ground   | Not used (available if needed) |
 | 35  | GPIO19| GPIO    | Porto LR (via LS2) |
@@ -64,14 +62,16 @@
 | Sparkle Pony | LR | 31 | 6 | Via LS2 |
 | Porto | LT | 33 | 13 | Via LS2 |
 | Porto | LR | 35 | 19 | Via LS2 |
+| N/A | Button 5 | 12 | 18 | Direct to GPIO |
+| N/A | Button 6 | 32 | 12 | Direct to GPIO |
 
 ## Power Connections
 
 | Voltage | Physical Pin | Connections |
 |---------|--------------|-------------|
-| 3.3V | 1 | LS1 VCCA, LS2 VCCA, LS1 OE, LS2 OE, ADS1115_1 VDD, ADS1115_2 VDD, ADS1115_2 ADDR, Resistor Ladders VCC, Piezo Knock Sensors VCC |
+| 3.3V | 1 | LS1 VCCA, LS2 VCCA, LS1 OE, LS2 OE, ADS1115_1 VDD, ADS1115_2 VDD, ADS1115_2 ADDR, All Buttons VCC |
 | 5V | 2 | LS1 VCCB, LS2 VCCB, All Laser Module VCC |
-| GND | 6 | LS1 GND, LS2 GND, ADS1115_1 GND, ADS1115_2 GND, ADS1115_1 ADDR, All Laser Module GND, Resistor Ladders GND, Piezo Knock Sensors GND |
+| GND | 6 | LS1 GND, LS2 GND, ADS1115_1 GND, ADS1115_2 GND, ADS1115_1 ADDR, All Laser Module GND, All Buttons GND |
 
 ## Additional GND Connections (if needed)
 | Voltage | Physical Pin | Purpose |
@@ -138,10 +138,10 @@
 | GND | GND (Pi Pin 6) |
 | SCL | Raspberry Pi GPIO 3 (Pi Pin 5) |
 | SDA | Raspberry Pi GPIO 2 (Pi Pin 3) |
-| A0 | Resistor Ladder 1 Signal |
-| A1 | Resistor Ladder 2 Signal |
-| A2 | Not Connected |
-| A3 | Not Connected |
+| A0 | Button 1 Signal |
+| A1 | Button 2 Signal |
+| A2 | Button 3 Signal |
+| A3 | Button 4 Signal |
 | ADDR | GND (Pi Pin 6) (I2C address 0x48) |
 
 ### ADC2 (Porto Room)
@@ -152,9 +152,9 @@
 | GND | GND (Pi Pin 6) |
 | SCL | Raspberry Pi GPIO 3 (Pi Pin 5) |
 | SDA | Raspberry Pi GPIO 2 (Pi Pin 3) |
-| A0 | Piezo Knock Sensor 1 Signal |
-| A1 | Piezo Knock Sensor 2 Signal |
-| A2 | Piezo Knock Sensor 3 Signal |
+| A0 | Not Connected |
+| A1 | Not Connected |
+| A2 | Not Connected |
 | A3 | Not Connected |
 | ADDR | VDD (Pi Pin 1) (I2C address 0x49) |
 
@@ -180,28 +180,25 @@
 | Sparkle Pony | 6 | 31 | LS2 B4 |
 | Porto | 19 | 35 | LS2 B6 |
 
-## Analog Sensors
+## Button Connections
 
-### Gate Room
-
-| Sensor | Connection |
+| Button | Connection |
 |--------|------------|
-| Resistor Ladder 1 | ADC1 A0 |
-| Resistor Ladder 2 | ADC1 A1 |
-
-### Porto Room
-
-| Sensor | Connection |
-|--------|------------|
-| Piezo Knock Sensor 1 | ADC2 A0 |
-| Piezo Knock Sensor 2 | ADC2 A1 |
-| Piezo Knock Sensor 3 | ADC2 A2 |
+| Button 1 | ADC1 A0 |
+| Button 2 | ADC1 A1 |
+| Button 3 | ADC1 A2 |
+| Button 4 | ADC1 A3 |
+| Button 5 | GPIO 18 (Pi Pin 12) |
+| Button 6 | GPIO 12 (Pi Pin 32) |
 
 ## Additional Notes
 
 1. All laser modules (LT and LR) have their VCC connected to 5V (Pi Pin 2) and GND connected to the main GND (Pi Pin 6).
-2. The resistor ladders and piezo knock sensors have their VCC connected to 3.3V (Pi Pin 1) and GND connected to the main GND (Pi Pin 6).
-3. Ensure all GND connections are properly made to create a common ground for the entire system.
-4. Double-check all connections before powering on the Raspberry Pi to prevent any potential damage to the components.
-5. The UART pins (GPIO 14 and 15, or physical pins 8 and 10) are left unused for console access as requested.
-6. If you need to distribute the ground connections to reduce wire length or improve organization, you can use the additional GND pins listed in the "Additional GND Connections" section.
+2. All buttons have their VCC connected to 3.3V (Pi Pin 1) and GND connected to the main GND (Pi Pin 6).
+3. Four SPST buttons (1-4) are connected to the ADS1115_1 ADC (channels A0 to A3) to save GPIO pins on the Raspberry Pi.
+4. Two SPST buttons (5-6) are directly connected to GPIO pins for simplicity and because we've used all available ADC channels.
+5. Ensure all GND connections are properly made to create a common ground for the entire system.
+6. Double-check all connections before powering on the Raspberry Pi to prevent any potential damage to the components.
+7. The UART pins (GPIO 14 and 15, or physical pins 8 and 10) are left unused for console access as requested.
+8. If you need to distribute the ground connections to reduce wire length or improve organization, you can use the additional GND pins listed in the "Additional GND Connections" section.
+9. The second ADC (ADS1115_2) is currently not used but remains in the setup for potential future expansion.
