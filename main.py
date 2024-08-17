@@ -533,7 +533,7 @@ async def run_effect_all_rooms():
     if not effect_name:
         return jsonify({'status': 'error', 'message': 'Effect name is required'}), 400
         
-    logger.info(f"Preparing effect: {effect_name} for all rooms")
+    logger.info(f"Preparing effect: {effect_name} for all connected clients")
     effect_data = effects_manager.get_effect(effect_name)
     if not effect_data:
         logger.error(f"Effect not found: {effect_name}")
@@ -548,20 +548,24 @@ async def run_effect_all_rooms():
     effect_data['audio'] = {**audio_params, 'file': audio_file}
         
     try:
-        # Play the audio file for all connected clients
-        audio_success = await remote_host_manager.play_audio_for_all_clients(effect_name, effect_data['audio'])
+        # Play the audio file once for each connected client
+        connected_clients = remote_host_manager.get_connected_clients()
+        audio_success = True
+        for client in connected_clients:
+            client_success = await remote_host_manager.play_audio_for_client(client, effect_name, effect_data['audio'])
+            audio_success = audio_success and client_success
             
         # Execute the effect immediately for all rooms
         success, message = await effects_manager.apply_effect_to_all_rooms(effect_name, effect_data)
             
-        if success:
-            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed for all remote units simultaneously'})
+        if success and audio_success:
+            return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed for all connected clients simultaneously'})
         else:
-            error_message = f"Failed to execute effect {effect_name} for all remote units. Message: {message}"
+            error_message = f"Failed to execute effect {effect_name} for all connected clients. Message: {message}"
             logger.error(error_message)
             return jsonify({'status': 'error', 'message': error_message}), 500
     except Exception as e:
-        error_message = f"Error executing effect {effect_name} for all remote units: {str(e)}"
+        error_message = f"Error executing effect {effect_name} for all connected clients: {str(e)}"
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
 
