@@ -163,6 +163,7 @@ class ThemeManager:
                 await self.stop_current_theme_async()
                 self.current_theme = theme_name
                 self.stop_theme.clear()
+                await asyncio.sleep(0.1)  # Add a small delay before starting the new theme
                 self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
                 self.theme_thread.start()
                 # Reset temporary theme values
@@ -196,14 +197,18 @@ class ThemeManager:
             return None
 
         current_index = self.theme_list.index(self.current_theme) if self.current_theme in self.theme_list else -1
-        for i in range(len(self.theme_list)):
-            next_index = (current_index + i + 1) % len(self.theme_list)
+        start_index = current_index
+        while True:
+            next_index = (start_index + 1) % len(self.theme_list)
             next_theme = self.theme_list[next_index]
             if next_theme != self.current_theme:
                 success = await self.set_current_theme_async(next_theme)
                 if success:
                     logger.info(f"Successfully set next theme to: {next_theme}")
                     return next_theme
+            if next_index == current_index:
+                break
+            start_index = next_index
         
         logger.error("Failed to set any theme after trying all available themes")
         return None
