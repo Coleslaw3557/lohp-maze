@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     libasound2-dev \
     portaudio19-dev \
     i2c-tools \
+    python3-smbus \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

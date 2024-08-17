@@ -169,6 +169,7 @@ class TriggerManager:
                             self.button_channels[trigger['name']] = sensor_channel
                         else:  # piezo
                             self.piezo_channels[trigger['name']] = sensor_channel
+                        logger.info(f"Set up {trigger['type']} channel for {trigger['name']} on address {adc_address}, channel {channel}")
                     else:
                         logger.warning(f"No channel specified for trigger: {trigger['name']}")
             
@@ -217,6 +218,7 @@ class TriggerManager:
                 logger.info(f"Button pressed: {trigger['name']}")
                 self.set_trigger_cooldown(trigger['name'], current_time)
                 await callback(trigger['name'])
+                await self.trigger_effect(trigger['name'])
 
     async def monitor_triggers(self, callback):
         while True:

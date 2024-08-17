@@ -119,6 +119,7 @@ async def main():
         try:
             trigger_manager = TriggerManager(config)
             logger.info(f"TriggerManager initialized with configuration from config file")
+            await trigger_manager.setup_adc()  # Ensure ADC is set up asynchronously
         except Exception as e:
             logger.error(f"Failed to initialize TriggerManager: {str(e)}")
             trigger_manager = None
