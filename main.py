@@ -178,6 +178,17 @@ effects_manager.stop_current_theme()
 async def initialize_remote_hosts():
     # Initialize WebSocket connections to remote hosts
     await remote_host_manager.initialize_websocket_connections()
+    
+    # Load and validate client configurations
+    for unit in ['a', 'b', 'c']:
+        config_file = f'client/config-unit-{unit}.json'
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+            logger.info(f"Loaded configuration for Unit {unit.upper()}: {config}")
+            # Here you can add additional validation logic if needed
+        except Exception as e:
+            logger.error(f"Error loading configuration for Unit {unit.upper()}: {str(e)}")
 
 @app.route('/api/set_master_brightness', methods=['POST'])
 async def set_master_brightness():
@@ -571,7 +582,7 @@ if __name__ == '__main__':
     config.use_reloader = DEBUG
     config.accesslog = "-"  # Log to stdout
     config.errorlog = "-"  # Log to stderr
-    config.loglevel = "DEBUG"
+    config.loglevel = "DEBUG" if DEBUG else "INFO"
 
     async def run_server():
         try:
