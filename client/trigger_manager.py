@@ -173,6 +173,7 @@ class TriggerManager:
         asyncio.create_task(self.read_adc_continuously())
 
         while True:
+            self.keep_lasers_on()  # Ensure laser states are set to HIGH on each iteration
             current_time = time.time()
             if current_time - self.start_time < self.startup_delay:
                 await asyncio.sleep(0.1)
