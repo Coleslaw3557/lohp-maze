@@ -446,8 +446,6 @@ class TriggerManager:
             voltage = channel.voltage
             button_status = self.get_button_status(voltage)
             
-            logger.debug(f"Button {trigger['name']}: Value: {channel.value}, Voltage: {voltage:.3f}V, Status: {button_status}")
-            
             if button_status == "Button pressed":
                 if self.check_trigger_cooldown(trigger['name'], current_time):
                     logger.info(f"Button pressed: {trigger['name']}")
@@ -462,8 +460,6 @@ class TriggerManager:
 
         try:
             voltage = channel.voltage
-            
-            logger.debug(f"Piezo {trigger['name']}: Value: {channel.value}, Voltage: {voltage:.3f}V")
             
             if voltage > self.PIEZO_THRESHOLD:
                 if self.check_trigger_cooldown(trigger['name'], current_time):
