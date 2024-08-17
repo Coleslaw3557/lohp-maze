@@ -35,16 +35,16 @@
     }
   ],
   "lasers": [
-    {"name": "TempleRoomLT", "gpio": 4},
-    {"name": "TempleRoomLR", "gpio": 17},
-    {"name": "DeepPlayaHandshakeLT", "gpio": 18},
-    {"name": "DeepPlayaHandshakeLR", "gpio": 27},
-    {"name": "BikeLockRoomLT", "gpio": 22},
-    {"name": "BikeLockRoomLR", "gpio": 23},
-    {"name": "VerticalMoopMarchLT", "gpio": 24},
-    {"name": "VerticalMoopMarchLR", "gpio": 25},
-    {"name": "MonkeyRoomLT", "gpio": 5},
-    {"name": "MonkeyRoomLR", "gpio": 6}
+    {"name": "TempleRoomLT", "gpio": 17},
+    {"name": "TempleRoomLR", "gpio": 27},
+    {"name": "DeepPlayaHandshakeLT", "gpio": 22},
+    {"name": "DeepPlayaHandshakeLR", "gpio": 5},
+    {"name": "BikeLockRoomLT", "gpio": 24},
+    {"name": "BikeLockRoomLR", "gpio": 6},
+    {"name": "VerticalMoopMarchLT", "gpio": 25},
+    {"name": "VerticalMoopMarchLR", "gpio": 13},
+    {"name": "MonkeyRoomLT", "gpio": 19},
+    {"name": "MonkeyRoomLR", "gpio": 26}
   ],
   "cache_dir": "/app/cache"
 }
