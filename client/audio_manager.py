@@ -17,7 +17,7 @@ class AudioManager:
         self.config = config
         self.preloaded_audio = {}
         server_ip = config.get('server_ip')
-        if server_ip.startswith('${'):
+        if not server_ip or server_ip.startswith('${'):
             logger.error(f"Server IP not properly set. Current value: {server_ip}")
             raise ValueError("Server IP is not properly configured")
         self.server_url = f"http://{server_ip}:{config.get('server_port', 5000)}"
