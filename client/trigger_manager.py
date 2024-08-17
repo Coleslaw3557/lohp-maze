@@ -311,19 +311,22 @@ class TriggerManager:
     async def read_adc_continuously(self):
         while True:
             current_time = time.time()
+            tasks = []
             for trigger in self.triggers:
                 if trigger['type'] == 'adc':
                     channel_info = self.adc_channels.get(trigger['name'])
                     if channel_info:
-                        try:
-                            voltage = channel_info['channel'].voltage
-                            logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V")
-                            await self.check_adc_trigger(trigger, self.trigger_effect, current_time)
-                        except Exception as e:
-                            logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
-                    else:
-                        logger.warning(f"No channel info for trigger {trigger['name']}")
+                        tasks.append(self.read_and_check_adc(trigger, channel_info, current_time))
+            await asyncio.gather(*tasks)
             await asyncio.sleep(0.05)  # Check every 50ms to reduce CPU usage
+
+    async def read_and_check_adc(self, trigger, channel_info, current_time):
+        try:
+            voltage = channel_info['channel'].voltage
+            logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V")
+            await self.check_adc_trigger(trigger, self.trigger_effect, current_time)
+        except Exception as e:
+            logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
 
     async def monitor_triggers(self, callback):
         while True:
@@ -332,16 +335,16 @@ class TriggerManager:
                 await asyncio.sleep(0.1)  # Sleep for 100ms during startup delay
                 continue
             
+            tasks = []
             for trigger in self.active_triggers:
                 if trigger['type'] == 'laser':
-                    await self.check_laser_trigger(trigger, callback, current_time)
+                    tasks.append(self.check_laser_trigger(trigger, callback, current_time))
                 elif trigger['type'] == 'gpio':
-                    await self.check_gpio_trigger(trigger, callback, current_time)
-                elif trigger['type'] == 'adc':
-                    await self.check_adc_trigger(trigger, callback, current_time)
+                    tasks.append(self.check_gpio_trigger(trigger, callback, current_time))
                 elif trigger['type'] == 'piezo':
-                    await self.check_piezo_trigger(trigger, callback, current_time)
+                    tasks.append(self.check_piezo_trigger(trigger, callback, current_time))
             
+            await asyncio.gather(*tasks)
             await asyncio.sleep(0.01)  # Check every 10ms for more responsive detection
 
     async def check_laser_trigger(self, trigger, callback, current_time):
@@ -371,11 +374,13 @@ class TriggerManager:
                     current_time - self.filters[adc_name]['last_knock'] > self.COOLDOWN_TIME):
                     logger.info(f"Knock detected on {adc_name}")
                     self.filters[adc_name]['last_knock'] = current_time
-                    await self.handle_piezo_trigger(trigger, callback)
+                    asyncio.create_task(self.handle_piezo_trigger(trigger, callback))
             
             self.filters[adc_name]['last_voltage'] = voltage
-        else:
-            logger.warning(f"Sensor not connected or low voltage on {adc_name}: {voltage:.3f}V")
+        elif self.filters[adc_name]['last_voltage'] > self.CONNECTED_THRESHOLD:
+            logger.warning(f"Sensor disconnected or low voltage on {adc_name}: {voltage:.3f}V")
+        
+        self.filters[adc_name]['last_voltage'] = voltage
 
     async def handle_piezo_trigger(self, trigger, callback):
         self.piezo_attempts += 1
