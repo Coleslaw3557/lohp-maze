@@ -1,14 +1,63 @@
 {
-  "server_ip": "lohp-server",
+  "server_ip": "192.168.1.238",
   "unit_name": "LOHP-UNIT-A",
   "associated_rooms": ["Entrance", "Cuddle Cross", "Photo Bomb Room", "No Friends Monday", "Exit"],
   "audio_output_device": "default",
   "triggers": [
     {
-      "name": "CuddleCrossResistorLadder",
+      "name": "CuddleCrossButton1",
       "type": "adc",
+      "adc_address": "0x48",
       "channel": 0,
-      "adc_address": "0x48"
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/set_theme",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "next_theme": true
+        }
+      }
+    },
+    {
+      "name": "CuddleCrossButton2",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 1,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect_all_rooms",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "effect_name": "Lightning"
+        }
+      }
+    },
+    {
+      "name": "CuddleCrossButton3",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 2,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/start_music",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {}
+      }
+    },
+    {
+      "name": "CuddleCrossButton4",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 3
     }
   ],
   "cache_dir": "/app/cache"
