@@ -116,10 +116,13 @@ async def main():
     try:
         config_file = os.environ.get('UNIT_CONFIG', 'config-unit-a.json')
         config = ConfigManager(config_file)
-        audio_manager = AudioManager(config.get('cache_dir'), config)
-        logger.info("Initializing AudioManager")
-        await audio_manager.initialize()  # Initialize and download audio files
-        logger.info("AudioManager initialization complete")
+        try:
+            audio_manager = AudioManager(config.get('cache_dir'), config)
+            logger.info("Initializing AudioManager")
+            await audio_manager.initialize()  # Initialize and download audio files
+            logger.info("AudioManager initialization complete")
+        except ValueError as e:
+            log_and_exit(f"Configuration error: {str(e)}")
         try:
             trigger_manager = TriggerManager(config)
             logger.info(f"TriggerManager initialized with configuration from config file")

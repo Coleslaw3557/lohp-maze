@@ -16,7 +16,11 @@ class AudioManager:
         self.cache_dir = cache_dir
         self.config = config
         self.preloaded_audio = {}
-        self.server_url = f"http://{config.get('server_ip')}:{config.get('server_port', 5000)}"
+        server_ip = config.get('server_ip')
+        if server_ip.startswith('${'):
+            logger.error(f"Server IP not properly set. Current value: {server_ip}")
+            raise ValueError("Server IP is not properly configured")
+        self.server_url = f"http://{server_ip}:{config.get('server_port', 5000)}"
         self.background_music_player = None
         self.effect_players = []
         self.background_music_volume = 0.5
