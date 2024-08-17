@@ -5,11 +5,16 @@ services:
     build: .
     devices:
       - "/dev/snd:/dev/snd"
+      - "/dev/gpiomem:/dev/gpiomem"
+      - "/dev/i2c-1:/dev/i2c-1"
+      - "/dev/mem:/dev/mem"
     privileged: true
     volumes:
       - ./:/app
       - ./cache:/app/cache
       - /:/host
+      - /sys/class/gpio:/sys/class/gpio
+      - /sys/devices/platform/soc/3f200000.gpio:/sys/devices/platform/soc/3f200000.gpio
     cap_add:
       - SYS_BOOT
     environment:

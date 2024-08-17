@@ -32,21 +32,28 @@ class TriggerManager:
         self.filters = {f"Button {i+1}": {'last_voltage': 0, 'last_press': 0} for i in range(4)}
 
     def check_cuddle_cross_buttons(self):
+        if not self.button_channels:
+            logger.warning("No button channels available. ADC might not be set up correctly.")
+            return
+
         current_time = time.time()
         for button_name, channel in self.button_channels.items():
-            value = channel.value
-            voltage = channel.voltage
-            button_status = self.get_button_status(voltage)
-            
-            logger.debug(f"{button_name}: Value: {value}, Voltage: {voltage:.3f}V, Status: {button_status}")
-            
-            if button_status == "Button pressed":
-                if current_time - self.filters[button_name]['last_press'] > self.COOLDOWN_TIME:
-                    logger.info(f"{button_name} pressed")
-                    self.filters[button_name]['last_press'] = current_time
-                    self.trigger_effect("Cuddle Cross", button_name)
-            
-            self.filters[button_name]['last_voltage'] = voltage
+            try:
+                value = channel.value
+                voltage = channel.voltage
+                button_status = self.get_button_status(voltage)
+                
+                logger.debug(f"{button_name}: Value: {value}, Voltage: {voltage:.3f}V, Status: {button_status}")
+                
+                if button_status == "Button pressed":
+                    if current_time - self.filters[button_name]['last_press'] > self.COOLDOWN_TIME:
+                        logger.info(f"{button_name} pressed")
+                        self.filters[button_name]['last_press'] = current_time
+                        self.trigger_effect("Cuddle Cross", button_name)
+                
+                self.filters[button_name]['last_voltage'] = voltage
+            except Exception as e:
+                logger.error(f"Error reading {button_name}: {str(e)}")
 
     def get_button_status(self, voltage):
         if voltage < 0.1:
@@ -85,16 +92,21 @@ class TriggerManager:
         logger.info("All triggers set up")
 
     def setup_adc(self):
-        i2c = busio.I2C(board.SCL, board.SDA)
-        self.ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Cuddle Cross buttons
-        
-        self.button_channels = {
-            'Button 1': AnalogIn(self.ads1, ADS.P0),
-            'Button 2': AnalogIn(self.ads1, ADS.P1),
-            'Button 3': AnalogIn(self.ads1, ADS.P2),
-            'Button 4': AnalogIn(self.ads1, ADS.P3)
-        }
-        logger.info("ADC setup completed for Cuddle Cross buttons (0x48)")
+        try:
+            i2c = busio.I2C(board.SCL, board.SDA)
+            self.ads1 = ADS.ADS1115(i2c, address=0x48)  # ADC1 for Cuddle Cross buttons
+            
+            self.button_channels = {
+                'Button 1': AnalogIn(self.ads1, ADS.P0),
+                'Button 2': AnalogIn(self.ads1, ADS.P1),
+                'Button 3': AnalogIn(self.ads1, ADS.P2),
+                'Button 4': AnalogIn(self.ads1, ADS.P3)
+            }
+            logger.info("ADC setup completed for Cuddle Cross buttons (0x48)")
+        except Exception as e:
+            logger.error(f"Error setting up ADC: {str(e)}")
+            self.ads1 = None
+            self.button_channels = {}
 
     async def monitor_triggers(self, callback):
         while True:
