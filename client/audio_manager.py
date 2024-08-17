@@ -205,24 +205,23 @@ class AudioManager:
         current_time = time.time()
         if current_time - self.last_music_change_time < self.music_change_cooldown:
             logger.info(f"Ignoring music change request for {music_file} due to cooldown")
-            return
+            return False
 
         if not music_file:
             logger.warning("No music file specified for background music")
-            return
+            return False
 
         full_path = self.preloaded_audio.get(music_file)
         if not full_path:
             logger.warning(f"Specified music file not found: {music_file}")
-            return
+            return False
 
         logger.info(f"Starting background music: {music_file}")
 
         try:
             async with self.audio_lock:
                 # Stop any existing background music
-                if self.background_music_player:
-                    self.background_music_player.stop()
+                await self.stop_background_music()
 
                 # Create a new media player
                 self.background_music_player = self.vlc_instance.media_player_new()
@@ -245,24 +244,29 @@ class AudioManager:
             if self.background_music_player.is_playing():
                 logger.info(f"Confirmed background music playback started for {music_file}")
                 self.last_music_change_time = current_time
+                return True
             else:
                 logger.warning(f"Background music playback did not start for {music_file}")
                 # Try to reinitialize VLC instance and retry playback
                 self.vlc_instance = self.initialize_vlc()
-                await self.start_background_music(music_file)
+                return await self.start_background_music(music_file)
 
         except Exception as e:
             logger.error(f"Error playing background music {music_file}: {str(e)}", exc_info=True)
             # Try to reinitialize VLC instance
             self.vlc_instance = self.initialize_vlc()
+            return False
 
     def loop_background_music(self, event):
         # This method will be called when the media player reaches the end of the track
-        self.background_music_player.set_position(0)
-        self.background_music_player.play()
+        if self.background_music_player:
+            self.background_music_player.set_position(0)
+            self.background_music_player.play()
+
     async def stop_background_music(self):
         logger.info("Stopping background music")
         if self.background_music_player:
             self.background_music_player.stop()
             self.background_music_player = None
         logger.info("Background music stopped")
+        return True

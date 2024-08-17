@@ -341,7 +341,7 @@ class TriggerManager:
                         response_text = await response.text()
                         if response.status == 200:
                             logger.info(f"Triggered action for {trigger['name']}. Response: {response_text}")
-                            return
+                            return response_text
                         else:
                             logger.warning(f"Failed to trigger action for {trigger['name']}. Status code: {response.status}. Response: {response_text}. Attempt {attempt + 1}/{max_retries}")
             except aiohttp.ClientError as e:
@@ -356,6 +356,7 @@ class TriggerManager:
                 retry_delay *= 2  # Exponential backoff
 
         logger.error(f"Failed to trigger action for {trigger['name']} after {max_retries} attempts")
+        return None
 
 async def trigger_effect(self, trigger_name):
     trigger = next((t for t in self.triggers if t['name'] == trigger_name), None)
