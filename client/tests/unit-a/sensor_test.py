@@ -95,11 +95,11 @@ def get_sensor_data():
 
 def get_button_status(voltage):
     if voltage < 0.1:
-        return "Error: Voltage too low"
-    elif voltage < 1.65:
         return "Button pressed"
-    else:
+    elif voltage > 0.9:
         return "Button not pressed"
+    else:
+        return "Error: Voltage in undefined range"
 
 def display_tui():
     data = get_sensor_data()
