@@ -313,7 +313,16 @@ class TriggerManager:
             current_time = time.time()
             for trigger in self.triggers:
                 if trigger['type'] == 'adc':
-                    await self.check_adc_trigger(trigger, self.trigger_effect, current_time)
+                    channel_info = self.adc_channels.get(trigger['name'])
+                    if channel_info:
+                        try:
+                            voltage = channel_info['channel'].voltage
+                            logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V")
+                            await self.check_adc_trigger(trigger, self.trigger_effect, current_time)
+                        except Exception as e:
+                            logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
+                    else:
+                        logger.warning(f"No channel info for trigger {trigger['name']}")
             await asyncio.sleep(0.05)  # Check every 50ms to reduce CPU usage
 
     async def monitor_triggers(self, callback):

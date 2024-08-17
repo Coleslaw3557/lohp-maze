@@ -123,14 +123,14 @@ async def main():
             logger.info("AudioManager initialization complete")
         except ValueError as e:
             log_and_exit(f"Configuration error: {str(e)}")
-        try:
-            trigger_manager = TriggerManager(config)
-            logger.info(f"TriggerManager initialized with configuration from config file")
-            await trigger_manager.setup_adc()  # Ensure ADC is set up asynchronously
-            logger.info("ADC setup completed")
-        except Exception as e:
-            logger.error(f"Failed to initialize TriggerManager: {str(e)}")
-            trigger_manager = None
+        trigger_manager = TriggerManager(config)
+        logger.info(f"TriggerManager initialized with configuration from config file")
+        await trigger_manager.setup_adc()  # Ensure ADC is set up asynchronously
+        logger.info("ADC setup completed")
+        
+        # Start the continuous ADC reading task
+        asyncio.create_task(trigger_manager.read_adc_continuously())
+        logger.info("Started continuous ADC reading task")
 
         sync_manager = SyncManager()
         
