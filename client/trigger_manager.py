@@ -304,9 +304,8 @@ class TriggerManager:
         button_status = self.get_button_status(voltage)
         
         # Add debug logging for voltage readings
-        logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V, Status: {button_status}")
-
         if button_status == "Button pressed":
+            logger.debug(f"ADC reading for {trigger['name']}: {voltage:.3f}V, Status: {button_status}")
             if self.check_trigger_cooldown(trigger['name'], current_time):
                 if not channel_info.get('press_start_time'):
                     channel_info['press_start_time'] = current_time
