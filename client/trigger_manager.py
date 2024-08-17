@@ -29,7 +29,7 @@ class TriggerManager:
         
         # Initialize based on configured triggers
         self.setup_triggers()
-        self.setup_adc()
+        asyncio.create_task(self.setup_adc())
         self.initialize_filters()
 
     def check_cuddle_cross_buttons(self):
@@ -144,7 +144,7 @@ class TriggerManager:
                 logger.info(f"Trigger {trigger['name']} not associated with this unit's rooms. Skipping setup.")
         logger.info(f"Set up {len(self.active_triggers)} triggers for associated rooms: {associated_rooms}")
 
-    def setup_adc(self):
+    async def setup_adc(self):
         adc_needed = any(trigger['type'] in ['adc', 'piezo'] for trigger in self.triggers)
         if not adc_needed:
             logger.info("No ADC triggers configured, skipping ADC setup")
