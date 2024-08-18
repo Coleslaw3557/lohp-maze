@@ -36,6 +36,7 @@ class TriggerManager:
         self.VOLTAGE_CHANGE_THRESHOLD = 0.5
         self.DEBUG_THRESHOLD = 0.1
         self.BUTTON_DEBOUNCE_TIME = 0.1
+        self.LASER_DEBOUNCE_TIME = 0.05  # 50ms debounce time for laser triggers
 
         self.adc_config = self.determine_adc_config()
         self.setup_piezo()
