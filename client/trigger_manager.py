@@ -236,6 +236,7 @@ class TriggerManager:
         elif previous_state == GPIO.LOW and rx_state == GPIO.HIGH:  # Laser beam was broken and is now intact
             logger.info(f"Laser beam restored: {trigger_name}")
             self.trigger_cooldowns.pop(trigger_name, None)
+            self.trigger_cooldowns.pop(trigger_name, None)
 
     async def check_gpio_trigger(self, trigger, callback, current_time):
         # Implementation for GPIO trigger check
