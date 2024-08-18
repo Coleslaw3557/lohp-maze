@@ -24,10 +24,10 @@ logging.basicConfig(level=logging.DEBUG,
 logger = logging.getLogger(__name__)
 
 # Set logging levels for specific modules
-logging.getLogger('websockets').setLevel(logging.DEBUG)
-logging.getLogger('asyncio').setLevel(logging.DEBUG)
-logging.getLogger('aiohttp').setLevel(logging.DEBUG)
-logging.getLogger('pydub').setLevel(logging.DEBUG)
+logging.getLogger('websockets').setLevel(logging.INFO)
+logging.getLogger('asyncio').setLevel(logging.INFO)
+logging.getLogger('aiohttp').setLevel(logging.INFO)
+logging.getLogger('pydub').setLevel(logging.INFO)
 
 # Ensure all loggers propagate to the root logger
 for name in logging.root.manager.loggerDict:
