@@ -2,13 +2,14 @@
 
 ## Overview
 
-This is the client-side application for the LoHP-MazeManager system, designed to run on Raspberry Pi devices. It manages audio playback, handles various types of triggers (laser, GPIO, ADC, piezo), and communicates with a central server via WebSocket.
+This is the client-side application for the LoHP-MazeManager system, designed to run on Raspberry Pi devices. It manages audio playback, handles various types of triggers (laser, GPIO, ADC, piezo, analog, timer), and communicates with a central server via WebSocket.
 
 ## Features
 
 - WebSocket communication with the central server
 - Audio playback management using VLC
-- Support for multiple trigger types (laser, GPIO, ADC, piezo)
+- Support for multiple trigger types (laser, GPIO, ADC, piezo, analog, timer)
+- Button combination support
 - Time synchronization with the server
 - Background music support
 - Effect audio playback
@@ -36,6 +37,9 @@ Manages audio playback:
 Manages various types of triggers:
 - Sets up GPIO pins for laser modules
 - Configures ADC channels for analog inputs (e.g., buttons, piezo sensors)
+- Handles analog triggers with configurable thresholds
+- Supports timer-based triggers
+- Manages button combinations
 - Monitors triggers and reports events to the server
 
 ### 4. ConfigManager (config_manager.py)
@@ -68,8 +72,29 @@ These files include:
 - Server IP and port
 - Unit name and associated rooms
 - Audio output device
-- Trigger configurations (laser, GPIO, ADC, piezo)
+- Trigger configurations (laser, GPIO, ADC, piezo, analog, timer)
+- Button combination settings
 - Cache directory location
+
+## New Trigger Types
+
+### Analog Trigger
+
+Allows execution of actions based on analog sensor readings:
+- Configurable ADC address and channel
+- Adjustable threshold for triggering actions
+
+### Timer Trigger
+
+Enables timed execution of actions:
+- Configurable delay for initial trigger
+- Optional repeat interval for recurring actions
+
+### Button Combinations
+
+Supports complex interactions using multiple buttons:
+- Configurable combination of buttons
+- Adjustable time window for button presses
 
 ## Deployment
 
@@ -108,9 +133,10 @@ Contributions to improve the client are welcome. Please ensure to follow the exi
 ## Troubleshooting
 
 - Check the logs for detailed information about any issues.
-- Ensure all required hardware (lasers, buttons, ADC) is properly connected.
+- Ensure all required hardware (lasers, buttons, ADC, analog sensors) is properly connected.
 - Verify the configuration file is correctly set up for the specific unit.
 - Make sure the server IP and port are correctly configured and accessible.
+- For button combination issues, check the configuration of the combination window and ensure all buttons are functioning correctly.
 
 ## Dependencies
 
