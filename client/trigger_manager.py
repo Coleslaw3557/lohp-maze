@@ -38,7 +38,7 @@ class TriggerManager:
         self.VOLTAGE_CHANGE_THRESHOLD = 0.5
         self.DEBUG_THRESHOLD = 0.1
         self.BUTTON_DEBOUNCE_TIME = 0.1
-        self.BUTTON_COMBINATION_WINDOW = 2  # 2 second window for button combinations
+        self.BUTTON_COMBINATION_WINDOW = config.get('button_combination_window', 2)  # Default to 2 seconds if not specified
 
         self.adc_config = self.determine_adc_config()
         self.setup_piezo()

@@ -235,5 +235,6 @@
     }
   ],
   "rate_limit": 5,
-  "cache_dir": "/app/cache"
+  "cache_dir": "/app/cache",
+  "button_combination_window": 2
 }
