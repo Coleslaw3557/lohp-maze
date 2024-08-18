@@ -20,7 +20,7 @@ services:
       - SYS_BOOT
     environment:
       - PYTHONUNBUFFERED=1
-      - UNIT_CONFIG=${UNIT_CONFIG:-config-unit-a.json}
+      - UNIT_CONFIG=${UNIT_CONFIG:-config-unit-b.json}
     restart: always
     logging:
       driver: "json-file"
