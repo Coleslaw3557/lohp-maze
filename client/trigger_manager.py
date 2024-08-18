@@ -109,14 +109,30 @@ class TriggerManager:
             logger.error(f"Error setting up laser trigger {trigger['name']}: {str(e)}")
 
     def keep_lasers_on(self):
+        error_count = {}
         while True:
             for pin in self.laser_tx_pins:
-                GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0.01)  # Small delay to prevent excessive CPU usage
+                try:
+                    current_state = GPIO.input(pin)
+                    if current_state != GPIO.HIGH:
+                        GPIO.output(pin, GPIO.HIGH)
+                        logger.warning(f"Laser pin {pin} was LOW, setting to HIGH")
+                        error_count[pin] = error_count.get(pin, 0) + 1
+                        if error_count[pin] > 10:
+                            logger.error(f"Laser pin {pin} has been reset more than 10 times. Possible hardware issue.")
+                    else:
+                        error_count[pin] = 0
+                except Exception as e:
+                    logger.error(f"Error controlling laser pin {pin}: {str(e)}")
+            time.sleep(0.005)  # Reduced delay for more frequent checks
 
     def start_laser_thread(self):
-        self.laser_thread = threading.Thread(target=self.keep_lasers_on, daemon=True)
-        self.laser_thread.start()
+        if self.laser_thread is None or not self.laser_thread.is_alive():
+            self.laser_thread = threading.Thread(target=self.keep_lasers_on, daemon=True)
+            self.laser_thread.start()
+            logger.info("Started laser maintenance thread")
+        else:
+            logger.info("Laser maintenance thread is already running")
 
     def setup_gpio_trigger(self, trigger):
         if 'pin' in trigger:
