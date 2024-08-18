@@ -75,6 +75,26 @@ analog_inputs = {
     'Button6': AnalogIn(ads2, ADS.P1)
 }
 
+# Update UNIT_B_CONFIG to include all buttons
+UNIT_B_CONFIG['adc'] = {
+    'adc1': {
+        'address': '0x48',
+        'channels': {
+            'Button1': ADS.P0,
+            'Button2': ADS.P1,
+            'Button3': ADS.P2,
+            'Button4': ADS.P3
+        }
+    },
+    'adc2': {
+        'address': '0x49',
+        'channels': {
+            'Button5': ADS.P0,
+            'Button6': ADS.P1
+        }
+    }
+}
+
 def control_laser(room, state):
     pins = current_unit['lasers'][room]
     GPIO.output(pins['LT'], state)
@@ -100,7 +120,7 @@ def get_sensor_data():
             value = analog_input.value
             voltage = analog_input.voltage
             button_status = get_button_status(voltage)
-            data.append((f"{button}", "ADC", "Button", f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"))
+            data.append((f"{button}", "ADC", adc_name, f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"))
     
     return data
 
