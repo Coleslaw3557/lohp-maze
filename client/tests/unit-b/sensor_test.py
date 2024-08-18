@@ -117,7 +117,7 @@ def get_button_status(voltage):
 def display_tui():
     data = get_sensor_data()
     print(term.home + term.clear)
-    print(term.move_y(0) + term.center(f"LoHP Maze Hardware Test - {UNIT_A_CONFIG['name']}"))
+    print(term.move_y(0) + term.center(f"LoHP Maze Hardware Test - {UNIT_B_CONFIG['name']}"))
     print(term.move_y(2) + term.center("Press 'q' to quit, 'b' for button test, '1'-'5' to toggle lasers"))
     
     for i, (component, description, location, status) in enumerate(data):
@@ -135,19 +135,20 @@ def button_test():
     last_press_time = 0
     
     while True:
-        value = analog_input.value
-        voltage = analog_input.voltage
-        
-        current_time = time.time()
-        
-        if (current_time - last_press_time) > BUTTON_DEBOUNCE_TIME:
-            button_status = get_button_status(voltage)
-            if button_status.startswith("Button") and button_status not in button_values:
-                button_values[button_status] = (value, voltage)
-                print(term.move_y(4 + len(button_values)) + f"{button_status}: ADC Value = {value}, Voltage = {voltage:.3f}V")
-                last_press_time = current_time
-        
-        print(term.move_xy(0, 4) + f"Current ADC Value: {value}, Voltage: {voltage:.3f}V" + " " * 20)
+        for button, analog_input in analog_inputs.items():
+            value = analog_input.value
+            voltage = analog_input.voltage
+            
+            current_time = time.time()
+            
+            if (current_time - last_press_time) > BUTTON_DEBOUNCE_TIME:
+                button_status = get_button_status(voltage)
+                if button_status.startswith("Button") and button_status not in button_values:
+                    button_values[button_status] = (value, voltage)
+                    print(term.move_y(4 + len(button_values)) + f"{button} {button_status}: ADC Value = {value}, Voltage = {voltage:.3f}V")
+                    last_press_time = current_time
+            
+            print(term.move_xy(0, 4) + f"Current {button} ADC Value: {value}, Voltage: {voltage:.3f}V" + " " * 20)
         
         key = term.inkey(timeout=0.1)
         if key == 'q':
