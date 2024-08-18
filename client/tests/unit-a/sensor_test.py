@@ -4,11 +4,9 @@ import board
 import busio
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
-import time
 from blessed import Terminal
 
 # Constants
-CONNECTED_THRESHOLD = 0.3
 BUTTON_DEBOUNCE_TIME = 0.1
 
 # Unit A Configuration
@@ -37,20 +35,8 @@ UNIT_A_CONFIG = {
 # Initialize current unit
 current_unit = UNIT_A_CONFIG
 
-def test_level_shifter(input_pin, output_pin):
-    GPIO.setup(input_pin, GPIO.OUT)
-    GPIO.setup(output_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    
-    results = []
-    for state in [GPIO.HIGH, GPIO.LOW]:
-        GPIO.output(input_pin, state)
-        time.sleep(0.1)
-        output_state = GPIO.input(output_pin)
-        results.append((state, output_state))
-    
-    GPIO.setup(input_pin, GPIO.IN)
-    
-    return results
+# Initialize Terminal
+term = Terminal()
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
@@ -58,8 +44,11 @@ def setup_gpio():
     
     for room, pins in current_unit['lasers'].items():
         GPIO.setup(pins['LT'], GPIO.OUT)
-        GPIO.output(pins['LT'], GPIO.HIGH)  # Turn on all lasers
-        GPIO.setup(pins['LR'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Use pull-down resistor
+        GPIO.output(pins['LT'], GPIO.LOW)  # Initialize all lasers to OFF
+        GPIO.setup(pins['LR'], GPIO.IN)  # Set up receiver as input without pull-up/down
+        print(f"Setting up {room} laser: LT (GPIO {pins['LT']}) set to LOW, LR (GPIO {pins['LR']}) set as INPUT")
+    
+    print("GPIO setup complete")
 
 # Set up GPIO
 setup_gpio()
@@ -71,8 +60,10 @@ ads1 = ADS.ADS1115(i2c, address=0x48)
 # Set up analog input for button testing
 analog_input = AnalogIn(ads1, ADS.P0)
 
-# Set up Terminal for TUI
-term = Terminal()
+def control_laser(room, state):
+    pins = current_unit['lasers'][room]
+    GPIO.output(pins['LT'], state)
+    return f"{room} laser turned {'ON' if state else 'OFF'}"
 
 def get_sensor_data():
     data = []
@@ -80,9 +71,12 @@ def get_sensor_data():
     # Monitor laser receivers
     for room, pins in current_unit['lasers'].items():
         rx_status = GPIO.input(pins['LR'])
-        status = f"Beam: {'Intact' if rx_status else 'Broken'}"
-        data.append((f"{room} Laser", "Laser System", room, status))
-        data.append((f"{room} Debug", "Laser Debug", room, f"TX GPIO: {pins['LT']}, RX GPIO: {pins['LR']}, RX Status: {rx_status}"))
+        tx_status = GPIO.input(pins['LT'])
+        status = f"Beam: {'Intact' if rx_status else 'Broken'}"  # HIGH when receiving signal
+        tx_state = f"TX: {'ON' if tx_status else 'OFF'}"
+        raw_status = f"Raw RX: {'HIGH' if rx_status else 'LOW'}"
+        
+        data.append((f"{room} Laser", "Laser System", room, f"{status}, {tx_state}, {raw_status}"))
     
     # Test ADC for button presses
     for button, channel in current_unit['adc']['Cuddle Cross']['channels'].items():
@@ -106,13 +100,13 @@ def display_tui():
     data = get_sensor_data()
     print(term.home + term.clear)
     print(term.move_y(0) + term.center(f"LoHP Maze Hardware Test - {UNIT_A_CONFIG['name']}"))
-    print(term.move_y(2) + term.center("Press 'q' to quit, 'b' for button test"))
+    print(term.move_y(2) + term.center("Press 'q' to quit, 'b' for button test, '1'-'5' to toggle lasers"))
     
     for i, (component, description, location, status) in enumerate(data):
         y = i + 4
         print(term.move_xy(0, y) + f"{component:<20} {description:<10} {location:<20} {status}")
     
-    print(term.move_y(len(data) + 4) + term.center("Press 'q' to quit, 'b' for button test"))
+    print(term.move_y(len(data) + 5) + term.center("Laser Control: 1=Entrance, 2=Cuddle Cross, 3=Photo Bomb, 4=No Friends Monday, 5=Exit"))
 
 def button_test():
     print(term.home + term.clear)
@@ -144,19 +138,31 @@ def button_test():
     print(term.move_y(10) + "Button Test Complete. Press any key to return to main menu.")
     term.inkey()
 
-try:
-    with term.cbreak(), term.hidden_cursor():
-        while True:
-            display_tui()
-            key = term.inkey(timeout=0.1)
-            if key == 'q':
-                break
-            elif key == 'b':
-                button_test()
-except KeyboardInterrupt:
-    print("Program interrupted by user")
-except Exception as e:
-    print(f"Unexpected error: {str(e)}")
-finally:
-    GPIO.cleanup()
-    print(term.clear())
+def main():
+    try:
+        with term.cbreak(), term.hidden_cursor():
+            while True:
+                display_tui()
+                key = term.inkey(timeout=0.1)
+                if key == 'q':
+                    break
+                elif key == 'b':
+                    button_test()
+                elif key in ['1', '2', '3', '4', '5']:
+                    room_index = int(key) - 1
+                    room = list(current_unit['lasers'].keys())[room_index]
+                    current_state = GPIO.input(current_unit['lasers'][room]['LT'])
+                    result = control_laser(room, not current_state)
+                    print(term.move_y(term.height - 1) + term.center(result))
+                    time.sleep(1)  # Show the result for 1 second
+                time.sleep(0.1)  # Add a small delay to prevent too rapid GPIO reading
+    except KeyboardInterrupt:
+        print("Program interrupted by user")
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+    finally:
+        GPIO.cleanup()
+        print(term.clear())
+
+if __name__ == "__main__":
+    main()
