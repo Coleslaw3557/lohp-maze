@@ -584,10 +584,10 @@ if __name__ == '__main__':
 
     config = Config()
     config.bind = ["0.0.0.0:5000"]
-    config.use_reloader = DEBUG
+    config.use_reloader = False  # Set to False since we're using INFO mode
     config.accesslog = "-"  # Log to stdout
     config.errorlog = "-"  # Log to stderr
-    config.loglevel = "DEBUG" if DEBUG else "INFO"
+    config.loglevel = "INFO"  # Always set to INFO
 
     async def run_server():
         try:
