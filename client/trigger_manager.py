@@ -88,13 +88,25 @@ class TriggerManager:
         logger.info(f"Set up {len(self.active_triggers)} triggers for associated rooms: {self.associated_rooms}")
 
     def setup_laser_trigger(self, trigger):
-        GPIO.setup(trigger['tx_pin'], GPIO.OUT)
-        GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
-        GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']} (ON), RX pin {trigger['rx_pin']}, Room: {trigger.get('room', 'Not specified')}")
-        self.active_triggers.append(trigger)
-        self.laser_states[trigger['name']] = GPIO.input(trigger['rx_pin'])  # Initialize laser state
-        self.laser_tx_pins.append(trigger['tx_pin'])  # Add TX pin to the list
+        try:
+            GPIO.setup(trigger['tx_pin'], GPIO.OUT)
+            GPIO.output(trigger['tx_pin'], GPIO.HIGH)  # Turn on laser
+            GPIO.setup(trigger['rx_pin'], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+            
+            # Verify the setup
+            tx_state = GPIO.input(trigger['tx_pin'])
+            rx_state = GPIO.input(trigger['rx_pin'])
+            
+            if tx_state != GPIO.HIGH:
+                logger.error(f"Failed to set TX pin {trigger['tx_pin']} HIGH for {trigger['name']}")
+            
+            logger.info(f"Laser trigger set up: {trigger['name']}, TX pin {trigger['tx_pin']} (State: {'HIGH' if tx_state == GPIO.HIGH else 'LOW'}), RX pin {trigger['rx_pin']} (State: {'HIGH' if rx_state == GPIO.HIGH else 'LOW'}), Room: {trigger.get('room', 'Not specified')}")
+            
+            self.active_triggers.append(trigger)
+            self.laser_states[trigger['name']] = rx_state  # Initialize laser state
+            self.laser_tx_pins.append(trigger['tx_pin'])  # Add TX pin to the list
+        except Exception as e:
+            logger.error(f"Error setting up laser trigger {trigger['name']}: {str(e)}")
 
     def keep_lasers_on(self):
         while True:
@@ -212,29 +224,40 @@ class TriggerManager:
             logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
 
     async def check_laser_trigger(self, trigger, callback, current_time):
-        rx_state = GPIO.input(trigger['rx_pin'])
-        trigger_name = trigger['name']
-        
-        if trigger_name not in self.laser_states:
+        try:
+            rx_state = GPIO.input(trigger['rx_pin'])
+            tx_state = GPIO.input(trigger['tx_pin'])
+            trigger_name = trigger['name']
+            
+            if trigger_name not in self.laser_states:
+                self.laser_states[trigger_name] = rx_state
+                logger.info(f"Initialized laser state for {trigger_name}: RX {'HIGH' if rx_state == GPIO.HIGH else 'LOW'}, TX {'HIGH' if tx_state == GPIO.HIGH else 'LOW'}")
+                return  # Initialize state without triggering
+
+            previous_state = self.laser_states[trigger_name]
             self.laser_states[trigger_name] = rx_state
-            return  # Initialize state without triggering
 
-        previous_state = self.laser_states[trigger_name]
-        self.laser_states[trigger_name] = rx_state
+            logger.debug(f"Laser {trigger_name}: Previous RX {'HIGH' if previous_state == GPIO.HIGH else 'LOW'}, Current RX {'HIGH' if rx_state == GPIO.HIGH else 'LOW'}, TX {'HIGH' if tx_state == GPIO.HIGH else 'LOW'}")
 
-        if previous_state == GPIO.HIGH and rx_state == GPIO.LOW:  # Laser beam was intact and is now broken
-            if self.check_trigger_cooldown(trigger_name, current_time):
-                logger.info(f"Laser beam broken: {trigger_name}")
-                self.set_trigger_cooldown(trigger_name, current_time)
-                if callback:
-                    result = callback(trigger_name)
-                    if asyncio.iscoroutine(result):
-                        await result
-                else:
-                    logger.warning(f"No callback provided for trigger: {trigger_name}")
-        elif previous_state == GPIO.LOW and rx_state == GPIO.HIGH:  # Laser beam was broken and is now intact
-            logger.info(f"Laser beam restored: {trigger_name}")
-            self.trigger_cooldowns.pop(trigger_name, None)
+            if previous_state == GPIO.HIGH and rx_state == GPIO.LOW:  # Laser beam was intact and is now broken
+                if self.check_trigger_cooldown(trigger_name, current_time):
+                    logger.info(f"Laser beam broken: {trigger_name}")
+                    self.set_trigger_cooldown(trigger_name, current_time)
+                    if callback:
+                        result = callback(trigger_name)
+                        if asyncio.iscoroutine(result):
+                            await result
+                    else:
+                        logger.warning(f"No callback provided for trigger: {trigger_name}")
+            elif previous_state == GPIO.LOW and rx_state == GPIO.HIGH:  # Laser beam was broken and is now intact
+                logger.info(f"Laser beam restored: {trigger_name}")
+                self.trigger_cooldowns.pop(trigger_name, None)
+            
+            if tx_state != GPIO.HIGH:
+                logger.warning(f"Laser TX pin for {trigger_name} is LOW, attempting to set HIGH")
+                GPIO.output(trigger['tx_pin'], GPIO.HIGH)
+        except Exception as e:
+            logger.error(f"Error checking laser trigger {trigger_name}: {str(e)}")
 
     async def check_gpio_trigger(self, trigger, callback, current_time):
         # Implementation for GPIO trigger check
