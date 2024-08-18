@@ -1,5 +1,6 @@
 # LoHP Maze Wiring Guide
-# UNIT - B (Updated)
+# UNIT - B
+# 192.168.1.186
 
 ## Raspberry Pi Full 40-pin Pinout Connections
 
@@ -16,7 +17,7 @@
 | 9   | GND  | Ground   | Not used (available if needed) |
 | 10  | GPIO15| UART RXD| Not used (reserved for console access) |
 | 11  | GPIO17| GPIO    | Cop Dodge LT (via LS1) |
-| 12  | GPIO18| GPIO    | Button 5 |
+| 12  | GPIO18| GPIO    | Not used |
 | 13  | GPIO27| GPIO    | Cop Dodge LR (via LS1) |
 | 14  | GND  | Ground   | Not used (available if needed) |
 | 15  | GPIO22| GPIO    | Gate LT (via LS1) |
@@ -36,7 +37,7 @@
 | 29  | GPIO5 | GPIO    | Sparkle Pony LT (via LS2) |
 | 30  | GND  | Ground   | Not used (available if needed) |
 | 31  | GPIO6 | GPIO    | Sparkle Pony LR (via LS2) |
-| 32  | GPIO12| GPIO    | Button 6 |
+| 32  | GPIO12| GPIO    | Not used |
 | 33  | GPIO13| GPIO    | Porto LT (via LS2) |
 | 34  | GND  | Ground   | Not used (available if needed) |
 | 35  | GPIO19| GPIO    | Porto LR (via LS2) |
@@ -62,8 +63,6 @@
 | Sparkle Pony | LR | 31 | 6 | Via LS2 |
 | Porto | LT | 33 | 13 | Via LS2 |
 | Porto | LR | 35 | 19 | Via LS2 |
-| N/A | Button 5 | 12 | 18 | Direct to GPIO |
-| N/A | Button 6 | 32 | 12 | Direct to GPIO |
 
 ## Power Connections
 
@@ -130,75 +129,76 @@
 
 ## ADS1115 ADCs
 
-### ADC1 (Gate Room)
+### ADC1 (Buttons 1-4)
 
-| Pin | Connection |
-|-----|------------|
-| VDD | 3.3V (Pi Pin 1) |
-| GND | GND (Pi Pin 6) |
-| SCL | Raspberry Pi GPIO 3 (Pi Pin 5) |
-| SDA | Raspberry Pi GPIO 2 (Pi Pin 3) |
-| A0 | Button 1 Signal |
-| A1 | Button 2 Signal |
-| A2 | Button 3 Signal |
-| A3 | Button 4 Signal |
-| ADDR | GND (Pi Pin 6) (I2C address 0x48) |
+| Pin | Connection | Terminal Block ID |
+|-----|------------|-------------------|
+| VDD | 3.3V (Pi Pin 1) | |
+| GND | GND (Pi Pin 6) | |
+| SCL | Raspberry Pi GPIO 3 (Pi Pin 5) | |
+| SDA | Raspberry Pi GPIO 2 (Pi Pin 3) | |
+| A0 | Button 1 Signal | Green - 1 |
+| A1 | Button 2 Signal | Green - 2 |
+| A2 | Button 3 Signal | Pi Gray - 1 |
+| A3 | Button 4 Signal | Pi Gray - 2 |
+| ADDR | GND (Pi Pin 6) (I2C address 0x48) | |
 
-### ADC2 (Porto Room)
+### ADC2 (Buttons 5-6)
 
-| Pin | Connection |
-|-----|------------|
-| VDD | 3.3V (Pi Pin 1) |
-| GND | GND (Pi Pin 6) |
-| SCL | Raspberry Pi GPIO 3 (Pi Pin 5) |
-| SDA | Raspberry Pi GPIO 2 (Pi Pin 3) |
-| A0 | Not Connected |
-| A1 | Not Connected |
-| A2 | Not Connected |
-| A3 | Not Connected |
-| ADDR | VDD (Pi Pin 1) (I2C address 0x49) |
+| Pin | Connection | Terminal Block ID |
+|-----|------------|-------------------|
+| VDD | 3.3V (Pi Pin 1) | |
+| GND | GND (Pi Pin 6) | |
+| SCL | Raspberry Pi GPIO 3 (Pi Pin 5) | |
+| SDA | Raspberry Pi GPIO 2 (Pi Pin 3) | |
+| A0 | Button 5 Signal | Pi - 4 |
+| A1 | Button 6 Signal | 5 |
+| A2 | Not Connected | 6 |
+| A3 | Not Connected | 3 (Unused) |
+| ADDR | VDD (Pi Pin 1) (I2C address 0x49) | |
 
 ## Laser Modules
 
 ### Laser Transmitters (LT)
 
-| Room | GPIO | Physical Pin | Connection |
-|------|------|--------------|------------|
-| Cop Dodge | 17 | 11 | LS1 B1 |
-| Gate | 22 | 15 | LS1 B3 |
-| Guy Line | 24 | 18 | LS2 B1 |
-| Sparkle Pony | 5 | 29 | LS2 B3 |
-| Porto | 13 | 33 | LS2 B5 |
+| Room | GPIO | Physical Pin | Connection | Terminal Block ID |
+|------|------|--------------|------------|-------------------|
+| Cop Dodge | 17 | 11 | LS1 B1 | Green 3 |
+| Gate | 22 | 15 | LS1 B3 | Green 5 |
+| Guy Line | 24 | 18 | LS2 B1 | Green 7 |
+| Sparkle Pony | 5 | 29 | LS2 B3 | Green 8 |
+| Porto | 13 | 33 | LS2 B5 | Green 11 |
 
 ### Laser Receivers (LR)
 
-| Room | GPIO | Physical Pin | Connection |
-|------|------|--------------|------------|
-| Cop Dodge | 27 | 13 | LS1 B2 |
-| Gate | 23 | 16 | LS1 B4 |
-| Guy Line | 25 | 22 | LS2 B2 |
-| Sparkle Pony | 6 | 31 | LS2 B4 |
-| Porto | 19 | 35 | LS2 B6 |
+| Room | GPIO | Physical Pin | Connection | Terminal Block ID |
+|------|------|--------------|------------|-------------------|
+| Cop Dodge | 27 | 13 | LS1 B2 | Green 4 |
+| Gate | 23 | 16 | LS1 B4 | Green 6 |
+| Guy Line | 25 | 22 | LS2 B2 | Green 8 |
+| Sparkle Pony | 6 | 31 | LS2 B4 | Green 10 |
+| Porto | 19 | 35 | LS2 B6 | Green 12 |
 
 ## Button Connections
 
-| Button | Connection |
-|--------|------------|
-| Button 1 | ADC1 A0 |
-| Button 2 | ADC1 A1 |
-| Button 3 | ADC1 A2 |
-| Button 4 | ADC1 A3 |
-| Button 5 | GPIO 18 (Pi Pin 12) |
-| Button 6 | GPIO 12 (Pi Pin 32) |
+| Button | ADC Connection | Terminal Block ID |
+|--------|----------------|-------------------|
+| Button 1 | ADC1 A0 | Green - 1 |
+| Button 2 | ADC1 A1 | Green - 2 |
+| Button 3 | ADC1 A2 | Pi Gray - 1 |
+| Button 4 | ADC1 A3 | Pi Gray - 2 |
+| Button 5 | ADC2 A0 | Pi - 4 |
+| Button 6 | ADC2 A1 | 5 |
 
 ## Additional Notes
 
 1. All laser modules (LT and LR) have their VCC connected to 5V (Pi Pin 2) and GND connected to the main GND (Pi Pin 6).
 2. All buttons have their VCC connected to 3.3V (Pi Pin 1) and GND connected to the main GND (Pi Pin 6).
-3. Four SPST buttons (1-4) are connected to the ADS1115_1 ADC (channels A0 to A3) to save GPIO pins on the Raspberry Pi.
-4. Two SPST buttons (5-6) are directly connected to GPIO pins for simplicity and because we've used all available ADC channels.
-5. Ensure all GND connections are properly made to create a common ground for the entire system.
-6. Double-check all connections before powering on the Raspberry Pi to prevent any potential damage to the components.
-7. The UART pins (GPIO 14 and 15, or physical pins 8 and 10) are left unused for console access as requested.
-8. If you need to distribute the ground connections to reduce wire length or improve organization, you can use the additional GND pins listed in the "Additional GND Connections" section.
-9. The second ADC (ADS1115_2) is currently not used but remains in the setup for potential future expansion.
+3. All six SPST buttons are now connected directly to ADC channels to save GPIO pins on the Raspberry Pi.
+4. Ensure all GND connections are properly made to create a common ground for the entire system.
+5. Double-check all connections before powering on the Raspberry Pi to prevent any potential damage to the components.
+6. The UART pins (GPIO 14 and 15, or physical pins 8 and 10) are left unused for console access as requested.
+7. If you need to distribute the ground connections to reduce wire length or improve organization, you can use the additional GND pins listed in the "Additional GND Connections" section.
+8. GPIO 18 (Pi Pin 12) and GPIO 12 (Pi Pin 32) are now unused and available for future expansion if needed.
+9. The software will need to be updated to read all button states from the ADC channels instead of GPIO inputs for Buttons 5 and 6.
+10. Regularly check the ADC connections to ensure they remain secure, as these are now critical for all button inputs.

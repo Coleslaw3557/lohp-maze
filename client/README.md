@@ -2,17 +2,16 @@
 
 ## Overview
 
-This is the client-side application for the LoHP-MazeManager system, designed to run on Raspberry Pi devices. It manages audio playback, handles various types of triggers (GPIO, ADC), controls laser modules, and communicates with a central server via WebSocket.
+This is the client-side application for the LoHP-MazeManager system, designed to run on Raspberry Pi devices. It manages audio playback, handles various types of triggers (laser, GPIO, ADC, piezo), and communicates with a central server via WebSocket.
 
 ## Features
 
 - WebSocket communication with the central server
-- Audio playback management using PyAudio
-- Support for multiple trigger types (GPIO, ADC)
-- Laser module control
+- Audio playback management using VLC
+- Support for multiple trigger types (laser, GPIO, ADC, piezo)
 - Time synchronization with the server
 - Background music support
-- Effect preparation and execution
+- Effect audio playback
 - Dockerized deployment
 - Support for multiple unit configurations (A, B, C)
 
@@ -28,15 +27,15 @@ Handles communication with the server:
 ### 2. AudioManager (audio_manager.py)
 
 Manages audio playback:
-- Initializes PyAudio for audio playback
+- Initializes VLC for audio playback
 - Handles audio file caching and downloads
 - Manages playback of effect audio and background music
 
 ### 3. TriggerManager (trigger_manager.py)
 
 Manages various types of triggers:
-- Sets up GPIO pins for laser modules and buttons
-- Configures ADC channels for analog inputs (e.g., resistor ladders, piezo sensors)
+- Sets up GPIO pins for laser modules
+- Configures ADC channels for analog inputs (e.g., buttons, piezo sensors)
 - Monitors triggers and reports events to the server
 
 ### 4. ConfigManager (config_manager.py)
@@ -69,8 +68,7 @@ These files include:
 - Server IP and port
 - Unit name and associated rooms
 - Audio output device
-- Trigger configurations (GPIO, ADC)
-- Laser module configurations
+- Trigger configurations (laser, GPIO, ADC, piezo)
 - Cache directory location
 
 ## Deployment
@@ -95,7 +93,6 @@ The application is containerized using Docker for easy deployment and management
 - Logging is set up to provide detailed information about the client's operations.
 - The code is structured to allow easy extension and modification of functionality.
 - Error handling and reconnection logic are implemented to ensure robustness.
-- Unit tests are available in the `tests` directory for verifying component functionality.
 
 ## Security Considerations
 
@@ -107,3 +104,22 @@ The application is containerized using Docker for easy deployment and management
 ## Contributing
 
 Contributions to improve the client are welcome. Please ensure to follow the existing code style and add appropriate tests for new features. When adding new functionality, consider compatibility with all unit configurations (A, B, C).
+
+## Troubleshooting
+
+- Check the logs for detailed information about any issues.
+- Ensure all required hardware (lasers, buttons, ADC) is properly connected.
+- Verify the configuration file is correctly set up for the specific unit.
+- Make sure the server IP and port are correctly configured and accessible.
+
+## Dependencies
+
+Main dependencies include:
+- websockets
+- aiohttp
+- RPi.GPIO
+- python-vlc
+- adafruit-blinka
+- adafruit-circuitpython-ads1x15
+
+For a complete list, refer to the `requirements.txt` file.

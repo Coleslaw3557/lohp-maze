@@ -21,6 +21,7 @@ class TriggerManager:
 
         GPIO.setmode(GPIO.BCM)
         self.start_time = time.time()
+        self.laser_cooldown_period = 5  # 5 second cooldown for laser triggers
         self.cooldown_period = self.config.get('cooldown_period', 5)
         self.startup_delay = self.config.get('startup_delay', 10)
         self.trigger_cooldowns = {}
@@ -223,7 +224,9 @@ class TriggerManager:
         self.laser_states[trigger_name] = rx_state
 
         if previous_state == GPIO.HIGH and rx_state == GPIO.LOW:  # Laser beam was intact and is now broken
-            if self.check_trigger_cooldown(trigger_name, current_time):
+            cooldown_passed = self.check_trigger_cooldown(trigger_name, current_time, cooldown_period=self.laser_cooldown_period)
+            logger.debug(f"Laser {trigger_name} cooldown check: {'Passed' if cooldown_passed else 'Failed'}")
+            if cooldown_passed:
                 logger.info(f"Laser beam broken: {trigger_name}")
                 self.set_trigger_cooldown(trigger_name, current_time)
                 if callback:
@@ -232,9 +235,11 @@ class TriggerManager:
                         await result
                 else:
                     logger.warning(f"No callback provided for trigger: {trigger_name}")
+            else:
+                logger.debug(f"Laser {trigger_name} trigger ignored due to cooldown")
         elif previous_state == GPIO.LOW and rx_state == GPIO.HIGH:  # Laser beam was broken and is now intact
             logger.info(f"Laser beam restored: {trigger_name}")
-            self.trigger_cooldowns.pop(trigger_name, None)
+            # Do not remove the cooldown when the beam is restored
 
     async def check_gpio_trigger(self, trigger, callback, current_time):
         # Implementation for GPIO trigger check
@@ -282,9 +287,11 @@ class TriggerManager:
         else:
             return None
 
-    def check_trigger_cooldown(self, trigger_name, current_time):
+    def check_trigger_cooldown(self, trigger_name, current_time, cooldown_period=None):
+        if cooldown_period is None:
+            cooldown_period = self.cooldown_period
         last_trigger_time, _ = self.trigger_cooldowns.get(trigger_name, (0, False))
-        return current_time - last_trigger_time > self.cooldown_period
+        return current_time - last_trigger_time > cooldown_period
 
     def set_trigger_cooldown(self, trigger_name, current_time):
         self.trigger_cooldowns[trigger_name] = (current_time, True)
