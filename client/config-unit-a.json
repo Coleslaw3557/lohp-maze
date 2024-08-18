@@ -5,10 +5,10 @@
   "audio_output_device": "default",
   "triggers": [
     {
-      "name": "EntranceLaser",
+      "name": "Entrance LT",
       "type": "laser",
-      "tx_pin": 4,
-      "rx_pin": 17,
+      "tx_pin": 7,
+      "rx_pin": 11,
       "action": {
         "type": "curl",
         "method": "POST",
@@ -23,10 +23,10 @@
       }
     },
     {
-      "name": "CuddleCrossLaser",
-      "type": "laser",
-      "tx_pin": 22,
-      "rx_pin": 5,
+      "name": "Cuddle Cross LT",
+      "type": "laser", 
+      "tx_pin": 12,
+      "rx_pin": 13,
       "action": {
         "type": "curl",
         "method": "POST",
@@ -41,10 +41,10 @@
       }
     },
     {
-      "name": "PhotoBombLaser",
+      "name": "Photo Bomb LT",
       "type": "laser",
-      "tx_pin": 24,
-      "rx_pin": 6,
+      "tx_pin": 15,
+      "rx_pin": 16,
       "action": {
         "type": "curl",
         "method": "POST",
@@ -59,10 +59,10 @@
       }
     },
     {
-      "name": "NoFriendsMondayLaser",
+      "name": "No Friends Monday LT",
       "type": "laser",
-      "tx_pin": 25,
-      "rx_pin": 13,
+      "tx_pin": 18,
+      "rx_pin": 22,
       "action": {
         "type": "curl",
         "method": "POST",
@@ -77,10 +77,10 @@
       }
     },
     {
-      "name": "ExitLaser",
+      "name": "Exit LT",
       "type": "laser",
-      "tx_pin": 19,
-      "rx_pin": 26,
+      "tx_pin": 29,
+      "rx_pin": 31,
       "action": {
         "type": "curl",
         "method": "POST",
@@ -95,7 +95,7 @@
       }
     },
     {
-      "name": "CuddleCrossButton1",
+      "name": "Button 1",
       "type": "adc",
       "adc_address": "0x48",
       "channel": 0,
@@ -112,7 +112,7 @@
       }
     },
     {
-      "name": "CuddleCrossButton2",
+      "name": "Button 2",
       "type": "adc",
       "adc_address": "0x48",
       "channel": 1,
@@ -129,7 +129,7 @@
       }
     },
     {
-      "name": "CuddleCrossButton3",
+      "name": "Button 3",
       "type": "adc",
       "adc_address": "0x48",
       "channel": 2,
@@ -144,7 +144,7 @@
       }
     },
     {
-      "name": "CuddleCrossButton4",
+      "name": "Button 4",
       "type": "adc",
       "adc_address": "0x48",
       "channel": 3,
