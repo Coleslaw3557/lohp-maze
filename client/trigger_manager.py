@@ -224,7 +224,7 @@ class TriggerManager:
         self.laser_states[trigger_name] = rx_state
 
         if previous_state == GPIO.HIGH and rx_state == GPIO.LOW:  # Laser beam was intact and is now broken
-            if self.check_trigger_cooldown(trigger_name, current_time):
+            if self.check_trigger_cooldown(trigger_name, current_time, cooldown_period=5):
                 logger.info(f"Laser beam broken: {trigger_name}")
                 self.set_trigger_cooldown(trigger_name, current_time)
                 if callback:
