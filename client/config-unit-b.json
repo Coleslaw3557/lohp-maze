@@ -95,7 +95,7 @@
       }
     },
     {
-      "name": "Button 1",
+      "name": "GateInsp1",
       "type": "adc",
       "adc_address": "0x48",
       "channel": 0,
@@ -112,7 +112,7 @@
       }
     },
     {
-      "name": "Button 2",
+      "name": "GateInsp2",
       "type": "adc",
       "adc_address": "0x48",
       "channel": 1,
@@ -129,7 +129,7 @@
       }
     },
     {
-      "name": "Button 3",
+      "name": "GateInsp3",
       "type": "adc",
       "adc_address": "0x48",
       "channel": 2,
@@ -146,7 +146,7 @@
       }
     },
     {
-      "name": "Button 4",
+      "name": "GateTicket1",
       "type": "adc",
       "adc_address": "0x48",
       "channel": 3,
@@ -163,7 +163,7 @@
       }
     },
     {
-      "name": "Button 5",
+      "name": "GateTicket2",
       "type": "adc",
       "adc_address": "0x49",
       "channel": 0,
@@ -180,7 +180,7 @@
       }
     },
     {
-      "name": "Button 6",
+      "name": "GateTicket3",
       "type": "adc",
       "adc_address": "0x49",
       "channel": 1,
