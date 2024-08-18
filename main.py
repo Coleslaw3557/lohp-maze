@@ -19,7 +19,7 @@ from remote_host_manager import RemoteHostManager
 from audio_manager import AudioManager
 
 # Configuration
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+INFO = os.environ.get('DEBUG', 'False').lower() == 'true'
 SECRET_KEY = os.environ.get('SECRET_KEY', 'your_secret_key_here')
 NUM_FIXTURES = 21
 CHANNELS_PER_FIXTURE = 8
