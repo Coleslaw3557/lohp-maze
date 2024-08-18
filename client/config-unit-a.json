@@ -7,8 +7,8 @@
     {
       "name": "EntranceLaser",
       "type": "laser",
-      "tx_pin": 17,
-      "rx_pin": 27,
+      "tx_pin": 4,
+      "rx_pin": 17,
       "action": {
         "type": "curl",
         "method": "POST",
