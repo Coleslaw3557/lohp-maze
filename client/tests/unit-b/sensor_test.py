@@ -20,22 +20,20 @@ UNIT_B_CONFIG = {
         'Porto Room': {'LT': 13, 'LR': 19}
     },
     'adc': {
-        'Gate': {
-            'adc1': {
-                'address': '0x48',
-                'channels': {
-                    'GateInsp1': ADS.P0,
-                    'GateInsp2': ADS.P1,
-                    'GateInsp3': ADS.P2,
-                    'GateTicket1': ADS.P3
-                }
-            },
-            'adc2': {
-                'address': '0x49',
-                'channels': {
-                    'GateTicket2': ADS.P0,
-                    'GateTicket3': ADS.P1
-                }
+        'adc1': {
+            'address': '0x48',
+            'channels': {
+                'Button1': ADS.P0,
+                'Button2': ADS.P1,
+                'Button3': ADS.P2,
+                'Button4': ADS.P3
+            }
+        },
+        'adc2': {
+            'address': '0x49',
+            'channels': {
+                'Button5': ADS.P0,
+                'Button6': ADS.P1
             }
         }
     }
@@ -69,12 +67,12 @@ ads2 = ADS.ADS1115(i2c, address=0x49)
 
 # Set up analog inputs for button testing
 analog_inputs = {
-    'GateInsp1': AnalogIn(ads1, ADS.P0),
-    'GateInsp2': AnalogIn(ads1, ADS.P1),
-    'GateInsp3': AnalogIn(ads1, ADS.P2),
-    'GateTicket1': AnalogIn(ads1, ADS.P3),
-    'GateTicket2': AnalogIn(ads2, ADS.P0),
-    'GateTicket3': AnalogIn(ads2, ADS.P1)
+    'Button1': AnalogIn(ads1, ADS.P0),
+    'Button2': AnalogIn(ads1, ADS.P1),
+    'Button3': AnalogIn(ads1, ADS.P2),
+    'Button4': AnalogIn(ads1, ADS.P3),
+    'Button5': AnalogIn(ads2, ADS.P0),
+    'Button6': AnalogIn(ads2, ADS.P1)
 }
 
 def control_laser(room, state):
@@ -96,13 +94,13 @@ def get_sensor_data():
         data.append((f"{room} Laser", "Laser System", room, f"{status}, {tx_state}, {raw_status}"))
     
     # Test ADC for button presses
-    for adc_name, adc_config in current_unit['adc']['Gate'].items():
+    for adc_name, adc_config in current_unit['adc'].items():
         for button, channel in adc_config['channels'].items():
             analog_input = analog_inputs[button]
             value = analog_input.value
             voltage = analog_input.voltage
             button_status = get_button_status(voltage)
-            data.append((f"Gate {button}", "ADC", "Gate", f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"))
+            data.append((f"{button}", "ADC", "Button", f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"))
     
     return data
 
