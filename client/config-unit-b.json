@@ -95,64 +95,108 @@
       }
     },
     {
-      "name": "Porto Room Piezo 1",
-      "type": "piezo",
-      "adc_channel": 0,
-      "threshold": 0.5,
+      "name": "Button 1",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 0,
       "action": {
         "type": "curl",
         "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
+        "url": "http://${server_ip}:5000/api/trigger_button",
         "headers": {
           "Content-Type": "application/json"
         },
         "data": {
-          "room": "Porto Room",
-          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+          "button_id": 1
         }
       }
     },
     {
-      "name": "Porto Room Piezo 2",
-      "type": "piezo",
-      "adc_channel": 1,
-      "threshold": 0.5,
+      "name": "Button 2",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 1,
       "action": {
         "type": "curl",
         "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
+        "url": "http://${server_ip}:5000/api/trigger_button",
         "headers": {
           "Content-Type": "application/json"
         },
         "data": {
-          "room": "Porto Room",
-          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+          "button_id": 2
         }
       }
     },
     {
-      "name": "Porto Room Piezo 3",
-      "type": "piezo",
-      "adc_channel": 2,
-      "threshold": 0.5,
+      "name": "Button 3",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 2,
       "action": {
         "type": "curl",
         "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
+        "url": "http://${server_ip}:5000/api/trigger_button",
         "headers": {
           "Content-Type": "application/json"
         },
         "data": {
-          "room": "Porto Room",
-          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+          "button_id": 3
+        }
+      }
+    },
+    {
+      "name": "Button 4",
+      "type": "adc",
+      "adc_address": "0x48",
+      "channel": 3,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/trigger_button",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "button_id": 4
+        }
+      }
+    },
+    {
+      "name": "Button 5",
+      "type": "adc",
+      "adc_address": "0x49",
+      "channel": 0,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/trigger_button",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "button_id": 5
+        }
+      }
+    },
+    {
+      "name": "Button 6",
+      "type": "adc",
+      "adc_address": "0x49",
+      "channel": 1,
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/trigger_button",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "button_id": 6
         }
       }
     }
   ],
   "rate_limit": 5,
-  "cache_dir": "/app/cache",
-  "piezo_settings": {
-    "correct_answer_probability": 0.25,
-    "attempts_required": 3
-  }
+  "cache_dir": "/app/cache"
 }
