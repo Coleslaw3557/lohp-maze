@@ -215,6 +215,23 @@
           "button_id": 6
         }
       }
+    },
+    {
+      "name": "GateTicketCombination",
+      "type": "button_combination",
+      "buttons": ["GateTicket1", "GateTicket2", "GateTicket3"],
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Gate",
+          "effect_name": "GateGreeters"
+        }
+      }
     }
   ],
   "rate_limit": 5,
