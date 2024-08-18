@@ -18,7 +18,7 @@ from config_manager import ConfigManager
 from sync_manager import SyncManager
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     handlers=[logging.StreamHandler(sys.stdout)])
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ logging.getLogger('pydub').setLevel(logging.INFO)
 # Ensure all loggers propagate to the root logger
 for name in logging.root.manager.loggerDict:
     logging.getLogger(name).propagate = True
-    logging.getLogger(name).setLevel(logging.DEBUG)
+    logging.getLogger(name).setLevel(logging.INFO)
 
 def log_and_exit(error_message):
     logger.critical(f"Critical error: {error_message}")

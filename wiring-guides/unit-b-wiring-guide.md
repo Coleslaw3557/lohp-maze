@@ -1,5 +1,6 @@
 # LoHP Maze Wiring Guide
-# UNIT - B (Updated)
+# UNIT - B
+# 192.168.1.186
 
 ## Raspberry Pi Full 40-pin Pinout Connections
 
@@ -130,64 +131,64 @@
 
 ### ADC1 (Buttons 1-4)
 
-| Pin | Connection |
-|-----|------------|
-| VDD | 3.3V (Pi Pin 1) |
-| GND | GND (Pi Pin 6) |
-| SCL | Raspberry Pi GPIO 3 (Pi Pin 5) |
-| SDA | Raspberry Pi GPIO 2 (Pi Pin 3) |
-| A0 | Button 1 Signal |
-| A1 | Button 2 Signal |
-| A2 | Button 3 Signal |
-| A3 | Button 4 Signal |
-| ADDR | GND (Pi Pin 6) (I2C address 0x48) |
+| Pin | Connection | Terminal Block ID |
+|-----|------------|-------------------|
+| VDD | 3.3V (Pi Pin 1) | |
+| GND | GND (Pi Pin 6) | |
+| SCL | Raspberry Pi GPIO 3 (Pi Pin 5) | |
+| SDA | Raspberry Pi GPIO 2 (Pi Pin 3) | |
+| A0 | Button 1 Signal | Green - 1 |
+| A1 | Button 2 Signal | Green - 2 |
+| A2 | Button 3 Signal | Pi Gray - 1 |
+| A3 | Button 4 Signal | Pi Gray - 2 |
+| ADDR | GND (Pi Pin 6) (I2C address 0x48) | |
 
 ### ADC2 (Buttons 5-6)
 
-| Pin | Connection |
-|-----|------------|
-| VDD | 3.3V (Pi Pin 1) |
-| GND | GND (Pi Pin 6) |
-| SCL | Raspberry Pi GPIO 3 (Pi Pin 5) |
-| SDA | Raspberry Pi GPIO 2 (Pi Pin 3) |
-| A0 | Button 5 Signal |
-| A1 | Button 6 Signal |
-| A2 | Not Connected |
-| A3 | Not Connected |
-| ADDR | VDD (Pi Pin 1) (I2C address 0x49) |
+| Pin | Connection | Terminal Block ID |
+|-----|------------|-------------------|
+| VDD | 3.3V (Pi Pin 1) | |
+| GND | GND (Pi Pin 6) | |
+| SCL | Raspberry Pi GPIO 3 (Pi Pin 5) | |
+| SDA | Raspberry Pi GPIO 2 (Pi Pin 3) | |
+| A0 | Button 5 Signal | Pi - 4 |
+| A1 | Button 6 Signal | 5 |
+| A2 | Not Connected | 6 |
+| A3 | Not Connected | 3 (Unused) |
+| ADDR | VDD (Pi Pin 1) (I2C address 0x49) | |
 
 ## Laser Modules
 
 ### Laser Transmitters (LT)
 
-| Room | GPIO | Physical Pin | Connection |
-|------|------|--------------|------------|
-| Cop Dodge | 17 | 11 | LS1 B1 |
-| Gate | 22 | 15 | LS1 B3 |
-| Guy Line | 24 | 18 | LS2 B1 |
-| Sparkle Pony | 5 | 29 | LS2 B3 |
-| Porto | 13 | 33 | LS2 B5 |
+| Room | GPIO | Physical Pin | Connection | Terminal Block ID |
+|------|------|--------------|------------|-------------------|
+| Cop Dodge | 17 | 11 | LS1 B1 | Green 3 |
+| Gate | 22 | 15 | LS1 B3 | Green 5 |
+| Guy Line | 24 | 18 | LS2 B1 | Green 7 |
+| Sparkle Pony | 5 | 29 | LS2 B3 | Green 8 |
+| Porto | 13 | 33 | LS2 B5 | Green 11 |
 
 ### Laser Receivers (LR)
 
-| Room | GPIO | Physical Pin | Connection |
-|------|------|--------------|------------|
-| Cop Dodge | 27 | 13 | LS1 B2 |
-| Gate | 23 | 16 | LS1 B4 |
-| Guy Line | 25 | 22 | LS2 B2 |
-| Sparkle Pony | 6 | 31 | LS2 B4 |
-| Porto | 19 | 35 | LS2 B6 |
+| Room | GPIO | Physical Pin | Connection | Terminal Block ID |
+|------|------|--------------|------------|-------------------|
+| Cop Dodge | 27 | 13 | LS1 B2 | Green 4 |
+| Gate | 23 | 16 | LS1 B4 | Green 6 |
+| Guy Line | 25 | 22 | LS2 B2 | Green 8 |
+| Sparkle Pony | 6 | 31 | LS2 B4 | Green 10 |
+| Porto | 19 | 35 | LS2 B6 | Green 12 |
 
 ## Button Connections
 
-| Button | Connection |
-|--------|------------|
-| Button 1 | ADC1 A0 |
-| Button 2 | ADC1 A1 |
-| Button 3 | ADC1 A2 |
-| Button 4 | ADC1 A3 |
-| Button 5 | ADC2 A0 |
-| Button 6 | ADC2 A1 |
+| Button | ADC Connection | Terminal Block ID |
+|--------|----------------|-------------------|
+| Button 1 | ADC1 A0 | Green - 1 |
+| Button 2 | ADC1 A1 | Green - 2 |
+| Button 3 | ADC1 A2 | Pi Gray - 1 |
+| Button 4 | ADC1 A3 | Pi Gray - 2 |
+| Button 5 | ADC2 A0 | Pi - 4 |
+| Button 6 | ADC2 A1 | 5 |
 
 ## Additional Notes
 

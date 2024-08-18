@@ -19,7 +19,7 @@ from remote_host_manager import RemoteHostManager
 from audio_manager import AudioManager
 
 # Configuration
-INFO = os.environ.get('DEBUG', 'False').lower() == 'true'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 SECRET_KEY = os.environ.get('SECRET_KEY', 'your_secret_key_here')
 NUM_FIXTURES = 21
 CHANNELS_PER_FIXTURE = 8
@@ -584,10 +584,10 @@ if __name__ == '__main__':
 
     config = Config()
     config.bind = ["0.0.0.0:5000"]
-    config.use_reloader = False  # Set to False since we're using INFO mode
+    config.use_reloader = DEBUG
     config.accesslog = "-"  # Log to stdout
     config.errorlog = "-"  # Log to stderr
-    config.loglevel = "INFO"  # Always set to INFO
+    config.loglevel = "DEBUG" if DEBUG else "INFO"
 
     async def run_server():
         try:
