@@ -9,6 +9,7 @@ import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 import aiohttp
 import threading
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -37,12 +38,17 @@ class TriggerManager:
         self.VOLTAGE_CHANGE_THRESHOLD = 0.5
         self.DEBUG_THRESHOLD = 0.1
         self.BUTTON_DEBOUNCE_TIME = 0.1
+        self.BUTTON_COMBINATION_WINDOW = 2  # 2 second window for button combinations
 
         self.adc_config = self.determine_adc_config()
         self.setup_piezo()
         self.setup_triggers()
         self.initialize_filters()
         self.start_laser_thread()  # Start the laser maintenance thread
+
+        # Button combination tracking
+        self.button_press_times = defaultdict(lambda: defaultdict(float))
+        self.button_combinations = self.setup_button_combinations()
 
     async def setup(self):
         await self.setup_adc()
@@ -273,9 +279,11 @@ class TriggerManager:
                 if self.check_trigger_cooldown(trigger['name'], current_time):
                     logger.info(f"Button pressed: {trigger['name']}")
                     self.set_trigger_cooldown(trigger['name'], current_time)
-                    await callback(trigger['name'])
+                    self.button_press_times[trigger['name']][current_time] = True
+                    await self.check_button_combinations(trigger, callback, current_time)
             elif button_status == "Button not pressed":
                 self.trigger_cooldowns.pop(trigger['name'], None)
+                self.button_press_times[trigger['name']] = defaultdict(float)
         except Exception as e:
             logger.error(f"Error reading ADC for {trigger['name']}: {str(e)}")
 
@@ -295,6 +303,33 @@ class TriggerManager:
 
     def set_trigger_cooldown(self, trigger_name, current_time):
         self.trigger_cooldowns[trigger_name] = (current_time, True)
+
+    def setup_button_combinations(self):
+        combinations = {}
+        for trigger in self.triggers:
+            if trigger.get('type') == 'button_combination':
+                combination_name = trigger['name']
+                combinations[combination_name] = {
+                    'buttons': trigger['buttons'],
+                    'action': trigger['action']
+                }
+        return combinations
+
+    async def check_button_combinations(self, trigger, callback, current_time):
+        for combination_name, combination_info in self.button_combinations.items():
+            if trigger['name'] in combination_info['buttons']:
+                all_pressed = all(
+                    any(abs(press_time - current_time) <= self.BUTTON_COMBINATION_WINDOW
+                        for press_time in self.button_press_times[button].keys())
+                    for button in combination_info['buttons']
+                )
+                if all_pressed:
+                    logger.info(f"Button combination triggered: {combination_name}")
+                    await callback(combination_name)
+                    return
+
+        # If no combination was triggered, execute the individual button action
+        await callback(trigger['name'])
 
     async def handle_piezo_trigger(self, trigger, callback):
         self.piezo_attempts += 1

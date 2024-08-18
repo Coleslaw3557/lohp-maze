@@ -102,12 +102,13 @@
       "action": {
         "type": "curl",
         "method": "POST",
-        "url": "http://${server_ip}:5000/api/trigger_button",
+        "url": "http://${server_ip}:5000/api/run_effect",
         "headers": {
           "Content-Type": "application/json"
         },
         "data": {
-          "button_id": 1
+          "room": "Gate",
+          "effect_name": "WrongAnswer"
         }
       }
     },
@@ -119,12 +120,13 @@
       "action": {
         "type": "curl",
         "method": "POST",
-        "url": "http://${server_ip}:5000/api/trigger_button",
+        "url": "http://${server_ip}:5000/api/run_effect",
         "headers": {
           "Content-Type": "application/json"
         },
         "data": {
-          "button_id": 2
+          "room": "Gate",
+          "effect_name": "WrongAnswer"
         }
       }
     },
@@ -136,12 +138,30 @@
       "action": {
         "type": "curl",
         "method": "POST",
-        "url": "http://${server_ip}:5000/api/trigger_button",
+        "url": "http://${server_ip}:5000/api/run_effect",
         "headers": {
           "Content-Type": "application/json"
         },
         "data": {
-          "button_id": 3
+          "room": "Gate",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "GateInspCombination",
+      "type": "button_combination",
+      "buttons": ["GateInsp1", "GateInsp2", "GateInsp3"],
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Gate",
+          "effect_name": "GateInspection"
         }
       }
     },
