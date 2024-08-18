@@ -9,31 +9,40 @@ from blessed import Terminal
 # Constants
 BUTTON_DEBOUNCE_TIME = 0.1
 
-# Unit A Configuration
-UNIT_A_CONFIG = {
-    'name': 'UNIT-A',
+# Unit B Configuration
+UNIT_B_CONFIG = {
+    'name': 'LOHP-UNIT-B',
     'lasers': {
-        'Entrance': {'LT': 4, 'LR': 17},
-        'Cuddle Cross': {'LT': 18, 'LR': 27},
-        'Photo Bomb': {'LT': 22, 'LR': 23},
-        'No Friends Monday': {'LT': 24, 'LR': 25},
-        'Exit': {'LT': 5, 'LR': 6}
+        'Cop Dodge': {'LT': 17, 'LR': 27},
+        'Gate': {'LT': 22, 'LR': 23},
+        'Guy Line Climb': {'LT': 24, 'LR': 25},
+        'Sparkle Pony Room': {'LT': 5, 'LR': 6},
+        'Porto Room': {'LT': 13, 'LR': 19}
     },
     'adc': {
-        'Cuddle Cross': {
-            'adc': 'ads1',
-            'channels': {
-                'Button 1': ADS.P0,
-                'Button 2': ADS.P1,
-                'Button 3': ADS.P2,
-                'Button 4': ADS.P3
+        'Gate': {
+            'adc1': {
+                'address': '0x48',
+                'channels': {
+                    'GateInsp1': ADS.P0,
+                    'GateInsp2': ADS.P1,
+                    'GateInsp3': ADS.P2,
+                    'GateTicket1': ADS.P3
+                }
+            },
+            'adc2': {
+                'address': '0x49',
+                'channels': {
+                    'GateTicket2': ADS.P0,
+                    'GateTicket3': ADS.P1
+                }
             }
         }
     }
 }
 
 # Initialize current unit
-current_unit = UNIT_A_CONFIG
+current_unit = UNIT_B_CONFIG
 
 # Initialize Terminal
 term = Terminal()
@@ -56,9 +65,17 @@ setup_gpio()
 # Set up I2C for ADS1115
 i2c = busio.I2C(board.SCL, board.SDA)
 ads1 = ADS.ADS1115(i2c, address=0x48)
+ads2 = ADS.ADS1115(i2c, address=0x49)
 
-# Set up analog input for button testing
-analog_input = AnalogIn(ads1, ADS.P0)
+# Set up analog inputs for button testing
+analog_inputs = {
+    'GateInsp1': AnalogIn(ads1, ADS.P0),
+    'GateInsp2': AnalogIn(ads1, ADS.P1),
+    'GateInsp3': AnalogIn(ads1, ADS.P2),
+    'GateTicket1': AnalogIn(ads1, ADS.P3),
+    'GateTicket2': AnalogIn(ads2, ADS.P0),
+    'GateTicket3': AnalogIn(ads2, ADS.P1)
+}
 
 def control_laser(room, state):
     pins = current_unit['lasers'][room]
@@ -79,12 +96,13 @@ def get_sensor_data():
         data.append((f"{room} Laser", "Laser System", room, f"{status}, {tx_state}, {raw_status}"))
     
     # Test ADC for button presses
-    for button, channel in current_unit['adc']['Cuddle Cross']['channels'].items():
-        analog_input = AnalogIn(ads1, channel)
-        value = analog_input.value
-        voltage = analog_input.voltage
-        button_status = get_button_status(voltage)
-        data.append((f"Cuddle Cross {button}", "ADC", "Cuddle Cross", f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"))
+    for adc_name, adc_config in current_unit['adc']['Gate'].items():
+        for button, channel in adc_config['channels'].items():
+            analog_input = analog_inputs[button]
+            value = analog_input.value
+            voltage = analog_input.voltage
+            button_status = get_button_status(voltage)
+            data.append((f"Gate {button}", "ADC", "Gate", f"Value: {value}, Voltage: {voltage:.3f}V, {button_status}"))
     
     return data
 
@@ -106,7 +124,7 @@ def display_tui():
         y = i + 4
         print(term.move_xy(0, y) + f"{component:<20} {description:<10} {location:<20} {status}")
     
-    print(term.move_y(len(data) + 5) + term.center("Laser Control: 1=Entrance, 2=Cuddle Cross, 3=Photo Bomb, 4=No Friends Monday, 5=Exit"))
+    print(term.move_y(len(data) + 5) + term.center("Laser Control: 1=Cop Dodge, 2=Gate, 3=Guy Line Climb, 4=Sparkle Pony Room, 5=Porto Room"))
 
 def button_test():
     print(term.home + term.clear)
