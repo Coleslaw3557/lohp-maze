@@ -41,6 +41,7 @@ class TriggerManager:
         self.setup_piezo()
         self.setup_triggers()
         self.initialize_filters()
+        self.start_laser_thread()  # Start the laser maintenance thread
 
     async def setup(self):
         await self.setup_adc()
@@ -96,8 +97,14 @@ class TriggerManager:
         self.laser_tx_pins.append(trigger['tx_pin'])  # Add TX pin to the list
 
     def keep_lasers_on(self):
-        for pin in self.laser_tx_pins:
-            GPIO.output(pin, GPIO.HIGH)
+        while True:
+            for pin in self.laser_tx_pins:
+                GPIO.output(pin, GPIO.HIGH)
+            time.sleep(0.01)  # Small delay to prevent excessive CPU usage
+
+    def start_laser_thread(self):
+        self.laser_thread = threading.Thread(target=self.keep_lasers_on, daemon=True)
+        self.laser_thread.start()
 
     def setup_gpio_trigger(self, trigger):
         if 'pin' in trigger:
@@ -166,7 +173,6 @@ class TriggerManager:
         asyncio.create_task(self.read_adc_continuously())
 
         while True:
-            self.keep_lasers_on()  # Ensure laser states are set to HIGH on each iteration
             current_time = time.time()
             if current_time - self.start_time < self.startup_delay:
                 await asyncio.sleep(0.1)
