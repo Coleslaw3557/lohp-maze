@@ -328,7 +328,26 @@ class TriggerManager:
                     await callback(combination_name)
                     return
 
-        # If no combination was triggered, execute the individual button action
+        # If no combination was triggered, schedule the individual button action
+        asyncio.create_task(self.schedule_individual_button_action(trigger, callback, current_time))
+
+    async def schedule_individual_button_action(self, trigger, callback, press_time):
+        await asyncio.sleep(self.BUTTON_COMBINATION_WINDOW)
+        current_time = time.time()
+        
+        # Check if any combination involving this button was triggered
+        for combination_name, combination_info in self.button_combinations.items():
+            if trigger['name'] in combination_info['buttons']:
+                all_pressed = all(
+                    any(abs(press_time - current_time) <= self.BUTTON_COMBINATION_WINDOW
+                        for press_time in self.button_press_times[button].keys())
+                    for button in combination_info['buttons']
+                )
+                if all_pressed:
+                    return  # Combination was triggered, don't execute individual action
+
+        # If we reach here, no combination was triggered, so execute the individual action
+        logger.info(f"Executing individual button action for: {trigger['name']}")
         await callback(trigger['name'])
 
     async def handle_piezo_trigger(self, trigger, callback):
