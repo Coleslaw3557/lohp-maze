@@ -25,7 +25,7 @@
             "volume": 0.8
         },
         "Entrance": {
-            "audio_files": ["entrance.mp3", "doom.mp3", "pornhub.mp3","bjbjbj.mp3"],
+            "audio_files": ["doom.mp3", "pornhub.mp3","bjbjbj.mp3"],
             "volume": 0.9
         },
         "GuyLineClimb": {
