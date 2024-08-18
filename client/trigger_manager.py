@@ -21,6 +21,7 @@ class TriggerManager:
 
         GPIO.setmode(GPIO.BCM)
         self.start_time = time.time()
+        self.laser_cooldown_period = 5  # 5 second cooldown for laser triggers
         self.cooldown_period = self.config.get('cooldown_period', 5)
         self.startup_delay = self.config.get('startup_delay', 10)
         self.trigger_cooldowns = {}
@@ -282,9 +283,11 @@ class TriggerManager:
         else:
             return None
 
-    def check_trigger_cooldown(self, trigger_name, current_time):
+    def check_trigger_cooldown(self, trigger_name, current_time, cooldown_period=None):
+        if cooldown_period is None:
+            cooldown_period = self.cooldown_period
         last_trigger_time, _ = self.trigger_cooldowns.get(trigger_name, (0, False))
-        return current_time - last_trigger_time > self.cooldown_period
+        return current_time - last_trigger_time > cooldown_period
 
     def set_trigger_cooldown(self, trigger_name, current_time):
         self.trigger_cooldowns[trigger_name] = (current_time, True)
