@@ -15,7 +15,7 @@ class DMXOutputManager(threading.Thread):
     FREQUENCY = 44  # Fixed 44Hz update rate as per DMX512 standard
 
     def __init__(self, dmx_state_manager, url='ftdi://ftdi:232:A10NI4B7/1', universe=0):
-        super().__init__()
+        super().__init__(daemon=True)  # Never block process exit (docker restart depends on it)
         self.dmx_state_manager = dmx_state_manager
         self.url = url
         self.universe = universe

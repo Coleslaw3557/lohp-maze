@@ -1,20 +1,19 @@
-FROM python:3.9-slim-buster
+FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+# gcc/python3-dev: build RPi.GPIO; vlc: audio playback; i2c-tools: ADS1115 debugging
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
-    ffmpeg \
     vlc \
-    libasound2-dev \
-    portaudio19-dev \
     i2c-tools \
-    python3-smbus \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . /app
 
 RUN mkdir -p /app/cache/audio_files
 

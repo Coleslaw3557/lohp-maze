@@ -1,0 +1,17 @@
+# Stable ALSA card names for the zone USB sound cards, pinned to physical USB ports
+# so identical dongles can't swap zones between boots.
+#
+# 1. Plug each dongle into its port, then find that port's path:
+#      udevadm info -q path /sys/class/sound/card1
+#    The "1-1.x" segment in the output is the KERNELS value for that port.
+# 2. Edit the KERNELS values below to match your ports.
+# 3. Install and reload:
+#      sudo cp 99-lohp-audio.rules /etc/udev/rules.d/
+#      sudo udevadm control --reload && sudo reboot
+# 4. Verify with `aplay -l` — the cards should be named zonea/zoneb/zonec,
+#    matching the plughw:CARD=... devices in config-single-pi.json.
+
+# Exact port paths (no wildcard: "1-1.1*" would also match port 1-1.10 or a chained hub)
+SUBSYSTEM=="sound", KERNELS=="1-1.1", ATTR{id}="zonea"
+SUBSYSTEM=="sound", KERNELS=="1-1.2", ATTR{id}="zoneb"
+SUBSYSTEM=="sound", KERNELS=="1-1.3", ATTR{id}="zonec"

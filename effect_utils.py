@@ -1,8 +1,5 @@
 import math
-import logging
 import random
-
-logger = logging.getLogger(__name__)
 
 def hsv_to_rgb(h, s, v):
     if s == 0.0:
@@ -94,13 +91,6 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
         hue = (hue + nebula * 0.2 + twinkle * 0.05) % 1
         saturation = max(saturation_min, min(saturation_max, saturation + nebula * 0.3 + twinkle * 0.1))
         value = max(value_min, min(value_max, value * twinkle + nebula * 0.2))
-    elif 'neon_flicker' in theme_data:  # BladeRunner theme
-        flicker = random.uniform(0.8, 1.0) * theme_data.get('neon_flicker', 0.4)
-        rain = (math.sin(time_factor_fast * 2 + room_offset) * 0.5 + 0.5) * theme_data.get('rain_effect', 0.6)
-        smog = (math.sin(time_factor_slow * 0.3 + room_offset) * 0.5 + 0.5) * theme_data.get('smog_effect', 0.5)
-        hue = (hue + smog * 0.1) % 1
-        saturation = max(saturation_min, min(saturation_max, saturation - smog * 0.2))
-        value = max(value_min, min(value_max, value * flicker - rain * 0.3 - smog * 0.2))
 
     # Add some randomness to prevent static patterns
     hue = (hue + random.uniform(-0.03, 0.03)) % 1
@@ -140,18 +130,35 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
 
     return channels
 
+EFFECT_CHANNELS = ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming',
+                   'w_dimming', 'total_strobe', 'function_selection', 'function_speed']
+
 def get_effect_step_values(effect_data):
+    """Return a function mapping elapsed seconds to the 8 interpolated channel values.
+
+    Steps are precomputed into arrays and scanned with a moving cursor so long
+    effects (LightningStorm has ~6000 steps) stay cheap at the 44Hz update rate.
+    """
+    times = [step['time'] for step in effect_data['steps']]
+    values = [[step['channels'].get(channel, 0) for channel in EFFECT_CHANNELS]
+              for step in effect_data['steps']]
+    cursor = 0
+
     def get_values(elapsed_time):
-        for i, step in enumerate(effect_data['steps']):
-            if elapsed_time <= step['time']:
-                if i == 0:
-                    return [step['channels'].get(channel, 0) for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming', 'w_dimming', 'total_strobe', 'function_selection', 'function_speed']]
-                else:
-                    prev_step = effect_data['steps'][i-1]
-                    t = (elapsed_time - prev_step['time']) / (step['time'] - prev_step['time'])
-                    return [
-                        int(prev_step['channels'].get(channel, 0) + t * (step['channels'].get(channel, 0) - prev_step['channels'].get(channel, 0)))
-                        for channel in ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming', 'w_dimming', 'total_strobe', 'function_selection', 'function_speed']
-                    ]
-        return [0] * 8  # Return all zeros if elapsed_time is beyond the last step
+        nonlocal cursor
+        if not times:
+            return [0] * 8
+        if cursor > 0 and elapsed_time < times[cursor - 1]:
+            cursor = 0  # Another fixture is slightly behind; rewind
+        while cursor < len(times) and times[cursor] < elapsed_time:
+            cursor += 1
+        if cursor >= len(times):
+            return [0] * 8  # Beyond the last step
+        if cursor == 0:
+            return list(values[0])
+        t0, t1 = times[cursor - 1], times[cursor]
+        t = (elapsed_time - t0) / (t1 - t0) if t1 > t0 else 1.0
+        v0, v1 = values[cursor - 1], values[cursor]
+        return [int(a + t * (b - a)) for a, b in zip(v0, v1)]
+
     return get_values

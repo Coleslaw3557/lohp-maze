@@ -15,6 +15,18 @@ class ConfigManager:
                 config_content = f.read()
             config = json.loads(config_content)
             config = self.replace_env_vars(config)
+            # Multi-zone configs list rooms per zone; derive the flat room list from them
+            if config.get('zones'):
+                zone_rooms = sorted({
+                    room for zone in config['zones'].values() for room in zone.get('rooms', [])
+                })
+                if not config.get('associated_rooms'):
+                    config['associated_rooms'] = zone_rooms
+                else:
+                    uncovered = set(config['associated_rooms']) - set(zone_rooms)
+                    if uncovered:
+                        logger.warning(f"associated_rooms not covered by any zone "
+                                       f"(their audio will be dropped): {sorted(uncovered)}")
             logger.info(f"Configuration loaded from {self.config_file}")
             return config
         except FileNotFoundError:
@@ -44,11 +56,3 @@ class ConfigManager:
             return config
         else:
             return config
-
-    def save_config(self):
-        try:
-            with open(self.config_file, 'w') as f:
-                json.dump(self.config, f, indent=4)
-            logger.info(f"Configuration saved to {self.config_file}")
-        except IOError:
-            logger.error(f"Error writing to {self.config_file}")

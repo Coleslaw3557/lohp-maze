@@ -1,7 +1,13 @@
 {
   "server_ip": "192.168.1.238",
   "unit_name": "LOHP-UNIT-C",
-  "associated_rooms": ["Vertical Moop March", "Bike Lock Room", "Deep Playa Handshake", "Monkey Room", "Temple Room"],
+  "associated_rooms": [
+    "Vertical Moop March",
+    "Bike Lock Room",
+    "Deep Playa Handshake",
+    "Monkey Room",
+    "Temple Room"
+  ],
   "audio_output_device": "default",
   "triggers": [
     {
@@ -18,7 +24,7 @@
         },
         "data": {
           "room": "Vertical Moop March",
-          "effect_name": "MoopMarch"
+          "effect_name": "Lightning"
         }
       }
     },
@@ -36,7 +42,7 @@
         },
         "data": {
           "room": "Bike Lock Room",
-          "effect_name": "BikeLock"
+          "effect_name": "BikeLockRoom"
         }
       }
     },
@@ -54,7 +60,7 @@
         },
         "data": {
           "room": "Deep Playa Handshake",
-          "effect_name": "DeepPlayaHandshake"
+          "effect_name": "DeepPlaya-Hit"
         }
       }
     },
@@ -72,7 +78,7 @@
         },
         "data": {
           "room": "Monkey Room",
-          "effect_name": "MonkeyBusiness"
+          "effect_name": "Lightning"
         }
       }
     },
@@ -90,7 +96,7 @@
         },
         "data": {
           "room": "Temple Room",
-          "effect_name": "TempleAmbience"
+          "effect_name": "Lightning"
         }
       }
     }

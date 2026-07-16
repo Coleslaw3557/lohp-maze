@@ -1,4 +1,3 @@
-version: '3'
 services:
   escape-room-control:
     container_name: lohp-server
@@ -7,16 +6,10 @@ services:
       - "5000:5000"
       - "8765:8765"
     devices:
-      - "/dev/ttyUSB0:/dev/ttyUSB0"
-      - "/dev/snd:/dev/snd"
-    privileged: true
+      - "/dev/bus/usb:/dev/bus/usb"  # FTDI USB-DMX interface
+    privileged: true  # USB access; also required for /api/shutdown (sysrq power-off)
     volumes:
       - .:/app
-      - /:/host
-    cap_add:
-      - SYS_BOOT
-    environment:
-      - FLASK_ENV=production
     restart: always
     logging:
       driver: "json-file"

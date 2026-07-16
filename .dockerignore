@@ -1,0 +1,6 @@
+.git
+client/
+wiring-guides/
+tools/
+*.md
+rooms.png

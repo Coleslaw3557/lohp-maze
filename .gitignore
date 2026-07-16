@@ -1,1 +1,7 @@
 .aider*
+__pycache__/
+*.py[cod]
+effects_config.json
+client/cache/
+.env
+*.log

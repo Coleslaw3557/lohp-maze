@@ -299,6 +299,22 @@ Retrieves information about all configured light models.
 curl http://localhost:5000/api/light_models
 ```
 
+## Additional Endpoints
+
+| Method | URL | Description |
+|--------|-----|-------------|
+| GET | `/` | Web control panel (serves `frontend/index.html`) |
+| GET | `/api/room_layout` | Alias of `/api/rooms` |
+| GET | `/api/rooms_units_fixtures` | Rooms with their fixtures and the client units covering them |
+| GET | `/api/connected_clients` | Connected room units (name, IP, rooms) |
+| POST | `/api/terminate_client` | Close a unit's WebSocket. Body: `{"ip": "<client-ip>"}` |
+| POST | `/api/update_theme_value` | Live-tune the running theme. Body: `{"control_id": "color-variation", "value": 0.5}`. Control IDs: `transition-speed`, `color-variation`, `intensity-fluctuation`, `color-wheel-speed`, `wave-effect` |
+| GET | `/api/light_fixtures` | Plain-text fixture listing (ROBCO terminal style) |
+| GET | `/api/audio_files_to_download` | Lists effect/music audio files clients should cache |
+| GET | `/api/audio/<filename>` | Serves an audio file (music or effect clip) |
+| POST | `/api/shutdown` | Powers off the server host and all connected units after 3 seconds |
+| POST | `/api/kill_process` | Immediately terminates the server process (docker restarts it) |
+
 ## Error Handling
 
 All API endpoints will return appropriate HTTP status codes:
@@ -308,7 +324,7 @@ All API endpoints will return appropriate HTTP status codes:
 - 404: Not Found
 - 500: Internal Server Error
 
-Error responses will include a JSON body with an error message:
+Most error responses include a JSON body of the form:
 
 ```json
 {
@@ -317,12 +333,14 @@ Error responses will include a JSON body with an error message:
 }
 ```
 
+Exception: `/api/run_test` and `/api/stop_test` return `{"message": ...}` on success and `{"error": ...}` on failure.
+
 ## WebSocket API
 
-In addition to the RESTful API, the system also supports real-time communication via WebSockets. The WebSocket server is available at:
+In addition to the RESTful API, the system communicates with the room units via WebSockets on:
 
 ```
 ws://<server-ip>:8765
 ```
 
-WebSocket messages are used for real-time updates and notifications between the server and connected clients. Refer to the WebSocket handler documentation for more details on the message formats and events.
+Clients send `client_connected` (with `unit_name` and `associated_rooms`), `status_update`, and `trigger_event`. The server sends `connection_response`, `status_update_response`, `audio_files_to_download`, `play_effect_audio`, `audio_stop`, `start_background_music`, `stop_background_music`, and `shutdown`. See `client/websocket_client.py` for the message shapes.

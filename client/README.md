@@ -1,125 +1,75 @@
 # LoHP-MazeManager Remote Unit Client
 
-## Overview
-
-This is the client-side application for the LoHP-MazeManager system, designed to run on Raspberry Pi devices. It manages audio playback, handles various types of triggers (laser, GPIO, ADC, piezo), and communicates with a central server via WebSocket.
-
-## Features
-
-- WebSocket communication with the central server
-- Audio playback management using VLC
-- Support for multiple trigger types (laser, GPIO, ADC, piezo)
-- Time synchronization with the server
-- Background music support
-- Effect audio playback
-- Dockerized deployment
-- Support for multiple unit configurations (A, B, C)
+Runs on a Raspberry Pi. Plays effect audio and background music on command from the central
+server (WebSocket), and fires sensor triggers at the server's REST API (laser tripwires,
+ADS1115 buttons, piezo knock sensors — until the ESP32 nodes replace them, see
+[../hardware-recommendations.md](../hardware-recommendations.md)).
 
 ## Components
 
-### 1. WebSocketClient (websocket_client.py)
-
-Handles communication with the server:
-- Establishes and maintains a WebSocket connection
-- Processes various message types from the server
-- Manages reconnection attempts on connection loss
-
-### 2. AudioManager (audio_manager.py)
-
-Manages audio playback:
-- Initializes VLC for audio playback
-- Handles audio file caching and downloads
-- Manages playback of effect audio and background music
-
-### 3. TriggerManager (trigger_manager.py)
-
-Manages various types of triggers:
-- Sets up GPIO pins for laser modules
-- Configures ADC channels for analog inputs (e.g., buttons, piezo sensors)
-- Monitors triggers and reports events to the server
-
-### 4. ConfigManager (config_manager.py)
-
-Handles client configuration:
-- Loads the configuration from a JSON file (config-unit-a.json, config-unit-b.json, or config-unit-c.json)
-- Provides access to configuration parameters
-
-### 5. SyncManager (sync_manager.py)
-
-Manages time synchronization:
-- Keeps track of the time offset between client and server
-- Provides methods to get the synced time
-
-### 6. Main Application (main.py)
-
-The entry point of the application:
-- Initializes all components based on the unit configuration
-- Starts the WebSocket connection and listening loop
-- Manages the overall flow of the application
+- `main.py` — wires everything up, connects to the server, exits on connection loss
+  (docker's `restart: always` is the reconnect strategy)
+- `websocket_client.py` — handles server messages: `play_effect_audio`, `audio_stop`,
+  `start/stop_background_music`, `audio_files_to_download`, `shutdown`
+- `audio_manager.py` — downloads/caches audio from the server, plays it with VLC on one or
+  more output zones
+- `trigger_manager.py` — polls sensors (lasers 10ms, ADC 50ms) and POSTs each trigger's
+  configured action to the server's REST API (`run_effect`, `set_theme`, music controls, …).
+  Only loaded when the config defines triggers, so audio-only units run without the Pi GPIO stack
+- `config_manager.py` — loads the unit's JSON config
 
 ## Configuration
 
-The client uses unit-specific configuration files:
-- `config-unit-a.json`: Configuration for Unit A
-- `config-unit-b.json`: Configuration for Unit B
-- `config-unit-c.json`: Configuration for Unit C
+One JSON file per deployment, selected with the `UNIT_CONFIG` environment variable:
 
-These files include:
-- Server IP and port
-- Unit name and associated rooms
-- Audio output device
-- Trigger configurations (laser, GPIO, ADC, piezo)
-- Cache directory location
+- `config-unit-a.json` / `config-unit-b.json` / `config-unit-c.json` — the original three-Pi
+  layout: each Pi covers ~5 rooms with one audio output and its local sensor triggers.
+- `config-single-pi.json` — consolidated mode: one Pi covers all rooms, with a `zones` map
+  routing each room's audio to its own USB sound card. No triggers (the ESP32 nodes own those).
 
-## Deployment
+### Multi-zone audio (`zones`)
 
-The application is containerized using Docker for easy deployment and management.
+```json
+"zones": {
+  "zone-a": {
+    "alsa_device": "plughw:CARD=zonea",
+    "rooms": ["Entrance", "Cuddle Cross", "..."]
+  }
+}
+```
 
-### Running the Client
+Each zone is one ALSA output device and the rooms it covers. The server already sends the room
+name with every audio command, so the client routes each sound to the right card; whole-maze
+audio (background music, all-rooms effects) plays on every zone. Configs without `zones` behave
+exactly as before: one default output for all associated rooms.
 
-1. Ensure Docker and Docker Compose are installed on your Raspberry Pi.
-2. Navigate to the client directory.
-3. Set the `UNIT_CONFIG` environment variable to specify which unit configuration to use:
-   ```
-   export UNIT_CONFIG=config-unit-b.json
-   ```
-4. Build and start the container:
-   ```
-   docker-compose up --build
-   ```
+### USB sound cards
 
-## Development and Debugging
+Identical USB dongles can swap ALSA card numbers between boots. Pin each card's name to its
+physical USB port with the included udev rule:
 
-- Logging is set up to provide detailed information about the client's operations.
-- The code is structured to allow easy extension and modification of functionality.
-- Error handling and reconnection logic are implemented to ensure robustness.
+1. Edit `99-lohp-audio.rules` — instructions for finding your port paths are in the file.
+2. `sudo cp 99-lohp-audio.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo reboot`
+3. `aplay -l` should now show cards `zonea`, `zoneb`, `zonec`, matching
+   `plughw:CARD=...` in `config-single-pi.json`.
 
-## Security Considerations
+## Running
 
-- The WebSocket connection should be secured (e.g., using WSS instead of WS) in production.
-- Implement authentication mechanisms for the client-server communication.
-- Regularly update dependencies to address potential vulnerabilities.
-- Ensure proper access controls on the Raspberry Pi devices.
+```bash
+UNIT_CONFIG=config-single-pi.json docker compose up -d --build
+```
 
-## Contributing
-
-Contributions to improve the client are welcome. Please ensure to follow the existing code style and add appropriate tests for new features. When adding new functionality, consider compatibility with all unit configurations (A, B, C).
+`UNIT_CONFIG` defaults to `config-unit-a.json`. For boot-time startup via systemd see
+[pi-notes.md](pi-notes.md). Audio files are downloaded from the server on startup and cached
+in `cache/`, so first boot needs the server reachable.
 
 ## Troubleshooting
 
-- Check the logs for detailed information about any issues.
-- Ensure all required hardware (lasers, buttons, ADC) is properly connected.
-- Verify the configuration file is correctly set up for the specific unit.
-- Make sure the server IP and port are correctly configured and accessible.
-
-## Dependencies
-
-Main dependencies include:
-- websockets
-- aiohttp
-- RPi.GPIO
-- python-vlc
-- adafruit-blinka
-- adafruit-circuitpython-ads1x15
-
-For a complete list, refer to the `requirements.txt` file.
+- `docker logs lohp-client` — startup logs list the configured zones, each trigger, and
+  initial ADC voltages.
+- No audio on one zone: check `aplay -l` card names against the config, and that `/dev/snd`
+  is passed through (it is, in the provided compose file).
+- Triggers firing but no effect: the client logs the server's HTTP response per trigger —
+  a 404 means the effect name in this config doesn't exist server-side.
+- The client exits on WebSocket loss by design; docker restarts it. If it's boot-looping,
+  the server address in the config is wrong or the server is down.

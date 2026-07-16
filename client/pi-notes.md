@@ -14,9 +14,13 @@ After=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/home/dietpi/lohp-client
+Environment=UNIT_CONFIG=config-unit-a.json
 ExecStart=/usr/bin/docker compose up -d
 ExecStop=/usr/bin/docker compose down
 TimeoutStartSec=0
+
+# Set UNIT_CONFIG to this unit's config file (config-unit-a/b/c.json,
+# or config-single-pi.json for the consolidated multi-zone unit).
 
 [Install]
 WantedBy=multi-user.target

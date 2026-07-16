@@ -15,12 +15,11 @@ class ThemeManager:
         self.current_theme = None
         self.theme_thread = None
         self.stop_theme = threading.Event()
-        self.theme_lock = threading.Lock()
+        self.theme_change_lock = asyncio.Lock()
         self.master_brightness = 1.0
         self.frequency = 10  # Reduce update rate to 10 Hz
         self.paused_rooms = set()
         self.theme_list = []
-        self.current_theme_index = -1
         self.previous_values = {}  # Store previous values for smoothing
         self.smoothing_factor = 0.2  # Adjust this value to control smoothing (0.0 to 1.0)
         self.load_themes()  # Load themes when initializing
@@ -140,54 +139,35 @@ class ThemeManager:
         }
         self.theme_list = list(self.themes.keys())
 
-    def set_current_theme(self, theme_name):
-        if theme_name in self.themes:
-            with self.theme_lock:
-                old_theme = self.current_theme
-                self.stop_current_theme()
-                self.current_theme = theme_name
-                self.stop_theme.clear()
-                self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
-                self.theme_thread.start()
-            logger.info(f"Theme changing from {old_theme} to: {theme_name}")
-            return True
-        else:
-            logger.warning(f"Theme not found: {theme_name}")
-            return False
-
     async def set_current_theme_async(self, theme_name):
         logger.info(f"Setting theme to: {theme_name}")
-        if theme_name in self.themes:
-            with self.theme_lock:
-                old_theme = self.current_theme
-                await self.stop_current_theme_async()
-                self.current_theme = theme_name
-                self.stop_theme.clear()
-                self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,))
-                self.theme_thread.start()
-                # Reset temporary theme values
-                self.temporary_theme_values = {}
-            logger.info(f"Theme changed from {old_theme} to: {theme_name}")
-            return True
-        else:
+        if theme_name not in self.themes:
             logger.warning(f"Theme not found: {theme_name}")
             return False
+        async with self.theme_change_lock:
+            old_theme = self.current_theme
+            await self.stop_current_theme_async()
+            self.current_theme = theme_name
+            self.stop_theme.clear()
+            self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,), daemon=True)
+            self.theme_thread.start()
+            self.temporary_theme_values = {}
+        logger.info(f"Theme changed from {old_theme} to: {theme_name}")
+        return True
 
     async def stop_current_theme_async(self):
-        async with asyncio.Lock():
-            if self.current_theme:
-                logger.info(f"Stopping current theme: {self.current_theme}")
-                self.stop_theme.set()
-                if self.theme_thread and self.theme_thread.is_alive():
-                    try:
-                        await asyncio.wait_for(asyncio.to_thread(self.theme_thread.join), timeout=5.0)
-                    except asyncio.TimeoutError:
-                        logger.warning("Theme thread join timed out after 5 seconds")
-                        self.theme_thread = None
-                self.current_theme = None
-                self.current_theme_index = -1
-                await asyncio.to_thread(self._reset_all_lights)
-                logger.info("Theme stopped and lights reset")
+        if self.current_theme:
+            logger.info(f"Stopping current theme: {self.current_theme}")
+            self.stop_theme.set()
+            if self.theme_thread and self.theme_thread.is_alive():
+                try:
+                    await asyncio.wait_for(asyncio.to_thread(self.theme_thread.join), timeout=5.0)
+                except asyncio.TimeoutError:
+                    logger.warning("Theme thread join timed out after 5 seconds")
+                    self.theme_thread = None
+            self.current_theme = None
+            await asyncio.to_thread(self._reset_all_lights)
+            logger.info("Theme stopped and lights reset")
 
     async def set_next_theme_async(self):
         logger.info("Setting next theme")
@@ -209,14 +189,13 @@ class ThemeManager:
         return None
 
     def stop_current_theme(self):
-        with self.theme_lock:
-            if self.current_theme:
-                self.stop_theme.set()
-                if self.theme_thread and self.theme_thread.is_alive():
-                    self.theme_thread.join(timeout=5)
-                self.current_theme = None
-                self._reset_all_lights()
-                logger.info("Current theme stopped and all lights reset")
+        if self.current_theme:
+            self.stop_theme.set()
+            if self.theme_thread and self.theme_thread.is_alive():
+                self.theme_thread.join(timeout=5)
+            self.current_theme = None
+            self._reset_all_lights()
+            logger.info("Current theme stopped and all lights reset")
 
     def _reset_all_lights(self):
         for fixture_id in range(self.dmx_state_manager.num_fixtures):
@@ -245,7 +224,8 @@ class ThemeManager:
         all_room_channels = {}
         for room_index, (room, lights) in enumerate(room_layout.items()):
             if room not in self.paused_rooms:
-                room_channels = generate_theme_values(theme_data, current_time, self.master_brightness, room_index, total_rooms)
+                room_channels = generate_theme_values(theme_data, current_time, self.master_brightness,
+                                                      room_index, total_rooms, self.temporary_theme_values)
                 smoothed_channels = self._smooth_channels(room, room_channels)
                 all_room_channels[room] = smoothed_channels
                 logger.debug(f"Generated channels for room {room}: {smoothed_channels}")
@@ -305,9 +285,6 @@ class ThemeManager:
 
     def get_all_themes(self):
         return self.themes
-
-    def get_theme(self, theme_name):
-        return self.themes.get(theme_name)
 
     async def apply_theme_to_room(self, room):
         if self.current_theme:

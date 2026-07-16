@@ -1,88 +1,65 @@
 # LoHP-MazeManager Control System
 
-## Overview
+Lighting and audio control for the LoHP maze — a central server drives DMX fixtures and coordinates
+Raspberry Pi room units that play audio and report sensor triggers.
 
-The LoHP-MazeManager Control System is a sophisticated lighting and audio control system designed for escape rooms and interactive experiences. It provides a centralized management interface for controlling lighting effects, audio playback, and synchronized events across multiple rooms.
+![Room layout](rooms.png)
 
-## Features
+## How it works
 
-- Real-time control of DMX lighting fixtures
-- Audio playback and synchronization
-- Theme-based lighting effects
-- Custom effect creation and management
-- Remote client support for distributed audio playback
-- WebSocket-based communication for real-time updates
-- RESTful API for integration with other systems
+- **Server** (this directory): Quart REST API on port 5000, WebSocket server on port 8765,
+  DMX output at 44Hz over an FTDI USB-DMX interface. Runs themes (ambient, whole-maze lighting)
+  and effects (short per-room sequences that interrupt the theme).
+- **Clients** (`client/`): Raspberry Pi units that play effect audio and background music on
+  command from the server via WebSocket, and (until the planned ESP32 sensor nodes take over)
+  watch sensors over GPIO/ADC and fire effects by POSTing to the server's REST API. Runs either
+  as the original three units (A/B/C, ~5 rooms each) or as a single Pi driving one USB sound
+  card per zone (`client/config-single-pi.json`).
+- **Frontend**: a small control panel served at `http://<server>:5000/` (brightness, live theme
+  tuning, next-theme).
 
-## System Requirements
+Effects are defined in code in `effects/` and registered in `effects_manager.py`.
+Audio for each effect is mapped in `audio_config.json`; fixtures and rooms in `light_config.json`.
 
-- Python 3.7+
-- FTDI-based DMX interface
-- Network connectivity for remote clients
+## Running the server
 
-## Installation
+```
+docker compose up -d
+```
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/LoHP-MazeManager.git
-   cd LoHP-MazeManager
-   ```
+or natively:
 
-2. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+```
+pip install -r requirements.txt
+python main.py
+```
 
-3. Configure the system:
-   - Edit `light_config.json` to match your lighting setup
-   - Edit `audio_config.json` to configure audio effects
-   - Adjust other configuration files as needed
+Requires the FTDI USB-DMX interface to be attached. See `client/README.md` for the room units,
+`wiring-guides/` for unit wiring, and [hardware-recommendations.md](hardware-recommendations.md)
+for the planned wireless sensor-node replacement.
 
-4. Start the server:
-   ```
-   python main.py
-   ```
+## Basic operations
 
-## Usage
+```bash
+# Set a theme
+curl -X POST http://localhost:5000/api/set_theme -H "Content-Type: application/json" -d '{"theme_name": "NeonNightlife"}'
 
-The system can be controlled via the RESTful API or through custom integrations. For detailed API documentation, see [api-docs.md](api-docs.md).
+# Run an effect in a room
+curl -X POST http://localhost:5000/api/run_effect -H "Content-Type: application/json" -d '{"room": "Entrance", "effect_name": "Lightning"}'
 
-### Basic Operations
+# Adjust master brightness
+curl -X POST http://localhost:5000/api/set_master_brightness -H "Content-Type: application/json" -d '{"brightness": 0.8}'
+```
 
-1. Set a theme:
-   ```
-   curl -X POST http://localhost:5000/api/set_theme -H "Content-Type: application/json" -d '{"theme_name": "NeonNightlife"}'
-   ```
-
-2. Run an effect in a room:
-   ```
-   curl -X POST http://localhost:5000/api/run_effect -H "Content-Type: application/json" -d '{"room": "Entrance", "effect_name": "Lightning"}'
-   ```
-
-3. Adjust master brightness:
-   ```
-   curl -X POST http://localhost:5000/api/set_master_brightness -H "Content-Type: application/json" -d '{"brightness": 0.8}'
-   ```
+Full API reference: [api-docs.md](api-docs.md). Adding effects: [adding_new_effects.md](adding_new_effects.md).
 
 ## Architecture
 
-The system consists of several key components:
-
-- `main.py`: The main server application
-- `effects_manager.py`: Manages and applies lighting effects
-- `theme_manager.py`: Handles theme-based lighting control
-- `dmx_interface.py`: Interfaces with the DMX hardware
-- `audio_manager.py`: Manages audio playback and synchronization
-- `remote_host_manager.py`: Handles communication with remote clients
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For support, please open an issue in the GitHub repository or contact the maintainers directly.
+- `main.py` — REST API, WebSocket server, component wiring
+- `effects_manager.py` — effect registry and per-room effect execution
+- `theme_manager.py` — ambient theme loop (its own thread, paused per-room during effects)
+- `interrupt_handler.py` — takes fixtures over from the theme while an effect runs
+- `dmx_state_manager.py` / `dmx_interface.py` — DMX channel state and the 44Hz FTDI output thread
+- `remote_host_manager.py` — WebSocket commands to the room units (effect audio, background music)
+- `audio_manager.py` — audio catalog from `audio_config.json`, served to clients over HTTP
+- `effects/` — one file per effect; `effect_utils.py` — shared step interpolation and theme math

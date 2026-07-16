@@ -45,7 +45,7 @@
         ],
         "Deep Playa Handshake": [{"model": "Par Light - Model ZQ01424", "start_address": 95}],
         "No Friends Monday": [{"model": "Par Light - Model ZQ01424", "start_address": 103}],
-        "Template Room": [{"model": "Par Light - Model ZQ01424", "start_address": 111}],
+        "Temple Room": [{"model": "Par Light - Model ZQ01424", "start_address": 111}],
         "Monkey Room": [
             {"model": "Par Light - Model ZQ01424", "start_address": 119},
             {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 127}

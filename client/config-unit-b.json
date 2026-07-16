@@ -1,7 +1,13 @@
 {
   "server_ip": "192.168.1.238",
   "unit_name": "LOHP-UNIT-B",
-  "associated_rooms": ["Cop Dodge", "Gate", "Guy Line Climb", "Sparkle Pony Room", "Porto Room"],
+  "associated_rooms": [
+    "Cop Dodge",
+    "Gate",
+    "Guy Line Climb",
+    "Sparkle Pony Room",
+    "Porto Room"
+  ],
   "audio_output_device": "default",
   "triggers": [
     {
@@ -97,7 +103,6 @@
     {
       "name": "Porto Room Piezo 1",
       "type": "piezo",
-      "adc_channel": 0,
       "threshold": 0.5,
       "action": {
         "type": "curl",
@@ -108,14 +113,14 @@
         },
         "data": {
           "room": "Porto Room",
-          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+          "effect_name": "WrongAnswer"
         }
-      }
+      },
+      "channel": 0
     },
     {
       "name": "Porto Room Piezo 2",
       "type": "piezo",
-      "adc_channel": 1,
       "threshold": 0.5,
       "action": {
         "type": "curl",
@@ -126,14 +131,14 @@
         },
         "data": {
           "room": "Porto Room",
-          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+          "effect_name": "WrongAnswer"
         }
-      }
+      },
+      "channel": 1
     },
     {
       "name": "Porto Room Piezo 3",
       "type": "piezo",
-      "adc_channel": 2,
       "threshold": 0.5,
       "action": {
         "type": "curl",
@@ -144,12 +149,12 @@
         },
         "data": {
           "room": "Porto Room",
-          "effect_name": ["WrongAnswer", "CorrectAnswer"]
+          "effect_name": "WrongAnswer"
         }
-      }
+      },
+      "channel": 2
     }
   ],
-  "rate_limit": 5,
   "cache_dir": "/app/cache",
   "piezo_settings": {
     "correct_answer_probability": 0.25,

@@ -1,8 +1,6 @@
 # LoHP Maze Wiring Guide
 # UNIT - A
 ## 192.168.1.238
-* dietpi
-* moonmoon
 
 ## Raspberry Pi Full 40-pin Pinout Connections
 
