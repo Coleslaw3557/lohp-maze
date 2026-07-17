@@ -1,0 +1,17 @@
+# Real-node platform: Seeed XIAO ESP32-C3 + WiFi (see hardware-recommendations.md).
+# Swap this in (instead of sim_host.yaml) in a room's packages when flashing real
+# hardware, then add that room's actual sensor block (vl53l1x / ld2410 / gpio) and
+# wire it to publish the `tripwire` template sensor (or replace it with the real
+# platform sensor keeping id: tripwire and the on_press automation).
+esp32:
+  board: seeed_xiao_esp32c3
+  framework:
+    type: esp-idf
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none   # keeps draw above power-bank auto-off thresholds
+
+ota:
+  - platform: esphome

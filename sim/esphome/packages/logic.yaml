@@ -1,0 +1,58 @@
+# Shared node logic — identical between simulated (host) and real (ESP32-C3) nodes.
+#
+# Contract: when the tripwire binary_sensor turns on, POST
+#   {"room": "${room}", "effect_name": "${effect}"}
+# to the LoHP server — exactly what the Pi triggers fire today.
+#
+# Expected substitutions (set per room in rooms/*.yaml):
+#   node_name, room, effect, server_host, api_port
+
+esphome:
+  name: ${node_name}
+  friendly_name: "LoHP ${room} node"
+
+logger:
+  level: INFO
+
+api:
+  port: ${api_port}
+  reboot_timeout: 0s   # sims/bench nodes must not reboot when no HA is connected
+  actions:
+    - action: trip     # virtual "someone crossed the doorway" — used by harness.py
+      then:
+        - binary_sensor.template.publish:
+            id: tripwire
+            state: ON
+        - delay: 250ms
+        - binary_sensor.template.publish:
+            id: tripwire
+            state: OFF
+
+http_request:
+  timeout: 30s   # the server holds /api/run_effect until the effect finishes
+
+binary_sensor:
+  - platform: template
+    id: tripwire
+    name: "${room} tripwire"
+    filters:
+      - delayed_on: 30ms   # debounce, same as the planned hardware config
+    on_press:
+      then:
+        - script.execute: fire_effect
+
+script:
+  - id: fire_effect
+    mode: single   # ignores re-triggers while running -> 5s cooldown like trigger_manager
+    then:
+      - logger.log:
+          format: "Tripwire fired: POST run_effect room=%s effect=%s"
+          args: ['"${room}"', '"${effect}"']
+      - http_request.post:
+          url: http://${server_host}:5000/api/run_effect
+          request_headers:
+            Content-Type: application/json
+          json:
+            room: ${room}
+            effect_name: ${effect}
+      - delay: 5s

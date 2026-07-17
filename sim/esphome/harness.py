@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Trigger virtual ESPHome sensor nodes over the native API.
+
+Calls the node's `trip` action, which publishes the tripwire binary_sensor —
+the node firmware then runs its real automation (debounce -> HTTP POST to the
+LoHP server), exactly as a physical sensor event would.
+
+Usage (with the esphome venv):
+    .venv/bin/python harness.py list
+    .venv/bin/python harness.py trip entrance
+    .venv/bin/python harness.py trip all
+
+Requires: pip install aioesphomeapi
+"""
+import asyncio
+import re
+import sys
+from pathlib import Path
+
+ROOMS_DIR = Path(__file__).parent / 'rooms'
+
+
+def node_ports():
+    nodes = {}
+    for f in sorted(ROOMS_DIR.glob('*.yaml')):
+        text = f.read_text()
+        port = re.search(r'api_port:\s*"(\d+)"', text)
+        room = re.search(r'^\s+room:\s*"([^"]+)"', text, re.M)
+        if port and room:
+            nodes[f.stem] = {'port': int(port.group(1)), 'room': room.group(1)}
+    return nodes
+
+
+async def trip(name, info):
+    from aioesphomeapi import APIClient
+    client = APIClient('127.0.0.1', info['port'], password='')
+    try:
+        await client.connect(login=True)
+        _, services = await client.list_entities_services()
+        svc = next((s for s in services if s.name == 'trip'), None)
+        if not svc:
+            print(f"  {name}: no 'trip' action exposed")
+            return False
+        result = client.execute_service(svc, {})
+        if asyncio.iscoroutine(result):  # awaitable in newer aioesphomeapi
+            await result
+        await asyncio.sleep(0.3)  # let the call flush before disconnect
+        print(f"  {name} ({info['room']}): tripped")
+        return True
+    except Exception as e:
+        print(f"  {name} ({info['room']}): {type(e).__name__}: {e} — node not running?")
+        return False
+    finally:
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
+
+
+async def main():
+    nodes = node_ports()
+    cmd = sys.argv[1] if len(sys.argv) > 1 else 'list'
+
+    if cmd == 'list':
+        for name, info in nodes.items():
+            print(f"  {name:24} room={info['room']:22} api_port={info['port']}")
+        return
+
+    if cmd == 'trip':
+        target = sys.argv[2] if len(sys.argv) > 2 else 'all'
+        picked = nodes if target == 'all' else {target: nodes[target]}
+        for name, info in picked.items():
+            await trip(name, info)
+            if target == 'all':
+                await asyncio.sleep(1.0)
+        return
+
+    print(__doc__)
+
+
+asyncio.run(main())

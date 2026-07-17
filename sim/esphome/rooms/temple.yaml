@@ -1,0 +1,12 @@
+# Temple Room sensor node — trigger map from client/config-unit-*.json
+substitutions:
+  node_name: lohp-node-temple
+  room: "Temple Room"
+  effect: "Lightning"
+  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
+  api_port: "6071"
+  host_mac: "06:35:69:00:00:0b"
+
+packages:
+  logic: !include ../packages/logic.yaml
+  platform: !include ../packages/sim_host.yaml   # -> hardware_c3.yaml when flashing

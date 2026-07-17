@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoHP Maze Simulator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="scene"></div>
+<div id="crosshair" class="hidden">+</div>
+
+<div id="enter-overlay">
+  <div class="card">
+    <h1>LoHP Maze Simulator</h1>
+    <p>Virtual walkthrough of the maze — real server, virtual DMX &amp; sensors.</p>
+    <ul class="help">
+      <li>Two-story open-faced maze — <b>Street view</b> shows the whole facade</li>
+      <li><b>M</b> — cycle Street / First-person / Overhead views</li>
+      <li><b>W A S D</b> move &nbsp;·&nbsp; <b>Shift</b> run &nbsp;·&nbsp; click canvas for mouse-look</li>
+      <li><b>E</b> / click — buttons, knock pads &amp; <b>ladders</b> (climb up in Guy Line Climb, down in Vertical Moop March)</li>
+      <li>Walk through a doorway beam to trip its sensor; click floor to teleport (street/overhead)</li>
+    </ul>
+    <button id="enter-btn">Enter the maze (enables audio)</button>
+    <button id="enter-muted-btn" class="secondary">Enter without audio</button>
+    <p class="fine">Audio: keep only one tab as the audio client — the server routes each
+    room's audio to the first client that claimed it (same rule as the real Pi units).</p>
+  </div>
+</div>
+
+<div id="panel">
+  <header>
+    <h2>LoHP Sim</h2>
+    <span class="dot" id="dot-dmx" title="DMX frame feed">DMX</span>
+    <span class="dot" id="dot-api" title="Server REST API">API</span>
+    <span class="dot" id="dot-audio" title="Audio client (unit protocol)">AUD</span>
+  </header>
+
+  <section>
+    <div class="row">
+      <button id="btn-view" title="Cycle Street / First-person / Overhead (M)">View</button>
+      <button id="btn-respawn" title="Back to the entrance">Respawn</button>
+    </div>
+    <div class="row hidden" id="floor-filter">
+      <button data-f="ground">Ground</button>
+      <button data-f="upper">Upper</button>
+      <button data-f="both" class="active">Both</button>
+    </div>
+  </section>
+
+  <section>
+    <h3>Theme</h3>
+    <div class="row">
+      <select id="theme-select"></select>
+      <button id="btn-theme-set">Set</button>
+    </div>
+    <div class="row">
+      <button id="btn-theme-next">Next ▶</button>
+      <button id="btn-theme-off">No theme</button>
+    </div>
+    <label class="slider-row">Master brightness
+      <input type="range" id="brightness" min="0" max="1" step="0.05" value="1">
+    </label>
+  </section>
+
+  <section>
+    <h3>Effects</h3>
+    <div class="row">
+      <select id="effect-select"></select>
+    </div>
+    <div class="row">
+      <select id="room-select"></select>
+      <button id="btn-effect-run">Run</button>
+    </div>
+    <div class="row">
+      <button id="btn-effect-stop">Stop room</button>
+      <button id="btn-effect-stopall">Stop all</button>
+      <button id="btn-effect-all">Run in all</button>
+    </div>
+  </section>
+
+  <section>
+    <h3>Music</h3>
+    <div class="row">
+      <button id="btn-music-start">Start</button>
+      <button id="btn-music-stop">Stop</button>
+    </div>
+  </section>
+
+  <details>
+    <summary>Trigger sensors directly</summary>
+    <div id="trigger-list"></div>
+  </details>
+
+  <details open>
+    <summary>Fixtures (live DMX)</summary>
+    <div id="fixture-grid"></div>
+  </details>
+
+  <details open>
+    <summary>Event log</summary>
+    <div id="log"></div>
+  </details>
+
+  <footer>
+    <a id="cp-link" href="#" target="_blank">Server control panel ↗</a>
+  </footer>
+</div>
+
+<div id="toast" class="hidden"></div>
+<div id="interact-hint" class="hidden">Press <b>E</b></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

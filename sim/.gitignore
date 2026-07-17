@@ -1,0 +1,8 @@
+.venv/
+sim.log
+sim.pid
+__pycache__/
+esphome/.venv/
+**/.esphome/
+esphome/secrets.yaml
+esphome/node-*.log

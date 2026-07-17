@@ -1,0 +1,4 @@
+# Simulation platform: compiles the node to a native Linux binary (no hardware).
+# Uses the host's network stack directly; the api listens on ${api_port}.
+host:
+  mac_address: ${host_mac}

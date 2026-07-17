@@ -1,0 +1,7 @@
+# Same pins as the production server (../requirements.txt) minus pyftdi,
+# plus a werkzeug cap: Quart 0.18.x breaks on werkzeug>=3 (url_quote removed).
+Quart==0.18.3
+quart-cors==0.6.0
+hypercorn==0.14.3
+websockets==10.4
+werkzeug==2.3.8
