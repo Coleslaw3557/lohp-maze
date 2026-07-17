@@ -34,6 +34,10 @@ WEB_DIR = os.path.join(SIM_DIR, 'web')
 PORT = int(os.environ.get('SIM_UI_PORT', '5001'))
 
 app = Quart(__name__, static_folder=WEB_DIR, static_url_path='')
+# dev server: make browsers revalidate statics on refresh (304s are cheap on a
+# LAN) instead of Quart's 12h max-age — otherwise app.js/backdrop edits don't
+# show up on reload for anyone who had the page open in the last half-day
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 
 def _load_json(path):

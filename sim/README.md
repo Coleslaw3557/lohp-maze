@@ -64,6 +64,18 @@ cross members**: fixtures are bracket-mounted, tilted down into their rooms (no
 poles in the walkways, nothing hangs mid-room); tripwire emitters sit on the
 frames at beam height.
 
+**Room backdrops**: every room's back wall carries its real printed-canvas
+background (the print masters live in `Background-images/` at the repo root,
+untracked — the sim serves resized copies from `web/img/backgrounds/`, mapped
+via `background` keys in `maze_layout.json`). The twelve wing rooms get one
+canvas each (full two-story prints in the climb shafts); the hex center gets
+one **wide canvas per level spanning both skinned back faces** — ground backs
+the Exit|Entrance halves, upper backs Cuddle Cross — and the `Towers` print
+wraps each entrance tower's three outside faces (middle third to the street,
+seam at the back apex). Backdrops use lit materials, so the DMX fixtures
+genuinely illuminate them and each room's canvas glows with its effect color;
+at night they keep a faint emissive floor so the art stays readable.
+
 The frames are modeled to the real PSV-610 geometry (taken off the product
 photo): legs with 9" coupling pins under 1" collars, a top rail over a
 full-width header tied by three short stubs, doorway tubes hanging from the
