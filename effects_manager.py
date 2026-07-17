@@ -108,6 +108,11 @@ class EffectsManager:
         finally:
             if self.effect_tasks.get(room) is asyncio.current_task():
                 del self.effect_tasks[room]
+                # Effects are transient: clear their last frame so it can't stay
+                # latched (several end on a bright hold — without this, a room
+                # with no theme stays stuck white after the effect completes).
+                for fixture_id in fixture_ids:
+                    self.dmx_state_manager.reset_fixture(fixture_id)
                 self.theme_manager.resume_theme_for_room(room)
 
     async def _cancel_effect_in_room(self, room):

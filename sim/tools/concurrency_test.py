@@ -186,8 +186,21 @@ async def main():
           starts == 5 and stops == 1 and unit.messages[-1][0] == 'stop_background_music',
           f'({starts} starts, {stops} stops)')
 
-    # cleanup
+    print("6) no stuck frame after an effect that ends on a bright hold (no theme)")
     post('/api/set_theme', {'theme_name': 'notheme'})
+    await asyncio.sleep(0.5)
+    # GateGreeters' final step is warm white; completion must not latch it
+    status, _ = post('/api/run_effect', {'room': 'Entrance', 'effect_name': 'GateGreeters'})
+    check('GateGreeters completed', status == 200)
+    await asyncio.sleep(0.5)
+    frames = []
+    await collect_frames(2.5, frames)
+    stuck = any(any(f[i] for i in range(8)) for f in frames[-3:])
+    check('Entrance fixture returns to black, not stuck white',
+          bool(frames) and not stuck,
+          f'(last frame ch1-8: {list(frames[-1][:8]) if frames else "no frames"})')
+
+    # cleanup
     post('/api/stop_effect', {})
     await unit.stop()
 
