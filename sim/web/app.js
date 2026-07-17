@@ -151,6 +151,9 @@ scene.add(new THREE.HemisphereLight(0x252b4e, 0x54462f, 0.5)); // night sky over
 const levelGroups = [new THREE.Group(), new THREE.Group(), new THREE.Group()];
 levelGroups.forEach(g => scene.add(g));
 const grp = (level) => levelGroups[level === 1 ? 1 : level === 0 ? 0 : 2];
+const roofGroup = new THREE.Group(); // hidden in overhead view so the plan stays readable
+scene.add(roofGroup);
+const matRoof = new THREE.MeshStandardMaterial({ color: 0x1a1b21, roughness: 0.95, side: THREE.DoubleSide });
 
 const raycaster = new THREE.Raycaster();
 
@@ -177,6 +180,54 @@ function makeLabel(text, scale = 1) {
 const matFloorBase = () => new THREE.MeshStandardMaterial({ color: 0x1f2027, roughness: 0.95 });
 const matWall = new THREE.MeshStandardMaterial({ color: 0x3a3b44, roughness: 0.9, metalness: 0.02 });
 const matPost = new THREE.MeshStandardMaterial({ color: 0x23242c, roughness: 0.7, metalness: 0.25 });
+const matGalv = new THREE.MeshStandardMaterial({ color: 0x8f959d, roughness: 0.35, metalness: 0.7 });
+const matFramePaint = [
+  new THREE.MeshStandardMaterial({ color: 0x2666b8, roughness: 0.5, metalness: 0.25 }), // our blue
+  new THREE.MeshStandardMaterial({ color: 0x2f9e57, roughness: 0.5, metalness: 0.25 }), // our green
+];
+
+// One 6'4" walk-thru frame (ScaffoldMart/ScaffoldsSupply pattern) between two
+// points: legs w/ coupling spigots, double-rail top band with spacers,
+// candy-cane curves into the legs, and the 3-rung ladder section on each leg.
+function buildFrameSeg(ax, az, bx, bz, yBase, mat, opts = {}) {
+  const H = 1.93, R = 0.0214;
+  const dx = bx - ax, dz = bz - az;
+  const len = Math.hypot(dx, dz);
+  const fg = new THREE.Group();
+  fg.position.set((ax + bx) / 2, yBase, (az + bz) / 2);
+  fg.rotation.y = -Math.atan2(dz, dx);
+
+  const cylY = (r, h) => new THREE.CylinderGeometry(r, r, h);
+  const addCyl = (r, h, x, y, rotZ = 0, material = mat) => {
+    const m = new THREE.Mesh(cylY(r, h), material);
+    m.position.set(x, y, 0);
+    if (rotZ) m.rotation.z = rotZ;
+    fg.add(m);
+    return m;
+  };
+
+  for (const s of [-1, 1]) {
+    if ((s < 0 && opts.skipLegA) || (s > 0 && opts.skipLegB)) continue;
+    const lx = s * (len / 2);
+    addCyl(R, H, lx, H / 2);                       // leg
+    addCyl(0.013, 0.14, lx, H + 0.06, 0, matGalv); // coupling-pin spigot
+    // ladder section: inner stub + 3 rungs
+    const ix = lx - s * 0.20;
+    addCyl(0.014, 1.2, ix, 0.85);
+    for (const ry of [0.45, 0.85, 1.25]) addCyl(0.011, 0.19, lx - s * 0.10, ry, Math.PI / 2);
+  }
+  addCyl(0.019, len - 0.02, 0, H - 0.025, Math.PI / 2);        // top rail
+  const rail2 = len - 0.56;
+  addCyl(0.019, rail2, 0, H - 0.30, Math.PI / 2);              // second rail
+  for (let k = 1; k <= 4; k++) {                                // spacers
+    addCyl(0.010, 0.25, -rail2 / 2 + k * rail2 / 5, H - 0.165);
+  }
+  for (const s of [-1, 1]) {                                    // candy-cane curves
+    if ((s < 0 && opts.skipLegA) || (s > 0 && opts.skipLegB)) continue;
+    const stub = addCyl(0.019, 0.34, s * (rail2 / 2 + 0.13), H - 0.395, s * 0.95);
+  }
+  return fg;
+}
 
 function carve(a0, a1, gaps) {
   let segs = [[a0, a1]];
@@ -212,7 +263,10 @@ function buildMaze(cfg) {
   ground.userData.level = 0;
   levelGroups[2].add(ground);
 
+  const hexRooms = new Set(Object.values((L.hex_center || {}).rooms || {}));
+
   for (const [name, r] of Object.entries(L.rooms)) {
+    if (hexRooms.has(name)) continue; // built by buildHexCenter below
     const isBoth = r.floor === 'both';
     const baseLevel = isBoth ? 0 : (r.floor || 0);
     const yBase = baseLevel * LH;
@@ -226,6 +280,13 @@ function buildMaze(cfg) {
 
     const center = new THREE.Vector3(r.x + r.w / 2, yBase + 1.5, r.z + r.d / 2);
     S.roomsMeshes[name] = { slab, center, level: baseLevel, room: r };
+
+    // roof over the top of the structure (real build has one)
+    if (baseLevel === 1 || isBoth) {
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(r.w, 0.05, r.d), matRoof);
+      roof.position.set(r.x + r.w / 2, LH + CH + 0.06, r.z + r.d / 2);
+      roofGroup.add(roof);
+    }
 
     // room label above its open face (like the elevation drawing)
     const label = makeLabel(name, 0.24);
@@ -289,48 +350,67 @@ function buildMaze(cfg) {
       }
     }
 
-    // scaffold pipes: vertical standards at the four corners (shared frames
-    // between bays read as doubled tubes — like real couplers) + front ledgers
-    const tubeGrp = grp(isBoth ? 'both' : baseLevel);
-    for (const px of [r.x + 0.045, r.x + r.w - 0.045]) {
-      for (const pz of [r.z + 0.045, r.z + r.d - 0.045]) {
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, wallHeight + 0.15), matPost);
-        post.position.set(px, yBase + (wallHeight + 0.15) / 2, pz);
-        tubeGrp.add(post);
-      }
+  }
+
+  // scaffold cross members: end-frame rungs at every shared boundary, and
+  // X-braces on each bay's back plane per level — the mounting surfaces for
+  // lights and sensors
+  {
+    const sample = Object.entries(L.rooms).find(([n]) => !hexRooms.has(n))[1];
+    const rz = sample.z, rd = sample.d;
+    const boundaries = new Set();
+    for (const [name, r] of Object.entries(L.rooms)) {
+      if (hexRooms.has(name)) continue;
+      boundaries.add(+r.x.toFixed(2));
+      boundaries.add(+(r.x + r.w).toFixed(2));
     }
-    const ledgerYs = isBoth ? [LH, LH + CH] : [yBase + CH];
-    if (!isBoth && baseLevel === 1) ledgerYs.push(yBase + 0.02); // upper deck edge
-    for (const ly of ledgerYs) {
-      const ledger = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, r.w), matPost);
-      ledger.rotation.z = Math.PI / 2;
-      ledger.position.set(r.x + r.w / 2, ly, r.z + r.d - 0.035);
-      tubeGrp.add(ledger);
+    const bs = [...boundaries].sort((a, b) => a - b);
+    // one painted walk-thru frame per boundary per level (shared between bays);
+    // blue/green alternate like our repainted mixed fleet
+    bs.forEach((bx, i) => {
+      for (const lv of [0, 1]) {
+        const frame = buildFrameSeg(bx, rz + 0.045, bx, rz + rd - 0.045, lv * LH,
+          matFramePaint[(i + lv) % 2]);
+        grp(lv).add(frame);
+      }
+    });
+    // 7' x 4' cross braces (ScaffoldsSupply spec: "4' Lock Span"): the scissor
+    // spans the 7' bay with a 4' (1.22m) vertical spread between brace studs —
+    // a wide flat X crossing at mid-bay, not corner-to-corner
+    const STUD_SPREAD = 1.219;
+    const braceMidY = 0.97; // studs sit symmetrically on the 6'4" frame legs
+    for (let i = 0; i < bs.length - 1; i++) {
+      const x0 = bs[i], x1 = bs[i + 1];
+      if (x1 - x0 > 2.2) continue; // hexagon span, no wing bay here
+      const dx = x1 - x0 - 0.12;
+      const len = Math.hypot(dx, STUD_SPREAD);
+      for (const lv of [0, 1]) {
+        for (const zb of [rz + 0.085, rz + rd - 0.085]) { // back AND front planes
+          for (const dir of [1, -1]) {
+            const brace = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, len), matGalv);
+            brace.position.set((x0 + x1) / 2, lv * LH + braceMidY, zb);
+            brace.rotation.z = Math.atan2(dir * STUD_SPREAD, dx) - Math.PI / 2;
+            grp(lv).add(brace);
+          }
+        }
+      }
     }
   }
 
-  // upper-floor guard rail along open faces of level-1 rooms
-  for (const [name, rm] of Object.entries(S.roomsMeshes)) {
-    const r = rm.room;
-    if (r.floor === 1) {
-      const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, r.w - 0.12), matPost);
-      rail.rotation.z = Math.PI / 2;
-      rail.position.set(r.x + r.w / 2, S.levelHeight + 0.55, r.z + r.d - 0.05);
-      levelGroups[1].add(rail);
-    }
-  }
+  if (L.hex_center) buildHexCenter(L);
+
 
   // ladders (climb points between floors)
   for (const lad of (L.ladders || [])) {
     const [lx, lz] = lad.pos;
     const ladder = new THREE.Group();
     for (const dx of [-0.25, 0.25]) {
-      const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, S.levelHeight + 1.0), matPost);
+      const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, S.levelHeight + 1.0), matGalv);
       rail.position.set(lx + dx, (S.levelHeight + 1.0) / 2, lz);
       ladder.add(rail);
     }
     for (let i = 1; i <= 8; i++) {
-      const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5), matPost);
+      const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5), matGalv);
       rung.rotation.z = Math.PI / 2;
       rung.position.set(lx, i * (S.levelHeight / 8), lz);
       ladder.add(rung);
@@ -348,17 +428,6 @@ function buildMaze(cfg) {
     levelGroups[2].add(ladder);
   }
 
-  // visitor route guide line, drawn at each room's floor height
-  const pts = (L.route || []).map(n => {
-    const rm = S.roomsMeshes[n];
-    return rm ? new THREE.Vector3(rm.center.x, rm.level * S.levelHeight + 0.18, rm.center.z) : null;
-  }).filter(Boolean);
-  if (pts.length > 1) {
-    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
-      new THREE.LineBasicMaterial({ color: 0x27436b, transparent: true, opacity: 0.7 }));
-    levelGroups[2].add(line);
-  }
-
   // server rack
   if (L.server_rack) {
     const [rx, rz] = L.server_rack.pos;
@@ -374,6 +443,119 @@ function buildMaze(cfg) {
     lbl.position.set(rx, 1.35, rz + 0.2);
     levelGroups[0].add(lbl);
   }
+}
+
+// ---------------------------------------------------------------- hex center
+// The center is a hexagon of the same 7ft scaffold pieces (side = one bay).
+// East/west vertices kiss the wings; front flat face is open to the street.
+// Ground: Exit (west half) + Entrance (east half). Upper deck: Cuddle Cross.
+function buildHexCenter(L) {
+  const H = L.hex_center;
+  const LH = L.level_height || 2.03, CH = L.ceiling_height || 1.98;
+  const cx = H.cx, cz = H.cz, R = H.side;
+  const V = [];
+  for (let k = 0; k < 6; k++) {
+    const a = k * Math.PI / 3; // 0,60,...: flat front/back, pointy east/west
+    V.push([cx + R * Math.cos(a), cz + R * Math.sin(a)]);
+  }
+  // V[0]=east vertex, V[1]/V[2]=front flat, V[3]=west vertex, V[4]/V[5]=back flat
+
+  const slabShape = (pts) => {
+    const sh = new THREE.Shape();
+    pts.forEach(([x, z], i) => i ? sh.lineTo(x, -z) : sh.moveTo(x, -z)); // shape-y = -world-z
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.14, bevelEnabled: false });
+    geo.rotateX(-Math.PI / 2); // lie flat: extrusion becomes +y
+    return geo;
+  };
+  const frontMidTop = [cx, cz + R * Math.sin(Math.PI / 3)];
+  const backMid = [cx, cz - R * Math.sin(Math.PI / 3)];
+  const halves = {
+    [H.rooms.ground_west]: [frontMidTop, V[2], V[3], V[4], backMid],
+    [H.rooms.ground_east]: [frontMidTop, backMid, V[5], V[0], V[1]],
+  };
+  for (const [room, pts] of Object.entries(halves)) {
+    const slab = new THREE.Mesh(slabShape(pts), matFloorBase());
+    slab.userData.ground = true; slab.userData.level = 0;
+    levelGroups[0].add(slab);
+    const xs = pts.map(p => p[0]), zs = pts.map(p => p[1]);
+    const c = new THREE.Vector3((Math.min(...xs) + Math.max(...xs)) / 2, 1.0, cz);
+    S.roomsMeshes[room] = { slab, center: c, level: 0, room: L.rooms[room] };
+    const lbl = makeLabel(room, 0.24);
+    lbl.position.set(c.x, CH + 0.14, cz + R * 0.87 + 0.12);
+    levelGroups[0].add(lbl);
+  }
+  const upSlab = new THREE.Mesh(slabShape(V), matFloorBase());
+  upSlab.position.y = LH;
+  upSlab.userData.ground = true; upSlab.userData.level = 1;
+  levelGroups[1].add(upSlab);
+  S.roomsMeshes[H.rooms.upper] = {
+    slab: upSlab, center: new THREE.Vector3(cx, LH + 1, cz), level: 1, room: L.rooms[H.rooms.upper],
+  };
+  const upLbl = makeLabel(H.rooms.upper, 0.24);
+  upLbl.position.set(cx, LH + CH + 0.14, cz + R * 0.87 + 0.12);
+  levelGroups[1].add(upLbl);
+
+  // walls: faces 0=[V0,V1] SE, 1=[V1,V2] front(OPEN), 2=[V2,V3] SW, 3=[V3,V4] NW,
+  // 4=[V4,V5] back, 5=[V5,V0] NE. Trim 0.55 at the east/west vertex ends — those
+  // corners are the doorways into the wings (the beams sit right on them).
+  const faces = [
+    { a: V[0], b: V[1], trimA: 0.55 }, // SE (door at east vertex)
+    null,                              // front open
+    { a: V[2], b: V[3], trimB: 0.55 }, // SW (door at west vertex)
+    { a: V[3], b: V[4], trimA: 0.55 }, // NW (door at west vertex)
+    { a: V[4], b: V[5] },              // back
+    { a: V[5], b: V[0], trimB: 0.55 }, // NE (door at east vertex)
+  ];
+  for (const lv of [0, 1]) {
+    for (const f of faces) {
+      if (!f) continue;
+      const dx = f.b[0] - f.a[0], dz = f.b[1] - f.a[1];
+      const len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len;
+      const tA = f.trimA || 0, tB = f.trimB || 0;
+      const l2 = len - tA - tB;
+      if (l2 < 0.1) continue;
+      const mx = f.a[0] + ux * (tA + l2 / 2), mz = f.a[1] + uz * (tA + l2 / 2);
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(l2, CH, 0.05), matWall);
+      wall.position.set(mx, lv * LH + CH / 2, mz);
+      wall.rotation.y = -Math.atan2(dz, dx);
+      levelGroups[lv].add(wall);
+    }
+    // Exit | Entrance divider on the ground floor only
+    if (lv === 0) {
+      const div = new THREE.Mesh(new THREE.BoxGeometry(0.05, CH, R * 1.73 - 0.5), matWall);
+      div.position.set(cx, CH / 2, cz);
+      levelGroups[0].add(div);
+    }
+  }
+
+  // hex roof
+  const roof = new THREE.Mesh(slabShape(V), matRoof);
+  roof.position.y = LH + CH + 0.02;
+  roofGroup.add(roof);
+
+  // six 5' walk-thru frames per level (twelve total), hose-clamped at the
+  // corners — NO cross braces. Each face draws one frame; a vertex's leg
+  // comes from its outgoing face so clamped joints don't double-render, and
+  // the east/west vertices stay leg-free (they're the doorways to the wings).
+  // The front face's walkthru arch IS the street entrance.
+  for (let k = 0; k < 6; k++) {
+    const a = V[k], b = V[(k + 1) % 6];
+    for (const lv of [0, 1]) {
+      const frame = buildFrameSeg(a[0], a[1], b[0], b[1], lv * LH,
+        matFramePaint[(k + lv) % 2],
+        { skipLegA: k === 0 || k === 3, skipLegB: true });
+      grp(lv).add(frame);
+    }
+  }
+  // hose-clamp sleeves at the frame joints
+  V.forEach(([vx, vz], i) => {
+    if (i === 0 || i === 3) return;
+    for (const cy of [0.35, 1.05, 1.7, LH + 0.35, LH + 1.05, LH + 1.7]) {
+      const clamp = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.06), matGalv);
+      clamp.position.set(vx, cy, vz);
+      grp(cy > LH ? 1 : 0).add(clamp);
+    }
+  });
 }
 
 // ---------------------------------------------------------------- fixtures
@@ -401,45 +583,74 @@ function buildFixtures(cfg) {
       const g = new THREE.Group();
       g.position.set(x, yBase, z);
 
-      // par can hung just under the room's 6.5ft ceiling
+      // flashlight icons in maze-diagram.drawio = the U'King DMX spotlights
+      // (narrow barrel); bulb icons = the circular par pucks. All fixtures
+      // bracket-mount on the back scaffolding / cross members and tilt down
+      // into the room — nothing hangs from poles.
+      const isSpot = /ZQ07010/.test(f.model);
       const CH = (S.cfg.layout.ceiling_height || 1.98);
-      const bodyY = CH - 0.22, lensY = CH - 0.33, coneH = CH - 0.5;
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.2),
-        new THREE.MeshStandardMaterial({ color: 0x0c0c10 }));
-      pole.position.y = CH - 0.1;
-      g.add(pole);
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.18),
-        new THREE.MeshStandardMaterial({ color: 0x0a0a0e, roughness: 0.55, metalness: 0.5 }));
-      body.position.y = bodyY;
-      g.add(body);
+      const coneH = CH - 0.45;
+      const mountY = CH - 0.16;
+      const metal = new THREE.MeshStandardMaterial({ color: 0x0a0a0e, roughness: 0.55, metalness: 0.5 });
 
-      const lens = new THREE.Mesh(new THREE.CircleGeometry(0.08, 24),
+      const rc = (S.roomsMeshes[room] || {}).center || new THREE.Vector3(x, 0, z + 0.6);
+      const head = new THREE.Group();
+      head.position.y = mountY;
+      head.rotation.order = 'YXZ';
+      head.rotation.y = Math.atan2(rc.x - x, rc.z - z); // aim into the room
+      head.rotation.x = -0.62;                          // ~35° down-tilt
+      g.add(head);
+
+      const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.16), metal);
+      bracket.position.set(0, mountY, -0.08);
+      g.add(bracket);
+      const yoke = new THREE.Mesh(new THREE.BoxGeometry(isSpot ? 0.12 : 0.22, 0.02, 0.03), metal);
+      yoke.position.y = 0.02;
+      head.add(yoke);
+
+      const body = isSpot
+        ? new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.26, 20), metal)    // spot barrel
+        : new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.105, 0.09, 24), metal);  // circular par puck
+      body.position.y = isSpot ? -0.11 : -0.045;
+      head.add(body);
+
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(isSpot ? 0.045 : 0.085, 24),
         new THREE.MeshBasicMaterial({ color: 0x000000 }));
       lens.rotation.x = -Math.PI / 2;
-      lens.position.y = lensY;
-      g.add(lens);
+      lens.position.y = isSpot ? -0.245 : -0.095;
+      head.add(lens);
 
-      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.75, coneH, 28, 1, true),
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(isSpot ? 0.3 : 0.75, coneH, 28, 1, true),
         new THREE.MeshBasicMaterial({
           color: 0x000000, transparent: true, opacity: 0,
           blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
         }));
-      cone.position.y = lensY - coneH / 2;
-      g.add(cone);
+      cone.position.y = (isSpot ? -0.245 : -0.095) - coneH / 2;
+      head.add(cone);
 
-      const light = new THREE.PointLight(0x000000, 0, 4.2, 1.6);
-      light.position.y = CH - 0.45;
-      g.add(light);
+      let light;
+      if (isSpot) {
+        light = new THREE.SpotLight(0x000000, 0, 5.5, 0.34, 0.45, 1.5);
+        light.position.y = -0.2;
+        const target = new THREE.Object3D();
+        target.position.y = -3;
+        head.add(target);
+        light.target = target;
+      } else {
+        light = new THREE.PointLight(0x000000, 0, 4.2, 1.6);
+        light.position.y = -0.42;
+      }
+      head.add(light);
 
       grp(level).add(g);
 
       const cell = document.createElement('div');
       cell.className = 'fixture-cell';
-      cell.innerHTML = `<span class="addr">@${f.start_address}</span> ${escapeHtml(room)}${level ? ' ▲' : ''}`;
+      cell.innerHTML = `<span class="addr">@${f.start_address}</span> ${isSpot ? '🔦 ' : ''}${escapeHtml(room)}${level ? ' ▲' : ''}`;
       grid.appendChild(cell);
 
       S.fixtures.push({
-        room, addr: f.start_address, model: f.model, level,
+        room, addr: f.start_address, model: f.model, level, isSpot, wx: x, wz: z,
         channels: cfg.light_models[f.model].channels,
         light, lens, cone, cell,
       });
@@ -474,8 +685,9 @@ function updateFixtures(t) {
   for (const fx of S.fixtures) {
     const { R, G, B, lum } = decodeFixture(fx, t);
     fx.light.color.setRGB(R, G, B);
-    fx.light.intensity = lum * 11;
-    fx.lens.material.color.setRGB(Math.min(1, R * 1.6 + 0.02), Math.min(1, G * 1.6 + 0.02), Math.min(1, B * 1.6 + 0.02));
+    fx.light.intensity = lum * (fx.isSpot ? 18 : 11);
+    // faint idle glow so every fixture is visible even when dark
+    fx.lens.material.color.setRGB(Math.min(1, R * 1.6 + 0.07), Math.min(1, G * 1.6 + 0.07), Math.min(1, B * 1.6 + 0.09));
     fx.cone.material.color.setRGB(R, G, B);
     fx.cone.material.opacity = 0.05 + lum * 0.22;
     const acc = roomTint.get(fx.room) || [0, 0, 0, 0];
@@ -496,7 +708,7 @@ function updateFixtureGrid(t) {
     const { R, G, B } = decodeFixture(fx, t);
     fx.cell.style.background = `rgb(${(R * 255) | 0},${(G * 255) | 0},${(B * 255) | 0})`;
     const a = fx.addr - 1;
-    fx.cell.title = `${fx.model} @${fx.addr} (${fx.level ? 'upper' : 'ground'} floor)\nraw: ${Array.from(S.frame.slice(a, a + 8)).join(' ')}`;
+    fx.cell.title = `${fx.model} @${fx.addr}${fx.isSpot ? ' [SPOTLIGHT]' : ''} (${fx.level ? 'upper' : 'ground'} floor)\nraw: ${Array.from(S.frame.slice(a, a + 8)).join(' ')}`;
   }
 }
 
@@ -525,11 +737,12 @@ function buildSensors(cfg) {
       beam.position.set((x1 + x2) / 2, yBase + 0.85, (z1 + z2) / 2);
       beam.rotation.y = -Math.atan2(z2 - z1, x2 - x1);
       grp(level).add(beam);
+      // emitter/receiver pucks on the scaffold at each end — nothing on the floor
       for (const [px, pz] of [[x1, z1], [x2, z2]]) {
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.92),
-          new THREE.MeshStandardMaterial({ color: 0x15161c }));
-        post.position.set(px, yBase + 0.46, pz);
-        grp(level).add(post);
+        const emitter = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.06, 0.05),
+          new THREE.MeshStandardMaterial({ color: 0x15161c, roughness: 0.5 }));
+        emitter.position.set(px, yBase + 0.85, pz);
+        grp(level).add(emitter);
       }
       sensor.meshes.push(beam);
     } else if (geo.kind === 'button' && geo.pos) {
@@ -786,12 +999,28 @@ function activeCamera() {
   return S.mode === 'first' ? camera : (S.mode === 'top' ? topCam : streetCam);
 }
 
+// Frame the whole structure in street view with margin, keeping it inside the
+// canvas area left of the side panel (which overlays the right ~324px).
+function frameStreetView() {
+  const b = S.bounds;
+  if (!b) return;
+  const cx = (b.minX + b.maxX) / 2;
+  const hHalf = Math.atan(Math.tan(streetCam.fov * Math.PI / 360) * streetCam.aspect);
+  const avail = Math.max(0.45, (innerWidth - 340) / innerWidth);
+  const halfW = (b.maxX - b.minX) / 2 + 1.0;
+  const dist = halfW / (Math.tan(hHalf) * avail);
+  const shift = Math.tan(hHalf) * dist * (1 - avail);
+  streetCam.position.set(cx + shift, 2.7, b.frontZ + dist);
+  streetCam.lookAt(cx + shift, 1.85, b.frontZ);
+}
+
 function setMode(mode) {
   S.mode = mode;
   const next = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
   $('btn-view').textContent = `View: ${MODE_LABEL[mode]} ▸ ${MODE_LABEL[next]}`;
   $('crosshair').classList.toggle('hidden', mode !== 'first' || !S.pointerLocked);
   $('floor-filter').classList.toggle('hidden', mode !== 'top');
+  roofGroup.visible = mode !== 'top'; // keep the plan view readable
   if (mode !== 'top') setFloorFilter('both');
   if (mode !== 'first' && document.pointerLockElement) document.exitPointerLock();
 }
@@ -869,7 +1098,7 @@ function setupControls(cfg) {
       topCam.zoom = Math.max(0.4, Math.min(6, topCam.zoom * (ev.deltaY > 0 ? 0.9 : 1.11)));
       topCam.updateProjectionMatrix();
     } else if (S.mode === 'street') {
-      streetCam.position.z = Math.max(4.5, Math.min(22, streetCam.position.z + (ev.deltaY > 0 ? 0.9 : -0.9)));
+      streetCam.position.z = Math.max(4.5, Math.min(30, streetCam.position.z + (ev.deltaY > 0 ? 0.9 : -0.9)));
     }
   }, { passive: true });
 
@@ -916,6 +1145,7 @@ function setupControls(cfg) {
       topCam.updateProjectionMatrix();
     }
     renderer.setSize(innerWidth, innerHeight);
+    if (S.mode === 'street') frameStreetView();
   });
 }
 let dragMoved = 0;
@@ -1051,12 +1281,17 @@ async function boot() {
   S.yaw = (sp.yaw_deg || 0) * Math.PI / 180;
   S.prev2 = { x: S.pos.x, z: S.pos.z };
 
-  const sv = cfg.layout.street_view || { pos: [30, 5, 28], look: [30, 3, 7] };
-  streetCam.position.set(sv.pos[0], sv.pos[1], sv.pos[2]);
-  streetCam.lookAt(sv.look[0], sv.look[1], sv.look[2]);
-
   const xs = Object.values(cfg.layout.rooms);
-  const minX = Math.min(...xs.map(r => r.x)) - 3, maxX = Math.max(...xs.map(r => r.x + r.w)) + 3;
+  const hexR = (cfg.layout.hex_center || {}).side || 0;
+  S.bounds = {
+    minX: Math.min(...xs.map(r => r.x)),
+    maxX: Math.max(...xs.map(r => r.x + r.w)),
+    frontZ: Math.max(...xs.map(r => r.z + r.d), cfg.layout.hex_center
+      ? cfg.layout.hex_center.cz + hexR * Math.sin(Math.PI / 3) : 0),
+  };
+  frameStreetView();
+
+  const minX = S.bounds.minX - 3, maxX = S.bounds.maxX + 3;
   const minZ = Math.min(...xs.map(r => r.z)) - 3, maxZ = Math.max(...xs.map(r => r.z + r.d)) + 8;
   const a = innerWidth / innerHeight;
   topCam = new THREE.OrthographicCamera(-36 * a, 36 * a, 24, -24, 0.1, 200);

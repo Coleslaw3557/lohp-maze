@@ -14,16 +14,45 @@ only hardware dependency) and then executes `main.py` verbatim.
 The maze is a **two-story, open-faced scaffold structure** on playa (Burning Man):
 every room's street face is open, so the whole piece reads like a dollhouse from
 the street — `rooms.png` in the repo root is the street **elevation**, not a floor
-plan. **Real dimensions**: each room bay is **7 ft wide × 5 ft deep × 6.5 ft tall**
-(2.13 × 1.52 × 1.98 m); adjacent rooms **share one scaffold frame**, so bays abut
-with no gaps (the sim renders the shared verticals as doubled tubes, like real
-couplers). The whole run is 9 bays ≈ 63 ft long, ~13 ft tall.
+plan. **Real hardware**: ScaffoldsSupply **5'W × 6'4"T walk-thru frames** (1-11/16"Ø
+tube, no center pins) with **7' × 4'-lock-span cross braces** — so each room bay is
+**7 ft wide × 5 ft deep × 6'4" tall** (2.13 × 1.52 × 1.93 m), adjacent rooms
+**share one frame** (bays abut, no gaps), and the braces are wide flat scissors
+(4 ft vertical spread) rather than corner-to-corner X's, on both the front and
+back planes. The whole run — seven 7ft wing bays plus the 10ft hexagon — is
+≈ 59 ft long, ~12.7 ft tall.
 
 Ground floor: Entrance, Cop Dodge, Gate, Monkey, Temple, No Friends Monday, Exit.
-Upper floor (+6.7 ft): Sparkle Pony, Porto, Cuddle Cross (double-wide), Photo Bomb,
-Deep Playa Handshake, Bike Lock. Full-height climb rooms connect the floors:
-visitors climb **up in Guy Line Climb** (east end) and **down in Vertical Moop
-March** (west end).
+Upper floor (+6'4"): Sparkle Pony, Porto, Cuddle Cross, Photo Bomb, Deep Playa
+Handshake, Bike Lock. Full-height climb rooms connect the floors: visitors climb
+**up in Guy Line Climb** (east end) and **down in Vertical Moop March** (west end).
+
+**The center is a hexagon of twelve walk-thru frames** — six per level, one 5'
+frame per side, **hose-clamped together at the corners, with no cross braces**
+(10 ft across the corners; the wings meet it at its east/west vertices). The
+front flat face is the open street face, the ground floor is split Exit (west) /
+Entrance (east) with the single **RPi + USB-DMX** box inside (the PoE switch and
+extra Pis are gone), and the upper deck is Cuddle Cross.
+
+The structure has a **roof** over the top floor (hidden automatically in the
+overhead plan view), and **all lights and sensors mount on the back scaffolding/
+cross members**: fixtures are bracket-mounted, tilted down into their rooms (no
+poles in the walkways, nothing hangs mid-room); tripwire emitters sit on the
+frames at beam height.
+
+The frames are modeled on the real hardware (ScaffoldMart BJ walkthru pattern):
+legs with coupling-pin spigots, double-rail top band with spacers, candy-cane
+curves, and the 3-rung ladder section on each leg — **painted blue and green**
+like ours (alternating, since the fleet is a repainted mix), with galvanized
+braces, clamps, and ladders. Cuddle-pit note: its pars and the four-button
+station mount on the hexagon's back faces upstairs, not the doorway frames.
+
+**Source of truth for lighting**: `maze-diagram.drawio` (Overview page) — old for
+architecture (pre-wireless, pre-single-Pi) but accurate for fixture locations and
+DMX cable routing. Bulb icons = the circular pars; **flashlight icons = the two
+U'King DMX spotlights** (Monkey Room, Photo Bomb Room), which the sim renders as
+narrow-beam spots. The diagram's cable chain runs in exact DMX address order
+(east wing out, Cuddle Cross east→west, back to the center box, west wing out).
 
 Canonical visitor route: Entrance → Cop Dodge → Gate → *up* Guy Line Climb →
 Sparkle Pony → Porto → Cuddle Cross → Photo Bomb → Deep Playa Handshake → Bike Lock
@@ -87,32 +116,28 @@ sim's trigger list. Other design gaps found:
   (the Guy Line sensor fires ImageEnhancement instead — intentional?), PortoHit,
   PhotoBomb-BG, DeepPlaya-BG, LightningStorm.
 - **Effects with no audio mapped**: GuyLineClimb, PortoHit, PhotoBomb-BG.
-- The two U'King fixtures ignore all effects/themes (channel-name mismatch:
-  `master_dimmer`/`red`/… vs `total_dimming`/`r_dimming`/…).
 
-## ⚠ The sim exposes a real hardware bug (left unfixed on purpose)
+## ⚠ HARDWARE DAY: re-address the physical fixtures (config already fixed)
 
-`light_config.json` daisy-chains DMX addresses by each fixture's true channel count
-(the U'King at 89 is 6-channel, so the next par starts at 95), but the server code
-assumes uniform 8-channel slots (`(start-1)//8` in theme/effect application). Every
-fixture from address 95 onward is therefore misaligned — those rooms render
-dark/garbled in the sim, which is exactly what physical fixtures would do:
+The old `light_config.json` daisy-chained DMX addresses by true channel count
+(…89, 95, 103…), but the server code assumes uniform 8-channel slots
+(`(start-1)//8`) — every fixture from 95 on was misaligned and the sim rendered
+the west wing dark/garbled, exactly as hardware would. **On 2026-07-17 the config
+was fixed to clean 8-aligned addresses so the whole maze works in the sim and the
+config is now the build spec.** The physical fixtures must be set to these
+addresses when rigging:
 
 ```
-Photo Bomb U'King  @89  slot 11 writes ch  89–96 | reads  89–94  OK (collides with ↓)
-Deep Playa         @95  slot 11 writes ch  89–96 | reads  95–102 MISALIGNED
-No Friends Monday @103  slot 12 writes ch  97–104| reads 103–110 MISALIGNED
-Temple            @111  slot 13 writes 105–112   | reads 111–118 MISALIGNED
-Monkey            @119  slot 14 writes 113–120   | reads 119–126 MISALIGNED
-Monkey U'King     @127  slot 15 writes 121–128   | reads 127–132 MISALIGNED
-Bike Lock         @133  slot 16 writes 129–136   | reads 133–140 MISALIGNED
-Moop March        @141  slot 17 writes 137–144   | reads 141–148 MISALIGNED
-Moop March        @149  slot 18 writes 145–152   | reads 149–156 MISALIGNED
+unchanged: 1, 9, 17, 25, 33, 41, 49, 57, 65, 73, 81, 89
+re-set:    95→97   103→105   111→113   119→121  (Deep Playa, NFM, Temple, Monkey par)
+           127→129 133→137   141→145   149→153  (Monkey spot, Bike Lock, Moop March ×2)
 ```
 
-Fix is a decision for hardware day: re-address the physical fixtures to 8-aligned
-starts (1,9,…,153 — then just update `light_config.json`), or teach the code real
-addressing. Until then the sim shows the truth.
+Also fixed: the U'King spotlight channel *keys* in `light_config.json` were renamed
+to the effect-engine vocabulary (`total_dimming`, `r_dimming`, …) so themes and
+effects actually drive the two spots. The wire format is untouched (ch0=dimmer,
+1=R, 2=G, 3=B, 4=W) and `color_macro` keeps its own name so nothing ever writes
+the fixture's built-in color-program channel.
 
 ## "Sensors firing at idle?"
 

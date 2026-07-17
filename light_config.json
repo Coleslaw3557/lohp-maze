@@ -14,12 +14,13 @@
             "type": "RGBW"
         },
         "U'King LED Par Light - Model ZQ07010/ZQ07011": {
+            "_comment": "DMX spotlight, 6ch. Channel KEYS renamed to the effect-engine vocabulary so themes/effects drive it (byte layout on the wire is unchanged: 0=dimmer 1=R 2=G 3=B 4=W). color_macro deliberately keeps its own name so nothing ever writes it (would trigger the fixture's built-in color programs).",
             "channels": {
-                "master_dimmer": 0,
-                "red": 1,
-                "green": 2,
-                "blue": 3,
-                "white": 4,
+                "total_dimming": 0,
+                "r_dimming": 1,
+                "g_dimming": 2,
+                "b_dimming": 3,
+                "w_dimming": 4,
                 "color_macro": 5
             }
         }
@@ -43,17 +44,17 @@
             {"model": "Par Light - Model ZQ01424", "start_address": 81},
             {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 89}
         ],
-        "Deep Playa Handshake": [{"model": "Par Light - Model ZQ01424", "start_address": 95}],
-        "No Friends Monday": [{"model": "Par Light - Model ZQ01424", "start_address": 103}],
-        "Temple Room": [{"model": "Par Light - Model ZQ01424", "start_address": 111}],
+        "Deep Playa Handshake": [{"model": "Par Light - Model ZQ01424", "start_address": 97}],
+        "No Friends Monday": [{"model": "Par Light - Model ZQ01424", "start_address": 105}],
+        "Temple Room": [{"model": "Par Light - Model ZQ01424", "start_address": 113}],
         "Monkey Room": [
-            {"model": "Par Light - Model ZQ01424", "start_address": 119},
-            {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 127}
+            {"model": "Par Light - Model ZQ01424", "start_address": 121},
+            {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 129}
         ],
-        "Bike Lock Room": [{"model": "Par Light - Model ZQ01424", "start_address": 133}],
+        "Bike Lock Room": [{"model": "Par Light - Model ZQ01424", "start_address": 137}],
         "Vertical Moop March": [
-            {"model": "Par Light - Model ZQ01424", "start_address": 141},
-            {"model": "Par Light - Model ZQ01424", "start_address": 149}
+            {"model": "Par Light - Model ZQ01424", "start_address": 145},
+            {"model": "Par Light - Model ZQ01424", "start_address": 153}
         ]
     }
 }

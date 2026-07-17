@@ -52,6 +52,7 @@ button:active { transform: translateY(1px); }
 button.active { background: #2c4a86; border-color: #4a6cb8; }
 .slider-row { display: block; margin-top: 8px; color: #8b90a8; font-size: 12px; }
 .slider-row input { width: 100%; margin-top: 2px; }
+.chk-row { display: block; margin-top: 6px; color: #8b90a8; font-size: 12px; cursor: pointer; }
 
 /* trigger quick-fire list */
 #trigger-list { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 6px; }
