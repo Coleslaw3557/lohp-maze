@@ -9,6 +9,13 @@ Everything lives in this folder — **zero changes to production code**. The lau
 injects `virtual_dmx.py` in place of `dmx_interface` (the FTDI driver, the server's
 only hardware dependency) and then executes `main.py` verbatim.
 
+| Street view — day | Street view — night |
+|---|---|
+| ![Street view, day mode](img/street-day.png) | ![Street view, night mode](img/street-night.png) |
+
+*(both with the decorative entrance towers + arch sign shown — the Towers button
+hides them; day/night toggles with N)*
+
 ## The structure (matches the real build)
 
 The maze is a **two-story, open-faced scaffold structure** on playa (Burning Man):
@@ -31,12 +38,25 @@ Handshake, Bike Lock. Full-height climb rooms connect the floors: visitors climb
 At those two far ends the skin hangs on the **outside** of the end frames — inside
 the shaft stays bare scaffold, so the frames' ladder rungs are the climb.
 
-**The center is a hexagon of twelve walk-thru frames** — six per level, one 5'
-frame per side, **hose-clamped together at the corners, with no cross braces**
-(10 ft across the corners; the wings meet it at its east/west vertices). The
-front flat face is the open street face, the ground floor is split Exit (west) /
-Entrance (east) with the single **RPi + USB-DMX** box inside (the PoE switch and
-extra Pis are gone), and the upper deck is Cuddle Cross.
+**The center is a hexagon of twelve complete 5' walk-thru frames** — six per
+level, one per side, real pieces only, **hose-clamped in pairs at every
+corner, with no cross braces**. A **corner points at the street**: the two
+angled street frames meeting at it are the split **entry (START sign, east)**
+and **exit (FINISH sign, west)** — each frame's walk-thru arch is one door.
+The side rooms walk into the center through the flat east/west frames'
+arches, the two back frames are skinned. The ground floor is split Exit
+(west) / Entrance (east) by a divider running front corner to back corner,
+with the single **RPi + USB-DMX** box inside (the PoE switch and extra Pis
+are gone); the upper deck is Cuddle Cross.
+
+**Out front on the street stand two decorative entrance towers** (see
+`hiddenplaya.art/maze-1.jpeg`) with the *Legends of the Hidden Playa* sign
+arching between them, medallion at the peak. Each tower is three **3' × 4'
+ladder frames** from the same tube-and-pin fleet, hose-clamped into a triangle
+in plan (flat face to the street, apex toward the maze), stacked two tiers
+tall (8 ft), skinned on the outside and guyed to playa stakes with orange
+ratchet straps. **Purely decorative — no fixtures, no sensors, no lights at
+this time** (`entrance_towers` in `maze_layout.json`).
 
 The structure has a **roof** over the top floor (hidden automatically in the
 overhead plan view), and **all lights and sensors mount on the back scaffolding/
@@ -88,6 +108,11 @@ Stop with `sim/stop.sh`. First run creates `sim/.venv` automatically.
 wheel to dolly, the way the piece reads on playa) · **First-person** (WASD + mouse-
 look, E to use buttons/pads/ladders, walk through red doorway beams to trip sensors)
 · **Overhead plan** (Ground/Upper/Both floor filter, click floor to teleport).
+**Day / night** (N or the ☀/☾ button, remembered across reloads): night is the
+default show environment; day mode brings up playa daylight — handy for checking
+the unlit structure itself, like the entrance towers. The **Towers button**
+shows/hides the decorative entrance towers + arch sign (also remembered), since
+they stand in front of part of the facade in street view.
 
 ## Editing workflow — what's real vs. sim-only
 

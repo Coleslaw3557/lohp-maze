@@ -97,25 +97,32 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0c18);
 scene.fog = new THREE.Fog(0x141020, 25, 95);
 
-// --- playa night environment: gradient sky dome + stars ---
-{
+// --- playa environment: gradient sky dome + stars. Night by default, with a
+// day mode toggle (N / the ☀ button) — the piece reads differently at 3pm.
+const ENV = { day: false };
+function skyTexture(stops) {
   const c = document.createElement('canvas');
   c.width = 4; c.height = 256;
   const g = c.getContext('2d');
   const grad = g.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0.0, '#05060f');   // zenith
-  grad.addColorStop(0.55, '#0d1024');
-  grad.addColorStop(0.78, '#2a2038');  // dusty horizon glow
-  grad.addColorStop(0.86, '#3b2b33');
-  grad.addColorStop(1.0, '#191410');   // below horizon
+  for (const [p, col] of stops) grad.addColorStop(p, col);
   g.fillStyle = grad;
   g.fillRect(0, 0, 4, 256);
-  const skyTex = new THREE.CanvasTexture(c);
-  skyTex.colorSpace = THREE.SRGBColorSpace;
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(150, 24, 16),
-    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false }));
-  dome.position.set(10, 0, 5);
-  scene.add(dome);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+{
+  ENV.nightTex = skyTexture([[0.0, '#05060f'], [0.55, '#0d1024'],   // zenith
+    [0.78, '#2a2038'],                                              // dusty horizon glow
+    [0.86, '#3b2b33'], [1.0, '#191410']]);                          // below horizon
+  ENV.dayTex = skyTexture([[0.0, '#3e77c2'], [0.5, '#7ba6d9'],      // deep blue zenith
+    [0.8, '#ccd2d1'],                                               // hazy dust band
+    [0.88, '#ddd3bd'], [1.0, '#b7a488']]);                          // alkali flats
+  ENV.dome = new THREE.Mesh(new THREE.SphereGeometry(150, 24, 16),
+    new THREE.MeshBasicMaterial({ map: ENV.nightTex, side: THREE.BackSide, fog: false, depthWrite: false }));
+  ENV.dome.position.set(10, 0, 5);
+  scene.add(ENV.dome);
 
   const starPos = [];
   for (let i = 0; i < 900; i++) {
@@ -126,10 +133,10 @@ scene.fog = new THREE.Fog(0x141020, 25, 95);
   }
   const starGeo = new THREE.BufferGeometry();
   starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-  const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
+  ENV.stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
     color: 0xcdd6ff, size: 0.55, sizeAttenuation: true, transparent: true, opacity: 0.85, fog: false,
   }));
-  scene.add(stars);
+  scene.add(ENV.stars);
 }
 
 const camera = new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.1, 300);
@@ -144,8 +151,31 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 $('scene').appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0x9895b0, 0.2));
-scene.add(new THREE.HemisphereLight(0x252b4e, 0x54462f, 0.5)); // night sky over warm dust bounce
+ENV.amb = new THREE.AmbientLight(0x9895b0, 0.2);
+ENV.hemi = new THREE.HemisphereLight(0x252b4e, 0x54462f, 0.5); // night sky over warm dust bounce
+ENV.sun = new THREE.DirectionalLight(0xfff3dd, 0);             // day mode only
+ENV.sun.position.set(40, 55, 38);
+scene.add(ENV.amb, ENV.hemi, ENV.sun);
+
+function setDayNight(day) {
+  ENV.day = day;
+  ENV.dome.material.map = day ? ENV.dayTex : ENV.nightTex;
+  ENV.stars.visible = !day;
+  ENV.amb.color.set(day ? 0xcdd3de : 0x9895b0);
+  ENV.amb.intensity = day ? 0.5 : 0.2;
+  ENV.hemi.color.set(day ? 0xbdd2ee : 0x252b4e);
+  ENV.hemi.groundColor.set(day ? 0xb29c76 : 0x54462f);
+  ENV.hemi.intensity = day ? 1.25 : 0.5;
+  ENV.sun.intensity = day ? 1.7 : 0;
+  scene.background.set(day ? 0x9db6d6 : 0x0a0c18);
+  scene.fog.color.set(day ? 0xc9c2b0 : 0x141020);
+  scene.fog.near = day ? 60 : 25;
+  scene.fog.far = day ? 260 : 95;
+  renderer.toneMappingExposure = day ? 1.0 : 1.15;
+  $('btn-daynight').textContent = day ? '☾ Night' : '☀ Day'; // shows what a click switches TO
+  try { localStorage.setItem('lohp-sim-day', day ? '1' : '0'); } catch (e) { /* private mode */ }
+}
+try { setDayNight(localStorage.getItem('lohp-sim-day') === '1'); } catch (e) { setDayNight(false); }
 
 // level groups: 0 = ground rooms, 1 = upper rooms, 2 = shared (street, shells, ladders)
 const levelGroups = [new THREE.Group(), new THREE.Group(), new THREE.Group()];
@@ -181,6 +211,10 @@ const matFloorBase = () => new THREE.MeshStandardMaterial({ color: 0x1f2027, rou
 const matWall = new THREE.MeshStandardMaterial({ color: 0x3a3b44, roughness: 0.9, metalness: 0.02 });
 const matPost = new THREE.MeshStandardMaterial({ color: 0x23242c, roughness: 0.7, metalness: 0.25 });
 const matGalv = new THREE.MeshStandardMaterial({ color: 0x8f959d, roughness: 0.35, metalness: 0.7 });
+const matStrap = new THREE.MeshStandardMaterial({ color: 0xc65f1e, roughness: 0.85, metalness: 0.05 });
+// tower wrap: same shade cloth as the maze walls, but the towers carry no
+// fixtures, so a whisper of emissive keeps their silhouette readable at night
+const matTowerSkin = new THREE.MeshStandardMaterial({ color: 0x3a3b44, roughness: 0.9, metalness: 0.02, emissive: 0x0e0f16 });
 const matFramePaint = [
   new THREE.MeshStandardMaterial({ color: 0x2666b8, roughness: 0.5, metalness: 0.25 }), // our blue
   new THREE.MeshStandardMaterial({ color: 0x2f9e57, roughness: 0.5, metalness: 0.25 }), // our green
@@ -192,7 +226,7 @@ const matFramePaint = [
 // tubes hanging from the header that candy-cane out into the legs ~12" up,
 // two ladder rungs per side, and brace studs on each leg 8.5" down from
 // the top and 4' below that (where the 7'x4' cross braces pin on).
-function buildFrameSeg(ax, az, bx, bz, yBase, mat, opts = {}) {
+function buildFrameSeg(ax, az, bx, bz, yBase, mat) {
   const H = 1.93, R = 0.0215;               // 6'4" tall, 1.6925" OD tube
   const RAIL_Y = H - 0.075, HEAD_Y = H - 0.19;
   const INSET = 0.29;                       // doorway tube ~11.5" in from leg
@@ -210,22 +244,15 @@ function buildFrameSeg(ax, az, bx, bz, yBase, mat, opts = {}) {
     return m;
   };
 
-  // per-side build mode: 'full' = leg + arch side; 'share' = arch side only
-  // (the leg at that corner belongs to an adjoining frame, hose-clamped);
-  // 'open' = nothing (that corner is a doorway with no leg at all)
   for (const s of [-1, 1]) {
-    const mode = (s < 0 ? opts.sideA : opts.sideB) || 'full';
-    if (mode === 'open') continue;
     const lx = s * (len / 2);
     const tx = s * (len / 2 - INSET);       // doorway tube line
-    if (mode !== 'share') {
-      addCyl(R, H, lx, H / 2);                                     // leg
-      addCyl(0.016, 0.115, lx, H + 0.0475, 0, 0, 0, matGalv);      // coupling pin
-      addCyl(0.026, 0.016, lx, H + 0.008, 0, 0, 0, matGalv);       // 1" collar
-      // brace studs (both faces): 8.5" down from the top, then 4' below
-      for (const sy of [1.7145, 0.4953]) {
-        for (const sz of [-1, 1]) addCyl(0.006, 0.05, lx, sy, sz * 0.038, 0, Math.PI / 2, matGalv);
-      }
+    addCyl(R, H, lx, H / 2);                                       // leg
+    addCyl(0.016, 0.115, lx, H + 0.0475, 0, 0, 0, matGalv);        // coupling pin
+    addCyl(0.026, 0.016, lx, H + 0.008, 0, 0, 0, matGalv);         // 1" collar
+    // brace studs (both faces): 8.5" down from the top, then 4' below
+    for (const sy of [1.7145, 0.4953]) {
+      for (const sz of [-1, 1]) addCyl(0.006, 0.05, lx, sy, sz * 0.038, 0, Math.PI / 2, matGalv);
     }
     // doorway tube: hangs from the header, candy-canes out into the leg
     addCyl(0.017, HEAD_Y - 0.50, tx, (HEAD_Y + 0.50) / 2);
@@ -244,6 +271,34 @@ function buildFrameSeg(ax, az, bx, bz, yBase, mat, opts = {}) {
   // three short stubs tie rail to header: over each doorway tube + center
   for (const sx of [-(len / 2 - INSET), 0, len / 2 - INSET]) {
     addCyl(0.010, RAIL_Y - HEAD_Y, sx, (RAIL_Y + HEAD_Y) / 2);
+  }
+  return fg;
+}
+
+// One 3' x 4' ladder frame — the little end frames from the same fleet as the
+// walk-thru sets: identical 1.69" OD tube and coupling-pin tops, two legs, a
+// top rail and two rungs, no doorway arch. Used by the entrance towers.
+function buildMiniFrameSeg(ax, az, bx, bz, yBase, mat, opts = {}) {
+  const H = opts.h || 1.2192, R = 0.0215;
+  const dx = bx - ax, dz = bz - az;
+  const len = Math.hypot(dx, dz);
+  const fg = new THREE.Group();
+  fg.position.set((ax + bx) / 2, yBase, (az + bz) / 2);
+  fg.rotation.y = -Math.atan2(dz, dx);
+  const addCyl = (r, h, x, y, rotZ = 0, material = mat) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h), material);
+    m.position.set(x, y, 0);
+    m.rotation.z = rotZ;
+    fg.add(m);
+  };
+  for (const s of [-1, 1]) {
+    const lx = s * (len / 2);
+    addCyl(R, H, lx, H / 2);
+    addCyl(0.016, 0.115, lx, H + 0.0475, 0, matGalv);   // coupling pin
+    addCyl(0.026, 0.016, lx, H + 0.008, 0, matGalv);    // 1" collar
+  }
+  for (const ry of [H - 0.035, H * 0.62, H * 0.3]) {    // top rail + two rungs
+    addCyl(0.015, len - 0.02, 0, ry, Math.PI / 2);
   }
   return fg;
 }
@@ -428,7 +483,7 @@ function buildMaze(cfg) {
   }
 
   if (L.hex_center) buildHexCenter(L);
-
+  if (L.entrance_towers) buildEntranceTowers(L);
 
   // ladders (climb points between floors)
   for (const lad of (L.ladders || [])) {
@@ -476,8 +531,12 @@ function buildMaze(cfg) {
 }
 
 // ---------------------------------------------------------------- hex center
-// The center is a hexagon of the same 7ft scaffold pieces (side = one bay).
-// East/west vertices kiss the wings; front flat face is open to the street.
+// The center is a hexagon of SIX complete 5' walk-thru frames per level (12
+// total) — real pieces only, hose-clamped in pairs at every corner, NO cross
+// braces. A CORNER points at the street: the two angled street frames meeting
+// at it are the split entry (START, east) and exit (FINISH, west) — each
+// frame's walk-thru arch is one door. The flat east/west frames' arches are
+// how the side rooms walk into the center. The two back frames are skinned.
 // Ground: Exit (west half) + Entrance (east half). Upper deck: Cuddle Cross.
 function buildHexCenter(L) {
   const H = L.hex_center;
@@ -485,10 +544,11 @@ function buildHexCenter(L) {
   const cx = H.cx, cz = H.cz, R = H.side;
   const V = [];
   for (let k = 0; k < 6; k++) {
-    const a = k * Math.PI / 3; // 0,60,...: flat front/back, pointy east/west
+    const a = Math.PI / 6 + k * Math.PI / 3; // 30,90,...: corners to street/back, flats to the wings
     V.push([cx + R * Math.cos(a), cz + R * Math.sin(a)]);
   }
-  // V[0]=east vertex, V[1]/V[2]=front flat, V[3]=west vertex, V[4]/V[5]=back flat
+  // V[1]=front corner (street), V[4]=back corner; faces: [V0,V1]=entry,
+  // [V1,V2]=exit, [V2,V3]=west wing door, [V3,V4]/[V4,V5]=back, [V5,V0]=east wing door
 
   const slabShape = (pts) => {
     const sh = new THREE.Shape();
@@ -497,24 +557,31 @@ function buildHexCenter(L) {
     geo.rotateX(-Math.PI / 2); // lie flat: extrusion becomes +y
     return geo;
   };
-  const frontMidTop = [cx, cz + R * Math.sin(Math.PI / 3)];
-  const backMid = [cx, cz - R * Math.sin(Math.PI / 3)];
+  // the wings end a hair past the hex flats — bridge the sliver so the floor
+  // runs continuous through the wing doorways
+  const wingW = L.rooms[H.rooms.ground_west].x;
+  const geRoom = L.rooms[H.rooms.ground_east];
+  const wingE = geRoom.x + geRoom.w;
   const halves = {
-    [H.rooms.ground_west]: [frontMidTop, V[2], V[3], V[4], backMid],
-    [H.rooms.ground_east]: [frontMidTop, backMid, V[5], V[0], V[1]],
+    [H.rooms.ground_west]: [V[1], V[2], [wingW, V[2][1]], [wingW, V[3][1]], V[3], V[4]],
+    [H.rooms.ground_east]: [V[1], V[4], V[5], [wingE, V[5][1]], [wingE, V[0][1]], V[0]],
   };
+  const deck = [V[1], V[2], [wingW, V[2][1]], [wingW, V[3][1]], V[3], V[4],
+    V[5], [wingE, V[5][1]], [wingE, V[0][1]], V[0]];
   for (const [room, pts] of Object.entries(halves)) {
     const slab = new THREE.Mesh(slabShape(pts), matFloorBase());
     slab.userData.ground = true; slab.userData.level = 0;
     levelGroups[0].add(slab);
-    const xs = pts.map(p => p[0]), zs = pts.map(p => p[1]);
+    const xs = pts.map(p => p[0]);
     const c = new THREE.Vector3((Math.min(...xs) + Math.max(...xs)) / 2, 1.0, cz);
     S.roomsMeshes[room] = { slab, center: c, level: 0, room: L.rooms[room] };
+    // label above the half's angled street frame
+    const sf = room === H.rooms.ground_east ? [V[0], V[1]] : [V[1], V[2]];
     const lbl = makeLabel(room, 0.24);
-    lbl.position.set(c.x, CH + 0.14, cz + R * 0.87 + 0.12);
+    lbl.position.set((sf[0][0] + sf[1][0]) / 2, CH + 0.14, (sf[0][1] + sf[1][1]) / 2 + 0.15);
     levelGroups[0].add(lbl);
   }
-  const upSlab = new THREE.Mesh(slabShape(V), matFloorBase());
+  const upSlab = new THREE.Mesh(slabShape(deck), matFloorBase());
   upSlab.position.y = LH;
   upSlab.userData.ground = true; upSlab.userData.level = 1;
   levelGroups[1].add(upSlab);
@@ -522,73 +589,291 @@ function buildHexCenter(L) {
     slab: upSlab, center: new THREE.Vector3(cx, LH + 1, cz), level: 1, room: L.rooms[H.rooms.upper],
   };
   const upLbl = makeLabel(H.rooms.upper, 0.24);
-  upLbl.position.set(cx, LH + CH + 0.14, cz + R * 0.87 + 0.12);
+  upLbl.position.set(cx, LH + CH + 0.14, V[1][1] + 0.12);
   levelGroups[1].add(upLbl);
 
-  // walls: faces 0=[V0,V1] SE, 1=[V1,V2] front(OPEN), 2=[V2,V3] SW, 3=[V3,V4] NW,
-  // 4=[V4,V5] back, 5=[V5,V0] NE. Trim 0.55 at the east/west vertex ends — those
-  // corners are the doorways into the wings (the beams sit right on them).
-  const faces = [
-    { a: V[0], b: V[1], trimA: 0.55 }, // SE (door at east vertex)
-    null,                              // front open
-    { a: V[2], b: V[3], trimB: 0.55 }, // SW (door at west vertex)
-    { a: V[3], b: V[4], trimA: 0.55 }, // NW (door at west vertex)
-    { a: V[4], b: V[5] },              // back
-    { a: V[5], b: V[0], trimB: 0.55 }, // NE (door at east vertex)
-  ];
+  // skin: only the two back faces are walled; the four street/wing faces
+  // stay open — their frames' arches are the doors
   for (const lv of [0, 1]) {
-    for (const f of faces) {
-      if (!f) continue;
-      const dx = f.b[0] - f.a[0], dz = f.b[1] - f.a[1];
-      const len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len;
-      const tA = f.trimA || 0, tB = f.trimB || 0;
-      const l2 = len - tA - tB;
-      if (l2 < 0.1) continue;
-      const mx = f.a[0] + ux * (tA + l2 / 2), mz = f.a[1] + uz * (tA + l2 / 2);
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(l2, CH, 0.05), matWall);
-      wall.position.set(mx, lv * LH + CH / 2, mz);
+    for (const [a, b] of [[V[3], V[4]], [V[4], V[5]]]) {
+      const dx = b[0] - a[0], dz = b[1] - a[1];
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(dx, dz), CH, 0.05), matWall);
+      wall.position.set((a[0] + b[0]) / 2, lv * LH + CH / 2, (a[1] + b[1]) / 2);
       wall.rotation.y = -Math.atan2(dz, dx);
       levelGroups[lv].add(wall);
     }
-    // Exit | Entrance divider on the ground floor only
+    // Exit | Entrance divider on the ground floor only: back corner to front
+    // corner, so the split lands exactly where the two street frames meet
+    // and the halves only connect through the wings
     if (lv === 0) {
-      const div = new THREE.Mesh(new THREE.BoxGeometry(0.05, CH, R * 1.73 - 0.5), matWall);
+      const div = new THREE.Mesh(new THREE.BoxGeometry(0.05, CH, R * 2 - 0.08), matWall);
       div.position.set(cx, CH / 2, cz);
       levelGroups[0].add(div);
     }
   }
 
-  // hex roof
-  const roof = new THREE.Mesh(slabShape(V), matRoof);
+  // hex roof (covers the wing-doorway slivers too)
+  const roof = new THREE.Mesh(slabShape(deck), matRoof);
   roof.position.y = LH + CH + 0.02;
   roofGroup.add(roof);
 
-  // six 5' walk-thru frames per level (twelve total), hose-clamped at the
-  // corners — NO cross braces. Each face draws one frame; a vertex's leg
-  // comes from its outgoing face so clamped joints don't double-render
-  // ('share' keeps the frame's own doorway tube + rungs at that corner),
-  // and the east/west vertices stay leg-free (they're the doorways to the
-  // wings). The front face's walkthru arch IS the street entrance.
+  // six complete walk-thru frames per level: legs at BOTH ends, nudged a hair
+  // in from each corner so the two neighbouring frames' legs stand side by
+  // side inside one clamp — how the real (welded) frames actually join
+  const EPS = 0.026;
   for (let k = 0; k < 6; k++) {
     const a = V[k], b = V[(k + 1) % 6];
+    const ux = (b[0] - a[0]) / R, uz = (b[1] - a[1]) / R;
     for (const lv of [0, 1]) {
-      const frame = buildFrameSeg(a[0], a[1], b[0], b[1], lv * LH,
-        matFramePaint[(k + lv) % 2], {
-          sideA: (k === 0 || k === 3) ? 'open' : 'full',
-          sideB: (k === 2 || k === 5) ? 'open' : 'share',
-        });
-      grp(lv).add(frame);
+      grp(lv).add(buildFrameSeg(a[0] + ux * EPS, a[1] + uz * EPS,
+        b[0] - ux * EPS, b[1] - uz * EPS, lv * LH, matFramePaint[(k + lv) % 2]));
     }
   }
-  // hose-clamp sleeves at the frame joints
-  V.forEach(([vx, vz], i) => {
-    if (i === 0 || i === 3) return;
+  // hose-clamp blocks around each corner's leg pair
+  for (const [vx, vz] of V) {
     for (const cy of [0.35, 1.05, 1.7, LH + 0.35, LH + 1.05, LH + 1.7]) {
       const clamp = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.06), matGalv);
       clamp.position.set(vx, cy, vz);
       grp(cy > LH ? 1 : 0).add(clamp);
     }
-  });
+  }
+
+  // START / FINISH ply signs over the two street arches, angled with their
+  // frames so they meet at the front corner like the photo
+  for (const [txt, bgc, a, b] of [['START', '#7cc25e', V[0], V[1]], ['FINISH', '#e0679c', V[1], V[2]]]) {
+    const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+    const nx = mx - cx, nz = mz - cz;
+    const nl = Math.hypot(nx, nz);
+    const sign = makePaintedSign(txt, bgc);
+    sign.position.set(mx + (nx / nl) * 0.07, 1.56, mz + (nz / nl) * 0.07);
+    sign.lookAt(mx + nx, 1.56, mz + nz);
+    levelGroups[0].add(sign);
+  }
+}
+
+// Painted-ply sign (the START / FINISH boards over the hex street doors);
+// slight emissive so they read at night like the arch sign.
+function makePaintedSign(text, bg, w = 0.62, h = 0.28) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = Math.round(256 * h / w);
+  const g = c.getContext('2d');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = 'rgba(30,20,10,0.85)';
+  g.lineWidth = 10;
+  g.strokeRect(5, 5, c.width - 10, c.height - 10);
+  g.fillStyle = '#241c10';
+  g.font = `700 ${Math.round(c.height * 0.58)}px Georgia, 'Times New Roman', serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, c.width / 2, c.height / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+    new THREE.MeshStandardMaterial({
+      map: tex, side: THREE.DoubleSide, roughness: 0.9,
+      emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.18,
+    }));
+}
+
+// ---------------------------------------------------------- entrance towers
+// Two decorative towers flank the street path out front (maze-1.jpeg) with
+// the "Legends of the Hidden Playa" sign arching between them. Each tower is
+// three 3'x4' ladder frames hose-clamped into a triangle in plan — flat face
+// to the street, apex toward the maze — stacked two tiers tall, skinned on
+// the outside like the maze walls and guyed to playa stakes with orange
+// ratchet straps. Purely decorative: no DMX fixtures, no sensors, no lights.
+// The whole assembly lives in one group so the Towers button can hide it
+// (it blocks part of the facade in street view).
+let towersGroup = null;
+function setTowersVisible(on) {
+  if (!towersGroup) return;
+  towersGroup.visible = on;
+  $('btn-towers').textContent = on ? 'Towers ✓' : 'Towers ✕';
+  try { localStorage.setItem('lohp-sim-towers', on ? '1' : '0'); } catch (e) { /* private mode */ }
+}
+
+function buildEntranceTowers(L) {
+  const ET = L.entrance_towers;
+  const FW = ET.frame_w, FH = ET.frame_h, TIERS = ET.tiers || 2;
+  const towerH = FH * TIERS;
+  const apexZ = ET.front_z - FW * Math.sin(Math.PI / 3);
+  towersGroup = new THREE.Group();
+  levelGroups[2].add(towersGroup); // street furniture: visible in every floor filter
+  const g = towersGroup;
+
+  for (const sx of [-1, 1]) {
+    const cx = ET.cx + sx * (ET.spacing / 2);
+    const V = [[cx - FW / 2, ET.front_z], [cx + FW / 2, ET.front_z], [cx, apexZ]];
+    // three complete frames per tier, legs nudged a hair in from each corner
+    // so neighbouring frames' legs stand side by side inside one clamp
+    for (let k = 0; k < 3; k++) {
+      const a = V[k], b = V[(k + 1) % 3];
+      const ux = (b[0] - a[0]) / FW, uz = (b[1] - a[1]) / FW;
+      for (let t = 0; t < TIERS; t++) {
+        g.add(buildMiniFrameSeg(a[0] + ux * 0.026, a[1] + uz * 0.026,
+          b[0] - ux * 0.026, b[1] - uz * 0.026, t * FH,
+          matFramePaint[(k + t) % 2], { h: FH }));
+      }
+      // hose-clamp sleeves at the corner joint
+      for (let t = 0; t < TIERS; t++) {
+        for (const cy of [t * FH + 0.28, t * FH + 0.86]) {
+          const clamp = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.06), matGalv);
+          clamp.position.set(a[0], cy, a[1]);
+          g.add(clamp);
+        }
+      }
+    }
+    // skin panels hang on the outside of all three faces
+    const cz3 = (2 * ET.front_z + apexZ) / 3;
+    for (let k = 0; k < 3; k++) {
+      const a = V[k], b = V[(k + 1) % 3];
+      const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+      const nl = Math.hypot(mx - cx, mz - cz3);
+      const skin = new THREE.Mesh(new THREE.BoxGeometry(FW + 0.05, towerH - 0.05, 0.03), matTowerSkin);
+      skin.position.set(mx + ((mx - cx) / nl) * 0.055, towerH / 2, mz + ((mz - cz3) / nl) * 0.055);
+      skin.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]);
+      g.add(skin);
+    }
+    // ratchet-strap guys: top front corners down to stakes on the opposite
+    // side, crossing in front of the skin the way they do in the photo
+    for (const s of [-1, 1]) {
+      const top = new THREE.Vector3(cx + s * FW / 2, towerH - 0.03, ET.front_z + 0.075);
+      const stake = new THREE.Vector3(cx - s * (FW / 2 + 1.15), 0.09, ET.front_z + 0.65);
+      const dir = stake.clone().sub(top);
+      const strap = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, dir.length()), matStrap);
+      strap.position.copy(top).add(stake).multiplyScalar(0.5);
+      strap.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+      g.add(strap);
+      const stakeM = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.35), matGalv);
+      stakeM.position.set(stake.x, 0.08, stake.z);
+      stakeM.rotation.set(0.15, 0, -s * 0.2);
+      g.add(stakeM);
+    }
+  }
+
+  // the painted-ply sign arching between the tower tops
+  const sg = ET.sign || {};
+  const band = sg.band || 0.58, medR = sg.medallion_r || 0.52;
+  const endY = towerH + 0.02;               // band centerline where it meets the towers
+  const apexY = endY + (sg.rise || 0.95);
+  const y1 = apexY + medR + 0.06, y0 = endY - band / 2 - 0.10;
+  const opts = {
+    W: ET.spacing + 0.6, H: y1 - y0, y1, a: ET.spacing / 2, endY, apexY, band, medR,
+    textLeft: sg.text_left || 'LEGENDS OF THE', textRight: sg.text_right || 'HIDDEN PLAYA',
+  };
+  for (const [withText, rotY, dz] of [[true, 0, 0.012], [false, Math.PI, -0.012]]) {
+    const tex = makeArchSignTexture(Object.assign({ withText }, opts));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(opts.W, opts.H),
+      new THREE.MeshStandardMaterial({
+        map: tex, alphaTest: 0.5, roughness: 0.85,
+        emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.2,
+      }));
+    m.position.set(ET.cx, (y0 + y1) / 2, ET.front_z + 0.1 + dz);
+    m.rotation.y = rotY;
+    g.add(m);
+  }
+
+  let show = true;
+  try { show = localStorage.getItem('lohp-sim-towers') !== '0'; } catch (e) { /* private mode */ }
+  setTowersVisible(show);
+}
+
+// The arch sign as a canvas texture (same trick as makeLabel): a gold band
+// along a circular arc through the tower tops and the apex, "LEGENDS OF THE"
+// / "HIDDEN PLAYA" set along the curve, and the round medallion at the peak.
+// withText=false renders the plain plywood back.
+function makeArchSignTexture(o) {
+  const K = 256; // px per meter
+  const c = document.createElement('canvas');
+  c.width = Math.ceil(o.W * K); c.height = Math.ceil(o.H * K);
+  const g = c.getContext('2d');
+  const X = (mx) => (mx + o.W / 2) * K;
+  const Y = (my) => (o.y1 - my) * K;        // world meters -> px, y flipped
+  // band centerline: the circle through the two end points and the apex
+  const yc = (o.apexY * o.apexY - o.endY * o.endY - o.a * o.a) / (2 * (o.apexY - o.endY));
+  const R = o.apexY - yc;
+  const thEnd = Math.acos(Math.min(1, (o.a + 0.18) / R)); // ends tuck past the tower centers
+  g.beginPath();
+  g.arc(X(0), Y(yc), (R + o.band / 2) * K, -(Math.PI - thEnd), -thEnd, false);
+  g.arc(X(0), Y(yc), (R - o.band / 2) * K, -thEnd, -(Math.PI - thEnd), true);
+  g.closePath();
+  if (o.withText) {
+    const grad = g.createLinearGradient(0, Y(o.apexY + o.band / 2), 0, Y(o.endY - o.band / 2));
+    grad.addColorStop(0, '#d6ac60'); grad.addColorStop(1, '#b18441');
+    g.fillStyle = grad;
+  } else {
+    g.fillStyle = '#8a6b43';
+  }
+  g.fill();
+  g.lineWidth = 0.028 * K;
+  g.strokeStyle = o.withText ? '#5c4520' : '#54401f';
+  g.stroke();
+
+  const medCx = X(0), medCy = Y(o.apexY);
+  if (!o.withText) { // plain disc backs the medallion; done
+    g.beginPath(); g.arc(medCx, medCy, o.medR * K, 0, Math.PI * 2);
+    g.fillStyle = '#8a6b43'; g.fill(); g.stroke();
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  // hand-painted lettering along the band centerline: measure both strings at
+  // the base size, then shrink to the tighter side's fit so they match
+  g.fillStyle = '#241c10';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const track = 0.012;
+  const font = (px) => { g.font = `700 ${Math.round(px)}px Georgia, 'Times New Roman', serif`; };
+  const seg = (text, x0, x1) => {
+    const t0 = Math.acos(Math.max(-1, Math.min(1, x0 / R)));
+    const t1 = Math.acos(Math.max(-1, Math.min(1, x1 / R)));
+    return { text, t0, A: (t0 - t1) * R };
+  };
+  const segs = [seg(o.textLeft, -o.a + 0.22, -(o.medR + 0.14)),
+    seg(o.textRight, o.medR + 0.14, o.a - 0.22)];
+  const base = 0.34 * K;
+  font(base);
+  const natural = (t) => [...t].map(ch => g.measureText(ch).width / K).reduce((p, q) => p + q, 0)
+    + track * (t.length - 1);
+  font(base * Math.min(1, ...segs.map(sg => sg.A * 0.97 / natural(sg.text))));
+  for (const sg of segs) {
+    const ws = [...sg.text].map(ch => g.measureText(ch).width / K);
+    let s = (sg.A - ws.reduce((p, q) => p + q, 0) - track * (sg.text.length - 1)) / 2;
+    [...sg.text].forEach((ch, i) => {
+      const th = sg.t0 - (s + ws[i] / 2) / R;
+      g.save();
+      g.translate(X(R * Math.cos(th)), Y(yc + R * Math.sin(th)));
+      g.rotate(Math.PI / 2 - th);
+      g.fillText(ch, 0, 0);
+      g.restore();
+      s += ws[i] + track;
+    });
+  }
+
+  // the medallion: gold ring of dots around a dark disc with the ziggurat
+  g.beginPath(); g.arc(medCx, medCy, o.medR * K, 0, Math.PI * 2);
+  g.fillStyle = '#c9a052'; g.fill();
+  g.lineWidth = 0.03 * K; g.strokeStyle = '#5c4520'; g.stroke();
+  g.fillStyle = '#5c4520';
+  for (let i = 0; i < 26; i++) {
+    const a2 = (i / 26) * Math.PI * 2;
+    g.beginPath();
+    g.arc(medCx + Math.cos(a2) * (o.medR - 0.075) * K, medCy + Math.sin(a2) * (o.medR - 0.075) * K, 0.014 * K, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.beginPath(); g.arc(medCx, medCy, (o.medR - 0.15) * K, 0, Math.PI * 2);
+  g.fillStyle = '#332c1c'; g.fill();
+  g.fillStyle = '#c9a052';
+  const steps = [[0.46, -0.155], [0.34, -0.08], [0.22, -0.005], [0.11, 0.07]]; // ziggurat
+  for (const [w, yb] of steps) {
+    g.fillRect(X(-w / 2), Y(o.apexY + yb + 0.075), w * K, 0.075 * K);
+  }
+  g.fillStyle = '#332c1c';
+  g.fillRect(X(-0.035), Y(o.apexY - 0.075), 0.07 * K, 0.08 * K); // doorway
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 // ---------------------------------------------------------------- fixtures
@@ -1121,6 +1406,7 @@ function setupControls(cfg) {
     if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT') return;
     S.keys[ev.code] = true;
     if (ev.code === 'KeyM') setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]);
+    if (ev.code === 'KeyN') setDayNight(!ENV.day);
     if (ev.code === 'KeyE' && S.mode === 'first') tryInteract();
   });
   addEventListener('keyup', (ev) => { S.keys[ev.code] = false; });
@@ -1155,6 +1441,8 @@ function setupControls(cfg) {
   });
 
   $('btn-view').onclick = () => setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]);
+  $('btn-daynight').onclick = () => setDayNight(!ENV.day);
+  $('btn-towers').onclick = () => setTowersVisible(!(towersGroup && towersGroup.visible));
   $('btn-respawn').onclick = () => {
     const sp = cfg.layout.spawn;
     S.pos.set(sp.pos[0], 1.6, sp.pos[1]);
@@ -1320,7 +1608,7 @@ async function boot() {
     minX: Math.min(...xs.map(r => r.x)),
     maxX: Math.max(...xs.map(r => r.x + r.w)),
     frontZ: Math.max(...xs.map(r => r.z + r.d), cfg.layout.hex_center
-      ? cfg.layout.hex_center.cz + hexR * Math.sin(Math.PI / 3) : 0),
+      ? cfg.layout.hex_center.cz + hexR : 0), // hex front corner pokes furthest
   };
   frameStreetView();
 

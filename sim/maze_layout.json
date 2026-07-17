@@ -36,8 +36,24 @@
     ],
     "label": "RPi + USB-DMX"
   },
+  "entrance_towers": {
+    "note": "Two decorative towers on the street out front (hiddenplaya.art/maze-1.jpeg) with the 'Legends of the Hidden Playa' sign arching between them. Each tower = three 3'W x 4'T ladder frames from the same tube-and-pin fleet as the walk-thru sets, hose-clamped into a triangle in plan (flat face to the street, apex toward the maze), stacked two tiers high (8ft), skinned on the outside like the maze walls and guyed to playa stakes with orange ratchet straps. Purely decorative: no fixtures, no sensors.",
+    "cx": 10.044,
+    "spacing": 5.2,
+    "front_z": 5.6,
+    "frame_w": 0.9144,
+    "frame_h": 1.2192,
+    "tiers": 2,
+    "sign": {
+      "text_left": "LEGENDS OF THE",
+      "text_right": "HIDDEN PLAYA",
+      "rise": 0.95,
+      "band": 0.58,
+      "medallion_r": 0.52
+    }
+  },
   "hex_center": {
-    "note": "The center is a hexagon of SIX 5'W x 6'4\" walk-thru frames per level (12 total), hose-clamped together at the corners \u2014 NO cross braces. Side = 5ft (1.524m), 10ft across the corners. West vertex meets the west wing at x=8.52; the east wing starts at the east vertex x=11.568. Ground floor split Exit (west) / Entrance (east); upper deck = Cuddle Cross.",
+    "note": "The center is a hexagon of SIX complete 5'W x 6'4\" walk-thru frames per level (12 total), hose-clamped in pairs at every corner \u2014 NO cross braces, no cut-down pieces. Side = 5ft (1.524m). A CORNER points at the street: the two angled street frames meeting at it are the split entry (START, east) and exit (FINISH, west) \u2014 each frame's walk-thru arch is one door, and the ground-floor Exit/Entrance divider runs front corner to back corner between them. The flat east/west frames' arches are the doorways the side rooms (wings, ending at x=8.52 / starting at x=11.568) walk in through; the two back frames are skinned. Upper deck = Cuddle Cross.",
     "cx": 10.044,
     "cz": 1.26,
     "side": 1.524,
@@ -288,16 +304,17 @@
   ],
   "sensors": {
     "Entrance LT": {
+      "note": "across the entry arch — the hex's front-east street frame, so the beam runs angled with it",
       "kind": "beam",
       "level": 0,
       "seg": [
         [
-          10.1,
-          2.58
+          10.31,
+          2.57
         ],
         [
-          10.75,
-          2.58
+          11.05,
+          2.15
         ]
       ]
     },
