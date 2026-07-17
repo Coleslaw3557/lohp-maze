@@ -639,7 +639,7 @@
     "Exit"
   ],
   "placeholder_effects": {
-    "note": "Rooms whose trigger fires generic Lightning because no bespoke effect exists yet",
+    "note": "Rooms with no doorway trigger wired: the generic Lightning-on-entry placeholders were test wiring, removed 2026-07-17. Their sensor geometry stays in `sensors` for when bespoke effects get designed. Monkey's bespoke moment is the puzzle BUTTON (MonkeyBusiness), not the doorway.",
     "rooms": [
       "Temple Room",
       "Monkey Room",

@@ -23,10 +23,15 @@ server can tell it from a real node.
 
 ## Layout
 
-- `packages/logic.yaml` — the shared contract, **identical for sim and hardware**:
-  `tripwire` sensor → 30ms `delayed_on` debounce → POST `run_effect` → 5s cooldown
-  (`script` with `mode: single`). Also exposes the `trip` action for the harness.
-- `packages/button.yaml` — optional second trigger for rooms with a physical button:
+- `packages/logic.yaml` — the shared node base (name, api port, 3s http_request),
+  **identical for sim and hardware**. Trigger behavior comes from the packages below;
+  a node with none of them (exit/temple/vertical-moop-march — their Lightning-on-entry
+  placeholders were test wiring, removed 2026-07-17) is an API bench node until its
+  bespoke effect is designed.
+- `packages/tripwire.yaml` — doorway-crossing trigger: `tripwire` sensor → 30ms
+  `delayed_on` debounce → POST `run_effect` `${effect}` → 5s cooldown (`script` with
+  `mode: single`). Exposes the `trip` action for the harness.
+- `packages/button.yaml` — trigger for rooms with a physical button:
   `push_button` sensor → same debounce/POST contract → `${button_effect}` with an 8s
   cooldown (covers the 6.5s PhotoBomb-Shot sequence). Exposes the `press_button`
   action. Included by `photo-bomb.yaml` (shutter button → `PhotoBomb-Shot`) and

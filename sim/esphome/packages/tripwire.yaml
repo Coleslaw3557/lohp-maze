@@ -1,0 +1,49 @@
+# Doorway-crossing trigger. Contract: when the tripwire binary_sensor turns on,
+#   POST {"room": "${room}", "effect_name": "${effect}"}
+# to the LoHP server — exactly what the Pi laser triggers fired.
+#
+# Include alongside logic.yaml and set the `effect` substitution. Rooms whose
+# doorway has no bespoke effect yet simply omit this package (the old generic
+# Lightning-on-entry placeholders were test wiring, removed 2026-07-17).
+
+api:
+  actions:
+    - action: trip     # virtual "someone crossed the doorway" — used by harness.py
+      then:
+        - binary_sensor.template.publish:
+            id: tripwire
+            state: ON
+        - delay: 250ms
+        - binary_sensor.template.publish:
+            id: tripwire
+            state: OFF
+
+binary_sensor:
+  - platform: template
+    id: tripwire
+    name: "${room} tripwire"
+    # Publish the resting OFF state at boot: without it the first-ever trip is
+    # the sensor's *initial* state, which never fires on_press — the first
+    # visitor after power-up walked through unnoticed.
+    publish_initial_state: true
+    filters:
+      - delayed_on: 30ms   # debounce, same as the planned hardware config
+    on_press:
+      then:
+        - script.execute: fire_effect
+
+script:
+  - id: fire_effect
+    mode: single   # ignores re-triggers while running -> 5s cooldown like trigger_manager
+    then:
+      - logger.log:
+          format: "Tripwire fired: POST run_effect room=%s effect=%s"
+          args: ['"${room}"', '"${effect}"']
+      - http_request.post:
+          url: http://${server_host}:5000/api/run_effect
+          request_headers:
+            Content-Type: application/json
+          json:
+            room: ${room}
+            effect_name: ${effect}
+      - delay: 5s

@@ -1,8 +1,10 @@
 # Vertical Moop March sensor node — trigger map from client/config-unit-*.json
+# No trigger packages yet: the Lightning-on-entry placeholder was test wiring
+# (removed 2026-07-17). Include tripwire.yaml + an `effect` substitution once
+# this room gets its bespoke effect.
 substitutions:
   node_name: lohp-node-vertical-moop-march
   room: "Vertical Moop March"
-  effect: "Lightning"
   server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
   api_port: "6074"
   host_mac: "06:35:69:00:00:0e"

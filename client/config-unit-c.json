@@ -11,24 +11,6 @@
   "audio_output_device": "default",
   "triggers": [
     {
-      "name": "Vertical Moop March Laser",
-      "type": "laser",
-      "tx_pin": 17,
-      "rx_pin": 27,
-      "action": {
-        "type": "curl",
-        "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "data": {
-          "room": "Vertical Moop March",
-          "effect_name": "Lightning"
-        }
-      }
-    },
-    {
       "name": "Bike Lock Room Laser",
       "type": "laser",
       "tx_pin": 22,
@@ -61,42 +43,6 @@
         "data": {
           "room": "Deep Playa Handshake",
           "effect_name": "DeepPlaya-Hit"
-        }
-      }
-    },
-    {
-      "name": "Monkey Room Laser",
-      "type": "laser",
-      "tx_pin": 5,
-      "rx_pin": 6,
-      "action": {
-        "type": "curl",
-        "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "data": {
-          "room": "Monkey Room",
-          "effect_name": "Lightning"
-        }
-      }
-    },
-    {
-      "name": "Temple Room Laser",
-      "type": "laser",
-      "tx_pin": 13,
-      "rx_pin": 19,
-      "action": {
-        "type": "curl",
-        "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "data": {
-          "room": "Temple Room",
-          "effect_name": "Lightning"
         }
       }
     },

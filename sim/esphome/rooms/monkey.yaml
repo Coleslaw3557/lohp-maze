@@ -1,11 +1,10 @@
 # Monkey Room sensor node — trigger map from client/config-unit-*.json
-# Doorway tripwire still fires placeholder Lightning; the BUTTON is closed by
-# the silver monkey puzzle when the assembly seats home -> MonkeyBusiness
-# (Shrine of the Silver Monkey fanfare + gold flashes).
+# No doorway trigger (the Lightning-on-entry placeholder was test wiring). The
+# BUTTON is closed by the silver monkey puzzle when the assembly seats home ->
+# MonkeyBusiness (Shrine of the Silver Monkey fanfare + gold flashes).
 substitutions:
   node_name: lohp-node-monkey
   room: "Monkey Room"
-  effect: "Lightning"
   button_effect: "MonkeyBusiness"
   server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
   api_port: "6072"

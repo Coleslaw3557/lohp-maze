@@ -149,13 +149,16 @@ So: design an effect in the sim → it's already production code → deploy to t
 physical server → identical behavior on real fixtures (once addressing is fixed,
 below).
 
-## Rooms without designed lighting/audio yet (checked 2026-07-16)
+## Rooms without designed lighting/audio yet (updated 2026-07-17)
 
-Every room has fixtures patched and a trigger wired, but four rooms still fire the
-generic **Lightning** placeholder because no bespoke effect exists: **Temple Room,
-Monkey Room, Vertical Moop March, Exit** (matches the old aspirational names
-MoopMarch/MonkeyBusiness/TempleAmbience that were never written). Marked ⚠ in the
-sim's trigger list. Other design gaps found:
+Four rooms have **no doorway trigger wired**: **Temple Room, Monkey Room,
+Vertical Moop March, Exit**. They used to fire a generic Lightning placeholder on
+entry, but that was test wiring and was removed — Lightning itself stays
+registered (the hex "Storm All Rooms" button and the API still use it). Their
+sensor geometry remains in `maze_layout.json` for when bespoke doorway effects
+get designed (the old aspirational names were MoopMarch/TempleAmbience;
+MonkeyBusiness now exists but is the puzzle *button* effect, deliberately not
+the doorway). Other design gaps found:
 
 - **Bespoke effects that exist but nothing triggers**: GateGreeters, GuyLineClimb
   (the Guy Line sensor fires ImageEnhancement instead — intentional?), PortoHit,

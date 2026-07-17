@@ -9,4 +9,5 @@ substitutions:
 
 packages:
   logic: !include ../packages/logic.yaml
+  tripwire: !include ../packages/tripwire.yaml
   platform: !include ../packages/sim_host.yaml   # -> hardware_c3.yaml when flashing

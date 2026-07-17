@@ -83,24 +83,6 @@
       }
     },
     {
-      "name": "Exit LT",
-      "type": "laser",
-      "tx_pin": 5,
-      "rx_pin": 6,
-      "action": {
-        "type": "curl",
-        "method": "POST",
-        "url": "http://${server_ip}:5000/api/run_effect",
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "data": {
-          "room": "Exit",
-          "effect_name": "Lightning"
-        }
-      }
-    },
-    {
       "name": "Button 1",
       "type": "adc",
       "adc_address": "0x48",

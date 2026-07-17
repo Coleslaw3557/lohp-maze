@@ -1,11 +1,13 @@
-# Shared node logic — identical between simulated (host) and real (ESP32-C3) nodes.
-#
-# Contract: when the tripwire binary_sensor turns on, POST
-#   {"room": "${room}", "effect_name": "${effect}"}
-# to the LoHP server — exactly what the Pi triggers fire today.
+# Shared node base — identical between simulated (host) and real (ESP32-C3) nodes.
+# Every room node includes this; the actual triggers are separate packages so a
+# room can carry any mix of them:
+#   tripwire.yaml   doorway crossing -> POST run_effect ${effect}
+#   button.yaml     physical button  -> POST run_effect ${button_effect}
+# A node with neither (exit/temple/vertical-moop-march today) is just an API
+# bench node until its bespoke effect gets designed.
 #
 # Expected substitutions (set per room in rooms/*.yaml):
-#   node_name, room, effect, server_host, api_port
+#   node_name, room, server_host, api_port
 
 esphome:
   name: ${node_name}
@@ -17,16 +19,6 @@ logger:
 api:
   port: ${api_port}
   reboot_timeout: 0s   # sims/bench nodes must not reboot when no HA is connected
-  actions:
-    - action: trip     # virtual "someone crossed the doorway" — used by harness.py
-      then:
-        - binary_sensor.template.publish:
-            id: tripwire
-            state: ON
-        - delay: 250ms
-        - binary_sensor.template.publish:
-            id: tripwire
-            state: OFF
 
 # The server holds /api/run_effect open until the effect finishes (up to ~15s)
 # and ESPHome's http_request blocks the node's whole loop while waiting — a
@@ -36,33 +28,3 @@ api:
 # completed after a 1s client disconnect).
 http_request:
   timeout: 3s
-
-binary_sensor:
-  - platform: template
-    id: tripwire
-    name: "${room} tripwire"
-    # Publish the resting OFF state at boot: without it the first-ever trip is
-    # the sensor's *initial* state, which never fires on_press — the first
-    # visitor after power-up walked through unnoticed.
-    publish_initial_state: true
-    filters:
-      - delayed_on: 30ms   # debounce, same as the planned hardware config
-    on_press:
-      then:
-        - script.execute: fire_effect
-
-script:
-  - id: fire_effect
-    mode: single   # ignores re-triggers while running -> 5s cooldown like trigger_manager
-    then:
-      - logger.log:
-          format: "Tripwire fired: POST run_effect room=%s effect=%s"
-          args: ['"${room}"', '"${effect}"']
-      - http_request.post:
-          url: http://${server_host}:5000/api/run_effect
-          request_headers:
-            Content-Type: application/json
-          json:
-            room: ${room}
-            effect_name: ${effect}
-      - delay: 5s
