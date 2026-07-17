@@ -5,3 +5,4 @@ effects_config.json
 client/cache/
 .env
 *.log
+.playwright-mcp/

@@ -186,45 +186,64 @@ const matFramePaint = [
   new THREE.MeshStandardMaterial({ color: 0x2f9e57, roughness: 0.5, metalness: 0.25 }), // our green
 ];
 
-// One 6'4" walk-thru frame (ScaffoldMart/ScaffoldsSupply pattern) between two
-// points: legs w/ coupling spigots, double-rail top band with spacers,
-// candy-cane curves into the legs, and the 3-rung ladder section on each leg.
+// One 5' x 6'4" S-style walk-thru frame (ScaffoldExpress PSV-610 — our
+// PSV-K610-7 sets): 1.69" OD legs with 9" coupling pins under 1" collars,
+// top rail over a full-width header tied by three short stubs, doorway
+// tubes hanging from the header that candy-cane out into the legs ~12" up,
+// two ladder rungs per side, and brace studs on each leg 8.5" down from
+// the top and 4' below that (where the 7'x4' cross braces pin on).
 function buildFrameSeg(ax, az, bx, bz, yBase, mat, opts = {}) {
-  const H = 1.93, R = 0.0214;
+  const H = 1.93, R = 0.0215;               // 6'4" tall, 1.6925" OD tube
+  const RAIL_Y = H - 0.075, HEAD_Y = H - 0.19;
+  const INSET = 0.29;                       // doorway tube ~11.5" in from leg
   const dx = bx - ax, dz = bz - az;
   const len = Math.hypot(dx, dz);
   const fg = new THREE.Group();
   fg.position.set((ax + bx) / 2, yBase, (az + bz) / 2);
   fg.rotation.y = -Math.atan2(dz, dx);
 
-  const cylY = (r, h) => new THREE.CylinderGeometry(r, r, h);
-  const addCyl = (r, h, x, y, rotZ = 0, material = mat) => {
-    const m = new THREE.Mesh(cylY(r, h), material);
-    m.position.set(x, y, 0);
-    if (rotZ) m.rotation.z = rotZ;
+  const addCyl = (r, h, x, y, z = 0, rotZ = 0, rotX = 0, material = mat) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h), material);
+    m.position.set(x, y, z);
+    m.rotation.set(rotX, 0, rotZ);
     fg.add(m);
     return m;
   };
 
+  // per-side build mode: 'full' = leg + arch side; 'share' = arch side only
+  // (the leg at that corner belongs to an adjoining frame, hose-clamped);
+  // 'open' = nothing (that corner is a doorway with no leg at all)
   for (const s of [-1, 1]) {
-    if ((s < 0 && opts.skipLegA) || (s > 0 && opts.skipLegB)) continue;
+    const mode = (s < 0 ? opts.sideA : opts.sideB) || 'full';
+    if (mode === 'open') continue;
     const lx = s * (len / 2);
-    addCyl(R, H, lx, H / 2);                       // leg
-    addCyl(0.013, 0.14, lx, H + 0.06, 0, matGalv); // coupling-pin spigot
-    // ladder section: inner stub + 3 rungs
-    const ix = lx - s * 0.20;
-    addCyl(0.014, 1.2, ix, 0.85);
-    for (const ry of [0.45, 0.85, 1.25]) addCyl(0.011, 0.19, lx - s * 0.10, ry, Math.PI / 2);
+    const tx = s * (len / 2 - INSET);       // doorway tube line
+    if (mode !== 'share') {
+      addCyl(R, H, lx, H / 2);                                     // leg
+      addCyl(0.016, 0.115, lx, H + 0.0475, 0, 0, 0, matGalv);      // coupling pin
+      addCyl(0.026, 0.016, lx, H + 0.008, 0, 0, 0, matGalv);       // 1" collar
+      // brace studs (both faces): 8.5" down from the top, then 4' below
+      for (const sy of [1.7145, 0.4953]) {
+        for (const sz of [-1, 1]) addCyl(0.006, 0.05, lx, sy, sz * 0.038, 0, Math.PI / 2, matGalv);
+      }
+    }
+    // doorway tube: hangs from the header, candy-canes out into the leg
+    addCyl(0.017, HEAD_Y - 0.50, tx, (HEAD_Y + 0.50) / 2);
+    const cane = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(tx, 0.50, 0),
+      new THREE.Vector3(tx, 0.30, 0),
+      new THREE.Vector3(lx - s * R, 0.30, 0));
+    fg.add(new THREE.Mesh(new THREE.TubeGeometry(cane, 12, 0.017, 8), mat));
+    // ladder rungs between the leg and the doorway tube
+    for (const ry of [0.84, 1.30]) {
+      addCyl(0.010, INSET, s * (len / 2 - INSET / 2), ry, 0, Math.PI / 2);
+    }
   }
-  addCyl(0.019, len - 0.02, 0, H - 0.025, Math.PI / 2);        // top rail
-  const rail2 = len - 0.56;
-  addCyl(0.019, rail2, 0, H - 0.30, Math.PI / 2);              // second rail
-  for (let k = 1; k <= 4; k++) {                                // spacers
-    addCyl(0.010, 0.25, -rail2 / 2 + k * rail2 / 5, H - 0.165);
-  }
-  for (const s of [-1, 1]) {                                    // candy-cane curves
-    if ((s < 0 && opts.skipLegA) || (s > 0 && opts.skipLegB)) continue;
-    const stub = addCyl(0.019, 0.34, s * (rail2 / 2 + 0.13), H - 0.395, s * 0.95);
+  addCyl(0.019, len - 0.02, 0, RAIL_Y, 0, Math.PI / 2);            // top rail
+  addCyl(0.019, len - 0.02, 0, HEAD_Y, 0, Math.PI / 2);            // header
+  // three short stubs tie rail to header: over each doorway tube + center
+  for (const sx of [-(len / 2 - INSET), 0, len / 2 - INSET]) {
+    addCyl(0.010, RAIL_Y - HEAD_Y, sx, (RAIL_Y + HEAD_Y) / 2);
   }
   return fg;
 }
@@ -265,6 +284,13 @@ function buildMaze(cfg) {
 
   const hexRooms = new Set(Object.values((L.hex_center || {}).rooms || {}));
 
+  // far ends of the maze strip: there the skin hangs on the OUTSIDE of the
+  // end frames — the inside stays bare scaffold so visitors climb the frame
+  // rungs up (Guy Line Climb) and down (Vertical Moop March)
+  const wings = Object.entries(L.rooms).filter(([n]) => !hexRooms.has(n)).map(([, r]) => r);
+  const endW = Math.min(...wings.map(r => r.x));
+  const endE = Math.max(...wings.map(r => r.x + r.w));
+
   for (const [name, r] of Object.entries(L.rooms)) {
     if (hexRooms.has(name)) continue; // built by buildHexCenter below
     const isBoth = r.floor === 'both';
@@ -300,11 +326,14 @@ function buildMaze(cfg) {
       : [{ y: yBase, h: CH, lv: baseLevel }];
     for (const wl of wallLevels) {
       // adjacent rooms share one scaffold frame: nudge west/east panels inward
-      // so both rooms' panels abut at the shared boundary without z-fighting
+      // so both rooms' panels abut at the shared boundary without z-fighting.
+      // At the maze's far ends the panel flips OUTSIDE the end frame instead,
+      // leaving the frame's rungs exposed to the room for the climb.
+      const skin = T / 2 + 0.004;
       const walls = [
-        ['x', r.z, r.x, r.x + r.w, 0],               // back wall (north)
-        ['z', r.x, r.z, r.z + r.d, T / 2 + 0.004],   // west
-        ['z', r.x + r.w, r.z, r.z + r.d, -(T / 2 + 0.004)], // east
+        ['x', r.z, r.x, r.x + r.w, 0],                                        // back wall (north)
+        ['z', r.x, r.z, r.z + r.d, r.x - endW < 0.01 ? -skin : skin],         // west
+        ['z', r.x + r.w, r.z, r.z + r.d, endE - (r.x + r.w) < 0.01 ? skin : -skin], // east
       ];
       for (const [axis, fixed0, s0, s1, off] of walls) {
         const fixed = fixed0 + (off || 0);
@@ -374,22 +403,23 @@ function buildMaze(cfg) {
         grp(lv).add(frame);
       }
     });
-    // 7' x 4' cross braces (ScaffoldsSupply spec: "4' Lock Span"): the scissor
-    // spans the 7' bay with a 4' (1.22m) vertical spread between brace studs —
-    // a wide flat X crossing at mid-bay, not corner-to-corner
-    const STUD_SPREAD = 1.219;
-    const braceMidY = 0.97; // studs sit symmetrically on the 6'4" frame legs
+    // 7' x 4' tube cross braces (PSV-303): a riveted scissor pinned to the
+    // leg studs — top stud 8.5" down from the frame top, bottom stud 4'
+    // below — so the X leans leg-to-leg across the full 7' bay and crosses
+    // above mid-height, exactly like the set photo
+    const STUD_TOP = 1.7145, STUD_BOT = 0.4953;
     for (let i = 0; i < bs.length - 1; i++) {
       const x0 = bs[i], x1 = bs[i + 1];
       if (x1 - x0 > 2.2) continue; // hexagon span, no wing bay here
-      const dx = x1 - x0 - 0.12;
-      const len = Math.hypot(dx, STUD_SPREAD);
+      const dx = x1 - x0;
+      const len = Math.hypot(dx, STUD_TOP - STUD_BOT);
       for (const lv of [0, 1]) {
         for (const zb of [rz + 0.085, rz + rd - 0.085]) { // back AND front planes
           for (const dir of [1, -1]) {
             const brace = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, len), matGalv);
-            brace.position.set((x0 + x1) / 2, lv * LH + braceMidY, zb);
-            brace.rotation.z = Math.atan2(dir * STUD_SPREAD, dx) - Math.PI / 2;
+            // scissor halves sit a tube apart at the center rivet
+            brace.position.set((x0 + x1) / 2, lv * LH + (STUD_TOP + STUD_BOT) / 2, zb + dir * 0.012);
+            brace.rotation.z = Math.atan2(dir * (STUD_TOP - STUD_BOT), dx) - Math.PI / 2;
             grp(lv).add(brace);
           }
         }
@@ -535,15 +565,18 @@ function buildHexCenter(L) {
 
   // six 5' walk-thru frames per level (twelve total), hose-clamped at the
   // corners — NO cross braces. Each face draws one frame; a vertex's leg
-  // comes from its outgoing face so clamped joints don't double-render, and
-  // the east/west vertices stay leg-free (they're the doorways to the wings).
-  // The front face's walkthru arch IS the street entrance.
+  // comes from its outgoing face so clamped joints don't double-render
+  // ('share' keeps the frame's own doorway tube + rungs at that corner),
+  // and the east/west vertices stay leg-free (they're the doorways to the
+  // wings). The front face's walkthru arch IS the street entrance.
   for (let k = 0; k < 6; k++) {
     const a = V[k], b = V[(k + 1) % 6];
     for (const lv of [0, 1]) {
       const frame = buildFrameSeg(a[0], a[1], b[0], b[1], lv * LH,
-        matFramePaint[(k + lv) % 2],
-        { skipLegA: k === 0 || k === 3, skipLegB: true });
+        matFramePaint[(k + lv) % 2], {
+          sideA: (k === 0 || k === 3) ? 'open' : 'full',
+          sideB: (k === 2 || k === 5) ? 'open' : 'share',
+        });
       grp(lv).add(frame);
     }
   }
@@ -583,7 +616,7 @@ function buildFixtures(cfg) {
       const g = new THREE.Group();
       g.position.set(x, yBase, z);
 
-      // flashlight icons in maze-diagram.drawio = the U'King DMX spotlights
+      // flashlight icons in the retired maze-diagram.drawio = the U'King DMX spotlights
       // (narrow barrel); bulb icons = the circular par pucks. All fixtures
       // bracket-mount on the back scaffolding / cross members and tilt down
       // into the room — nothing hangs from poles.

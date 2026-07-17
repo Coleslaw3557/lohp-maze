@@ -14,18 +14,22 @@ only hardware dependency) and then executes `main.py` verbatim.
 The maze is a **two-story, open-faced scaffold structure** on playa (Burning Man):
 every room's street face is open, so the whole piece reads like a dollhouse from
 the street — `rooms.png` in the repo root is the street **elevation**, not a floor
-plan. **Real hardware**: ScaffoldsSupply **5'W × 6'4"T walk-thru frames** (1-11/16"Ø
-tube, no center pins) with **7' × 4'-lock-span cross braces** — so each room bay is
-**7 ft wide × 5 ft deep × 6'4" tall** (2.13 × 1.52 × 1.93 m), adjacent rooms
-**share one frame** (bays abut, no gaps), and the braces are wide flat scissors
-(4 ft vertical spread) rather than corner-to-corner X's, on both the front and
-back planes. The whole run — seven 7ft wing bays plus the 10ft hexagon — is
-≈ 59 ft long, ~12.7 ft tall.
+plan. **Real hardware**: ScaffoldExpress **5' × 6'4" × 7' S-Style walk-thru frame
+sets** (PSV-K610-7: two PSV-610 frames + two PSV-303 7'×4' tube cross braces,
+9" coupling pins with 1" collars, toggle pins and spring clips; 1.6925"Ø ×
+0.095"-wall Q235 tube) — so each room bay is **7 ft wide × 5 ft deep × 6'4" tall**
+(2.13 × 1.52 × 1.93 m), adjacent rooms **share one frame** (bays abut, no gaps),
+and the braces pin to leg studs **8.5" down from the frame top with a 4 ft
+spread** — wide flat scissors crossing just above mid-height, not corner-to-corner
+X's — on both the front and back planes. The whole run — seven 7ft wing bays plus
+the 10ft hexagon — is ≈ 59 ft long, ~12.7 ft tall.
 
 Ground floor: Entrance, Cop Dodge, Gate, Monkey, Temple, No Friends Monday, Exit.
 Upper floor (+6'4"): Sparkle Pony, Porto, Cuddle Cross, Photo Bomb, Deep Playa
 Handshake, Bike Lock. Full-height climb rooms connect the floors: visitors climb
 **up in Guy Line Climb** (east end) and **down in Vertical Moop March** (west end).
+At those two far ends the skin hangs on the **outside** of the end frames — inside
+the shaft stays bare scaffold, so the frames' ladder rungs are the climb.
 
 **The center is a hexagon of twelve walk-thru frames** — six per level, one 5'
 frame per side, **hose-clamped together at the corners, with no cross braces**
@@ -40,19 +44,22 @@ cross members**: fixtures are bracket-mounted, tilted down into their rooms (no
 poles in the walkways, nothing hangs mid-room); tripwire emitters sit on the
 frames at beam height.
 
-The frames are modeled on the real hardware (ScaffoldMart BJ walkthru pattern):
-legs with coupling-pin spigots, double-rail top band with spacers, candy-cane
-curves, and the 3-rung ladder section on each leg — **painted blue and green**
-like ours (alternating, since the fleet is a repainted mix), with galvanized
-braces, clamps, and ladders. Cuddle-pit note: its pars and the four-button
+The frames are modeled to the real PSV-610 geometry (taken off the product
+photo): legs with 9" coupling pins under 1" collars, a top rail over a
+full-width header tied by three short stubs, doorway tubes hanging from the
+header that candy-cane out into the legs ~12" up, two ladder rungs per side,
+and brace studs on each leg (8.5" down from the top, 4' apart) — **painted blue
+and green** like ours (alternating, since the fleet is a repainted mix), with
+galvanized pins, braces, clamps, and ladders. Cuddle-pit note: its pars and the four-button
 station mount on the hexagon's back faces upstairs, not the doorway frames.
 
-**Source of truth for lighting**: `maze-diagram.drawio` (Overview page) — old for
-architecture (pre-wireless, pre-single-Pi) but accurate for fixture locations and
-DMX cable routing. Bulb icons = the circular pars; **flashlight icons = the two
-U'King DMX spotlights** (Monkey Room, Photo Bomb Room), which the sim renders as
-narrow-beam spots. The diagram's cable chain runs in exact DMX address order
-(east wing out, Cuddle Cross east→west, back to the center box, west wing out).
+**Source of truth for lighting**: `sim/maze_layout.json` (`fixture_positions`),
+transcribed from the retired `maze-diagram.drawio` (that diagram was pre-wireless
+/ pre-single-Pi, but accurate for fixture locations and DMX cable routing). From
+its icons: bulbs = the circular pars; **flashlights = the two U'King DMX
+spotlights** (Monkey Room, Photo Bomb Room), which the sim renders as narrow-beam
+spots. The cable chain runs in exact DMX address order (east wing out, Cuddle
+Cross east→west, back to the center box, west wing out).
 
 Canonical visitor route: Entrance → Cop Dodge → Gate → *up* Guy Line Climb →
 Sparkle Pony → Porto → Cuddle Cross → Photo Bomb → Deep Playa Handshake → Bike Lock
