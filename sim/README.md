@@ -213,10 +213,21 @@ this same machine (UDP 6454 clash).
 ```bash
 sim/.venv/bin/python sim/tools/smoke_test.py     # headless end-to-end: frames, trigger→DMX, theme, audio protocol
 sim/.venv/bin/python sim/tools/walkthrough.py    # scripted visitor walks the full two-story route; all triggers must 200
+sim/.venv/bin/python sim/tools/concurrency_test.py  # simultaneous-trigger storms, stop/supersede semantics
+sim/.venv/bin/python sim/tools/photobooth_test.py   # Photo Bomb countdown/flash/photo + Monkey fanfare timelines
 ```
 
 Note: the server holds `/api/run_effect` open until the effect finishes (up to ~20s);
 test tooling fires triggers concurrently rather than waiting serially.
+
+## Photo booth & monkey buttons
+
+Two clickable buttons exist in the 3D world (and in the Triggers panel): **"Say
+Cheese!"** in Photo Bomb (upstairs) starts the 3-2-1 countdown → white FLASH →
+the server's `camera_manager.py` stores a photo (synthetic SMPTE-bars JPEG when
+no webcam is attached — check `GET :5000/api/photobomb/photos`); **"Silver
+Monkey"** in Monkey Room fires the sampled Shrine of the Silver Monkey fanfare
+with synced gold flashes. Same POSTs the room ESP32 buttons send.
 
 ## Known limits
 

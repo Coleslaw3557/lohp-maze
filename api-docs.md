@@ -312,6 +312,8 @@ curl http://localhost:5000/api/light_models
 | GET | `/api/light_fixtures` | Plain-text fixture listing (ROBCO terminal style) |
 | GET | `/api/audio_files_to_download` | Lists effect/music audio files clients should cache |
 | GET | `/api/audio/<filename>` | Serves an audio file (music or effect clip) |
+| GET | `/api/photobomb/photos` | Photo booth captures, newest first (`photos_dir`, capture `backend`, and per-photo filename/size/timestamp) |
+| GET | `/api/photobomb/photos/<filename>` | Serves one captured photo (JPEG) |
 | POST | `/api/shutdown` | Powers off the server host and all connected units after 3 seconds |
 | POST | `/api/kill_process` | Immediately terminates the server process (docker restarts it) |
 

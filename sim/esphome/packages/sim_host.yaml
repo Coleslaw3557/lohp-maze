@@ -2,3 +2,13 @@
 # Uses the host's network stack directly; the api listens on ${api_port}.
 host:
   mac_address: ${host_mac}
+
+# ESPHome 2026.7.0 host quirk: the select() loop only wakes on socket traffic,
+# so timers scheduled while idle (debounce filters, delays, queued scripts) sit
+# until the next packet — automations ran seconds-to-minutes late. A standing
+# repeating task keeps the wake deadline ≤100ms. Sim-only; real ESP32 nodes
+# (hardware_c3.yaml) have a proper RTOS loop and don't need or get this.
+interval:
+  - interval: 100ms
+    then:
+      - lambda: ";"

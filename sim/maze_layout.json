@@ -597,6 +597,28 @@
         0.58
       ],
       "label": "Knock Pad 3"
+    },
+    "Photo Bomb Shutter Button": {
+      "note": "arcade button on the back scaffolding, chest height; camera + flash face the poser",
+      "kind": "button",
+      "level": 1,
+      "pos": [
+        7.05,
+        3.0,
+        0.55
+      ],
+      "label": "Say Cheese!"
+    },
+    "Monkey Puzzle Button": {
+      "note": "the silver monkey pedestal microswitch \u2014 pressing it = puzzle assembled",
+      "kind": "button",
+      "level": 0,
+      "pos": [
+        3.2,
+        1.05,
+        0.55
+      ],
+      "label": "Silver Monkey"
     }
   },
   "route": [

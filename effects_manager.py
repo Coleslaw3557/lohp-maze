@@ -9,7 +9,8 @@ from effects import (
     create_porto_standby_effect, create_porto_hit_effect, create_cuddle_puddle_effect,
     create_photobomb_bg_effect, create_photobomb_spot_effect, create_deep_playa_bg_effect,
     create_deep_playa_hit_effect, create_image_enhancement_effect, create_bike_lock_room_effect,
-    create_no_friends_monday_effect, create_lightning_storm_effect
+    create_no_friends_monday_effect, create_lightning_storm_effect, create_photobomb_shot_effect,
+    create_monkey_business_effect
 )
 from theme_manager import ThemeManager
 from effect_utils import get_effect_step_values
@@ -49,8 +50,20 @@ class EffectsManager:
             "BikeLockRoom": create_bike_lock_room_effect(),
             "NoFriendsMonday": create_no_friends_monday_effect(),
             "LightningStorm": create_lightning_storm_effect(),
+            "PhotoBomb-Shot": create_photobomb_shot_effect(),
+            "MonkeyBusiness": create_monkey_business_effect(),
         }
+        # effect_name -> {'start': fn(room), 'cancel': fn(room)} side-channel for
+        # non-lighting actions tied to an effect run (the Photo Bomb camera)
+        self.effect_hooks = {}
         logger.info(f"Initialized {len(self.effects)} effects")
+
+    def register_effect_hooks(self, effect_name, on_start=None, on_cancel=None):
+        """Attach callbacks to an effect's lifecycle. ``on_start`` fires when a
+        run actually begins (post-takeover, inside the effect task); ``on_cancel``
+        fires only if that run is cancelled/superseded before completing. Both
+        must be synchronous and quick — they run on the event loop."""
+        self.effect_hooks[effect_name] = {'start': on_start, 'cancel': on_cancel}
 
     def get_effect(self, effect_name):
         return self.effects.get(effect_name)
@@ -100,12 +113,27 @@ class EffectsManager:
     async def _run_effect(self, room, fixture_ids, effect_data, effect_name, send_audio=True):
         """The per-room effect task. Owns its cleanup: only the task still registered
         for the room resumes the theme, so a takeover can never unbalance pause/resume."""
+        hooks = self.effect_hooks.get(effect_name) or {}
+        completed = False
         try:
+            if hooks.get('start'):
+                try:
+                    hooks['start'](room)
+                except Exception as e:
+                    logger.error(f"Start hook for '{effect_name}' failed: {e}", exc_info=True)
             if send_audio:
                 await self.remote_host_manager.play_effect_audio(effect_name, rooms=[room],
                                                                  audio_params=effect_data.get('audio', {}))
             await self._run_lights(fixture_ids, effect_data)
+            completed = True
         finally:
+            # A run that didn't complete was cancelled (supersede/stop) or crashed;
+            # let the hook owner abort whatever it scheduled (pending photo capture).
+            if not completed and hooks.get('cancel'):
+                try:
+                    hooks['cancel'](room)
+                except Exception as e:
+                    logger.error(f"Cancel hook for '{effect_name}' failed: {e}", exc_info=True)
             if self.effect_tasks.get(room) is asyncio.current_task():
                 del self.effect_tasks[room]
                 # Effects are transient: clear their last frame so it can't stay

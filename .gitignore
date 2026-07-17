@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 effects_config.json
 client/cache/
+photos/
 .env
 *.log
 .playwright-mcp/

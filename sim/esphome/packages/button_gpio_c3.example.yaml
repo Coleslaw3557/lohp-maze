@@ -1,0 +1,38 @@
+# REAL-HARDWARE companion to packages/button.yaml for the XIAO ESP32-C3 nodes.
+# Include this (in addition to button.yaml) when flashing a node that has a
+# physical button — it feeds the GPIO edge into the same `push_button` template
+# sensor the sim uses, so the debounce/POST/cooldown logic stays identical.
+#
+#   packages:
+#     logic:      !include ../packages/logic.yaml
+#     button:     !include ../packages/button.yaml
+#     button_hw:  !include ../packages/button_gpio_c3.example.yaml
+#     platform:   !include ../packages/hardware_c3.yaml
+#
+# Wiring (Photo Bomb shutter button / Monkey puzzle completion switch):
+#   button leg 1 -> GPIO3 (XIAO C3 pin D1)      any momentary NO button works;
+#   button leg 2 -> GND                          the monkey puzzle uses a lever
+#                                                microswitch closed by the last
+#                                                piece seating home
+# Internal pull-up, so the pin reads LOW (pressed) when the button closes.
+# NOT validated by validate_all.sh (gpio needs the esp32 platform, sim nodes
+# are host-platform).
+binary_sensor:
+  - platform: gpio
+    id: push_button_hw
+    pin:
+      number: GPIO3
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_press:
+      then:
+        - binary_sensor.template.publish:
+            id: push_button
+            state: ON
+    on_release:
+      then:
+        - binary_sensor.template.publish:
+            id: push_button
+            state: OFF

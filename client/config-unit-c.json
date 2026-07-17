@@ -99,6 +99,23 @@
           "effect_name": "Lightning"
         }
       }
+    },
+    {
+      "name": "Monkey Puzzle Button",
+      "type": "button",
+      "_note": "Microswitch closed when the silver monkey assembly seats home, wired to the room's ESP32 node (sim/esphome/rooms/monkey.yaml), not Pi GPIO. Fires the Shrine of the Silver Monkey fanfare + gold flashes.",
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Monkey Room",
+          "effect_name": "MonkeyBusiness"
+        }
+      }
     }
   ],
   "cache_dir": "/app/cache"

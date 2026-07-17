@@ -1,12 +1,16 @@
 # Photo Bomb Room sensor node — trigger map from client/config-unit-*.json
+# Tripwire fires the room ambience; the shutter BUTTON starts the camera
+# sequence (countdown -> flash -> the Pi's USB webcam takes the photo).
 substitutions:
   node_name: lohp-node-photo-bomb
   room: "Photo Bomb Room"
   effect: "PhotoBomb-Spot"
+  button_effect: "PhotoBomb-Shot"
   server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
   api_port: "6068"
   host_mac: "06:35:69:00:00:08"
 
 packages:
   logic: !include ../packages/logic.yaml
+  button: !include ../packages/button.yaml       # + button_gpio_c3.example.yaml on hardware
   platform: !include ../packages/sim_host.yaml   # -> hardware_c3.yaml when flashing

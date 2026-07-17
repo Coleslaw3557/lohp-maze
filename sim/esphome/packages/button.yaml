@@ -1,0 +1,58 @@
+# Optional second trigger on a node: a physical push button (Photo Bomb shutter
+# button, Monkey puzzle completion switch). Mirrors the logic.yaml contract:
+#
+#   press -> 30ms debounce -> POST {"room": "${room}", "effect_name": "${button_effect}"}
+#            -> cooldown (script mode: single swallows re-presses meanwhile)
+#
+# Include from a room yaml alongside logic.yaml and set:
+#   button_effect    effect fired on press (required)
+#   button_cooldown  lockout after a press; default 8s covers the longest
+#                    button-driven sequence (PhotoBomb-Shot runs 6.5s)
+#
+# Sim/host nodes press it via the `press_button` api action (harness.py press
+# <room>). Real ESP32-C3 nodes wire a GPIO to publish `push_button` — see
+# packages/button_gpio_c3.example.yaml.
+substitutions:
+  button_cooldown: 8s
+
+api:
+  actions:
+    - action: press_button   # virtual "someone pushed the button" — harness.py
+      then:
+        - binary_sensor.template.publish:
+            id: push_button
+            state: ON
+        - delay: 250ms
+        - binary_sensor.template.publish:
+            id: push_button
+            state: OFF
+
+binary_sensor:
+  - platform: template
+    id: push_button
+    name: "${room} button"
+    # Same first-event trap as the tripwire: without an initial OFF publish,
+    # the first press after power-up is the sensor's initial state and
+    # on_press never fires for it.
+    publish_initial_state: true
+    filters:
+      - delayed_on: 30ms   # debounce, same treatment as the tripwire
+    on_press:
+      then:
+        - script.execute: fire_button_effect
+
+script:
+  - id: fire_button_effect
+    mode: single   # ignores re-presses while running -> button cooldown
+    then:
+      - logger.log:
+          format: "Button pressed: POST run_effect room=%s effect=%s"
+          args: ['"${room}"', '"${button_effect}"']
+      - http_request.post:
+          url: http://${server_host}:5000/api/run_effect
+          request_headers:
+            Content-Type: application/json
+          json:
+            room: ${room}
+            effect_name: ${button_effect}
+      - delay: ${button_cooldown}

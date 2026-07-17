@@ -1,7 +1,13 @@
 {
   "server_ip": "192.168.1.238",
   "unit_name": "LOHP-UNIT-A",
-  "associated_rooms": ["Entrance", "Cuddle Cross", "Photo Bomb Room", "No Friends Monday", "Exit"],
+  "associated_rooms": [
+    "Entrance",
+    "Cuddle Cross",
+    "Photo Bomb Room",
+    "No Friends Monday",
+    "Exit"
+  ],
   "audio_output_device": "default",
   "triggers": [
     {
@@ -24,7 +30,7 @@
     },
     {
       "name": "Cuddle Cross LT",
-      "type": "laser", 
+      "type": "laser",
       "tx_pin": 18,
       "rx_pin": 27,
       "action": {
@@ -156,6 +162,23 @@
           "Content-Type": "application/json"
         },
         "data": {}
+      }
+    },
+    {
+      "name": "Photo Bomb Shutter Button",
+      "type": "button",
+      "_note": "Physical button on the room's ESP32 node (sim/esphome/rooms/photo-bomb.yaml), not Pi GPIO \u2014 listed here because these configs are the trigger map. Starts the camera countdown; the USB webcam on the server Pi takes the photo at the flash.",
+      "action": {
+        "type": "curl",
+        "method": "POST",
+        "url": "http://${server_ip}:5000/api/run_effect",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "data": {
+          "room": "Photo Bomb Room",
+          "effect_name": "PhotoBomb-Shot"
+        }
       }
     }
   ],

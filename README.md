@@ -57,6 +57,26 @@ curl -X POST http://localhost:5000/api/set_master_brightness -H "Content-Type: a
 
 Full API reference: [api-docs.md](api-docs.md). Adding effects: [adding_new_effects.md](adding_new_effects.md).
 
+## Photo booth & the silver monkey
+
+Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,
+`sim/esphome/rooms/{photo-bomb,monkey}.yaml`):
+
+- **Photo Bomb Room** — a USB webcam on the server Pi plus a shutter button. A press fires
+  the `PhotoBomb-Shot` effect: camera power-up jingle, 3-2-1 countdown beeps (3 seconds to
+  strike a pose), then a full-white FLASH synced with the shutter sound while
+  `camera_manager.py` grabs a frame. Photos land on the Pi's SD card in `photos/` as
+  `photobomb_YYYY-MM-DD_HH-MM-SS.jpg`; browse them at `GET /api/photobomb/photos`.
+  Re-pressing mid-countdown restarts the countdown (never double-shoots); the timeline is
+  defined once in `effects/photobomb_shot.py` and shared by the lights, the soundtrack
+  (`tools/make_photobomb_audio.py`) and the capture scheduler. Optional `camera_config.json`
+  overrides device/resolution/photos dir.
+- **Monkey Room** — the silver monkey puzzle (a nod to Legends of the Hidden Temple) closes a
+  microswitch when the assembly seats home, firing `MonkeyBusiness`: the actual Shrine of the
+  Silver Monkey assembly cue sampled from the show (`tools/fetch_monkey_sound.sh`) with gold
+  flashes synced to the fanfare, a white-gold mega flash on the final stinger, and emerald
+  twinkles fading out.
+
 ## Architecture
 
 - `main.py` — REST API, WebSocket server, component wiring

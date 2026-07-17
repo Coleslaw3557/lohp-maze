@@ -14,6 +14,8 @@ from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
 from remote_host_manager import RemoteHostManager
 from audio_manager import AudioManager
+from camera_manager import CameraManager
+from effects.photobomb_shot import SHUTTER_OFFSET
 
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -101,6 +103,16 @@ light_config = LightConfigManager()
 audio_manager = AudioManager()
 remote_host_manager = RemoteHostManager(audio_manager=audio_manager)
 effects_manager = EffectsManager(light_config, dmx_state_manager, remote_host_manager, audio_manager)
+camera_manager = CameraManager()
+
+# Photo Bomb camera: every PhotoBomb-Shot run schedules a webcam capture at the
+# flash; a superseded/stopped run (button re-press restarts the countdown)
+# cancels it so exactly one photo comes out of the last full countdown.
+effects_manager.register_effect_hooks(
+    'PhotoBomb-Shot',
+    on_start=lambda room: camera_manager.schedule_capture(SHUTTER_OFFSET),
+    on_cancel=lambda room: camera_manager.cancel_pending(),
+)
 
 dmx_state_manager.reset_all_fixtures()
 dmx_output_manager.start()
@@ -390,6 +402,20 @@ def stop_test():
     except Exception as e:
         logger.exception("Error stopping test")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/photobomb/photos', methods=['GET'])
+def list_photobomb_photos():
+    return jsonify({
+        'photos_dir': camera_manager.photos_dir,
+        'backend': camera_manager.backend,
+        'photos': camera_manager.list_photos(),
+    })
+
+
+@app.route('/api/photobomb/photos/<path:filename>')
+async def serve_photobomb_photo(filename):
+    return await send_from_directory(camera_manager.photos_dir, filename)
 
 
 @app.route('/api/audio/<path:filename>')

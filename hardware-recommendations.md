@@ -61,7 +61,22 @@ only gives you sluggish PIR blobs — skip it.
 |---|---|---|
 | Doorway crossing | **VL53L1X ToF (~$5–8)**: one-sided "virtual tripwire" on the jamb — beam across at hip height, trigger when range < doorway width. Invisible, eye-safe, nothing to align, I2C straight into the node. Recess it behind a small aperture and threshold generously (e.g. <60cm across a 90cm doorway) so dust-shortened readings don't false-trigger. | IR break-beam pair — Adafruit #2168-style ($6) for narrow dark doorways; industrial M18 through-beam pair (E3F-5DN1, ~$15 with brackets, needs a $1.50 5V→12V boost) where you want modulated, never-think-about-it-again certainty over longer spans. LED cone beam = far more alignment-tolerant than a laser. |
 | Room presence | **HLK-LD2410C mmWave radar (~$4)**: sees moving *and stationary* people through plastic, so it lives **fully sealed inside the dust-proof box**. Dark-immune, zero alignment. Native ESPHome support. Tune max-gate distance so it doesn't see through thin walls into the next room. | AM312 PIR (~$1.50) where "someone moved, roughly" is enough — degraded on hot afternoons and slow to re-trigger, fine on cool nights. |
-| Buttons / knock stations | Arcade buttons straight to node GPIOs (internal pull-ups + ESPHome debounce). Piezo discs to a node ADC pin with a 1MΩ bleed resistor, or a $1 LM393 knock module to a GPIO. | — |
+| Buttons / knock stations | Arcade buttons straight to node GPIOs (internal pull-ups + ESPHome debounce). **Implemented**: `sim/esphome/packages/button.yaml` + `button_gpio_c3.example.yaml` (GPIO3→GND) drive the Photo Bomb shutter button and the Monkey puzzle completion switch. Piezo discs to a node ADC pin with a 1MΩ bleed resistor, or a $1 LM393 knock module to a GPIO. | — |
+
+The Monkey puzzle switch is just a button in disguise: a lever microswitch under the
+silver monkey's top piece, closed when the assembly seats home, wired to the room
+node like any arcade button (NO + COM → GPIO3/GND).
+
+### Photo Bomb camera (implemented)
+
+The camera does **not** go on a sensor node — a USB webcam (any UVC one, e.g. Logitech
+C270) plugs into the server Pi next to the USB-DMX interface. The room's ESP32 button
+fires `PhotoBomb-Shot` over the normal trigger contract; the server runs the
+countdown/flash and `camera_manager.py` grabs the frame at the shutter moment
+(fswebcam, in the Docker image). Photos land on the Pi's SD card in `photos/` with
+date/timestamp filenames; browse via `GET /api/photobomb/photos`. The privileged
+container already sees `/dev/video0`; `camera_config.json` (optional) overrides
+device/resolution/paths.
 
 Skip HC-SR04 ultrasonic entirely (sloppy cone, absorbs into costumes, units interfere, dust).
 

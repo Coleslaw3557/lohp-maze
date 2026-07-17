@@ -95,6 +95,20 @@
             ],
             "volume": 0.8
         },
+        "PhotoBomb-Shot": {
+            "_comment": "Camera sequence: power-up, 3-2-1 countdown, shutter at 4.0s (tools/make_photobomb_audio.py)",
+            "audio_files": [
+                "photobomb-countdown.mp3"
+            ],
+            "volume": 0.9
+        },
+        "MonkeyBusiness": {
+            "_comment": "Shrine of the Silver Monkey assembly cue, sampled from Legends of the Hidden Temple (tools/fetch_monkey_sound.sh)",
+            "audio_files": [
+                "monkey-shrine-complete.mp3"
+            ],
+            "volume": 1.0
+        },
         "DeepPlaya-BG": {
             "audio_files": [
                 "dance-distance-muffled.mp3"

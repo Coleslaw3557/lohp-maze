@@ -28,13 +28,23 @@ api:
             id: tripwire
             state: OFF
 
+# The server holds /api/run_effect open until the effect finishes (up to ~15s)
+# and ESPHome's http_request blocks the node's whole loop while waiting — a
+# trip/press during that hold would queue behind it. 3s is enough to deliver
+# the POST and hear the effect start; hanging up early does NOT cancel the
+# effect (verified against the sim server 2026-07-17: effect + photo capture
+# completed after a 1s client disconnect).
 http_request:
-  timeout: 30s   # the server holds /api/run_effect until the effect finishes
+  timeout: 3s
 
 binary_sensor:
   - platform: template
     id: tripwire
     name: "${room} tripwire"
+    # Publish the resting OFF state at boot: without it the first-ever trip is
+    # the sensor's *initial* state, which never fires on_press — the first
+    # visitor after power-up walked through unnoticed.
+    publish_initial_state: true
     filters:
       - delayed_on: 30ms   # debounce, same as the planned hardware config
     on_press:
