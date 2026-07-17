@@ -1,0 +1,43 @@
+# Bench/evaluation node for the real XIAO ESP32-C3s — the exact hardware-day
+# stack of a button room (Monkey / Photo Bomb): shared logic + button
+# debounce/POST/cooldown + GPIO3 momentary button + esp32/wifi/ota platform.
+#
+#   flash:   .venv/bin/esphome run bench-xiao-c3.yaml --device /dev/ttyACM0
+#   secrets: copy secrets.example.yaml -> secrets.yaml (gitignored). With real
+#            LAN credentials the node joins and can genuinely POST run_effect;
+#            with the placeholders it raises the fallback AP below instead —
+#            still proves boot, radio TX and the GPIO logic over USB logs.
+#
+# Not part of validate_all.sh (that only sweeps rooms/*.yaml, all host-platform).
+substitutions:
+  node_name: lohp-bench-c3
+  room: "Monkey Room"            # a real room so the POST genuinely runs an effect
+  button_effect: "MonkeyBusiness"
+  server_host: "192.168.253.184" # this dev box — the sim's real server on :5000
+  api_port: "6099"
+
+packages:
+  logic: !include packages/logic.yaml
+  button: !include packages/button.yaml
+  button_hw: !include packages/button_gpio_c3.example.yaml
+  platform: !include packages/hardware_c3.yaml
+
+# bench extras layered over the production packages
+wifi:
+  # RF at the bench is marginal (-78..-96 dBm; antenna/placement being sorted
+  # out) — pin the stronger mesh AP so retries don't waste time on the -96 dB
+  # satellite, and skip the pre-connect scan. The package's shorthand
+  # ssid/password must move into the networks entry to carry the bssid pin.
+  ssid: !remove
+  password: !remove
+  networks:
+    - ssid: !secret wifi_ssid
+      password: !secret wifi_password
+      bssid: 70:58:A4:5E:16:29
+  fast_connect: true
+  ap:
+    ssid: "LoHP-Bench-C3"
+    password: "hiddenplaya"
+
+logger:
+  level: DEBUG

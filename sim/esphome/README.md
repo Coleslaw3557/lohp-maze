@@ -21,6 +21,15 @@ node runs its automation → `POST /api/run_effect` hits the server (UA `ESPHome
 effect runs (and for the Photo Bomb button, the webcam takes the photo). Nothing in the
 server can tell it from a real node.
 
+**First real XIAO ESP32-C3 bench-validated 2026-07-17** (`bench-xiao-c3.yaml` — the
+button-room stack on real hardware): USB flash → WiFi join → native-API
+`press_button` → POST over WiFi → `MonkeyBusiness` ran in Monkey Room,
+press-to-effect ≈ 16 ms. Hardware notes: the 3s `http_request` timeout IS
+enforced on the C3 — the node logs `HTTP Request failed; Code: -1` at 3s while
+the server completes the effect (by design, see caveats below); and the XIAO
+has **no onboard antenna** — clip on the U.FL pigtail, or you get near-empty
+scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
+
 ## Layout
 
 - `packages/logic.yaml` — the shared node base (name, api port, 3s http_request),
