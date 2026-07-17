@@ -23,6 +23,9 @@ let AUDIO_WS = `ws://${HOST}:8765`;
 const MODES = ['street', 'first', 'top'];
 const MODE_LABEL = { street: 'Street view', first: 'First-person', top: 'Overhead plan' };
 
+// first-person eye line: our visitors stand ≈5'11" (1.80 m), eyes at 1.69 m
+const EYE = 1.69;
+
 const S = {
   cfg: null,
   frame: new Uint8Array(168),
@@ -37,7 +40,7 @@ const S = {
   piezoAttempts: 0,
   mode: 'street',
   keys: {},
-  pos: new THREE.Vector3(11.7, 1.6, 4.5),
+  pos: new THREE.Vector3(11.7, EYE, 4.5),
   level: 0,
   prev2: { x: 11.7, z: 4.5 },
   yaw: 0, pitch: 0,
@@ -216,6 +219,7 @@ const matStrap = new THREE.MeshStandardMaterial({ color: 0xc65f1e, roughness: 0.
 // tower wrap: same shade cloth as the maze walls, but the towers carry no
 // fixtures, so a whisper of emissive keeps their silhouette readable at night
 const matTowerSkin = new THREE.MeshStandardMaterial({ color: 0x3a3b44, roughness: 0.9, metalness: 0.02, emissive: 0x0e0f16 });
+const matPly = new THREE.MeshStandardMaterial({ color: 0x9a7b52, roughness: 0.85, metalness: 0.02 });
 const matFramePaint = [
   new THREE.MeshStandardMaterial({ color: 0x2666b8, roughness: 0.5, metalness: 0.25 }), // our blue
   new THREE.MeshStandardMaterial({ color: 0x2f9e57, roughness: 0.5, metalness: 0.25 }), // our green
@@ -602,6 +606,33 @@ function buildMaze(cfg) {
     lbl.position.set(rx, yBase + 1.48, rz);
     grp(lv).add(lbl);
   }
+
+  // per-room node enclosures — the wooden sensor boxes from
+  // wiring-guides/room-node-enclosure-plan.md (XIAO C3 + LD2410C radar +
+  // power), hose-clamped to a frame leg: wing bays on the ENTRY-side front
+  // leg at 1.55 m, radar window (local +z) aimed at the diagonally-opposite
+  // back corner. Block placeholders for now; pos/aim come from the layout's
+  // per-room "enclosure" entries.
+  for (const r of Object.values(L.rooms)) {
+    const enc = r.enclosure;
+    if (!enc) continue;
+    const lv = enc.level != null ? enc.level : (r.floor === 1 ? 1 : 0);
+    const eg = new THREE.Group();
+    eg.position.set(enc.pos[0], lv * LH + (enc.h || 1.55), enc.pos[1]);
+    eg.rotation.y = (enc.yaw_deg || 0) * Math.PI / 180;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.22, 0.10), matPly);
+    eg.add(box);
+    // thinned window panel the radar looks through
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.07),
+      new THREE.MeshStandardMaterial({ color: 0x23242b, roughness: 0.5 }));
+    win.position.z = 0.0505;
+    eg.add(win);
+    const led = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.006),
+      new THREE.MeshBasicMaterial({ color: 0x33ff66 }));
+    led.position.set(0.06, 0.085, 0.0505);
+    eg.add(led);
+    grp(lv).add(eg);
+  }
 }
 
 // ---------------------------------------------------------------- hex center
@@ -731,6 +762,20 @@ function buildHexCenter(L) {
       clamp.position.set(vx, cy, vz);
       grp(cy > LH ? 1 : 0).add(clamp);
     }
+  }
+
+  // the center mast: a SINGLE continuous 20 ft stick of 3" schedule 40 pipe
+  // (3.5" OD) standing at the exact hex center — up from the ground where
+  // the Exit|Entrance divider meets the middle, through the Cuddle Cross
+  // deck and the hex roof, straight to the sky ~7 ft above the structure.
+  // One piece, no joints; the deck and roof penetrations brace it. Lives in
+  // the shared group so it shows on both floor filters.
+  if (H.center_pole) {
+    const pr = (H.center_pole.od || 0.0889) / 2;
+    const ph = H.center_pole.height || 6.096;
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(pr, pr, ph, 24), matGalv);
+    mast.position.set(cx, ph / 2, cz);
+    levelGroups[2].add(mast);
   }
 
   // START / FINISH ply signs over the two street arches, angled with their
@@ -1561,7 +1606,7 @@ function setupControls(cfg) {
   $('btn-towers').onclick = () => setTowersVisible(!(towersGroup && towersGroup.visible));
   $('btn-respawn').onclick = () => {
     const sp = cfg.layout.spawn;
-    S.pos.set(sp.pos[0], 1.6, sp.pos[1]);
+    S.pos.set(sp.pos[0], EYE, sp.pos[1]);
     S.level = sp.level || 0;
     S.yaw = (sp.yaw_deg || 0) * Math.PI / 180;
     S.pitch = 0;
@@ -1628,7 +1673,7 @@ function updateMovement(dt) {
     move.normalize().multiplyScalar(speed * dt);
     S.pos.add(move);
   }
-  S.pos.y = 1.6 + S.level * S.levelHeight; // eye height under the 6.5ft ceiling
+  S.pos.y = EYE + S.level * S.levelHeight; // a 5'11" visitor's eyes under the 6'2" ceiling
 }
 
 function nearestLadder(maxDist) {
@@ -1713,7 +1758,7 @@ async function boot() {
   buildAvatar();
 
   const sp = cfg.layout.spawn;
-  S.pos.set(sp.pos[0], 1.6, sp.pos[1]);
+  S.pos.set(sp.pos[0], EYE, sp.pos[1]);
   S.level = sp.level || 0;
   S.yaw = (sp.yaw_deg || 0) * Math.PI / 180;
   S.prev2 = { x: S.pos.x, z: S.pos.z };

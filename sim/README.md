@@ -49,6 +49,13 @@ the upper deck is Cuddle Cross. The single **RPi + USB-DMX** box mounts
 **outside on the back wall**, behind Cuddle Cross on the shared scaffold
 frame with Photo Bomb Room (the PoE switch and extra Pis are gone).
 
+**A single 20 ft center mast** — one continuous stick of 3" schedule 40 pipe
+(3.5" OD, no joints) — stands at the exact middle of the hex: up from the
+ground where the Exit|Entrance divider meets the center, straight through the
+Cuddle Cross deck and the roof to the sky, topping out ~7 ft above the
+structure. The deck and roof penetrations are its lateral bracing
+(`hex_center.center_pole` in `maze_layout.json`).
+
 **Out front on the street stand two decorative entrance towers** (see
 `hiddenplaya.art/maze-1.jpeg`) with the *Legends of the Hidden Playa* sign
 arching between them, medallion at the peak. Each tower is three **3' × 4'
@@ -62,7 +69,11 @@ The structure has a **roof** over the top floor (hidden automatically in the
 overhead plan view), and **all lights and sensors mount on the back scaffolding/
 cross members**: fixtures are bracket-mounted, tilted down into their rooms (no
 poles in the walkways, nothing hangs mid-room); tripwire emitters sit on the
-frames at beam height.
+frames at beam height. Each room also renders its **wooden node-enclosure box**
+(XIAO C3 + LD2410C radar + power) at the planned mount from
+`wiring-guides/room-node-enclosure-plan.md` — wing bays on the entry-side front
+leg with the radar window aimed at the opposite back corner (`enclosure` keys
+in `maze_layout.json`).
 
 **Room backdrops**: every room's back wall carries its real printed-canvas
 background (the print masters live in `Background-images/` at the repo root,

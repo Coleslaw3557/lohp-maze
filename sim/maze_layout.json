@@ -3,7 +3,8 @@
     "units": "meters",
     "coordinates": "x = along the street (west\u2192east, left-to-right in the sim's street view), z = depth into the structure (back wall z=0.5, open street face z=2.02), y = up",
     "note": "TWO-STORY OPEN-FACED SCAFFOLD structure (the sim's street view is the elevation). Built from ScaffoldsSupply 5'W x 6'4\"T walk-thru frames (1-11/16\" dia tube, no center pins) with 7' x 4'-lock-span cross braces: each bay is 7ft wide x 5ft deep x 6'4\" tall (2.13 x 1.52 x 1.93 m); adjacent rooms SHARE one frame, so bays abut with no gaps. floor 0 = ground, floor 1 = upper (+1.93m), 'both' = full-height climb rooms (up in Guy Line Climb, down in Vertical Moop March). Room names must match light_config.json, sensor names must match client/config-unit-*.json.",
-    "sim_only": "This file affects ONLY the simulator's 3D geometry. Lights/effects/audio/triggers all come from the production configs."
+    "sim_only": "This file affects ONLY the simulator's 3D geometry. Lights/effects/audio/triggers all come from the production configs.",
+    "enclosures": "each room's \"enclosure\" is the wooden node box (XIAO C3 + LD2410C radar + power) from wiring-guides/room-node-enclosure-plan.md, hose-clamped to a scaffold frame leg: wing bays on the ENTRY-side front leg (ground enters west, upper enters east) at 1.55 m, radar window (local +z, yaw_deg) aimed at the diagonally-opposite back corner; Cuddle Cross on the back corner; Entrance/Exit near the back legs facing their arches (ToF rooms)."
   },
   "level_height": 1.93,
   "ceiling_height": 1.88,
@@ -70,6 +71,11 @@
       "note": "one wide printed canvas per level spans BOTH skinned back faces (west face = left half, east face = right half): the ground canvas backs the Exit and Entrance halves, the upper canvas backs Cuddle Cross",
       "ground": "img/backgrounds/entrance.jpg",
       "upper": "img/backgrounds/cuddle.jpg"
+    },
+    "center_pole": {
+      "note": "a SINGLE continuous 20 ft stick of 3\" schedule 40 pipe (3.5\" OD) standing at the exact hex center: up from the ground where the Exit|Entrance divider meets the middle, through the Cuddle Cross deck and the hex roof, straight to the sky ~7 ft above the structure. One piece, no joints; the deck and roof penetrations are the lateral bracing.",
+      "od": 0.0889,
+      "height": 6.096
     }
   },
   "rooms": {
@@ -91,7 +97,15 @@
           0.68,
           1
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          2.03,
+          1.94
+        ],
+        "level": 1,
+        "yaw_deg": -124
+      }
     },
     "Monkey Room": {
       "x": 2.13,
@@ -109,7 +123,15 @@
           3.12,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          2.23,
+          1.94
+        ],
+        "level": 0,
+        "yaw_deg": 124
+      }
     },
     "Bike Lock Room": {
       "x": 2.13,
@@ -123,7 +145,15 @@
           4.02,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          4.16,
+          1.94
+        ],
+        "level": 1,
+        "yaw_deg": -124
+      }
     },
     "Temple Room": {
       "x": 4.26,
@@ -137,7 +167,15 @@
           4.31,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          4.36,
+          1.94
+        ],
+        "level": 0,
+        "yaw_deg": 124
+      }
     },
     "Deep Playa Handshake": {
       "x": 4.26,
@@ -151,7 +189,15 @@
           6.15,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          6.29,
+          1.94
+        ],
+        "level": 1,
+        "yaw_deg": -124
+      }
     },
     "No Friends Monday": {
       "x": 6.39,
@@ -165,7 +211,15 @@
           6.5,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          6.49,
+          1.94
+        ],
+        "level": 0,
+        "yaw_deg": 124
+      }
     },
     "Photo Bomb Room": {
       "x": 6.39,
@@ -183,7 +237,15 @@
           7.37,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          8.42,
+          1.94
+        ],
+        "level": 1,
+        "yaw_deg": -124
+      }
     },
     "Exit": {
       "x": 8.52,
@@ -196,7 +258,15 @@
           9.6,
           0.16
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          8.79,
+          0.6
+        ],
+        "level": 0,
+        "yaw_deg": 18
+      }
     },
     "Entrance": {
       "x": 10.044,
@@ -209,7 +279,15 @@
           10.5,
           0.16
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          11.3,
+          0.6
+        ],
+        "level": 0,
+        "yaw_deg": -18
+      }
     },
     "Cuddle Cross": {
       "x": 8.52,
@@ -226,7 +304,16 @@
           9.1,
           0.72
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          10.044,
+          -0.15
+        ],
+        "level": 1,
+        "yaw_deg": 0,
+        "h": 1.5
+      }
     },
     "Cop Dodge": {
       "x": 11.568,
@@ -240,7 +327,15 @@
           13.398,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          11.668,
+          1.94
+        ],
+        "level": 0,
+        "yaw_deg": 124
+      }
     },
     "Porto Room": {
       "x": 11.568,
@@ -254,7 +349,15 @@
           13.458,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          13.598,
+          1.94
+        ],
+        "level": 1,
+        "yaw_deg": -124
+      }
     },
     "Gate": {
       "x": 13.698,
@@ -268,7 +371,15 @@
           13.748,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          13.798,
+          1.94
+        ],
+        "level": 0,
+        "yaw_deg": 124
+      }
     },
     "Sparkle Pony Room": {
       "x": 13.698,
@@ -282,7 +393,15 @@
           15.578,
           0.68
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          15.728,
+          1.94
+        ],
+        "level": 1,
+        "yaw_deg": -124
+      }
     },
     "Guy Line Climb": {
       "x": 15.828,
@@ -302,7 +421,15 @@
           0.68,
           1
         ]
-      ]
+      ],
+      "enclosure": {
+        "pos": [
+          15.928,
+          1.94
+        ],
+        "level": 0,
+        "yaw_deg": 124
+      }
     }
   },
   "ladders": [
