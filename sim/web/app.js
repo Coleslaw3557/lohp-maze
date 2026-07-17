@@ -1,6 +1,6 @@
 // LoHP Maze Simulator — 3D walkthrough client.
 //
-// The maze is a TWO-STORY, OPEN-FACED structure (rooms.png is the street
+// The maze is a TWO-STORY, OPEN-FACED structure (street view IS the street
 // elevation): ground-floor and upper-floor rooms all face the street like a
 // dollhouse. Visitors climb UP in Guy Line Climb and DOWN in Vertical Moop
 // March. The default "street" view shows the whole facade at once — the way
@@ -513,20 +513,24 @@ function buildMaze(cfg) {
     levelGroups[2].add(ladder);
   }
 
-  // server rack
+  // server box: the RPi + USB-DMX enclosure mounts on the OUTSIDE of the
+  // back wall, behind Cuddle Cross on the shared frame between Cuddle Cross
+  // and Photo Bomb Room — not inside the hex
   if (L.server_rack) {
     const [rx, rz] = L.server_rack.pos;
-    const rack = new THREE.Mesh(new THREE.BoxGeometry(0.38, 1.1, 0.3),
+    const lv = L.server_rack.level || 0;
+    const yBase = lv * LH;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.46, 0.16),
       new THREE.MeshStandardMaterial({ color: 0x101318, roughness: 0.6, metalness: 0.4 }));
-    rack.position.set(rx, 0.55, rz);
-    levelGroups[0].add(rack);
-    const led = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02),
+    box.position.set(rx, yBase + 1.05, rz);
+    grp(lv).add(box);
+    const led = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.02),
       new THREE.MeshBasicMaterial({ color: 0x33ff66 }));
-    led.position.set(rx + 0.09, 0.92, rz + 0.16);
-    levelGroups[0].add(led);
+    led.position.set(rx + 0.1, yBase + 1.2, rz - 0.085); // faces out the back
+    grp(lv).add(led);
     const lbl = makeLabel(L.server_rack.label || 'SERVER', 0.3);
-    lbl.position.set(rx, 1.35, rz + 0.2);
-    levelGroups[0].add(lbl);
+    lbl.position.set(rx, yBase + 1.48, rz);
+    grp(lv).add(lbl);
   }
 }
 

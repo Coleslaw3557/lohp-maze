@@ -3,7 +3,11 @@
 Lighting and audio control for the LoHP maze — a central server drives DMX fixtures and coordinates
 Raspberry Pi room units that play audio and report sensor triggers.
 
-![Room layout](rooms.png)
+The maze in the simulator (`sim/` — the 3D representation is the layout reference):
+
+| Street view — day | Street view — night |
+|---|---|
+| ![Street view, day](sim/img/street-day.png) | ![Street view, night](sim/img/street-night.png) |
 
 ## How it works
 

@@ -20,8 +20,7 @@ hides them; day/night toggles with N)*
 
 The maze is a **two-story, open-faced scaffold structure** on playa (Burning Man):
 every room's street face is open, so the whole piece reads like a dollhouse from
-the street — `rooms.png` in the repo root is the street **elevation**, not a floor
-plan. **Real hardware**: ScaffoldExpress **5' × 6'4" × 7' S-Style walk-thru frame
+the street — the sim's street view (screenshots above) **is** the elevation. **Real hardware**: ScaffoldExpress **5' × 6'4" × 7' S-Style walk-thru frame
 sets** (PSV-K610-7: two PSV-610 frames + two PSV-303 7'×4' tube cross braces,
 9" coupling pins with 1" collars, toggle pins and spring clips; 1.6925"Ø ×
 0.095"-wall Q235 tube) — so each room bay is **7 ft wide × 5 ft deep × 6'4" tall**
@@ -45,9 +44,10 @@ angled street frames meeting at it are the split **entry (START sign, east)**
 and **exit (FINISH sign, west)** — each frame's walk-thru arch is one door.
 The side rooms walk into the center through the flat east/west frames'
 arches, the two back frames are skinned. The ground floor is split Exit
-(west) / Entrance (east) by a divider running front corner to back corner,
-with the single **RPi + USB-DMX** box inside (the PoE switch and extra Pis
-are gone); the upper deck is Cuddle Cross.
+(west) / Entrance (east) by a divider running front corner to back corner;
+the upper deck is Cuddle Cross. The single **RPi + USB-DMX** box mounts
+**outside on the back wall**, behind Cuddle Cross on the shared scaffold
+frame with Photo Bomb Room (the PoE switch and extra Pis are gone).
 
 **Out front on the street stand two decorative entrance towers** (see
 `hiddenplaya.art/maze-1.jpeg`) with the *Legends of the Hidden Playa* sign
@@ -74,12 +74,13 @@ galvanized pins, braces, clamps, and ladders. Cuddle-pit note: its pars and the 
 station mount on the hexagon's back faces upstairs, not the doorway frames.
 
 **Source of truth for lighting**: `sim/maze_layout.json` (`fixture_positions`),
-transcribed from the retired `maze-diagram.drawio` (that diagram was pre-wireless
-/ pre-single-Pi, but accurate for fixture locations and DMX cable routing). From
-its icons: bulbs = the circular pars; **flashlights = the two U'King DMX
-spotlights** (Monkey Room, Photo Bomb Room), which the sim renders as narrow-beam
-spots. The cable chain runs in exact DMX address order (east wing out, Cuddle
-Cross east→west, back to the center box, west wing out).
+originally transcribed from the old `maze-diagram.drawio` (since deleted — it was
+pre-wireless / pre-single-Pi, but accurate for fixture locations and DMX cable
+routing). From its icons: bulbs = the circular pars; **flashlights = the two
+U'King DMX spotlights** (Monkey Room, Photo Bomb Room), which the sim renders as
+narrow-beam spots. The cable chain runs in exact DMX address order (east wing
+out, Cuddle Cross east→west, to the box on the back at the Cuddle Cross / Photo
+Bomb frame, west wing out).
 
 Canonical visitor route: Entrance → Cop Dodge → Gate → *up* Guy Line Climb →
 Sparkle Pony → Porto → Cuddle Cross → Photo Bomb → Deep Playa Handshake → Bike Lock
