@@ -40,35 +40,33 @@ class ZonePlayer:
 
     def play_effect(self, full_path, volume, loop):
         """Start an effect file. Returns the player (caller confirms playback)."""
+        self.reap_ended_effects()
         player = self.vlc_instance.media_player_new()
-        player.set_media(self.vlc_instance.media_new(full_path))
+        media = self._new_media(full_path, loop)
+        player.set_media(media)
+        media.release()  # the player holds its own reference
         player.audio_set_volume(int(volume * 100))
         player.play()
-        if loop:
-            player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, self._loop_effect)
         self.effect_players.append(player)
         return player
 
-    def _loop_effect(self, event):
-        for player in self.effect_players:
-            if player.get_state() == vlc.State.Ended:
-                player.set_position(0)
-                player.play()
-                break
+    def _new_media(self, full_path, loop):
+        # Looping uses VLC's native input-repeat: restarting a player from its
+        # own EndReached callback (the old approach) is the documented libVLC
+        # deadlock pattern, and it sometimes restarted the wrong player.
+        media = self.vlc_instance.media_new(full_path)
+        if loop:
+            media.add_option('input-repeat=65535')
+        return media
 
     def start_music(self, full_path, volume):
         self.stop_music()
         self.background_player = self.vlc_instance.media_player_new()
-        self.background_player.set_media(self.vlc_instance.media_new(full_path))
+        media = self._new_media(full_path, loop=True)
+        self.background_player.set_media(media)
+        media.release()  # the player holds its own reference
         self.background_player.audio_set_volume(int(volume * 100))
         self.background_player.play()
-        self.background_player.event_manager().event_attach(
-            vlc.EventType.MediaPlayerEndReached, self._loop_music)
-
-    def _loop_music(self, event):
-        if self.background_player:
-            self.background_player.set_position(0)
-            self.background_player.play()
 
     def stop_music(self):
         if self.background_player:
@@ -79,7 +77,18 @@ class ZonePlayer:
     def stop_effects(self):
         for player in self.effect_players:
             player.stop()
+            player.release()
         self.effect_players.clear()
+
+    def reap_ended_effects(self):
+        """Release finished players so hours of triggers don't leak VLC objects."""
+        still_active = []
+        for player in self.effect_players:
+            if player.get_state() in (vlc.State.Ended, vlc.State.Error, vlc.State.Stopped):
+                player.release()
+            else:
+                still_active.append(player)
+        self.effect_players = still_active
 
 
 class AudioManager:
@@ -147,33 +156,28 @@ class AudioManager:
                 logger.error(f"Zone '{zone.name}': failed to start {file_name}: {e}", exc_info=True)
         if not players:
             return False
-        await asyncio.sleep(0.1)  # Give playback a moment to start
+        logger.info(f"Playing '{file_name}' (volume {volume}, loop {loop}) "
+                    f"in zones: {[z.name for z, _ in players]}")
+        # Confirm off the message loop so a slow start never delays or reorders
+        # the commands that arrive after this one
+        asyncio.create_task(self._confirm_effect_playback(file_name, players))
+        return True
 
-        started = False
+    async def _confirm_effect_playback(self, file_name, players):
+        await asyncio.sleep(0.3)
         for zone, player in players:
-            if player.is_playing():
-                started = True
-                if not loop:
-                    asyncio.create_task(self._reap_effect_player(zone, player))
-            else:
+            if player not in zone.effect_players:
+                continue  # already stopped or reaped; don't touch a released player
+            if not player.is_playing() and player.get_state() != vlc.State.Ended:
                 logger.warning(f"Playback did not start for {file_name} in zone '{zone.name}'")
-        if started:
-            logger.info(f"Playing '{file_name}' (volume {volume}, loop {loop}) "
-                        f"in zones: {[z.name for z, _ in players]}")
-        return started
-
-    async def _reap_effect_player(self, zone, player):
-        while player.is_playing():
-            await asyncio.sleep(0.1)
-        if player in zone.effect_players:
-            zone.effect_players.remove(player)
 
     def stop_audio(self, room=None):
-        """Stop all playback in the room's zone (all zones when room is None)."""
+        """Stop effect playback in the room's zone (all zones when room is None).
+        Background music is deliberately untouched: it has its own stop command,
+        and stopping a room's effect must not silence the zone's music."""
         for zone in self.zones_for_room(room):
-            zone.stop_music()
             zone.stop_effects()
-        logger.info(f"Stopped audio ({'room ' + room if room else 'all zones'})")
+        logger.info(f"Stopped effect audio ({'room ' + room if room else 'all zones'})")
 
     async def start_background_music(self, music_file):
         current_time = time.time()
@@ -198,15 +202,18 @@ class AudioManager:
                 logger.error(f"Zone '{zone.name}': failed to start background music: {e}", exc_info=True)
         if not started_zones:
             return False
+        self.last_music_change_time = current_time
+        asyncio.create_task(self._confirm_music_playback(music_file, started_zones))
+        return True
 
+    async def _confirm_music_playback(self, music_file, zones):
         for _ in range(10):  # Confirm playback within ~1 second
             await asyncio.sleep(0.1)
+            # Re-read background_player each pass: it may have been replaced/stopped
             if any(zone.background_player and zone.background_player.is_playing()
-                   for zone in started_zones):
-                self.last_music_change_time = current_time
-                return True
+                   for zone in zones):
+                return
         logger.warning(f"Background music playback did not start for {music_file}")
-        return False
 
     async def stop_background_music(self):
         for zone in self.zones.values():

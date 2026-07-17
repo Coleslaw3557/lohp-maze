@@ -72,9 +72,11 @@ async def handle_client_connected(ws, data):
     associated_rooms = data.get('data', {}).get('associated_rooms', [])
     client_ip = ws.remote_address[0]
     if unit_name and associated_rooms:
-        remote_host_manager.update_client_rooms(unit_name, client_ip, associated_rooms, ws)
         logger.info(f"Client connected: {unit_name} ({client_ip}) - Associated rooms: {associated_rooms}")
+        # Ack first: the client's handshake recv() expects connection_response
+        # before any other message (like the audio download list) arrives.
         await ws.send(json.dumps({"type": "connection_response", "status": "success", "message": "Connection acknowledged"}))
+        await remote_host_manager.update_client_rooms(unit_name, client_ip, associated_rooms, ws)
     else:
         logger.warning(f"Received incomplete client connection data: {data}")
         await ws.send(json.dumps({"type": "connection_response", "status": "error", "message": "Incomplete connection data"}))

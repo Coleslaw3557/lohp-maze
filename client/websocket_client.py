@@ -79,23 +79,29 @@ class WebSocketClient:
 
     async def handle_message(self, message):
         message_type = message.get('type')
-        handlers = {
+        # Audio commands run inline so they execute strictly in arrival order:
+        # a stop must never overtake the play it was meant to stop (the server
+        # sends stop-old + play-new back to back on every effect takeover).
+        # None of them block: playback-start confirmation runs in the background.
+        ordered_handlers = {
             'play_effect_audio': self.handle_play_effect_audio,
             'audio_stop': self.handle_audio_stop,
-            'audio_files_to_download': self.handle_audio_files_to_download,
             'start_background_music': self.handle_start_background_music,
             'stop_background_music': self.handle_stop_background_music,
             'connection_response': self.handle_ack,
             'status_update_response': self.handle_ack,
+        }
+        # Long-running work must not block the receive loop
+        background_handlers = {
+            'audio_files_to_download': self.handle_audio_files_to_download,
             'shutdown': self.handle_shutdown,
         }
-        handler = handlers.get(message_type)
-        if handler is None:
-            logger.warning(f"Unhandled message: {message}")
-        elif message_type == 'play_effect_audio':
-            await handler(message)  # Play immediately, don't queue behind other handlers
+        if message_type in ordered_handlers:
+            await ordered_handlers[message_type](message)
+        elif message_type in background_handlers:
+            asyncio.create_task(background_handlers[message_type](message))
         else:
-            asyncio.create_task(handler(message))
+            logger.warning(f"Unhandled message: {message}")
 
     async def handle_ack(self, message):
         logger.info(f"Server response: {message}")

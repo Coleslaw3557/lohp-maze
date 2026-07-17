@@ -14,7 +14,7 @@ class ThemeManager:
         self.themes = {}
         self.current_theme = None
         self.theme_thread = None
-        self.stop_theme = threading.Event()
+        self.stop_event = None  # stop Event of the current theme thread run
         self.theme_change_lock = asyncio.Lock()
         self.master_brightness = 1.0
         self.frequency = 10  # Reduce update rate to 10 Hz
@@ -148,8 +148,12 @@ class ThemeManager:
             old_theme = self.current_theme
             await self.stop_current_theme_async()
             self.current_theme = theme_name
-            self.stop_theme.clear()
-            self.theme_thread = threading.Thread(target=self._run_theme, args=(theme_name,), daemon=True)
+            # Each run gets its own Event so a stop can never be un-done for a
+            # thread that outlived its join timeout (which would leave two
+            # theme threads writing to the same fixtures).
+            self.stop_event = threading.Event()
+            self.theme_thread = threading.Thread(target=self._run_theme,
+                                                 args=(theme_name, self.stop_event), daemon=True)
             self.theme_thread.start()
             self.temporary_theme_values = {}
         logger.info(f"Theme changed from {old_theme} to: {theme_name}")
@@ -158,13 +162,14 @@ class ThemeManager:
     async def stop_current_theme_async(self):
         if self.current_theme:
             logger.info(f"Stopping current theme: {self.current_theme}")
-            self.stop_theme.set()
+            if self.stop_event:
+                self.stop_event.set()
             if self.theme_thread and self.theme_thread.is_alive():
                 try:
                     await asyncio.wait_for(asyncio.to_thread(self.theme_thread.join), timeout=5.0)
                 except asyncio.TimeoutError:
                     logger.warning("Theme thread join timed out after 5 seconds")
-                    self.theme_thread = None
+            self.theme_thread = None
             self.current_theme = None
             await asyncio.to_thread(self._reset_all_lights)
             logger.info("Theme stopped and lights reset")
@@ -190,9 +195,11 @@ class ThemeManager:
 
     def stop_current_theme(self):
         if self.current_theme:
-            self.stop_theme.set()
+            if self.stop_event:
+                self.stop_event.set()
             if self.theme_thread and self.theme_thread.is_alive():
                 self.theme_thread.join(timeout=5)
+            self.theme_thread = None
             self.current_theme = None
             self._reset_all_lights()
             logger.info("Current theme stopped and all lights reset")
@@ -201,13 +208,13 @@ class ThemeManager:
         for fixture_id in range(self.dmx_state_manager.num_fixtures):
             self.dmx_state_manager.reset_fixture(fixture_id)
 
-    def _run_theme(self, theme_name):
+    def _run_theme(self, theme_name, stop_event):
         theme_data = self.themes[theme_name]
         logger.info(f"Starting theme: {theme_name}")
         start_time = time.time()
         last_update_time = 0
         try:
-            while not self.stop_theme.is_set():
+            while not stop_event.is_set():
                 current_time = time.time() - start_time
                 if current_time - last_update_time >= 1 / self.frequency:
                     self._generate_and_apply_theme_step(theme_data, current_time)
@@ -261,23 +268,19 @@ class ThemeManager:
         logger.info(f"Theme resumed for room: {room}")
 
     def _apply_room_channels(self, room, lights, room_channels):
-        current_time = time.time()
         for light in lights:
             start_address = light['start_address']
             light_model = self.light_config_manager.get_light_config(light['model'])
             fixture_id = (start_address - 1) // 8
-            if fixture_id not in self.interrupt_handler.interrupted_fixtures or \
-               (fixture_id in self.interrupt_handler.interrupt_end_times and current_time >= self.interrupt_handler.interrupt_end_times[fixture_id]):
-                fixture_values = [0] * 8
-                for channel, value in room_channels.items():
-                    if channel in light_model['channels']:
-                        channel_offset = light_model['channels'][channel]
-                        fixture_values[channel_offset] = value
-                current_values = self.dmx_state_manager.get_fixture_state(fixture_id)
-                logger.debug(f"Updating fixture {fixture_id} in room {room}: Current values: {current_values}, New values: {fixture_values}")
-                self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
-            else:
+            if self.interrupt_handler.is_interrupted(fixture_id):
                 logger.debug(f"Fixture {fixture_id} in room {room} is interrupted, skipping update")
+                continue
+            fixture_values = [0] * 8
+            for channel, value in room_channels.items():
+                if channel in light_model['channels']:
+                    channel_offset = light_model['channels'][channel]
+                    fixture_values[channel_offset] = value
+            self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
 
     def set_master_brightness(self, brightness):
         self.master_brightness = max(0.0, min(1.0, brightness))
@@ -285,17 +288,6 @@ class ThemeManager:
 
     def get_all_themes(self):
         return self.themes
-
-    async def apply_theme_to_room(self, room):
-        if self.current_theme:
-            theme_data = self.themes[self.current_theme]
-            room_layout = self.light_config_manager.get_room_layout()
-            lights = room_layout.get(room, [])
-            current_time = time.time()
-            room_channels = generate_theme_values(theme_data, current_time, self.master_brightness)
-            self._apply_room_channels(room, lights, room_channels)
-        else:
-            logger.warning(f"No current theme to apply to room {room}")
 
     async def update_theme_value(self, control_id, value):
         if self.current_theme:
