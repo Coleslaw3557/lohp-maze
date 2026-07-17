@@ -30,6 +30,7 @@ const S = {
   levelHeight: 3.2,
   fixtures: [],            // {room, addr, channels, level, light, lens, cone, cell}
   roomsMeshes: {},         // room -> {slab, center(Vector3 at room level), level}
+  canvasMats: {},          // room -> [backdrop materials], emissive-tinted by the room's light
   sensors: [],             // {name, kind, room, action, seg?, level, meshes, lastFired}
   ladders: [],             // {room, x, z} climb points
   interactables: [],       // meshes with .userData.{sensor|ladder}
@@ -220,6 +221,66 @@ const matFramePaint = [
   new THREE.MeshStandardMaterial({ color: 0x2f9e57, roughness: 0.5, metalness: 0.25 }), // our green
 ];
 
+// Printed-canvas backdrops (the real prints in Background-images/, resized
+// into web/img/backgrounds/ — paths come from maze_layout.json). Each hangs
+// on its room's back wall; standard material so the DMX fixtures genuinely
+// light it, plus a per-room emissive tint (set every frame in updateFixtures)
+// so the art stays readable at night and glows with the room's effect color.
+// Hex/tower canvases pass a uRange to show one slice of a shared print.
+const texLoader = new THREE.TextureLoader();
+const texCache = new Map();
+function canvasTexture(url) {
+  if (!texCache.has(url)) {
+    texCache.set(url, new Promise((resolve, reject) => texLoader.load(url, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      resolve(tex);
+    }, undefined, reject)));
+  }
+  return texCache.get(url);
+}
+
+// Map the plane's UVs to its [u0,u1] slice of the print, cover-cropped so the
+// whole print fills the whole span (planeW/(u1-u0) x planeH) w/o stretching.
+function applyCanvasUVs(geo, img, planeW, planeH, [u0, u1]) {
+  const spanAspect = (planeW / (u1 - u0)) / planeH;
+  const imgAspect = img.width / img.height;
+  let cu = [0, 1], cv = [0, 1];
+  if (imgAspect > spanAspect) {
+    const f = spanAspect / imgAspect;
+    cu = [(1 - f) / 2, (1 + f) / 2];
+  } else {
+    const f = imgAspect / spanAspect;
+    cv = [(1 - f) / 2, (1 + f) / 2];
+  }
+  const U0 = cu[0] + (cu[1] - cu[0]) * u0, U1 = cu[0] + (cu[1] - cu[0]) * u1;
+  const uv = geo.attributes.uv, pos = geo.attributes.position;
+  for (let i = 0; i < uv.count; i++) {
+    uv.setXY(i, pos.getX(i) < 0 ? U0 : U1, pos.getY(i) < 0 ? cv[0] : cv[1]);
+  }
+  uv.needsUpdate = true;
+}
+
+function mountCanvas(url, w, h, pos, rotY, parent, room, uRange = [0, 1]) {
+  const geo = new THREE.PlaneGeometry(w, h);
+  const mat = new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.visible = false; // until the texture arrives
+  mesh.position.copy(pos);
+  mesh.rotation.y = rotY;
+  parent.add(mesh);
+  canvasTexture(url).then((tex) => {
+    applyCanvasUVs(geo, tex.image, w, h, uRange);
+    mat.map = tex;
+    mat.emissiveMap = tex;
+    mat.needsUpdate = true;
+    mesh.visible = true;
+  }).catch(() => log('err', `backdrop missing: ${url}`));
+  if (room) (S.canvasMats[room] = S.canvasMats[room] || []).push(mat);
+  else mat.emissive.setRGB(0.07, 0.07, 0.08); // no room light feed (towers): faint static glow
+  return mat;
+}
+
 // One 5' x 6'4" S-style walk-thru frame (ScaffoldExpress PSV-610 — our
 // PSV-K610-7 sets): 1.69" OD legs with 9" coupling pins under 1" collars,
 // top rail over a full-width header tied by three short stubs, doorway
@@ -374,6 +435,15 @@ function buildMaze(cfg) {
     const labelLevel = isBoth ? 1 : baseLevel;
     label.position.set(r.x + r.w / 2, labelLevel * LH + CH + 0.14, r.z + r.d + 0.08);
     grp(isBoth ? 'both' : baseLevel).add(label);
+
+    // printed-canvas backdrop on the back wall ('both' rooms: one tall print
+    // spanning both stories, like the real full-height climb-shaft canvases)
+    if (r.background) {
+      const bh = (isBoth ? LH + CH : CH) - 0.24;
+      mountCanvas(r.background, r.w - 0.12, bh,
+        new THREE.Vector3(r.x + r.w / 2, yBase + 0.16 + bh / 2, r.z + T / 2 + 0.012),
+        0, grp(isBoth ? 'both' : baseLevel), name);
+    }
 
     // walls per level: back (north) + west + east. NO street wall — open face.
     const wallHeight = isBoth ? LH + CH : CH;
@@ -616,6 +686,27 @@ function buildHexCenter(L) {
     }
   }
 
+  // the two wide printed canvases: each spans BOTH skinned back faces — the
+  // west face shows the left half, the east face the right half, continuous
+  // across the shared back corner (ground: Exit|Entrance, upper: Cuddle Cross)
+  const BGS = H.backgrounds || {};
+  for (const [lv, url, bgRooms] of [
+    [0, BGS.ground, [H.rooms.ground_west, H.rooms.ground_east]],
+    [1, BGS.upper, [H.rooms.upper, H.rooms.upper]],
+  ]) {
+    if (!url) continue;
+    [[V[3], V[4]], [V[4], V[5]]].forEach(([a, b], fi) => {
+      const dx = b[0] - a[0], dz = b[1] - a[1];
+      const len = Math.hypot(dx, dz);
+      const nx = -dz / len, nz = dx / len; // inward, toward the hex center
+      const bh = CH - 0.24;
+      mountCanvas(url, len - 0.1, bh,
+        new THREE.Vector3((a[0] + b[0]) / 2 + nx * 0.05, lv * LH + 0.16 + bh / 2,
+          (a[1] + b[1]) / 2 + nz * 0.05),
+        Math.atan2(nx, nz), levelGroups[lv], bgRooms[fi], [fi * 0.5, fi * 0.5 + 0.5]);
+    });
+  }
+
   // hex roof (covers the wing-doorway slivers too)
   const roof = new THREE.Mesh(slabShape(deck), matRoof);
   roof.position.y = LH + CH + 0.02;
@@ -737,6 +828,19 @@ function buildEntranceTowers(L) {
       skin.position.set(mx + ((mx - cx) / nl) * 0.055, towerH / 2, mz + ((mz - cz3) / nl) * 0.055);
       skin.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]);
       g.add(skin);
+    }
+    // the Towers print wraps the three outside faces: middle third on the
+    // street face, continuing around each corner so the u-seam hides at the
+    // back apex (which faces the maze, not the street)
+    if (ET.skin_image) {
+      const slices = [[1 / 3, 2 / 3], [2 / 3, 1], [0, 1 / 3]];
+      for (let k = 0; k < 3; k++) {
+        const a = V[k], b = V[(k + 1) % 3];
+        const nx = -(b[1] - a[1]) / FW, nz = (b[0] - a[0]) / FW; // outward
+        mountCanvas(ET.skin_image, FW + 0.02, towerH - 0.1,
+          new THREE.Vector3((a[0] + b[0]) / 2 + nx * 0.075, towerH / 2, (a[1] + b[1]) / 2 + nz * 0.075),
+          Math.atan2(nx, nz), g, null, slices[k]);
+      }
     }
     // ratchet-strap guys: top front corners down to stakes on the opposite
     // side, crossing in front of the skin the way they do in the photo
@@ -1019,6 +1123,14 @@ function updateFixtures(t) {
   for (const [room, rm] of Object.entries(S.roomsMeshes)) {
     const acc = roomTint.get(room);
     if (acc) rm.slab.material.emissive.setRGB((acc[0] / acc[3]) * 0.13, (acc[1] / acc[3]) * 0.13, (acc[2] / acc[3]) * 0.13);
+  }
+  // canvas backdrops: a readability floor at night, plus the room's light color
+  for (const [room, mats] of Object.entries(S.canvasMats)) {
+    const acc = roomTint.get(room);
+    const r = acc ? acc[0] / acc[3] : 0, g = acc ? acc[1] / acc[3] : 0, b = acc ? acc[2] / acc[3] : 0;
+    for (const m of mats) {
+      m.emissive.setRGB(Math.min(1, 0.12 + r * 0.5), Math.min(1, 0.12 + g * 0.5), Math.min(1, 0.13 + b * 0.5));
+    }
   }
 }
 

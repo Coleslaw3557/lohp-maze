@@ -30,7 +30,7 @@
     ]
   },
   "server_rack": {
-    "note": "small enclosure mounted on the OUTSIDE of the back wall, behind Cuddle Cross on the shared scaffold frame between Cuddle Cross and Photo Bomb Room (upper level) — NOT inside the hex",
+    "note": "small enclosure mounted on the OUTSIDE of the back wall, behind Cuddle Cross on the shared scaffold frame between Cuddle Cross and Photo Bomb Room (upper level) \u2014 NOT inside the hex",
     "pos": [
       8.52,
       0.385
@@ -52,7 +52,9 @@
       "rise": 0.95,
       "band": 0.58,
       "medallion_r": 0.52
-    }
+    },
+    "skin_image": "img/backgrounds/towers.jpg",
+    "skin_image_note": "the Towers canvas wraps around each tower\u2019s three outside faces (image split in thirds, middle third on the street face, seam at the back apex)"
   },
   "hex_center": {
     "note": "The center is a hexagon of SIX complete 5'W x 6'4\" walk-thru frames per level (12 total), hose-clamped in pairs at every corner \u2014 NO cross braces, no cut-down pieces. Side = 5ft (1.524m). A CORNER points at the street: the two angled street frames meeting at it are the split entry (START, east) and exit (FINISH, west) \u2014 each frame's walk-thru arch is one door, and the ground-floor Exit/Entrance divider runs front corner to back corner between them. The flat east/west frames' arches are the doorways the side rooms (wings, ending at x=8.52 / starting at x=11.568) walk in through; the two back frames are skinned. Upper deck = Cuddle Cross.",
@@ -63,6 +65,11 @@
       "ground_west": "Exit",
       "ground_east": "Entrance",
       "upper": "Cuddle Cross"
+    },
+    "backgrounds": {
+      "note": "one wide printed canvas per level spans BOTH skinned back faces (west face = left half, east face = right half): the ground canvas backs the Exit and Entrance halves, the upper canvas backs Cuddle Cross",
+      "ground": "img/backgrounds/entrance.jpg",
+      "upper": "img/backgrounds/cuddle.jpg"
     }
   },
   "rooms": {
@@ -72,6 +79,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": "both",
+      "background": "img/backgrounds/moop.jpg",
       "fixture_positions": [
         [
           1.9,
@@ -91,6 +99,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 0,
+      "background": "img/backgrounds/monkey.jpg",
       "fixture_positions": [
         [
           3.96,
@@ -108,6 +117,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 1,
+      "background": "img/backgrounds/bikes.jpg",
       "fixture_positions": [
         [
           4.02,
@@ -121,6 +131,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 0,
+      "background": "img/backgrounds/temple.jpg",
       "fixture_positions": [
         [
           4.31,
@@ -134,6 +145,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 1,
+      "background": "img/backgrounds/deep-playa.jpg",
       "fixture_positions": [
         [
           6.15,
@@ -147,6 +159,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 0,
+      "background": "img/backgrounds/monday.jpg",
       "fixture_positions": [
         [
           6.5,
@@ -160,6 +173,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 1,
+      "background": "img/backgrounds/photo.jpg",
       "fixture_positions": [
         [
           8.27,
@@ -220,6 +234,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 0,
+      "background": "img/backgrounds/cop-dodge.jpg",
       "fixture_positions": [
         [
           13.398,
@@ -233,6 +248,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 1,
+      "background": "img/backgrounds/portos.jpg",
       "fixture_positions": [
         [
           13.458,
@@ -246,6 +262,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 0,
+      "background": "img/backgrounds/gate.jpg",
       "fixture_positions": [
         [
           13.748,
@@ -259,6 +276,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": 1,
+      "background": "img/backgrounds/sparkle.jpg",
       "fixture_positions": [
         [
           15.578,
@@ -272,6 +290,7 @@
       "z": 0.5,
       "d": 1.52,
       "floor": "both",
+      "background": "img/backgrounds/guy-line.jpg",
       "fixture_positions": [
         [
           17.738,
@@ -306,7 +325,7 @@
   ],
   "sensors": {
     "Entrance LT": {
-      "note": "across the entry arch — the hex's front-east street frame, so the beam runs angled with it",
+      "note": "across the entry arch \u2014 the hex's front-east street frame, so the beam runs angled with it",
       "kind": "beam",
       "level": 0,
       "seg": [
