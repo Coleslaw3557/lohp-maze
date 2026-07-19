@@ -1,0 +1,57 @@
+# Bench/evaluation node for the XIAO ESP32-S3 — the audio-era hardware stack
+# of a button room (Monkey): shared logic + button + GPIO button on D1 +
+# speaker chain (PCM5102A -> Pebble) + S3 platform. This is the node
+# node_audio_config.json maps "Monkey Room" to, so the dev server's real
+# audio commands land here: trigger MonkeyBusiness and the cue plays on the
+# bench speaker while music (POST /api/start_music) streams underneath.
+#
+#   before flashing:  ./make_node_audio.py     (generates audio/cues-bench-s3.yaml)
+#   flash:            .venv/bin/esphome run bench-xiao-s3.yaml --device /dev/ttyACM0
+#   poke it directly: .venv/bin/python harness.py call <node-ip>:6098 play_cue cue=monkey_shrine_complete
+#
+# Wiring (see wiring-guides/room-node-audio-plan.md):
+#   D8/GPIO7 -> PCM5102A BCK, D9/GPIO8 -> LCK, D10/GPIO9 -> DIN
+#   PCM5102A: VIN<-5V pin, GND, back jumpers FLT-L DEMP-L XSMT-H FMT-L, SCK->GND
+#   line-out jack -> 3.5mm -> Pebble; button D1/GPIO2 -> GND
+#
+# Not part of validate_all.sh (that only sweeps rooms/*.yaml, all host-platform).
+substitutions:
+  node_name: lohp-bench-s3
+  room: "Monkey Room"            # a real room so the POST genuinely runs an effect
+  button_effect: "MonkeyBusiness"
+  button_pin: GPIO2              # XIAO S3: D1 position = GPIO2 (C3 was GPIO3)
+  server_host: "192.168.253.184" # this dev box — the sim's real server on :5000
+  api_port: "6098"               # 6099 = the C3 bench node
+
+packages:
+  logic: !include packages/logic.yaml
+  button: !include packages/button.yaml
+  button_hw: !include packages/button_gpio_c3.example.yaml
+  audio: !include packages/audio_s3.yaml
+  cues: !include audio/cues-bench-s3.yaml   # generated — run ./make_node_audio.py
+  platform: !include packages/hardware_s3.yaml
+
+# bench extras layered over the production packages
+wifi:
+  # Same marginal-RF treatment as the C3 bench node: pin the stronger mesh AP,
+  # skip the pre-connect scan.
+  ssid: !remove
+  password: !remove
+  networks:
+    - ssid: !secret wifi_ssid
+      password: !secret wifi_password
+      bssid: 70:58:A4:5E:16:29
+  fast_connect: true
+  ap:
+    ssid: "LoHP-Bench-S3"
+    password: "hiddenplaya"
+
+# On-playa diagnostics habit starts at the bench: RSSI + stream health visible
+# from the server laptop.
+sensor:
+  - platform: wifi_signal
+    name: "${room} node RSSI"
+    update_interval: 30s
+
+logger:
+  level: DEBUG

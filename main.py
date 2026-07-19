@@ -14,6 +14,7 @@ from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
 from remote_host_manager import RemoteHostManager
 from audio_manager import AudioManager
+from node_audio_manager import NodeAudioManager
 from camera_manager import CameraManager
 from effects.photobomb_shot import SHUTTER_OFFSET
 
@@ -101,7 +102,8 @@ dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
 dmx_output_manager = DMXOutputManager(dmx_state_manager)
 light_config = LightConfigManager()
 audio_manager = AudioManager()
-remote_host_manager = RemoteHostManager(audio_manager=audio_manager)
+node_audio_manager = NodeAudioManager(audio_manager=audio_manager)
+remote_host_manager = RemoteHostManager(audio_manager=audio_manager, node_audio=node_audio_manager)
 effects_manager = EffectsManager(light_config, dmx_state_manager, remote_host_manager, audio_manager)
 camera_manager = CameraManager()
 

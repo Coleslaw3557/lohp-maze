@@ -19,9 +19,13 @@ Everything below is either one-sided (nothing to align across the gap) or modula
 
 ## Recommended architecture
 
-**Node:** Seeed XIAO ESP32-C3 (~$5) — external antenna (real RF through maze walls) and LiPo
-charging built in. Budget alternative: ESP32-C3 SuperMini (~$2.50–4), but range-test the antenna
-and buy 20% spares.
+**Node:** Seeed XIAO ESP32-S3 ($7.49) — the fleet standard since the 2026-07-18 audio revisit
+(`wiring-guides/room-node-audio-plan.md`): same footprint and external antenna as the C3, plus
+8MB PSRAM + 8MB flash, which the per-room speaker chain requires (dual media+announcement audio
+pipeline — music bed and effect cues mixed on-device). C3s already on hand stay as bench units
+and spares; a C3 pressed into audio duty can only do effect cues OR music, never both at once.
+Pin note: wiring is keyed to XIAO Dx positions; GPIO numbers differ per board (D1 button = GPIO2
+on S3 vs GPIO3 on C3; I2S D8/D9/D10 = GPIO7/8/9 on S3).
 
 **Firmware: ESPHome.** Per-node YAML, no code, OTA updates, a debug web UI on every node, and
 native drivers for every sensor below. One shared package + a 6-line file per room, all kept in
@@ -80,37 +84,100 @@ device/resolution/paths.
 
 Skip HC-SR04 ultrasonic entirely (sloppy cone, absorbs into costumes, units interfere, dust).
 
-## Power (12-hour night runs; a node draws ~0.5W)
+## Power (12-hour night runs; sensing ~0.5W, with the speaker chain ~1–2W while playing)
 
-1. **Rooms with lighting power** (most of them): a $5 USB wall cube off the same feed as the DMX
-   fixture. "Power-only wiring" — no data runs.
-2. **Rooms without**: 20,000mAh USB power bank (~$22) runs the whole event. The classic trap is
-   bank auto-shutoff at low draw — `power_save_mode: none` keeps the node above most cutoff
-   thresholds, but **test one unit of the exact bank model before buying five**. Guaranteed
-   option: Voltaic V25 "Always On" ($45). 18650 shields are cheaper but bare-cell logistics on
-   playa aren't worth it; PoE splitters reintroduce the cable pulls this project is escaping.
+**Topology (2026-07-19 v4, Tim's call): one cheap 20000mAh USB bank velcro'd at every box —
+no power stations, no long 5V runs.** The fleet is a pure-5V USB load (~0.2A node + a Pebble
+per room): power-bank territory, not power-station territory. A ~$15 bank carries a room for
+two nights, so 18 banks (15 rooms + the mast router + 2 rotation spares) cost about what ONE
+SOLIX C300 did, and the 30-50ft 5V-droop problem disappears along with the runs themselves.
+
+- **Bank pick (listings checked 2026-07-19): Miady 2-pack 20000mAh PD 22.5W — $28.99/pair
+  ($14.50/bank, White+Black; Black+Black pair $32.99), amzn B0GQM3SB65.** Per bank: 74Wh,
+  outputs 2× USB-A + 1× USB-C — exactly a room's plug set: Pebble's captive A-male straight
+  into an A port, node USB-C via a 1ft A-to-C. Nicer-cheapo fallback if Miady QC disappoints
+  at the bench: INIU 20000mAh 22.5W single, $29.99 (B0DFLSQBHT, USB-C×2 + USB-A×1).
+- **Runtime:** 74Wh nominal ≈ 50Wh usable after 5V conversion. A 12h room-night runs
+  ~18-24Wh (~1W node steady + Pebble duty-cycling) → **two nights per charge with margin**;
+  even a worst-case 4W all-night party clears one full night (48Wh).
+- **Auto-off is a non-issue at this load:** the box draws ~0.2A *continuously* (S3 WiFi +
+  radar/ToF + DAC), 3-4× above the ~50-60mA "phone finished charging" cutoff cheap banks
+  use, and the Pebble idles on top of that. The v3 lesson still stands — every brand hides
+  low-current timers somewhere — which is why the safety case here is the load math, not
+  brand trust, and why the bench gate below stays.
+- **In-box wiring unchanged:** radar VCC + DAC VIN tap the XIAO's 5V pin (~105mA); no other
+  power electronics in the box. **Velcro the bank OUTSIDE the box** (lid or the scaffold
+  tube beside it): daily swap without opening the box, no battery heat inside, and shade it.
+- **Recharge rotation, not UPS:** banks charge by day on ONE PowerPort 6 (6× 2.4A ports) off
+  generator/camp power — each bank needs a slot every other day, ≈9 banks/day in two ~2h
+  waves; the 2 spares float the rotation. If maze WiFi stays up 24/7, the router bank swaps
+  daily. A dead bank is now a one-room, 60-second swap instead of a 5-room cluster event.
+- **Why not stations / one central battery (v3, superseded):** 3× SOLIX C300 + mandatory
+  chargers ≈ $840 to solve a ~$260 problem, and the UPS behavior only mattered because a
+  cluster hung 5 rooms on one plug. The 5V physics is unchanged — 30-50ft at these currents
+  drops half a volt, which is exactly why the banks sit AT the boxes.
+- **Bench gate before the fleet buy (unchanged discipline):** run ONE Miady + node + Pebble
+  overnight with audio duty-cycling and confirm the morning state — still powered, no port
+  flap (the node's ESPHome uptime sensor is the witness).
+
+## Per-box kit (what one room's enclosure gets)
+
+**Identical in all 15 rooms** — the audio/brain core: XIAO ESP32-S3 ($7.49) +
+PCM5102A DAC ($4.44) + 3.5mm cable + Creative Pebble 2.0 pair ($20.99, mounted
+off-box) + its own 20000mAh USB bank velcro'd at the box (see Power).
+One firmware family; a room's YAML just picks its sensor package.
+
+**Differs per room** — the sensor pack:
+
+| Rooms | Sensor pack |
+|---|---|
+| 10 wing bays (Monkey, Temple, NFM, Cop Dodge, Gate, Bike Lock, Deep Playa, Photo Bomb, Porto, Sparkle) | LD2410C radar |
+| Cuddle Cross | LD2410C + hex 4-button termination (+ LD2450 later, projection subsystem) |
+| Entrance / Exit | VL53L1X ToF (through the START/FINISH arch) |
+| Guy Line Climb / Vertical Moop March | VL53L1X ToF (across the shaft arch) |
+| Monkey (add-on) | puzzle microswitch, 2-wire to the box |
+| Photo Bomb (add-on) | shutter arcade button, 2-wire to the box |
+| Porto (add-on) | 3 piezo discs + ADC front-ends |
 
 ## Budget (15 rooms, mid-2026 street prices)
 
 | Item | Qty | Ext |
 |---|---|---|
-| XIAO ESP32-C3 (12 rooms + 3 flashed spares + 3 button stations) | 18 | $90 |
+| XIAO ESP32-S3 (15 rooms + 3 flashed spares) | 18 | $135 |
 | LD2410C mmWave (presence rooms) | 10 | $45 |
 | VL53L1X ToF (doorway tripwires) | 6 | $39 |
 | M18 through-beam pairs (problem doorways) | 2 | $31 |
 | AM312 PIR (spares/backup) | 5 | $7 |
-| IP65 enclosures with cable glands | 15 | $75 |
-| USB wall cubes | 10 | $50 |
-| 20Ah power banks (pre-tested model) | 5 | $110 |
-| GL.iNet travel router | 1 | $29 |
+| PCM5102A I2S DAC 2-packs (amzn B0DNW32Y46; 15 rooms + 1 spare) | 8 | $71 |
+| Creative Pebble 2.0 pairs ($20.99 ea, **minus pairs on hand**) | ≤15 | ≤$315 |
+| 3.5mm M-M cables + second wall-cube ports for the Pebbles | — | $40 |
+| Wooden node enclosures (shop-built — see room-node-enclosure-plan.md) | 15 | — |
+| Miady 20000mAh bank 2-packs (per-box power: 15 rooms + mast router + 2 spares) | 9 | ~$261 |
+| Anker PowerPort 6 (the day-charge rack for the bank rotation) | 1 | ~$30 |
+| USB runs: 16× A-to-C 1ft (bank→node at the box) + 4× USB-A 10ft extensions (far Pebble mounts) | ~20 | ~$50 |
+| GL.iNet travel router (mount it high on the 20ft center mast) | 1 | $29 |
 | Boost modules, JST leads, velcro, misc | — | $30 |
-| **Total** | | **≈ $506** |
+| **Total** | | **≈ $1,080 minus owned Pebbles** (power share ≈ $340 — the v3 station scheme was ≈ $940 of it alone) |
+
+Audio rows land the whole per-room chain at ~$12 of electronics + a Pebble per room; the
+node's speaker replaces the three Pi units A/B/C outright (camera already lives on the server
+Pi, Cuddle projection is its own planned Pi 3B).
 
 That's roughly what the old multi-conductor cabling alone cost, and per-room install drops from
 "pull and terminate a home run to the Pi" to "screw one box to the wall and plug it in."
 AliExpress prices swing 2–3× with sales; Amazon multi-packs are the stable reference.
 
-## Audio: consolidate the three Pis to one (implemented)
+## Audio: consolidate the three Pis to one (SUPERSEDED 2026-07-18)
+
+> Superseded by **per-room audio on the nodes**: XIAO S3 → PCM5102A line-out →
+> Creative Pebble at every box, effect cues compiled into node firmware, music
+> streamed from the server's `/api/audio/` — plan in
+> `wiring-guides/room-node-audio-plan.md`, server downlink in
+> `node_audio_manager.py` + `node_audio_config.json`, firmware in
+> `sim/esphome/packages/audio_s3.yaml` (+ generated cues), bench node
+> `sim/esphome/bench-xiao-s3.yaml`. The single-Pi mode below still works and
+> remains the fallback if the S3 bench disappoints — both paths run the same
+> server code, and the WS client protocol stays live for the sim regardless.
 
 Once the ESP32 nodes own all sensing, the Pis' only job is zone audio — and one Pi 4 with a
 cheap USB sound dongle per zone (~$10 each, and they sound better than the Pi's headphone jack)
@@ -145,5 +212,7 @@ Adds to the BOM: 3 × USB sound dongles (~$30), replaces two Pi power feeds.
 3. At the maze: unplug the sensor harnesses/level shifters/ADS1115s from the Pis and delete the
    `triggers` arrays from `client/config-unit-*.json`. Pis keep doing audio unchanged.
 4. Run both systems in parallel for a test night before ripping out the old wiring for good.
-5. Optionally consolidate audio to one Pi (`config-single-pi.json`, section above) once the
-   amp placement question is settled.
+5. Audio: bench the S3 speaker chain (`sim/esphome/bench-xiao-s3.yaml` + the checklist in
+   `wiring-guides/room-node-audio-plan.md`), then migrate rooms into `node_audio_config.json`
+   one at a time — the node path is additive beside the WS units, so a room can run both for a
+   test night. Units A/B/C retire when all speaker rooms are migrated.

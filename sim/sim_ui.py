@@ -102,6 +102,13 @@ async def sim_config():
     })
 
 
+@app.route('/cad/<path:filename>')
+async def cad_item(filename):
+    """Real cut files (cad-items/ at the repo root) — the beacon tiki faces
+    load from here so the sim always renders the same SVGs the laser cuts."""
+    return await send_from_directory(os.path.join(REPO_DIR, 'cad-items'), filename)
+
+
 @app.route('/sim/health')
 async def sim_health():
     return jsonify({

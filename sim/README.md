@@ -27,8 +27,10 @@ sets** (PSV-K610-7: two PSV-610 frames + two PSV-303 7'×4' tube cross braces,
 (2.13 × 1.52 × 1.93 m), adjacent rooms **share one frame** (bays abut, no gaps),
 and the braces pin to leg studs **8.5" down from the frame top with a 4 ft
 spread** — wide flat scissors crossing just above mid-height, not corner-to-corner
-X's — on both the front and back planes. The whole run — seven 7ft wing bays plus
-the 10ft hexagon — is ≈ 59 ft long, ~12.7 ft tall.
+X's — on both the front and back planes. The wings **share the hexagon's flat
+east/west frames**: the hex-adjacent bays' braces pin directly to those frames
+(one frame per junction, no doubled scaffold), so the whole run — seven 7ft
+wing bays plus the 10ft hexagon — is ≈ 57.6 ft long, ~12.7 ft tall.
 
 Ground floor: Entrance, Cop Dodge, Gate, Monkey, Temple, No Friends Monday, Exit.
 Upper floor (+6'4"): Sparkle Pony, Porto, Cuddle Cross, Photo Bomb, Deep Playa
@@ -56,6 +58,27 @@ Cuddle Cross deck and the roof to the sky, topping out ~7 ft above the
 structure. The deck and roof penetrations are its lateral bracing
 (`hex_center.center_pole` in `maze_layout.json`).
 
+**The custom steel decks** that carry the hex ply — the Cuddle Cross floor and
+the roof above it — are modeled from the real fab drawings
+(`cad-items/main-floor.svg` / `top-floor.svg`, plan scale 10 units = 1"): a 2"
+steel channel along each edge lying flat on the frames' top rails, 1" bars kept
+top-flush with it — spoke pairs from a collar at the mast out to every corner
+leg cluster, plus a joist bay per side — and the roof deck cut away at the SW
+corner (the rear corner beside the Photo Bomb arch), the open climb-up hole to
+the roof (no cover; the corner legs are the ladder). The roof slab renders the
+hole too. The **Steel** button cycles deck / roof / both and ghosts the ply so
+the members read against the scaffold; after editing a drawing, rerun
+`tools/deck_steel_from_cad.py` to regenerate `web/deck_steel.js`.
+
+**The beacon crowns the mast**: four laser-cut **tiki heads** boxed square
+around the pole, all four panel tops flush with the pole tip. The sim's face
+textures are built from the **actual xTool cut files** (`cad-items/tiki-*.svg`,
+served live at `/cad/` — edit a cut file, reload, see it): each 24"×36" panel
+is painted forest green, and the SVG's line work is what the laser cuts
+*through*, so at night the cuts glow with the LED backing panel behind
+(LED hardware/color still undecided — the sim shows a warm-white placeholder;
+`hex_center.beacon` in `maze_layout.json`).
+
 **Out front on the street stand two decorative entrance towers** (see
 `hiddenplaya.art/maze-1.jpeg`) with the *Legends of the Hidden Playa* sign
 arching between them, medallion at the peak. Each tower is three **3' × 4'
@@ -66,14 +89,18 @@ ratchet straps. **Purely decorative — no fixtures, no sensors, no lights at
 this time** (`entrance_towers` in `maze_layout.json`).
 
 The structure has a **roof** over the top floor (hidden automatically in the
-overhead plan view), and **all lights and sensors mount on the back scaffolding/
-cross members**: fixtures are bracket-mounted, tilted down into their rooms (no
-poles in the walkways, nothing hangs mid-room); tripwire emitters sit on the
-frames at beam height. Each room also renders its **wooden node-enclosure box**
-(XIAO C3 + LD2410C radar + power) at the planned mount from
+overhead plan view), and **all lights mount on the back scaffolding/cross
+members**: fixtures are bracket-mounted, tilted down into their rooms (no
+poles in the walkways, nothing hangs mid-room). **Each room's entire sensing
+lives in its wooden node-enclosure box** (XIAO C3 + the room's LD2410C radar
+or VL53L1X ToF + power) at the planned mount from
 `wiring-guides/room-node-enclosure-plan.md` — wing bays on the entry-side front
-leg with the radar window aimed at the opposite back corner (`enclosure` keys
-in `maze_layout.json`).
+leg with the radar window aimed at the opposite back corner, ToF rooms with the
+window facing their arch (`enclosure` keys in `maze_layout.json`). The sim
+draws each box's detection wedge and boresight at its configured yaw/tilt;
+buttons and knock pads stay at their interaction points and wire back to screw
+terminals in the room's box. Doorway openings are declared in `doorways` (they
+used to be implied by the old break-beam segs).
 
 **Room backdrops**: every room's back wall carries its real printed-canvas
 background (the print masters live in `Background-images/` at the repo root,
@@ -130,7 +157,8 @@ Stop with `sim/stop.sh`. First run creates `sim/.venv` automatically.
 
 **Views** (M cycles): **Street** (default — the whole facade at once, drag to pan,
 wheel to dolly, the way the piece reads on playa) · **First-person** (WASD + mouse-
-look, E to use buttons/pads/ladders, walk through red doorway beams to trip sensors)
+look, E to use buttons/pads/ladders, walk into a room's radar wedge (green) or ToF
+cone (red) to trip its sensor)
 · **Overhead plan** (Ground/Upper/Both floor filter, click floor to teleport).
 **Day / night** (N or the ☀/☾ button, remembered across reloads): night is the
 default show environment; day mode brings up playa daylight — handy for checking
@@ -152,13 +180,45 @@ shows comes from **production configs and code**, with one sim-only exception:
 | Which effect a sensor/room triggers | `../client/config-unit-*.json` (today's Pis) and `esphome/rooms/*.yaml` (ESP32 nodes) | **REAL** — sim reads the unit configs live |
 | Fixtures: rooms, models, DMX addresses | `../light_config.json` | **REAL** |
 | Buttons (what the 4 arcade buttons do) | `../client/config-unit-a.json` | **REAL** |
-| 3D geometry: room bays, floor levels, beam/button/pad positions, route, spawn, playa environment | `maze_layout.json` (+ `web/app.js` for looks) | **sim-only** (visualization) |
+| 3D geometry: room bays, floor levels, node-box sensor zones (pos/yaw/tilt/fov/range), button/pad positions, doorways, route, spawn, playa environment | `maze_layout.json` (+ `web/app.js` for looks) | **sim-only** (visualization) |
 
 Restart needed after editing Python (`sim/stop.sh && sim/run.sh -d`); JSON config
 changes only need a browser refresh (`/sim/config` re-reads them per request).
 So: design an effect in the sim → it's already production code → deploy to the
 physical server → identical behavior on real fixtures (once addressing is fixed,
 below).
+
+## Planned: Cuddle Cross floor projection (sim preview, 2026-07-18)
+
+The `projection` key in `maze_layout.json` renders the **planned** cuddle-pit
+rig: a used ViewSonic LS625X (laser-phosphor DLP — no bulb, sealed optical
+engine with a dust filter, the playa-relevant feature; ~$395 used) hung
+**nose-down on a stub arm just inside the hexagon's NE corner** (lens plumb
+10 cm inboard of the paired corner legs, so the steel sits *behind* the
+aperture and never enters the beam), throwing **SW down the long
+diagonal**. The nose-down chassis rides with its top kissing the roof
+slab — window at ~1.53 m, the biggest image the roof allows — and the
+0.49:1 optics with the 118% lens offset paint a **3.11 × 2.33 m** rectangle
+nearly centered on the deck: **91.2%**, the placement-math optimum once
+obstructions are priced in (an aperture *outside* the vertex would center
+the image for 92.7%, but the corner legs 6 cm in front of the lens shadow
+±20° wedges through the full image — optically dead; the old rear-leg mount
+was 76%, or 89.8% re-aimed diagonally — full optimization in the layout
+note). Dark: the ~0.5 m dead wedge under the body and a ~0.2 m far tip.
+Supersedes the rear-leg placement, the Casio XJ-ST145 pick and the earlier
+595Wi 130%-overdrive scheme. Content is
+projection-mapped as before: masked to the actual deck outline, off-deck pixels
+black — plus the LD2450 position radar that joins the LD2410C inside the node
+box (faint blue wedge). Walk onto the deck
+in first person — or click the **Cuddle Cross LT** trigger — and the floor
+show starts: placeholder snakes wander the playfield and flee your tracked
+position, filtered through the tracker's coverage wedge and ~150 ms
+sensor+render latency to match the real LD2450 → Pi 3B → projector chain.
+The center mast base renders as the content island with its real shadow
+wedge falling SW toward the back-west corner; the show times out 60 s after
+presence is lost,
+like the planned cue daemon. **Sim-only** — no production config exists for
+this yet; delete the `projection` key to remove the rig.
 
 ## Rooms without designed lighting/audio yet (updated 2026-07-17)
 
@@ -214,7 +274,7 @@ open and you'll see the "ghost" activity they produce.
 |---|---|---|
 | DMX output | `virtual_dmx.py` replaces the FTDI thread; same 44Hz loop over `DMXStateManager` | Same frames that would hit the wire |
 | Fixtures | Each 3D fixture decodes the **raw universe at its configured start address** using the channel map from `light_config.json` | Reproduces addressing bugs |
-| Sensors | Beam/button/pad geometry in `maze_layout.json` (floor-aware), actions verbatim from `client/config-unit-*.json`; piezo 3-attempt/25% logic mirrors `trigger_manager.py`; 5s cooldowns | Same HTTP POSTs as the Pis / planned ESP32s |
+| Sensors | Radar/ToF detection wedges fired from each room's node box (pos + yaw/tilt/fov/range in `maze_layout.json`, floor-aware, clipped to room bounds) plus button/pad geometry; actions verbatim from `client/config-unit-*.json`; piezo 3-attempt/25% logic mirrors `trigger_manager.py`; 5s cooldowns | Same HTTP POSTs as the Pis / planned ESP32s |
 | Audio | The page connects to `:8765` speaking the unit protocol, claims all 15 rooms, plays served MP3s via Web Audio, spatialized at room+floor positions | Same messages a Pi unit receives |
 | ESP32 nodes | Real ESPHome YAML compiled for the `host` platform → native Linux processes that fire real `http_request` POSTs (`esphome/`, verified end-to-end) | Real firmware engine, virtual sensor input |
 

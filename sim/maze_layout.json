@@ -4,7 +4,7 @@
     "coordinates": "x = along the street (west\u2192east, left-to-right in the sim's street view), z = depth into the structure (back wall z=0.5, open street face z=2.02), y = up",
     "note": "TWO-STORY OPEN-FACED SCAFFOLD structure (the sim's street view is the elevation). Built from ScaffoldsSupply 5'W x 6'4\"T walk-thru frames (1-11/16\" dia tube, no center pins) with 7' x 4'-lock-span cross braces: each bay is 7ft wide x 5ft deep x 6'4\" tall (2.13 x 1.52 x 1.93 m); adjacent rooms SHARE one frame, so bays abut with no gaps. floor 0 = ground, floor 1 = upper (+1.93m), 'both' = full-height climb rooms (up in Guy Line Climb, down in Vertical Moop March). Room names must match light_config.json, sensor names must match client/config-unit-*.json.",
     "sim_only": "This file affects ONLY the simulator's 3D geometry. Lights/effects/audio/triggers all come from the production configs.",
-    "enclosures": "each room's \"enclosure\" is the wooden node box (XIAO C3 + LD2410C radar + power) from wiring-guides/room-node-enclosure-plan.md, hose-clamped to a scaffold frame leg: wing bays on the ENTRY-side front leg (ground enters west, upper enters east) at 1.55 m, radar window (local +z, yaw_deg) aimed at the diagonally-opposite back corner; Cuddle Cross on the back corner; Entrance/Exit near the back legs facing their arches (ToF rooms)."
+    "enclosures": "each room's \"enclosure\" is the wooden node box (XIAO C3 + sensor + power) from wiring-guides/room-node-enclosure-plan.md, hose-clamped to a scaffold frame member \u2014 and it holds ALL of the room's sensing. Wing bays: LD2410C radar behind the ply window on the ENTRY-side front leg (ground enters west, upper enters east) at 1.55 m, boresight (yaw_deg, local +z) at the diagonally-opposite back corner, down-tilt 10\u00b0 ground / 5\u00b0 upper. Cuddle Cross: radar on the hex back corner aimed across the deck. Entrance/Exit: VL53L1X ToF fires from the box out through the START/FINISH arch (needs an open aperture \u2014 IR can't pass ply). Guy Line/VMM: ToF fires from the box diagonally across the shaft entry arch. Buttons and knock pads stay at their interaction points and 2-wire back to terminals in the room's box. Zone sensors in `sensors` carry pos (= the box), yaw_deg/tilt_deg/fov_deg/range_m and a room-bounds clip; `doorways` now declares the arch openings the old doorway beams used to imply."
   },
   "level_height": 1.93,
   "ceiling_height": 1.88,
@@ -33,7 +33,7 @@
   "server_rack": {
     "note": "small enclosure mounted on the OUTSIDE of the back wall, behind Cuddle Cross on the shared scaffold frame between Cuddle Cross and Photo Bomb Room (upper level) \u2014 NOT inside the hex",
     "pos": [
-      8.52,
+      8.724,
       0.385
     ],
     "level": 1,
@@ -58,7 +58,7 @@
     "skin_image_note": "the Towers canvas wraps around each tower\u2019s three outside faces (image split in thirds, middle third on the street face, seam at the back apex)"
   },
   "hex_center": {
-    "note": "The center is a hexagon of SIX complete 5'W x 6'4\" walk-thru frames per level (12 total), hose-clamped in pairs at every corner \u2014 NO cross braces, no cut-down pieces. Side = 5ft (1.524m). A CORNER points at the street: the two angled street frames meeting at it are the split entry (START, east) and exit (FINISH, west) \u2014 each frame's walk-thru arch is one door, and the ground-floor Exit/Entrance divider runs front corner to back corner between them. The flat east/west frames' arches are the doorways the side rooms (wings, ending at x=8.52 / starting at x=11.568) walk in through; the two back frames are skinned. Upper deck = Cuddle Cross.",
+    "note": "The center is a hexagon of SIX complete 5'W x 6'4\" walk-thru frames per level (12 total), hose-clamped in pairs at every corner \u2014 NO cross braces, no cut-down pieces. Side = 5ft (1.524m). A CORNER points at the street: the two angled street frames meeting at it are the split entry (START, east) and exit (FINISH, west) \u2014 each frame's walk-thru arch is one door, and the ground-floor Exit/Entrance divider runs front corner to back corner between them. The flat east/west frames' arches are the doorways the side rooms walk in through (the wings END at these flat frames \u2014 x=8.724 / x=11.364 \u2014 sharing them: one frame per junction, the wing bays\u2019 cross braces pin directly to the hex frames); the two back frames are skinned. Upper deck = Cuddle Cross.",
     "cx": 10.044,
     "cz": 1.26,
     "side": 1.524,
@@ -76,11 +76,19 @@
       "note": "a SINGLE continuous 20 ft stick of 3\" schedule 40 pipe (3.5\" OD) standing at the exact hex center: up from the ground where the Exit|Entrance divider meets the middle, through the Cuddle Cross deck and the hex roof, straight to the sky ~7 ft above the structure. One piece, no joints; the deck and roof penetrations are the lateral bracing.",
       "od": 0.0889,
       "height": 6.096
+    },
+    "beacon": {
+      "note": "THE BEACON: four tiki heads boxed square around the mast top, all four panel TOPS FLUSH with the pole tip at 6.096 m. Each face is a 24\"x36\" ply panel (1728x2592 @ 72 dpi in the art files) painted forest green, its line work laser-cut on the xTool from the REAL cut files cad-items/tiki-1..4.svg — the sim serves those same files at /cad/ so a cut-file edit shows up on the next reload. In each SVG the cls-1 rect is the painted panel and the single cls-2 path is what the laser cuts THROUGH; light from the LED-lit backing panel comes through the cuts, so the sim renders cls-1 as paint and makes cls-2 glow in the led color (LED hardware/color undecided — warm-white placeholder). Panels stand off half a panel width so their edges meet at the corners: a closed 24\" square totem head the 3.5\" pipe runs up the middle of. Face order marching around: tiki-1 street (+z), tiki-2 east/Entrance (+x), tiki-3 back (-z), tiki-4 west/Exit (-x). Delete this key to drop the beacon from the sim.",
+      "faces": ["cad/tiki-1.svg", "cad/tiki-2.svg", "cad/tiki-3.svg", "cad/tiki-4.svg"],
+      "panel_w": 0.6096,
+      "panel_h": 0.9144,
+      "paint": "#228b22",
+      "led": "#ffd9a3"
     }
   },
   "rooms": {
     "Vertical Moop March": {
-      "x": 0.0,
+      "x": 0.204,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -88,27 +96,27 @@
       "background": "img/backgrounds/moop.jpg",
       "fixture_positions": [
         [
-          1.9,
+          2.104,
           0.68,
           1
         ],
         [
-          0.15,
+          0.354,
           0.68,
           1
         ]
       ],
       "enclosure": {
         "pos": [
-          2.03,
+          2.234,
           1.94
         ],
         "level": 1,
-        "yaw_deg": -124
+        "yaw_deg": 174
       }
     },
     "Monkey Room": {
-      "x": 2.13,
+      "x": 2.334,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -116,17 +124,17 @@
       "background": "img/backgrounds/monkey.jpg",
       "fixture_positions": [
         [
-          3.96,
+          4.164,
           0.68
         ],
         [
-          3.12,
+          3.324,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          2.23,
+          2.434,
           1.94
         ],
         "level": 0,
@@ -134,7 +142,7 @@
       }
     },
     "Bike Lock Room": {
-      "x": 2.13,
+      "x": 2.334,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -142,13 +150,13 @@
       "background": "img/backgrounds/bikes.jpg",
       "fixture_positions": [
         [
-          4.02,
+          4.224,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          4.16,
+          4.364,
           1.94
         ],
         "level": 1,
@@ -156,7 +164,7 @@
       }
     },
     "Temple Room": {
-      "x": 4.26,
+      "x": 4.464,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -164,13 +172,13 @@
       "background": "img/backgrounds/temple.jpg",
       "fixture_positions": [
         [
-          4.31,
+          4.514,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          4.36,
+          4.564,
           1.94
         ],
         "level": 0,
@@ -178,7 +186,7 @@
       }
     },
     "Deep Playa Handshake": {
-      "x": 4.26,
+      "x": 4.464,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -186,13 +194,13 @@
       "background": "img/backgrounds/deep-playa.jpg",
       "fixture_positions": [
         [
-          6.15,
+          6.354,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          6.29,
+          6.494,
           1.94
         ],
         "level": 1,
@@ -200,7 +208,7 @@
       }
     },
     "No Friends Monday": {
-      "x": 6.39,
+      "x": 6.594,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -208,13 +216,13 @@
       "background": "img/backgrounds/monday.jpg",
       "fixture_positions": [
         [
-          6.5,
+          6.704,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          6.49,
+          6.694,
           1.94
         ],
         "level": 0,
@@ -222,7 +230,7 @@
       }
     },
     "Photo Bomb Room": {
-      "x": 6.39,
+      "x": 6.594,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -230,17 +238,17 @@
       "background": "img/backgrounds/photo.jpg",
       "fixture_positions": [
         [
-          8.27,
+          8.474,
           0.68
         ],
         [
-          7.37,
+          7.574,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          8.42,
+          8.624,
           1.94
         ],
         "level": 1,
@@ -248,8 +256,8 @@
       }
     },
     "Exit": {
-      "x": 8.52,
-      "w": 1.524,
+      "x": 8.724,
+      "w": 1.32,
       "z": 0.5,
       "d": 1.52,
       "floor": 0,
@@ -270,7 +278,7 @@
     },
     "Entrance": {
       "x": 10.044,
-      "w": 1.524,
+      "w": 1.32,
       "z": 0.5,
       "d": 1.52,
       "floor": 0,
@@ -290,8 +298,8 @@
       }
     },
     "Cuddle Cross": {
-      "x": 8.52,
-      "w": 3.048,
+      "x": 8.724,
+      "w": 2.64,
       "z": 0.5,
       "d": 1.52,
       "floor": 1,
@@ -316,7 +324,7 @@
       }
     },
     "Cop Dodge": {
-      "x": 11.568,
+      "x": 11.364,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -324,13 +332,13 @@
       "background": "img/backgrounds/cop-dodge.jpg",
       "fixture_positions": [
         [
-          13.398,
+          13.194,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          11.668,
+          11.464,
           1.94
         ],
         "level": 0,
@@ -338,7 +346,7 @@
       }
     },
     "Porto Room": {
-      "x": 11.568,
+      "x": 11.364,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -346,13 +354,13 @@
       "background": "img/backgrounds/portos.jpg",
       "fixture_positions": [
         [
-          13.458,
+          13.254,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          13.598,
+          13.394,
           1.94
         ],
         "level": 1,
@@ -360,7 +368,7 @@
       }
     },
     "Gate": {
-      "x": 13.698,
+      "x": 13.494,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -368,13 +376,13 @@
       "background": "img/backgrounds/gate.jpg",
       "fixture_positions": [
         [
-          13.748,
+          13.544,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          13.798,
+          13.594,
           1.94
         ],
         "level": 0,
@@ -382,7 +390,7 @@
       }
     },
     "Sparkle Pony Room": {
-      "x": 13.698,
+      "x": 13.494,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -390,13 +398,13 @@
       "background": "img/backgrounds/sparkle.jpg",
       "fixture_positions": [
         [
-          15.578,
+          15.374,
           0.68
         ]
       ],
       "enclosure": {
         "pos": [
-          15.728,
+          15.524,
           1.94
         ],
         "level": 1,
@@ -404,7 +412,7 @@
       }
     },
     "Guy Line Climb": {
-      "x": 15.828,
+      "x": 15.624,
       "w": 2.13,
       "z": 0.5,
       "d": 1.52,
@@ -412,23 +420,23 @@
       "background": "img/backgrounds/guy-line.jpg",
       "fixture_positions": [
         [
-          17.738,
+          17.534,
           0.68,
           1
         ],
         [
-          15.938,
+          15.734,
           0.68,
           1
         ]
       ],
       "enclosure": {
         "pos": [
-          15.928,
+          15.724,
           1.94
         ],
         "level": 0,
-        "yaw_deg": 124
+        "yaw_deg": -174
       }
     }
   },
@@ -436,7 +444,7 @@
     {
       "room": "Guy Line Climb",
       "pos": [
-        16.898,
+        16.694,
         0.62
       ],
       "label": "Climb (E)"
@@ -444,7 +452,7 @@
     {
       "room": "Vertical Moop March",
       "pos": [
-        1.07,
+        1.274,
         0.62
       ],
       "label": "Climb (E)"
@@ -452,265 +460,412 @@
   ],
   "sensors": {
     "Entrance LT": {
-      "note": "across the entry arch \u2014 the hex's front-east street frame, so the beam runs angled with it",
-      "kind": "beam",
+      "note": "VL53L1X inside the Entrance node box, firing out through the START arch; range gate 2.1 m ends at the arch plane so street crowd beyond it is ignored",
+      "kind": "tof",
       "level": 0,
-      "seg": [
-        [
-          10.31,
-          2.57
+      "pos": [
+        11.3,
+        0.6
+      ],
+      "yaw_deg": -18,
+      "tilt_deg": -10,
+      "fov_deg": 27,
+      "range_m": 2.1,
+      "clip": {
+        "x": [
+          10.044,
+          11.364
         ],
-        [
-          11.05,
-          2.15
+        "z": [
+          0.5,
+          2.75
         ]
-      ]
+      }
     },
     "Cop Dodge Laser": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 0,
-      "seg": [
-        [
-          11.568,
-          0.95
+      "pos": [
+        11.464,
+        1.94
+      ],
+      "yaw_deg": 124,
+      "tilt_deg": -10,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          11.364,
+          13.494
         ],
-        [
-          11.568,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Gate Laser": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 0,
-      "seg": [
-        [
-          13.698,
-          0.95
+      "pos": [
+        13.594,
+        1.94
+      ],
+      "yaw_deg": 124,
+      "tilt_deg": -10,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          13.494,
+          15.624
         ],
-        [
-          13.698,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Guy Line Laser": {
-      "kind": "beam",
+      "note": "VL53L1X inside the node box on the entry-side front leg, firing diagonally across the shaft entry arch; the far doorway tube (~1.0 m) is the empty-range baseline",
+      "kind": "tof",
       "level": 0,
-      "seg": [
-        [
-          15.828,
-          0.95
+      "pos": [
+        15.724,
+        1.94
+      ],
+      "yaw_deg": -174,
+      "tilt_deg": 0,
+      "fov_deg": 27,
+      "range_m": 1.05,
+      "clip": {
+        "x": [
+          15.624,
+          17.754
         ],
-        [
-          15.828,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Sparkle Pony Laser": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 1,
-      "seg": [
-        [
-          15.828,
-          0.95
+      "pos": [
+        15.524,
+        1.94
+      ],
+      "yaw_deg": -124,
+      "tilt_deg": -5,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          13.494,
+          15.624
         ],
-        [
-          15.828,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Porto Laser": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 1,
-      "seg": [
-        [
-          13.698,
-          0.95
+      "pos": [
+        13.394,
+        1.94
+      ],
+      "yaw_deg": -124,
+      "tilt_deg": -5,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          11.364,
+          13.494
         ],
-        [
-          13.698,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Cuddle Cross LT": {
-      "kind": "beam",
+      "note": "LD2410C in the back-corner box aimed across the deck at the front corner; the 20 ft center mast sits mid-beam as a constant static reflector (thresholded out in the mock pass)",
+      "kind": "radar",
       "level": 1,
-      "seg": [
-        [
-          11.568,
-          0.95
+      "pos": [
+        10.044,
+        -0.15
+      ],
+      "h": 1.5,
+      "yaw_deg": 0,
+      "tilt_deg": 0,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          8.724,
+          11.364
         ],
-        [
-          11.568,
-          1.75
+        "z": [
+          -0.3,
+          2.85
         ]
-      ]
+      }
     },
     "Photo Bomb LT": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 1,
-      "seg": [
-        [
-          8.52,
-          0.95
+      "pos": [
+        8.624,
+        1.94
+      ],
+      "yaw_deg": -124,
+      "tilt_deg": -5,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          6.594,
+          8.724
         ],
-        [
-          8.52,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Deep Playa Handshake Laser": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 1,
-      "seg": [
-        [
-          6.39,
-          0.95
+      "pos": [
+        6.494,
+        1.94
+      ],
+      "yaw_deg": -124,
+      "tilt_deg": -5,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          4.464,
+          6.594
         ],
-        [
-          6.39,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Bike Lock Room Laser": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 1,
-      "seg": [
-        [
-          4.26,
-          0.95
+      "pos": [
+        4.364,
+        1.94
+      ],
+      "yaw_deg": -124,
+      "tilt_deg": -5,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          2.334,
+          4.464
         ],
-        [
-          4.26,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Vertical Moop March Laser": {
-      "kind": "beam",
+      "note": "VL53L1X inside the node box on the entry-side front leg, firing diagonally across the shaft entry arch; the far doorway tube (~1.0 m) is the empty-range baseline",
+      "kind": "tof",
       "level": 1,
-      "seg": [
-        [
-          2.13,
-          0.95
+      "pos": [
+        2.234,
+        1.94
+      ],
+      "yaw_deg": 174,
+      "tilt_deg": 0,
+      "fov_deg": 27,
+      "range_m": 1.05,
+      "clip": {
+        "x": [
+          0.204,
+          2.334
         ],
-        [
-          2.13,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Monkey Room Laser": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 0,
-      "seg": [
-        [
-          2.13,
-          0.95
+      "pos": [
+        2.434,
+        1.94
+      ],
+      "yaw_deg": 124,
+      "tilt_deg": -10,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          2.334,
+          4.464
         ],
-        [
-          2.13,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Temple Room Laser": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 0,
-      "seg": [
-        [
-          4.26,
-          0.95
+      "pos": [
+        4.564,
+        1.94
+      ],
+      "yaw_deg": 124,
+      "tilt_deg": -10,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          4.464,
+          6.594
         ],
-        [
-          4.26,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "No Friends Monday LT": {
-      "kind": "beam",
+      "kind": "radar",
       "level": 0,
-      "seg": [
-        [
-          6.39,
-          0.95
+      "pos": [
+        6.694,
+        1.94
+      ],
+      "yaw_deg": 124,
+      "tilt_deg": -10,
+      "fov_deg": 120,
+      "range_m": 3.0,
+      "clip": {
+        "x": [
+          6.594,
+          8.724
         ],
-        [
-          6.39,
-          1.75
+        "z": [
+          0.5,
+          2.02
         ]
-      ]
+      }
     },
     "Exit LT": {
-      "kind": "beam",
+      "note": "VL53L1X inside the Exit node box, firing out through the FINISH arch; the cone also catches arrival from No Friends Monday, so entry semantics survive the move into the box",
+      "kind": "tof",
       "level": 0,
-      "seg": [
-        [
-          8.52,
-          0.95
+      "pos": [
+        8.79,
+        0.6
+      ],
+      "yaw_deg": 18,
+      "tilt_deg": -10,
+      "fov_deg": 27,
+      "range_m": 2.1,
+      "clip": {
+        "x": [
+          8.724,
+          10.044
         ],
-        [
-          8.52,
-          1.75
+        "z": [
+          0.5,
+          2.75
         ]
-      ]
+      }
     },
     "Button 1": {
       "kind": "button",
       "pos": [
-        9.5,
-        3.03,
-        0.12
+        11.34,
+        3.58,
+        0.52
       ],
-      "label": "Next Theme"
+      "label": "Next Theme",
+      "note": "the 4-button station stacked on a vertical rail \u2014 the hex's east back-corner leg by the Porto entry \u2014 top to bottom B1..B4 at 1.65/1.35/1.05/0.75 m above the deck, labels beside the buttons; all four 2-wire to screw terminals in the Cuddle Cross node box on the back corner",
+      "label_off": [
+        -0.72,
+        0.0,
+        0.06
+      ]
     },
     "Button 2": {
       "kind": "button",
       "pos": [
-        9.9,
-        3.03,
-        0.12
+        11.34,
+        3.28,
+        0.52
       ],
-      "label": "Storm All Rooms"
+      "label": "Storm All Rooms",
+      "label_off": [
+        -0.72,
+        0.0,
+        0.06
+      ]
     },
     "Button 3": {
       "kind": "button",
       "pos": [
-        10.3,
-        3.03,
-        0.12
+        11.34,
+        2.98,
+        0.52
       ],
-      "label": "Music On"
+      "label": "Music On",
+      "label_off": [
+        -0.72,
+        0.0,
+        0.06
+      ]
     },
     "Button 4": {
       "kind": "button",
       "pos": [
-        10.7,
-        3.03,
-        0.12
+        11.34,
+        2.68,
+        0.52
       ],
-      "label": "Music Off"
+      "label": "Music Off",
+      "label_off": [
+        -0.72,
+        0.0,
+        0.06
+      ]
     },
     "Porto Room Piezo 1": {
       "kind": "knock",
       "pos": [
-        12.1,
+        11.896,
         3.03,
         0.58
       ],
-      "label": "Knock Pad 1"
+      "label": "Knock Pad 1",
+      "note": "knock pads: the piezo discs stay bonded to the pads (they sense the pad itself); each runs 2-wire to an ADC front-end inside the Porto Room node box"
     },
     "Porto Room Piezo 2": {
       "kind": "knock",
       "pos": [
-        12.65,
+        12.446,
         3.03,
         0.58
       ],
@@ -719,29 +874,29 @@
     "Porto Room Piezo 3": {
       "kind": "knock",
       "pos": [
-        13.2,
+        12.996,
         3.03,
         0.58
       ],
       "label": "Knock Pad 3"
     },
     "Photo Bomb Shutter Button": {
-      "note": "arcade button on the back scaffolding, chest height; camera + flash face the poser",
+      "note": "arcade button on the back scaffolding, chest height; camera + flash face the poser \u2014 2-wire run to a GPIO in the Photo Bomb Room node box",
       "kind": "button",
       "level": 1,
       "pos": [
-        7.05,
+        7.254,
         3.0,
         0.55
       ],
       "label": "Say Cheese!"
     },
     "Monkey Puzzle Button": {
-      "note": "the silver monkey pedestal microswitch \u2014 pressing it = puzzle assembled",
+      "note": "the silver monkey pedestal microswitch \u2014 pressing it = puzzle assembled \u2014 2-wire run to GPIO3/GND in the Monkey Room node box",
       "kind": "button",
       "level": 0,
       "pos": [
-        3.2,
+        3.404,
         1.05,
         0.55
       ],
@@ -773,5 +928,241 @@
       "Vertical Moop March",
       "Exit"
     ]
+  },
+  "doorways": [
+    {
+      "level": 0,
+      "seg": [
+        [
+          2.334,
+          0.95
+        ],
+        [
+          2.334,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 0,
+      "seg": [
+        [
+          4.464,
+          0.95
+        ],
+        [
+          4.464,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 0,
+      "seg": [
+        [
+          6.594,
+          0.95
+        ],
+        [
+          6.594,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 0,
+      "seg": [
+        [
+          8.724,
+          0.95
+        ],
+        [
+          8.724,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 0,
+      "seg": [
+        [
+          11.364,
+          0.95
+        ],
+        [
+          11.364,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 0,
+      "seg": [
+        [
+          13.494,
+          0.95
+        ],
+        [
+          13.494,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 0,
+      "seg": [
+        [
+          15.624,
+          0.95
+        ],
+        [
+          15.624,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 1,
+      "seg": [
+        [
+          2.334,
+          0.95
+        ],
+        [
+          2.334,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 1,
+      "seg": [
+        [
+          4.464,
+          0.95
+        ],
+        [
+          4.464,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 1,
+      "seg": [
+        [
+          6.594,
+          0.95
+        ],
+        [
+          6.594,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 1,
+      "seg": [
+        [
+          8.724,
+          0.95
+        ],
+        [
+          8.724,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 1,
+      "seg": [
+        [
+          11.364,
+          0.95
+        ],
+        [
+          11.364,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 1,
+      "seg": [
+        [
+          13.494,
+          0.95
+        ],
+        [
+          13.494,
+          1.75
+        ]
+      ]
+    },
+    {
+      "level": 1,
+      "seg": [
+        [
+          15.624,
+          0.95
+        ],
+        [
+          15.624,
+          1.75
+        ]
+      ]
+    }
+  ],
+  "projection": {
+    "note": "PLANNED Cuddle Cross floor-projection rig (sim preview only, no production config behind it): used ViewSonic LS625X (laser-phosphor DLP, 20k-hr solid-state source, SEALED optical engine + waveform dust filter - the playa-relevant feature; XGA 4:3, 3200 lm, TR 0.49:1, lens offset 118%, native focus 60-300in; ~$395 used on eBay 2026-07) mounted FACE-DOWN = NOSE-DOWN (0.22 m chassis depth hangs vertically; body top 3.82 kisses the 3.83 roof slab, so the window rides at ~1.53 m - the biggest image the roof allows: 3.112 m wide x 2.334 m along-throw) on a STUB ARM just INSIDE the hexagon's NE corner (paired legs at (11.364, 2.022); lens plumb 10 cm inboard of the vertex, body rear face ~1.5 cm off the leg cluster, arm_deg 60 out to the legs - the legs sit BEHIND the aperture so no scaffold steel touches a single ray), throwing SW down the long diagonal (yaw -120). 2026-07-18 MAX-COVERAGE revision - Tim's call: coverage math wins over the rear-leg placement preference. The geometry: with height roof-capped the image rect is fixed, so coverage is pure plumb+yaw placement; the 118% offset pins the near image edge 0.42 m from the lens plumb, and the far edge reaches only 2.754 m - short of the 3.048 m corner-to-corner diagonal - so some dark deck is unavoidable and the corner throw minimizes it. KEY OBSTRUCTION PHYSICS (caught by Tim): the ideal unobstructed plumb is ~6 cm OUTSIDE the vertex (92.7%, image dead-centered), but from there the paired corner legs stand 6 cm in front of the lens and every ray crosses them at 1.30-1.49 m height - one 43 mm tube at that range shadows a +-20 deg wedge through the FULL image depth, so any outboard aperture is optically dead; inboard-of-the-legs is the real optimum: 91.2% of the 6.03 m2 deck. All six corners tie; NE chosen because the S corner is blocked (canvas + node box in the near field), SE has the button rail in the beam, SW rides the canvas end seam, and N hangs over the front lean-out corner. Unlit: the near corner wedge under the body (~0.52 m deep - the body hangs over the deck's darkest dead corner, bottom at 1.53 m) and the ~0.19 m SW far tip; the east-arch jamb clips only rays that land off-deck (masked). Fallbacks: rolling the body to yaw -63 at the OLD rear-leg clamp gets 89.8% with zero new hardware (the due-west throw was 75.8%; legs/arch clear there too); a roof-top doghouse over a beam porthole reaches 100% but means roof surgery. Offset tolerance now cuts both ways: 118%+-5% spans 88.2-92.6% (low-offset units win), so slot the arm bracket +-8 cm radially and set the final plumb on-site; every 25 mm of lost mount height costs ~0.4pt. MASKED to the deck outline as always (off-deck pixels black); mast base in-image (content island; its shadow wedge now falls SW toward the back-west corner, clear of the button station). Supersedes the rear-leg placement, the Casio XJ-ST145 pick (kept as budget fallback) and the earlier 595Wi scheme. LD2450/LD2410C node box unchanged at the back corner. Render Pi 3B outputs 1024x768. Playa care: ply shroud with open downward aperture, filter cloth over the intake, daily brush-out, power off by day. An LD2450 position radar joins the LD2410C inside the node box (UART1 on the XIAO C3) and streams up to 3 target positions to the projection Pi 3B at the rack; the sim reacts to the walker through the tracker's real coverage wedge with ~150 ms sensor+render latency. Show starts on the room's entry trigger (or tracked presence) and times out like the planned cue daemon. Delete this key to remove the whole rig from the sim.",
+    "room": "Cuddle Cross",
+    "level": 1,
+    "cue": "Cuddle Cross LT",
+    "timeout_s": 60,
+    "projector": {
+      "pos": [
+        11.301,
+        1.986
+      ],
+      "h": 1.64,
+      "yaw_deg": -120,
+      "arm_deg": 60,
+      "arm_len": 0.12,
+      "body": [
+        0.29,
+        0.22,
+        0.115
+      ],
+      "label": "LS625X floor projection (planned)"
+    },
+    "image": {
+      "center": [
+        9.903,
+        1.178
+      ],
+      "w": 3.112,
+      "d": 2.334
+    },
+    "tracker": {
+      "pos": [
+        10.044,
+        -0.15
+      ],
+      "h": 1.38,
+      "yaw_deg": 0,
+      "fov_deg": 120,
+      "range_m": 6.0,
+      "latency_ms": 150,
+      "clip": {
+        "x": [
+          8.724,
+          11.364
+        ],
+        "z": [
+          -0.3,
+          2.85
+        ]
+      }
+    }
   }
 }

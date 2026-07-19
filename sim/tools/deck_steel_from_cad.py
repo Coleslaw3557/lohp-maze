@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+"""Generate sim/web/deck_steel.js from the Illustrator deck drawings.
+
+cad-items/main-floor.svg (Cuddle Cross floor) and cad-items/top-floor.svg (the
+roof deck, with the climb-out hole) are 1:1 plans of the custom steel that sits
+on the hex scaffold frames: a 2" channel along each edge resting on the frame
+top rails, 1" bars radiating from a collar around the mast, and per-side joist
+bays. Drawing scale is 10 SVG units = 1 inch.
+
+This tool reads the green (edge channel) and red (interior bar) members, maps
+them from drawing orientation into sim plan orientation — the top-floor hole
+lands on the SW corner V[3], the rear corner adjacent to Photo Bomb Room, per
+Tim — and writes them as hex-center-relative inches for app.js to place.
+Layer 1 (scaffold rails + legs) is skipped: the sim already draws the frames.
+
+Rerun after editing the SVGs:  python3 sim/tools/deck_steel_from_cad.py
+"""
+import json
+import math
+import os
+import re
+
+SIM_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CAD_DIR = os.path.join(os.path.dirname(SIM_DIR), 'cad-items')
+OUT = os.path.join(SIM_DIR, 'web', 'deck_steel.js')
+
+# drawing -> sim: svg y flips to visual y-up, then +150 deg lands the drawing's
+# hole corner (visual 60 deg) on the sim's SW corner V[3] (210 deg)
+ROT = math.radians(150.0)
+# perpendicular distance from mast to the edge-channel centerline in the
+# drawing; app.js fit-scales this onto the sim hex's rail line (the sim hex is
+# idealized ~3% tighter than the real leg ring — see buildDeckSteel)
+CAD_APOTHEM_IN = 53.61
+
+# roof climb hole outline (drawing inches rel. mast, svg y-down), following the
+# cut steel: channel cut ends on both flanking sides, the corner (tip clipped
+# to stay inside the sim slab), and the chamfer headers closing it inboard
+HOLE_SVG_IN = [(9.97, -52.7), (29.5, -52.7), (40.5, -35.2), (21.1, -22.4), (9.7, -30.5)]
+
+
+def to_sim(sx, sy, cx, cy):
+    """svg units -> hex-center-relative sim-plan inches (+x east, +z north)."""
+    u, v = (sx - cx) / 10.0, -(sy - cy) / 10.0
+    return (u * math.cos(ROT) - v * math.sin(ROT),
+            u * math.sin(ROT) + v * math.cos(ROT))
+
+
+def parse(path):
+    txt = open(path).read()
+    center = None
+    for m in re.finditer(r'<circle class="cls-1" cx="([\d.]+)" cy="([\d.]+)" r="17.5"', txt):
+        center = (float(m.group(1)), float(m.group(2)))
+    if not center:
+        raise SystemExit(f'{path}: mast circle (r=17.5) not found')
+    cx, cy = center
+    members = []
+    for m in re.finditer(r'<rect class="(cls-[34])" x="([-\d.]+)" y="([-\d.]+)" '
+                         r'width="([\d.]+)" height="([\d.]+)"(?: transform="([^"]*)")?', txt):
+        cls, x, y, w, h = m.group(1), *(float(v) for v in m.group(2, 3, 4, 5))
+        a, tx, ty = 0.0, 0.0, 0.0
+        if m.group(6):
+            for op, val in re.findall(r'(translate|rotate)\(([^)]*)\)', m.group(6)):
+                nums = [float(v) for v in re.split(r'[ ,]+', val.strip())]
+                if op == 'translate':
+                    tx, ty = nums[0], nums[1] if len(nums) > 1 else 0.0
+                else:
+                    a = math.radians(nums[0])
+        # rect center + long-axis direction under translate*rotate (about origin)
+        mx, my = x + w / 2, y + h / 2
+        rx = tx + mx * math.cos(a) - my * math.sin(a)
+        ry = ty + mx * math.sin(a) + my * math.cos(a)
+        ang_svg = a if w >= h else a + math.pi / 2
+        px, pz = to_sim(rx, ry, cx, cy)
+        ang_sim = math.degrees(-ang_svg + ROT) % 360.0
+        if ang_sim >= 180.0:
+            ang_sim -= 180.0  # a bar has no direction; keep angles in [0,180)
+        members.append({
+            'kind': 'chan' if cls == 'cls-3' else 'bar',
+            'x': round(px, 2), 'z': round(pz, 2),
+            'len': round(max(w, h) / 10.0, 2), 'w': round(min(w, h) / 10.0, 2),
+            'ang': round(ang_sim, 2),
+        })
+    return members
+
+
+def main():
+    decks = {}
+    for name in ('main-floor', 'top-floor'):
+        mem = parse(os.path.join(CAD_DIR, f'{name}.svg'))
+        chans = [m for m in mem if m['kind'] == 'chan']
+        bars = [m for m in mem if m['kind'] == 'bar']
+        decks[name] = mem
+        short = [m for m in chans if m['len'] < 50]
+        print(f'{name}: {len(chans)} channels ({len(short)} cut), {len(bars)} bars')
+        for m in short:
+            print(f'  cut channel at ({m["x"]:+.1f},{m["z"]:+.1f})in ang {m["ang"]}')
+
+    hole = [[round(v, 2) for v in to_sim(x * 10, y * 10, 0, 0)] for x, y in HOLE_SVG_IN]
+    hx = sum(p[0] for p in hole) / len(hole)
+    hz = sum(p[1] for p in hole) / len(hole)
+    ang = math.degrees(math.atan2(hz, hx)) % 360
+    print(f'hole centroid ({hx:+.1f},{hz:+.1f})in, bearing {ang:.0f} deg (SW corner V[3] = 210)')
+    if not 170 < ang < 250:
+        raise SystemExit('hole did not land on the SW corner — check ROT')
+
+    data = {
+        'note': 'generated by sim/tools/deck_steel_from_cad.py from cad-items/*.svg — do not hand-edit',
+        'units': 'inches, hex-center-relative sim plan (+x east, +z north); ang deg CCW from +x',
+        'cad_apothem_in': CAD_APOTHEM_IN,
+        'chan_h_in': 1.625,   # edge channel sits this tall on the frame top rail
+        'bar_h_in': 1.0,      # interior bars, top flush with the channel
+        'collar': {'od_in': 5.5, 'id_in': 3.5},
+        'main': decks['main-floor'],
+        'top': decks['top-floor'],
+        'roof_hole': hole,
+    }
+    with open(OUT, 'w') as f:
+        f.write('// ' + data['note'] + '\n')
+        f.write('window.DECK_STEEL = ')
+        f.write(json.dumps(data, separators=(',', ':')))
+        f.write(';\n')
+    print(f'wrote {OUT} ({os.path.getsize(OUT)} bytes)')
+
+
+if __name__ == '__main__':
+    main()

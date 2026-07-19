@@ -34,9 +34,9 @@ def node_ports():
     return nodes
 
 
-async def fire(name, info, action='trip'):
+async def fire(name, info, action='trip', host='127.0.0.1', data=None):
     from aioesphomeapi import APIClient
-    client = APIClient('127.0.0.1', info['port'], password='')
+    client = APIClient(host, info['port'], password='')
     try:
         await client.connect(login=True)
         _, services = await client.list_entities_services()
@@ -44,7 +44,7 @@ async def fire(name, info, action='trip'):
         if not svc:
             print(f"  {name}: no '{action}' action exposed")
             return False
-        result = client.execute_service(svc, {})
+        result = client.execute_service(svc, data or {})
         if asyncio.iscoroutine(result):  # awaitable in newer aioesphomeapi
             await result
         await asyncio.sleep(0.3)  # let the call flush before disconnect
@@ -77,6 +77,17 @@ async def main():
             await fire(name, info, action)
             if target == 'all':
                 await asyncio.sleep(1.0)
+        return
+
+    if cmd == 'call':
+        # Generic action call on any node (bench hardware included, which
+        # rooms/*.yaml doesn't know about), with key=value service args:
+        #   harness.py call 192.168.1.87:6098 play_cue cue=monkey_shrine_complete
+        target, action = sys.argv[2], sys.argv[3]
+        host, _, port = target.partition(':')
+        data = dict(arg.split('=', 1) for arg in sys.argv[4:])
+        await fire(target, {'port': int(port or 6053), 'room': host},
+                   action, host=host, data=data)
         return
 
     print(__doc__)

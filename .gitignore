@@ -7,4 +7,8 @@ photos/
 .env
 *.log
 .playwright-mcp/
+.playwright-cli/
 Background-images/
+# generated node firmware audio (make_node_audio.py; machine-local abs paths)
+sim/esphome/audio/cues/
+sim/esphome/audio/cues-*.yaml

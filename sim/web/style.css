@@ -42,7 +42,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #060609; col
 .dot.ok { background: #12351f; color: #55e08a; }
 .dot.err { background: #3d1420; color: #ff7285; }
 
-.row { display: flex; gap: 6px; margin: 4px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
 .row select { flex: 1; min-width: 0; }
 button, select { background: #1d2030; color: #dfe2ee; border: 1px solid #32364e;
   border-radius: 6px; padding: 6px 10px; font: inherit; cursor: pointer; }

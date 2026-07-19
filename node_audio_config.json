@@ -1,0 +1,13 @@
+{
+  "_comment": "Rooms whose audio ALSO plays on their ESP32-S3 node box (additive beside the WS unit path — see node_audio_manager.py). server_host = this server's LAN address, where nodes stream GET /api/audio/<file> from. Per room: host/port = the node's ESPHome native API; node = basename for the generated firmware cue package (sim/esphome/audio/cues-<node>.yaml); effects = whose audio files get compiled into that node (sim/esphome/make_node_audio.py). Currently mapped: the S3 bench node only — add real rooms as their boxes are built.",
+  "server_host": "192.168.253.184",
+  "server_port": 5000,
+  "rooms": {
+    "Monkey Room": {
+      "host": "lohp-bench-s3.local",
+      "port": 6098,
+      "node": "bench-s3",
+      "effects": ["MonkeyBusiness"]
+    }
+  }
+}

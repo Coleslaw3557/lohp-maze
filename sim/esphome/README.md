@@ -45,25 +45,58 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
   cooldown (covers the 6.5s PhotoBomb-Shot sequence). Exposes the `press_button`
   action. Included by `photo-bomb.yaml` (shutter button → `PhotoBomb-Shot`) and
   `monkey.yaml` (puzzle-completion microswitch → `MonkeyBusiness`).
-- `packages/button_gpio_c3.example.yaml` — real-hardware companion: GPIO3→GND
-  momentary button feeding the same `push_button` template sensor. Include it
-  alongside `button.yaml` when flashing a XIAO C3 (host platform has no GPIO, so
-  it's not part of `validate_all.sh`).
+- `packages/button_gpio_c3.example.yaml` — real-hardware companion: D1→GND
+  momentary button feeding the same `push_button` template sensor
+  (`button_pin` defaults to the C3's GPIO3; XIAO S3 rooms set `GPIO2`). Include
+  it alongside `button.yaml` when flashing real hardware (host platform has no
+  GPIO, so it's not part of `validate_all.sh`).
 - `packages/sim_host.yaml` — `host:` platform (sim) + a 100ms keepalive interval
   (see gotchas below).
-- `packages/hardware_c3.yaml` — `esp32` XIAO C3 + WiFi + OTA (real nodes).
+- `packages/hardware_c3.yaml` — `esp32` XIAO C3 + WiFi + OTA. Superseded as the
+  fleet platform by the S3 (audio needs PSRAM); still fine for the C3 bench node.
+- `packages/hardware_s3.yaml` — **fleet standard**: XIAO ESP32-S3 + PSRAM + WiFi
+  + OTA (per-room audio revisit, `wiring-guides/room-node-audio-plan.md`).
+- `packages/audio_s3.yaml` — the speaker chain (I2S → PCM5102A → Pebble):
+  mixer + dual media/announcement pipelines, music ducks 12dB under effect cues.
+- `make_node_audio.py` — generates each node's firmware cue assets from
+  `node_audio_config.json` + `audio_config.json`: `audio/cues/*.wav` (22.05kHz
+  mono, per-effect volume baked in) + `audio/cues-<node>.yaml` (the
+  `files:` list and the `play_cue` dispatch the server calls). Outputs are
+  gitignored — rerun after config/mp3 changes and before any flash.
 - `rooms/*.yaml` — one node per room: substitutions only (room, effect, server,
   api port 6061–6075, MAC). Room→effect mapping matches `client/config-unit-*.json`.
 
 ## Flashing a real node later
 
-1. In the room's yaml: swap `sim_host.yaml` → `hardware_c3.yaml`, set
+1. In the room's yaml: swap `sim_host.yaml` → `hardware_s3.yaml` (fleet standard;
+   button rooms also set `button_pin: GPIO2` — S3's D1), set
    `server_host: "192.168.1.238"`, copy `secrets.example.yaml` → `secrets.yaml`.
 2. Add the room's actual sensor (VL53L1X / LD2410 / gpio per the hardware doc) and
    have it drive the automation — either publish to the `tripwire` template sensor,
    or replace it with the platform sensor keeping `id: tripwire` + the `on_press`.
-3. `esphome run rooms/<room>.yaml` with the board plugged in. Done — `logic.yaml`
+3. Speaker rooms: add `audio_s3.yaml` + the generated `audio/cues-<node>.yaml` to
+   the packages, list the room in `node_audio_config.json`, and run
+   `./make_node_audio.py`.
+4. `esphome run rooms/<room>.yaml` with the board plugged in. Done — `logic.yaml`
    already carried the tested behavior over.
+
+## S3 audio bench (bench-xiao-s3.yaml)
+
+The audio-era hardware stack of a button room, mapped as "Monkey Room" in
+`node_audio_config.json` so the dev server's real audio commands land on it.
+Bring-up order (full checklist: `wiring-guides/room-node-audio-plan.md`):
+
+1. Prep the PCM5102A (boards ship silent): back jumpers FLT→L DEMP→L **XSMT→H**
+   FMT→L, front SCK pads → GND. Wire D8/D9/D10 → BCK/LCK/DIN, 5V pin → VIN,
+   line-out jack → Pebble; button between D1 (GPIO2) and GND.
+2. `./make_node_audio.py`, then flash `bench-xiao-s3.yaml`.
+3. Drive it the real way: press the button (or
+   `harness.py call <node-ip>:6098 play_cue cue=monkey_shrine_complete`) for the
+   embedded cue; `POST /api/start_music` for the streamed bed — the server's
+   `node_audio_manager.py` handles both, additively beside the WS/sim path.
+4. Bench checks that gate the 15× buy: cue latency vs the VLC feel, 10× rapid
+   `play_cue` retrigger (ESPHome #15692 regression), 30min music+cue soak on
+   marginal RF, overnight power-bank hold, radar baseline with audio playing.
 
 ## Hardware-day caveats (learned from the sim)
 

@@ -1,0 +1,82 @@
+# Per-room speaker on the node box (wiring-guides/room-node-audio-plan.md).
+# XIAO ESP32-S3 -> PCM5102A I2S DAC -> 3.5mm line out -> powered speaker
+# (Creative Pebble). Requires hardware_s3.yaml (PSRAM) — this will not fit a C3.
+#
+# Two pipelines, mixed on-device exactly like the old per-zone VLC setup:
+#   media pipeline         background music, streamed from the server's
+#                          existing GET /api/audio/<file> endpoint
+#   announcement pipeline  short effect cues COMPILED INTO the firmware for
+#                          VLC-parity start latency (~100-300ms); music ducks
+#                          12dB underneath and recovers when the cue ends
+#
+# The cue files + the `play_cue` api action dispatch are generated per node:
+#   sim/esphome/make_node_audio.py  ->  audio/cues-<node>.yaml   (include it
+# alongside this package). The server drives everything over the native API
+# (node_audio_manager.py): ExecuteService play_cue / media_player commands.
+#
+# PCM5102A board prep (boards ship unbridged, an unprepped board is SILENT):
+#   back jumpers FLT->L, DEMP->L, XSMT->H, FMT->L; front SCK pads bridged to
+#   GND (internal PLL from BCK — no MCLK line to the ESP).
+substitutions:
+  i2s_bclk_pin: GPIO7    # XIAO S3 D8  -> PCM5102A BCK
+  i2s_lrclk_pin: GPIO8   # XIAO S3 D9  -> PCM5102A LCK
+  i2s_dout_pin: GPIO9    # XIAO S3 D10 -> PCM5102A DIN
+
+i2s_audio:
+  i2s_bclk_pin: ${i2s_bclk_pin}
+  i2s_lrclk_pin: ${i2s_lrclk_pin}
+
+speaker:
+  - platform: i2s_audio
+    id: dac_out
+    dac_type: external
+    i2s_dout_pin: ${i2s_dout_pin}
+    sample_rate: 44100
+    bits_per_sample: 16bit
+    channel: mono          # PCM5102A duplicates mono to both line-out channels
+    buffer_duration: 100ms # default 500ms adds command-to-sound delay
+  - platform: mixer
+    id: mixer_spk
+    output_speaker: dac_out
+    num_channels: 1
+    source_speakers:
+      - id: media_mix_in
+      - id: announce_mix_in
+  - platform: resampler
+    id: media_resampler
+    output_speaker: media_mix_in
+  - platform: resampler
+    id: announce_resampler
+    output_speaker: announce_mix_in
+
+media_player:
+  - platform: speaker
+    id: room_audio
+    name: "${room} audio"
+    volume_initial: 100%   # room level is set physically at the Pebble knob;
+                           # music/cue balance is baked into the cue files
+    media_pipeline:
+      speaker: media_resampler
+      format: MP3
+      sample_rate: 44100
+      num_channels: 1
+    announcement_pipeline:
+      speaker: announce_resampler
+      format: WAV
+      sample_rate: 22050
+      num_channels: 1
+    on_announcement:
+      - mixer_speaker.apply_ducking:
+          id: media_mix_in
+          decibel_reduction: 12
+          duration: 0.2s
+    on_state:
+      - if:
+          condition:
+            not:
+              media_player.is_announcing: room_audio
+          then:
+            - mixer_speaker.apply_ducking:
+                id: media_mix_in
+                decibel_reduction: 0
+                duration: 0.5s

@@ -34,10 +34,11 @@ const S = {
   fixtures: [],            // {room, addr, channels, level, light, lens, cone, cell}
   roomsMeshes: {},         // room -> {slab, center(Vector3 at room level), level}
   canvasMats: {},          // room -> [backdrop materials], emissive-tinted by the room's light
-  sensors: [],             // {name, kind, room, action, seg?, level, meshes, lastFired}
+  sensors: [],             // {name, kind, room, action, seg?, zone?, wasInside?, level, meshes, lastFired}
   ladders: [],             // {room, x, z} climb points
   interactables: [],       // meshes with .userData.{sensor|ladder}
   piezoAttempts: 0,
+  projection: null,        // planned Cuddle floor-projection rig (layout `projection` key)
   mode: 'street',
   keys: {},
   pos: new THREE.Vector3(11.7, EYE, 4.5),
@@ -49,6 +50,7 @@ const S = {
   dmxWs: null,
   teleporting: false,
 };
+window.SIM = S; // debug handle: inspect live sim state from the console
 
 const $ = (id) => document.getElementById(id);
 const clock = new THREE.Clock();
@@ -188,6 +190,31 @@ const grp = (level) => levelGroups[level === 1 ? 1 : level === 0 ? 0 : 2];
 const roofGroup = new THREE.Group(); // hidden in overhead view so the plan stays readable
 scene.add(roofGroup);
 const matRoof = new THREE.MeshStandardMaterial({ color: 0x1a1b21, roughness: 0.95, side: THREE.DoubleSide });
+
+// custom deck steel (the cad-items/*.svg weldments, baked into deck_steel.js by
+// tools/deck_steel_from_cad.py). Normally buried under the ply, so it lives in
+// its own groups behind the Steel button: off / deck / roof / both, ghosting
+// the hex ply while shown so the members read against the scaffold.
+const steelGroups = { deck: new THREE.Group(), roof: new THREE.Group() };
+scene.add(steelGroups.deck, steelGroups.roof);
+const steelGhosts = []; // hex ply materials faded while steel is shown
+let steelMode = 'off';
+const STEEL_MODES = ['off', 'deck', 'roof', 'both'];
+const STEEL_LABEL = { off: 'Steel ✕', deck: 'Steel: deck', roof: 'Steel: roof', both: 'Steel ✓' };
+function setSteelMode(mode) {
+  steelMode = mode;
+  steelGroups.deck.visible = mode === 'deck' || mode === 'both';
+  steelGroups.roof.visible = mode === 'roof' || mode === 'both';
+  const ghost = mode !== 'off';
+  for (const m of steelGhosts) {
+    m.transparent = ghost;
+    m.opacity = ghost ? 0.22 : 1;
+    m.depthWrite = !ghost;
+    m.needsUpdate = true;
+  }
+  $('btn-steel').textContent = STEEL_LABEL[mode];
+  try { localStorage.setItem('lohp-sim-steel', mode); } catch (e) { /* private mode */ }
+}
 
 const raycaster = new THREE.Raycaster();
 
@@ -389,9 +416,14 @@ function buildMaze(cfg) {
   const LH = S.levelHeight = L.level_height || 3.2;
   const CH = L.ceiling_height || 3.0;
   const T = L.wall_thickness || 0.12;
-  const beams = Object.entries(L.sensors)
-    .filter(([, s]) => s.kind === 'beam')
-    .map(([, s]) => ({ seg: s.seg, level: s.level || 0 }));
+  // doorway openings to carve out of the shared wing walls. These used to be
+  // implied by the break-beam sensor segs; the sensors live inside the room
+  // node boxes now, so L.doorways declares the arches explicitly (any future
+  // beam-kind sensor still carves for back-compat).
+  const beams = (L.doorways || []).map(d => ({ seg: d.seg, level: d.level || 0 }))
+    .concat(Object.entries(L.sensors)
+      .filter(([, s]) => s.kind === 'beam' && s.seg)
+      .map(([, s]) => ({ seg: s.seg, level: s.level || 0 })));
 
   // playa dust — pale alkali flat, dimly moonlit
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(320, 320),
@@ -524,8 +556,15 @@ function buildMaze(cfg) {
     }
     const bs = [...boundaries].sort((a, b) => a - b);
     // one painted walk-thru frame per boundary per level (shared between bays);
-    // blue/green alternate like our repainted mixed fleet
+    // blue/green alternate like our repainted mixed fleet. The wings' hex-side
+    // ends land ON the hexagon's flat east/west frames — one shared frame in
+    // reality (the wing bays' braces pin straight to it), already drawn by
+    // buildHexCenter, so skip the coincident boundary here.
+    const hexC = L.hex_center;
+    const hexFaceX = hexC ? [hexC.cx - hexC.side * Math.cos(Math.PI / 6),
+      hexC.cx + hexC.side * Math.cos(Math.PI / 6)] : [];
     bs.forEach((bx, i) => {
+      if (hexFaceX.some(f => Math.abs(bx - f) < 0.02)) return;
       for (const lv of [0, 1]) {
         const frame = buildFrameSeg(bx, rz + 0.045, bx, rz + rd - 0.045, lv * LH,
           matFramePaint[(i + lv) % 2]);
@@ -608,11 +647,12 @@ function buildMaze(cfg) {
   }
 
   // per-room node enclosures — the wooden sensor boxes from
-  // wiring-guides/room-node-enclosure-plan.md (XIAO C3 + LD2410C radar +
-  // power), hose-clamped to a frame leg: wing bays on the ENTRY-side front
-  // leg at 1.55 m, radar window (local +z) aimed at the diagonally-opposite
-  // back corner. Block placeholders for now; pos/aim come from the layout's
-  // per-room "enclosure" entries.
+  // wiring-guides/room-node-enclosure-plan.md (XIAO C3 + the room's radar or
+  // ToF + power), hose-clamped to a frame member: wing bays on the ENTRY-side
+  // front leg at 1.55 m with the radar window (local +z) aimed at the
+  // diagonally-opposite back corner; ToF rooms' windows face their aim. The
+  // room's sensor wedge/boresight is drawn by buildSensors from the matching
+  // `sensors` entry; pos/aim here come from the per-room "enclosure" entries.
   for (const r of Object.values(L.rooms)) {
     const enc = r.enclosure;
     if (!enc) continue;
@@ -655,9 +695,14 @@ function buildHexCenter(L) {
   // V[1]=front corner (street), V[4]=back corner; faces: [V0,V1]=entry,
   // [V1,V2]=exit, [V2,V3]=west wing door, [V3,V4]/[V4,V5]=back, [V5,V0]=east wing door
 
-  const slabShape = (pts) => {
+  const slabShape = (pts, holePts) => {
     const sh = new THREE.Shape();
     pts.forEach(([x, z], i) => i ? sh.lineTo(x, -z) : sh.moveTo(x, -z)); // shape-y = -world-z
+    if (holePts) {
+      const hp = new THREE.Path();
+      holePts.forEach(([x, z], i) => i ? hp.lineTo(x, -z) : hp.moveTo(x, -z));
+      sh.holes.push(hp); // ExtrudeGeometry normalizes hole winding itself
+    }
     const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.14, bevelEnabled: false });
     geo.rotateX(-Math.PI / 2); // lie flat: extrusion becomes +y
     return geo;
@@ -686,9 +731,13 @@ function buildHexCenter(L) {
     lbl.position.set((sf[0][0] + sf[1][0]) / 2, CH + 0.14, (sf[0][1] + sf[1][1]) / 2 + 0.15);
     levelGroups[0].add(lbl);
   }
-  const upSlab = new THREE.Mesh(slabShape(deck), matFloorBase());
+  // the Cuddle deck reads as what it really is: plywood over the deck steel
+  // (own instance — effects tint its emissive, the Steel button ghosts it)
+  const matDeckPly = new THREE.MeshStandardMaterial({ color: 0x8d7148, roughness: 0.9, metalness: 0.02 });
+  const upSlab = new THREE.Mesh(slabShape(deck), matDeckPly);
   upSlab.position.y = LH;
   upSlab.userData.ground = true; upSlab.userData.level = 1;
+  steelGhosts.push(upSlab.material); // fade the ply while the deck steel shows
   levelGroups[1].add(upSlab);
   S.roomsMeshes[H.rooms.upper] = {
     slab: upSlab, center: new THREE.Vector3(cx, LH + 1, cz), level: 1, room: L.rooms[H.rooms.upper],
@@ -738,10 +787,18 @@ function buildHexCenter(L) {
     });
   }
 
-  // hex roof (covers the wing-doorway slivers too)
-  const roof = new THREE.Mesh(slabShape(deck), matRoof);
+  // hex roof (covers the wing-doorway slivers too) — with the real climb-out
+  // hole in its SW corner wedge (the rear corner beside the Photo Bomb arch):
+  // roof steel and ply stop short there, so the corner legs are the ladder up.
+  // Outline comes from the fab drawing via deck_steel.js.
+  const DS = window.DECK_STEEL, IN = 0.0254;
+  const kSteel = DS ? (R * Math.cos(Math.PI / 6)) / (DS.cad_apothem_in * IN) : 1;
+  const roofHole = DS && DS.roof_hole.map(([hx, hz]) => [cx + hx * IN * kSteel, cz + hz * IN * kSteel]);
+  const matHexRoof = matRoof.clone();
+  const roof = new THREE.Mesh(slabShape(deck, roofHole), matHexRoof);
   roof.position.y = LH + CH + 0.02;
   roofGroup.add(roof);
+  steelGhosts.push(matHexRoof);
 
   // six complete walk-thru frames per level: legs at BOTH ends, nudged a hair
   // in from each corner so the two neighbouring frames' legs stand side by
@@ -776,6 +833,7 @@ function buildHexCenter(L) {
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(pr, pr, ph, 24), matGalv);
     mast.position.set(cx, ph / 2, cz);
     levelGroups[2].add(mast);
+    if (H.beacon) buildBeacon(H, cx, cz);
   }
 
   // START / FINISH ply signs over the two street arches, angled with their
@@ -788,6 +846,56 @@ function buildHexCenter(L) {
     sign.position.set(mx + (nx / nl) * 0.07, 1.56, mz + (nz / nl) * 0.07);
     sign.lookAt(mx + nx, 1.56, mz + nz);
     levelGroups[0].add(sign);
+  }
+
+  buildDeckSteel(H, LH, kSteel);
+  // steel shows by default — Tim wants the metal visible through the floor
+  // and roof; the Steel button cycles it away and the choice sticks
+  let savedSteel = null;
+  try { savedSteel = localStorage.getItem('lohp-sim-steel'); } catch (e) { /* private mode */ }
+  setSteelMode(STEEL_MODES.includes(savedSteel) ? savedSteel : 'both');
+}
+
+// The custom steel decks from the fab drawings (cad-items/main-floor.svg and
+// top-floor.svg, baked into deck_steel.js by tools/deck_steel_from_cad.py):
+// a 2" channel along each edge seated on the frame top rails, 1" bars kept
+// top-flush with the channels — spoke pairs running from a collar around the
+// mast out to each corner leg cluster, plus a joist bay per side under the
+// ply seams — and the roof deck's cut-away SW corner wedge. The drawing's leg
+// ring is ~3% wider than the sim's idealized hex (real corner legs stand in
+// pairs OUTSIDE the V points), so members fit-scale onto the sim's rail line;
+// true sizes live in the drawings.
+// enough self-glow to read under the night sky against the ghosted ply —
+// it's a reveal overlay, so softly luminous steel is the point, day or night
+const matSteelChan = new THREE.MeshStandardMaterial({ color: 0x9aa2ad, roughness: 0.38, metalness: 0.7, emissive: 0x3a414c });
+const matSteelBar = new THREE.MeshStandardMaterial({ color: 0x757c87, roughness: 0.5, metalness: 0.6, emissive: 0x2e343e });
+function buildDeckSteel(H, LH, k) {
+  const DS = window.DECK_STEEL;
+  if (!DS) return;
+  const IN = 0.0254;
+  const RAIL_TOP = 1.874; // buildFrameSeg: top rail center 1.855 + 0.019 tube radius
+  for (const [key, members, yBase] of [['deck', DS.main, 0], ['roof', DS.top, LH]]) {
+    const g = steelGroups[key];
+    const topY = yBase + RAIL_TOP + DS.chan_h_in * IN; // the ply bearing plane
+    for (const m of members) {
+      const h = (m.kind === 'chan' ? DS.chan_h_in : DS.bar_h_in) * IN;
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(m.len * IN * k, h, m.w * IN * k),
+        m.kind === 'chan' ? matSteelChan : matSteelBar);
+      mesh.position.set(H.cx + m.x * IN * k, topY - h / 2, H.cz + m.z * IN * k);
+      mesh.rotation.y = -m.ang * Math.PI / 180;
+      g.add(mesh);
+    }
+    // collar ring around the mast — true size, its bore hugs the 3.5" pipe
+    const ring = new THREE.Shape();
+    ring.absarc(0, 0, (DS.collar.od_in / 2) * IN, 0, Math.PI * 2, false);
+    const bore = new THREE.Path();
+    bore.absarc(0, 0, (DS.collar.id_in / 2) * IN, 0, Math.PI * 2, true);
+    ring.holes.push(bore);
+    const geo = new THREE.ExtrudeGeometry(ring, { depth: DS.bar_h_in * IN, bevelEnabled: false, curveSegments: 24 });
+    geo.rotateX(-Math.PI / 2); // extrusion becomes +y
+    const collar = new THREE.Mesh(geo, matSteelBar);
+    collar.position.set(H.cx, topY - DS.bar_h_in * IN, H.cz);
+    g.add(collar);
   }
 }
 
@@ -813,6 +921,72 @@ function makePaintedSign(text, bg, w = 0.62, h = 0.28) {
       map: tex, side: THREE.DoubleSide, roughness: 0.9,
       emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.18,
     }));
+}
+
+// ---------------------------------------------------------------- the beacon
+// Four laser-cut tiki heads boxed square around the mast top, panel tops
+// flush with the pole tip. Textures come from the REAL xTool cut files
+// (cad-items/tiki-*.svg, served at /cad/): each SVG is one green rect
+// (cls-1, the painted panel) plus one line-work path (cls-2) — the path is
+// what the laser cuts THROUGH, so the sim recolors cls-1 to the forest-green
+// paint and cls-2 to the LED backing color, and rasterizes a second
+// black/white pass as the emissive mask so the cutouts read as light coming
+// through the panel, not light paint on it.
+const tikiSvgCache = new Map();
+function tikiTexture(url, bg, fg, w = 640, h = 960) {
+  if (!tikiSvgCache.has(url)) {
+    tikiSvgCache.set(url, fetch(url).then((r) => {
+      if (!r.ok) throw new Error(`${url}: ${r.status}`);
+      return r.text();
+    }));
+  }
+  return tikiSvgCache.get(url).then((svg) => new Promise((resolve, reject) => {
+    const recolored = svg.replace(/<style>[\s\S]*?<\/style>/,
+      `<style>.cls-1{fill:${bg};}.cls-2{fill:${fg};stroke:${fg};stroke-miterlimit:10;stroke-width:8px;}</style>`);
+    const blobUrl = URL.createObjectURL(new Blob([recolored], { type: 'image/svg+xml' }));
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(blobUrl);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      resolve(tex);
+    };
+    img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error(url)); };
+    img.src = blobUrl;
+  }));
+}
+
+function buildBeacon(H, cx, cz) {
+  const B = H.beacon;
+  const ph = H.center_pole.height || 6.096;
+  const w = B.panel_w || 0.6096, h = B.panel_h || 0.9144;
+  const paint = B.paint || '#228b22', led = B.led || '#ffd9a3';
+  (B.faces || []).forEach((url, i) => {
+    const yaw = i * Math.PI / 2;                     // street, east, back, west
+    const nx = Math.sin(yaw), nz = Math.cos(yaw);
+    const mat = new THREE.MeshStandardMaterial({
+      roughness: 0.88, metalness: 0, side: THREE.DoubleSide,
+      emissive: new THREE.Color(led),
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+    mesh.visible = false; // until the textures arrive
+    mesh.position.set(cx + nx * w / 2, ph - h / 2, cz + nz * w / 2);
+    mesh.rotation.y = yaw;
+    levelGroups[2].add(mesh); // on the mast: shows in every floor filter
+    Promise.all([tikiTexture(url, paint, led), tikiTexture(url, '#000000', '#ffffff')])
+      .then(([map, mask]) => {
+        mat.map = map;
+        mat.emissiveMap = mask;
+        mat.emissiveIntensity = 1.25;
+        mat.needsUpdate = true;
+        mesh.visible = true;
+      })
+      .catch(() => log('err', `beacon face missing: ${url}`));
+  });
 }
 
 // ---------------------------------------------------------- entrance towers
@@ -1199,9 +1373,23 @@ function buildSensors(cfg) {
   const placeholders = new Set((cfg.layout.placeholder_effects || {}).rooms || []);
   const triggerList = $('trigger-list');
 
+  // labels are wider than the button spacing at stations (hex 4-button row,
+  // Porto knock pads) — alternate clustered labels between two rows so the
+  // words don't overlap
+  const labelSpots = [];
+  const labelRow = (x, y, z) => {
+    const n = labelSpots.filter(p => Math.abs(p.x - x) < 1.3
+      && Math.abs(p.y - y) < 0.5 && Math.abs(p.z - z) < 0.5).length;
+    labelSpots.push({ x, y, z });
+    return (n % 2) * 0.26;
+  };
+
   for (const trig of cfg.triggers) {
     const geo = byName[trig.name] || {};
-    const level = geo.level || (geo.pos && geo.pos[1] > S.levelHeight ? 1 : 0);
+    // geo.level 0 is a real value — the || fallback once swallowed it and the
+    // pos[1] height guess then misread zone sensors' [x,z] pos as [x,y]
+    const level = geo.level != null ? geo.level
+      : (geo.pos && geo.pos[1] > S.levelHeight ? 1 : 0);
     const sensor = {
       name: trig.name, kind: geo.kind || trig.type, room: trig.room, level,
       action: trig.action, type: trig.type, lastFired: -1e9, meshes: [], seg: geo.seg || null,
@@ -1224,6 +1412,45 @@ function buildSensors(cfg) {
         grp(level).add(emitter);
       }
       sensor.meshes.push(beam);
+    } else if ((geo.kind === 'radar' || geo.kind === 'tof') && geo.pos) {
+      // zone sensor firing from inside the room's node box: horizontal wedge
+      // = detection footprint (range/fov/clip), boresight line = exact aim
+      // (yaw + down-tilt). Radar detects presence in the wedge; the ToF cone
+      // is a range-gated tripwire — same enter-the-zone trigger model.
+      const range = geo.range_m || (geo.kind === 'radar' ? 3.0 : 2.0);
+      const fov = geo.fov_deg || (geo.kind === 'radar' ? 120 : 27);
+      const yaw = geo.yaw_deg || 0;
+      const yawR = yaw * Math.PI / 180;
+      sensor.zone = {
+        x: geo.pos[0], z: geo.pos[1], yaw, fov, range, clip: geo.clip || null,
+        // thin ToF cones get a boresight seg-cross backstop; wide radar wedges
+        // don't need one (and their 3 m bore can graze the neighboring bay)
+        bore: geo.kind === 'tof'
+          ? [[geo.pos[0], geo.pos[1]],
+            [geo.pos[0] + range * Math.sin(yawR), geo.pos[1] + range * Math.cos(yawR)]]
+          : null,
+      };
+      const color = geo.kind === 'radar' ? 0x37ffb0 : 0xff2b2b;
+      const zg = new THREE.Group();
+      zg.position.set(geo.pos[0], level * S.levelHeight + (geo.h || 1.55), geo.pos[1]);
+      zg.rotation.y = yawR;
+      const fovR = fov * Math.PI / 180;
+      const wedge = new THREE.Mesh(
+        new THREE.CircleGeometry(range, 48, Math.PI / 2 - fovR / 2, fovR),
+        new THREE.MeshBasicMaterial({ color, transparent: true, side: THREE.DoubleSide,
+          opacity: geo.kind === 'radar' ? 0.07 : 0.16, depthWrite: false }));
+      wedge.rotation.x = Math.PI / 2; // lay flat, opening along local +z (the box window)
+      zg.add(wedge);
+      const boreG = new THREE.Group();
+      boreG.rotation.x = -(geo.tilt_deg || 0) * Math.PI / 180; // -10° tilt = aim below horizon
+      const bore = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(
+          [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, range)]),
+        new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.65 }));
+      boreG.add(bore);
+      zg.add(boreG);
+      grp(level).add(zg);
+      sensor.meshes.push(wedge, bore);
     } else if (geo.kind === 'button' && geo.pos) {
       const colors = { 'Button 1': 0x3d7bff, 'Button 2': 0xffc93d, 'Button 3': 0x3dff70, 'Button 4': 0xff4d4d };
       const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.05, 24),
@@ -1232,8 +1459,12 @@ function buildSensors(cfg) {
       btn.position.set(geo.pos[0], geo.pos[1], geo.pos[2]);
       btn.userData.sensor = sensor;
       grp(level).add(btn);
+      // label_off ([dx,dy,dz] in the layout) places the label beside the
+      // button — used by vertical rail stacks; default sits above, row-staggered
+      const off = geo.label_off
+        || [0, 0.19 + labelRow(geo.pos[0], geo.pos[1], geo.pos[2]), 0.04];
       const lbl = makeLabel(geo.label || trig.name, 0.24);
-      lbl.position.set(geo.pos[0], geo.pos[1] + 0.19, geo.pos[2] + 0.04);
+      lbl.position.set(geo.pos[0] + off[0], geo.pos[1] + off[1], geo.pos[2] + off[2]);
       grp(level).add(lbl);
       sensor.meshes.push(btn);
       S.interactables.push(btn);
@@ -1243,8 +1474,10 @@ function buildSensors(cfg) {
       pad.position.set(geo.pos[0], geo.pos[1], geo.pos[2]);
       pad.userData.sensor = sensor;
       grp(level).add(pad);
+      const off = geo.label_off
+        || [0, 0.22 + labelRow(geo.pos[0], geo.pos[1], geo.pos[2]), 0.04];
       const lbl = makeLabel(geo.label || trig.name, 0.24);
-      lbl.position.set(geo.pos[0], geo.pos[1] + 0.22, geo.pos[2] + 0.04);
+      lbl.position.set(geo.pos[0] + off[0], geo.pos[1] + off[1], geo.pos[2] + off[2]);
       grp(level).add(lbl);
       sensor.meshes.push(pad);
       S.interactables.push(pad);
@@ -1255,6 +1488,9 @@ function buildSensors(cfg) {
       && (trig.action.data || {}).effect_name === 'Lightning';
     b.textContent = trig.name + (isPlaceholder ? ' ⚠' : '');
     b.title = `${trig.type} → ${JSON.stringify(trig.action.data)}`
+      + (sensor.zone ? `\n${geo.kind === 'radar' ? 'LD2410C radar' : 'VL53L1X ToF'} in the `
+        + `${trig.room} node box — yaw ${sensor.zone.yaw}°, tilt ${geo.tilt_deg || 0}°, `
+        + `fov ${sensor.zone.fov}°, reach ${sensor.zone.range} m` : '')
       + (isPlaceholder ? '\n⚠ placeholder: no bespoke effect designed for this room yet' : '');
     b.onclick = () => fireSensor(sensor, true);
     triggerList.appendChild(b);
@@ -1287,6 +1523,7 @@ function fireSensor(sensor, manual) {
     toast(`${sensor.name}${sensor.room ? ' → ' + (sensor.action.data.effect_name || '') : ''}`);
     post(sensor.action.path, sensor.action.data, source);
   }
+  if (S.projection && sensor.name === S.projection.cfg.cue) projectionCue('cue: ' + sensor.name);
 
   for (const m of sensor.meshes) {
     if (m.material && m.material.color) {
@@ -1307,17 +1544,313 @@ function segCross(ax, az, bx, bz, cx, cz, dx, dz) {
   return t >= 0 && t <= 1 && u >= 0 && u <= 1;
 }
 
-function checkBeamCrossings() {
-  if (S.teleporting) { S.teleporting = false; S.prev2 = { x: S.pos.x, z: S.pos.z }; return; }
-  const { x: px, z: pz } = S.prev2;
+function zoneContains(zone, x, z) {
+  if (zone.clip) {
+    if (x < zone.clip.x[0] || x > zone.clip.x[1]
+      || z < zone.clip.z[0] || z > zone.clip.z[1]) return false;
+  }
+  const dx = x - zone.x, dz = z - zone.z;
+  if (Math.hypot(dx, dz) > zone.range) return false;
+  const a = ((Math.atan2(dx, dz) * 180 / Math.PI - zone.yaw + 540) % 360) - 180;
+  return Math.abs(a) <= zone.fov / 2;
+}
+
+function checkSensorTriggers() {
   const { x, z } = S.pos;
-  if (px === x && pz === z) return;
+  const tele = S.teleporting;
+  if (tele) { S.teleporting = false; S.prev2 = { x, z }; }
+  const { x: px, z: pz } = S.prev2;
+  const moved = px !== x || pz !== z;
   for (const sensor of S.sensors) {
-    if (!sensor.seg || sensor.level !== S.level) continue;
-    const [[x1, z1], [x2, z2]] = sensor.seg;
-    if (segCross(px, pz, x, z, x1, z1, x2, z2)) fireSensor(sensor, false);
+    if (sensor.zone) {
+      // fire on entering the detection wedge (teleports re-seat state without
+      // firing, like beams); a ToF boresight seg-cross is the fast-mover
+      // backstop so a sprint through the thin cone can't step over it
+      const inside = sensor.level === S.level && zoneContains(sensor.zone, x, z);
+      if (!tele && ((inside && !sensor.wasInside)
+        || (moved && sensor.zone.bore && sensor.level === S.level
+          && segCross(px, pz, x, z,
+            sensor.zone.bore[0][0], sensor.zone.bore[0][1],
+            sensor.zone.bore[1][0], sensor.zone.bore[1][1])))) fireSensor(sensor, false);
+      sensor.wasInside = inside;
+    } else if (sensor.seg && sensor.level === S.level && !tele && moved) {
+      const [[x1, z1], [x2, z2]] = sensor.seg;
+      if (segCross(px, pz, x, z, x1, z1, x2, z2)) fireSensor(sensor, false);
+    }
   }
   S.prev2 = { x, z };
+}
+
+// ------------------------------------------------- planned projection rig (sim preview)
+// The PLANNED Cuddle Cross floor projection from the layout's `projection` key:
+// a face-down short-throw projector on a stub arm at the hex NE corner
+// paints a reactive playfield on the deck; an LD2450 in the node box tracks walker
+// positions. The sim's walker IS the target — filtered through the tracker's
+// real coverage wedge and first-order latency so the interactivity previews
+// how the hardware will feel. Placeholder snake content; delete the layout key
+// to remove the whole rig. No production config is involved.
+function buildProjection(cfg) {
+  const P = cfg.layout.projection;
+  if (!P) return;
+  const LH = S.levelHeight;
+  const yDeck = P.level * LH + 0.145; // hair above the deck slab
+  const g = new THREE.Group();
+
+  // projector body + mount arm back to its frame; yaw_deg spins the rig
+  // (0 = throws +z; -90 = throws -x as on the old rear-leg mount; -120 =
+  // throws SW down the long diagonal from the NE corner arm)
+  const [bw, bh, bd] = P.projector.body || [0.37, 0.11, 0.29];
+  const yaw = (P.projector.yaw_deg || 0) * Math.PI / 180;
+  const fwd = [Math.sin(yaw), Math.cos(yaw)];
+  const yProj = P.level * LH + 0.14 + (P.projector.h || 0.6);
+  const rig = new THREE.Group();
+  rig.position.set(P.projector.pos[0], yProj, P.projector.pos[1]);
+  rig.rotation.y = yaw;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd),
+    new THREE.MeshStandardMaterial({ color: 0xe8e4dc, roughness: 0.55 }));
+  rig.add(body);
+  g.add(rig);
+  // mount arm from the body back to its supporting frame (arm_deg = absolute
+  // world direction to the support; default = opposite the throw)
+  const armDeg = P.projector.arm_deg != null ? P.projector.arm_deg
+    : (P.projector.yaw_deg || 0) + 180;
+  const armG = new THREE.Group();
+  armG.position.set(P.projector.pos[0], yProj, P.projector.pos[1]);
+  armG.rotation.y = armDeg * Math.PI / 180;
+  const armLen = P.projector.arm_len || 0.5;
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, armLen), matGalv);
+  arm.rotation.x = Math.PI / 2;
+  arm.position.z = bd / 2 - 0.07 + armLen / 2;
+  armG.add(arm);
+  g.add(armG);
+  const lbl = makeLabel(P.projector.label || 'floor projection (planned)', 0.22);
+  lbl.position.set(P.projector.pos[0], yProj + 0.34, P.projector.pos[1]);
+  g.add(lbl);
+
+  // projected image: live canvas on the deck, additive like thrown light.
+  // w = the lateral (long, 4:3-width) axis, d = the along-throw (short)
+  // axis; the plane rides in a group yawed with the projector so diagonal
+  // throws render true
+  const cw = 640, chp = Math.round(cw * P.image.d / P.image.w);
+  const canvas = document.createElement('canvas');
+  canvas.width = cw; canvas.height = chp;
+  const tex = new THREE.CanvasTexture(canvas);
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(P.image.w, P.image.d),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false }));
+  plane.rotation.x = -Math.PI / 2;
+  const planeG = new THREE.Group();
+  planeG.position.set(P.image.center[0], yDeck, P.image.center[1]);
+  planeG.rotation.y = yaw;
+  planeG.add(plane);
+  g.add(planeG);
+
+  // world (x,z) -> image canvas px, honoring the throw yaw: canvas +x runs
+  // along the image's lateral axis, canvas +y from near edge to far edge
+  const ppm = cw / P.image.w;
+  const lat = [Math.cos(yaw), -Math.sin(yaw)];
+  const toPx = (wx, wz) => {
+    const dx = wx - P.image.center[0], dz = wz - P.image.center[1];
+    return { x: (dx * lat[0] + dz * lat[1] + P.image.w / 2) * ppm,
+             y: (dx * fwd[0] + dz * fwd[1] + P.image.d / 2) * ppm };
+  };
+
+  // beam edges from the projection window to the image corners
+  const win = new THREE.Vector3(P.projector.pos[0] + fwd[0] * (bd / 2 - 0.03),
+    yProj - bh / 2,
+    P.projector.pos[1] + fwd[1] * (bd / 2 - 0.03));
+  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const corner = new THREE.Vector3(
+      P.image.center[0] + lat[0] * sx * P.image.w / 2 + fwd[0] * sz * P.image.d / 2,
+      yDeck + 0.005,
+      P.image.center[1] + lat[1] * sx * P.image.w / 2 + fwd[1] * sz * P.image.d / 2);
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([win, corner]),
+      new THREE.LineBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.22 })));
+  }
+
+  // LD2450 tracker wedge — faint blue, just under the LD2410 trigger wedge
+  const T = P.tracker;
+  const fovR = (T.fov_deg || 120) * Math.PI / 180;
+  const wedge = new THREE.Mesh(
+    new THREE.CircleGeometry(Math.min(T.range_m || 6, 3.0), 48, Math.PI / 2 - fovR / 2, fovR),
+    new THREE.MeshBasicMaterial({ color: 0x37b6ff, transparent: true, opacity: 0.05,
+      side: THREE.DoubleSide, depthWrite: false }));
+  wedge.rotation.x = Math.PI / 2;
+  const wg = new THREE.Group();
+  wg.position.set(T.pos[0], P.level * LH + (T.h || 1.38), T.pos[1]);
+  wg.rotation.y = (T.yaw_deg || 0) * Math.PI / 180;
+  wg.add(wedge);
+  g.add(wg);
+  grp(P.level).add(g);
+
+  // mast base in image pixels: content island + shadow direction (the
+  // window's position in image pixels sets which way the shadow falls)
+  const pole = (cfg.layout.hex_center || {}).center_pole || {};
+  const mast = { ...toPx(cfg.layout.hex_center.cx, cfg.layout.hex_center.cz),
+    r: ((pole.od || 0.09) / 2 + 0.05) * ppm };
+  const winPx = toPx(win.x, win.z);
+
+  // projection-mapping mask: the deck outline (hex + door slivers) in image
+  // pixels — the projected rectangle overdrives past the deck edges, and
+  // everything off-deck stays black, exactly like the real software mask
+  const H = cfg.layout.hex_center, room = cfg.layout.rooms[P.room] || {};
+  const V = [];
+  for (let k = 0; k < 6; k++) {
+    const a = Math.PI / 6 + k * Math.PI / 3;
+    V.push([H.cx + H.side * Math.cos(a), H.cz + H.side * Math.sin(a)]);
+  }
+  const wW = room.x != null ? room.x : V[2][0], wE = room.x != null ? room.x + room.w : V[0][0];
+  const deckPts = [V[1], V[2], [wW, V[2][1]], [wW, V[3][1]], V[3], V[4], V[5],
+    [wE, V[5][1]], [wE, V[0][1]], V[0]];
+  const deckPath = new Path2D();
+  deckPts.forEach(([wx, wz], i) => {
+    const { x, y } = toPx(wx, wz);
+    if (i) deckPath.lineTo(x, y); else deckPath.moveTo(x, y);
+  });
+  deckPath.closePath();
+
+  const snakes = [];
+  for (let i = 0; i < 6; i++) {
+    const x = Math.random() * cw, y = Math.random() * chp;
+    snakes.push({ pts: Array.from({ length: 16 }, () => ({ x, y })),
+      h: Math.random() * Math.PI * 2, sp: (46 + Math.random() * 30), wig: Math.random() * 9 });
+  }
+
+  S.projection = { cfg: P, canvas, ctx: canvas.getContext('2d'), tex, plane,
+    cw, ch: chp, ppm, toPx, mast, winPx, deckPath, snakes, active: false, fade: 0,
+    lastPresence: -1e9, smooth: null, accum: 0 };
+}
+
+function projectionCue(source) {
+  const pr = S.projection;
+  if (!pr) return;
+  pr.lastPresence = clock.getElapsedTime();
+  if (!pr.active) {
+    pr.active = true;
+    log('info', `projection: floor show ON (${source})`);
+  }
+}
+
+function updateProjection(dt) {
+  const pr = S.projection;
+  if (!pr) return;
+  const P = pr.cfg, T = P.tracker, now = clock.getElapsedTime();
+
+  // what the LD2450 sees: the walker, on the deck, inside its wedge
+  const seen = S.level === P.level && zoneContains({ x: T.pos[0], z: T.pos[1],
+    yaw: T.yaw_deg || 0, fov: T.fov_deg || 120, range: T.range_m || 6,
+    clip: T.clip || null }, S.pos.x, S.pos.z);
+  if (seen) {
+    if (!pr.active) projectionCue('presence');
+    pr.lastPresence = now;
+    // first-order lag ≈ radar cadence + render pipeline
+    const k = 1 - Math.exp(-dt / ((T.latency_ms || 150) / 1000));
+    if (!pr.smooth) pr.smooth = { x: S.pos.x, z: S.pos.z };
+    pr.smooth.x += (S.pos.x - pr.smooth.x) * k;
+    pr.smooth.z += (S.pos.z - pr.smooth.z) * k;
+  } else {
+    pr.smooth = null;
+    if (pr.active && now - pr.lastPresence > (P.timeout_s || 60)) {
+      pr.active = false;
+      log('info', 'projection: absence timeout — floor show off');
+    }
+  }
+
+  pr.fade = Math.max(0, Math.min(1, pr.fade + (pr.active ? dt : -dt) * 1.5));
+  pr.plane.material.opacity = 0.95 * pr.fade;
+  if (pr.fade <= 0) return;
+  pr.accum += dt;
+  if (pr.accum < 0.05) return; // ~20 fps content is plenty
+  drawProjection(pr, Math.min(pr.accum, 0.25), now);
+  pr.accum = 0;
+}
+
+function drawProjection(pr, dt, now) {
+  const { ctx, cw, ch, mast, ppm } = pr;
+  ctx.clearRect(0, 0, cw, ch);
+  // everything renders inside the deck-outline mask; off-deck pixels stay
+  // black (masked), so the wash reads deck-shaped, not rectangular
+  ctx.save();
+  ctx.clip(pr.deckPath);
+  ctx.fillStyle = '#03150b'; // dim green wash = the visible projected area
+  ctx.fillRect(0, 0, cw, ch);
+
+  // mast island + its real shadow: cast away from the projection window,
+  // spreading like the penumbra of a pole taller than the light source
+  const wp = pr.winPx;
+  const sdx = mast.x - wp.x, sdy = mast.y - wp.y;
+  const sd = Math.hypot(sdx, sdy) || 1;
+  const ux = sdx / sd, uy = sdy / sd, vx = -uy, vy = ux;
+  const L = cw + ch, far = mast.r * (1 + L / sd);
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.beginPath();
+  ctx.moveTo(mast.x - vx * mast.r, mast.y - vy * mast.r);
+  ctx.lineTo(mast.x + vx * mast.r, mast.y + vy * mast.r);
+  ctx.lineTo(mast.x + ux * L + vx * far, mast.y + uy * L + vy * far);
+  ctx.lineTo(mast.x + ux * L - vx * far, mast.y + uy * L - vy * far);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#0d3320';
+  ctx.beginPath(); ctx.arc(mast.x, mast.y, mast.r + 10, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#2c7a4c'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(mast.x, mast.y, mast.r + 10, 0, 7); ctx.stroke();
+
+  // tracked walker: pulsing ring at the (lagged) radar position
+  let tgt = null;
+  if (pr.smooth) {
+    const { x: tx, y: ty } = pr.toPx(pr.smooth.x, pr.smooth.z);
+    if (tx > -80 && tx < cw + 80 && ty > -80 && ty < ch + 80) {
+      tgt = { x: tx, y: ty };
+      ctx.strokeStyle = 'rgba(120,255,170,0.5)';
+      ctx.lineWidth = 3;
+      const rr = 24 + 10 * Math.sin(now * 5);
+      ctx.beginPath(); ctx.arc(tx, ty, rr, 0, 7); ctx.stroke();
+    }
+  }
+
+  // snakes: wander, keep off the island and edges, flee the tracked walker
+  const FLEE = 1.15 * ppm; // flee radius ≈ 1.15 m in image pixels
+  for (const s of pr.snakes) {
+    const head = s.pts[0];
+    let steer = Math.sin(now * 1.7 + s.wig * 3) * 1.4 * dt; // idle wiggle
+    let boost = 1;
+    const av = (px, py, rad, gain) => {
+      const dx = head.x - px, dy = head.y - py, d = Math.hypot(dx, dy);
+      if (d < rad && d > 1) {
+        const want = Math.atan2(dy, dx);
+        let diff = ((want - s.h + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+        steer += diff * gain * (1 - d / rad) * dt;
+        return 1 - d / rad;
+      }
+      return 0;
+    };
+    if (tgt) boost += 1.4 * av(tgt.x, tgt.y, FLEE, 9);       // flee the human
+    av(mast.x, mast.y, mast.r + 46, 7);                      // island is solid
+    // stay on the deck: if the point ahead leaves the mask, turn toward center
+    const ahead = 52;
+    if (!ctx.isPointInPath(pr.deckPath, head.x + Math.cos(s.h) * ahead,
+      head.y + Math.sin(s.h) * ahead)) {
+      const want = Math.atan2(ch / 2 - head.y, cw / 2 - head.x);
+      const diff = ((want - s.h + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      steer += diff * 5 * dt;
+    }
+    s.h += Math.max(-3.2 * dt, Math.min(3.2 * dt, steer)) * (1 + (boost - 1) * 0.4);
+    const v = s.sp * boost * dt;
+    const nx = Math.max(4, Math.min(cw - 4, head.x + Math.cos(s.h) * v));
+    const ny = Math.max(4, Math.min(ch - 4, head.y + Math.sin(s.h) * v));
+    s.pts.unshift({ x: nx, y: ny });
+    s.pts.pop();
+
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#2fe968'; ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(s.pts[0].x, s.pts[0].y);
+    for (const p of s.pts) ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.fillStyle = '#b9ffcf';
+    ctx.beginPath(); ctx.arc(nx, ny, 4.5, 0, 7); ctx.fill();
+  }
+  ctx.restore(); // end deck mask
+  pr.tex.needsUpdate = true;
 }
 
 // ---------------------------------------------------------------- audio unit
@@ -1575,7 +2108,7 @@ function setupControls(cfg) {
   // street dolly / top zoom
   el.addEventListener('wheel', (ev) => {
     if (S.mode === 'top' && topCam) {
-      topCam.zoom = Math.max(0.4, Math.min(6, topCam.zoom * (ev.deltaY > 0 ? 0.9 : 1.11)));
+      topCam.zoom = Math.max(0.4, Math.min(24, topCam.zoom * (ev.deltaY > 0 ? 0.9 : 1.11))); // deep enough to inspect the deck steel
       topCam.updateProjectionMatrix();
     } else if (S.mode === 'street') {
       streetCam.position.z = Math.max(4.5, Math.min(30, streetCam.position.z + (ev.deltaY > 0 ? 0.9 : -0.9)));
@@ -1604,6 +2137,7 @@ function setupControls(cfg) {
   $('btn-view').onclick = () => setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]);
   $('btn-daynight').onclick = () => setDayNight(!ENV.day);
   $('btn-towers').onclick = () => setTowersVisible(!(towersGroup && towersGroup.visible));
+  $('btn-steel').onclick = () => setSteelMode(STEEL_MODES[(STEEL_MODES.indexOf(steelMode) + 1) % STEEL_MODES.length]);
   $('btn-respawn').onclick = () => {
     const sp = cfg.layout.spawn;
     S.pos.set(sp.pos[0], EYE, sp.pos[1]);
@@ -1755,6 +2289,7 @@ async function boot() {
   buildMaze(cfg);
   buildFixtures(cfg);
   buildSensors(cfg);
+  buildProjection(cfg);
   buildAvatar();
 
   const sp = cfg.layout.spawn;
@@ -1808,7 +2343,8 @@ function animate() {
   const t = clock.getElapsedTime();
 
   if (S.mode === 'first') updateMovement(dt);
-  checkBeamCrossings();
+  checkSensorTriggers();
+  updateProjection(dt);
   updateFixtures(t);
   updateFixtureGrid(t);
   updateInteractHint();

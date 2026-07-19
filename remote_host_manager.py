@@ -8,9 +8,10 @@ logger = logging.getLogger(__name__)
 
 
 class RemoteHostManager:
-    def __init__(self, audio_manager=None):
+    def __init__(self, audio_manager=None, node_audio=None):
         self.clients = {}  # client_ip -> {"name": unit_name, "rooms": [...], "websocket": ws}
         self.audio_manager = audio_manager
+        self.node_audio = node_audio  # NodeAudioManager: ESP32 node boxes with speakers
         self.background_music_task = None
         self.music_lock = asyncio.Lock()  # serializes background music start/stop
 
@@ -45,12 +46,12 @@ class RemoteHostManager:
             logger.error(f"Error terminating client {client_ip}: {e}")
             return False
 
-    def get_client_ips_by_room(self, room):
+    def get_client_ips_by_room(self, room, warn_if_empty=True):
         """All clients covering a room (a real unit and the sim web UI can both
         claim it — every one of them must get the room's audio)."""
         ips = [ip for ip, client in self.clients.items()
                if room.lower() in [r.lower() for r in client["rooms"]]]
-        if not ips:
+        if not ips and warn_if_empty:
             logger.warning(f"No client IP found for room: {room}")
         return ips
 
@@ -67,14 +68,23 @@ class RemoteHostManager:
             return False
 
     async def send_audio_command(self, room, command, data=None):
-        """Send a command to the client covering `room`, or to all clients if room is None."""
+        """Send a command to the client covering `room`, or to all clients if room is None.
+
+        Rooms with an ESP32 speaker node (node_audio_config.json) get the same
+        command mirrored over the ESPHome native API. That path is additive —
+        the WS copy still goes out, so the sim's browser audio client keeps
+        working — and fire-and-forget, so a dead node never delays an effect."""
         message = {"type": command, "data": data if data is not None else {}}
+        node_handled = bool(self.node_audio) and self.node_audio.handle_command(room, command, data)
         if room is None:
             results = [await self._send(ip, message) for ip in list(self.clients)]
             return all(results)
         message["room"] = room
-        client_ips = self.get_client_ips_by_room(room)
+        client_ips = self.get_client_ips_by_room(room, warn_if_empty=not node_handled)
         if not client_ips:
+            if node_handled:
+                logger.debug(f"Room {room}: {command} handled by the audio node only (no WS client)")
+                return True
             logger.error(f"No connected client found for room: {room}. Cannot send {command}.")
             return False
         results = [await self._send(ip, message) for ip in client_ips]

@@ -10,18 +10,24 @@
 #     platform:   !include ../packages/hardware_c3.yaml
 #
 # Wiring (Photo Bomb shutter button / Monkey puzzle completion switch):
-#   button leg 1 -> GPIO3 (XIAO C3 pin D1)      any momentary NO button works;
+#   button leg 1 -> XIAO pin D1                  any momentary NO button works;
 #   button leg 2 -> GND                          the monkey puzzle uses a lever
 #                                                microswitch closed by the last
 #                                                piece seating home
+# The button contract is the D1 PAD POSITION; the GPIO number differs per
+# board: XIAO C3 D1 = GPIO3 (the default below), XIAO S3 D1 = GPIO2 — S3 rooms
+# set `button_pin: GPIO2` in their substitutions (see hardware_s3.yaml).
 # Internal pull-up, so the pin reads LOW (pressed) when the button closes.
 # NOT validated by validate_all.sh (gpio needs the esp32 platform, sim nodes
 # are host-platform).
+substitutions:
+  button_pin: GPIO3
+
 binary_sensor:
   - platform: gpio
     id: push_button_hw
     pin:
-      number: GPIO3
+      number: ${button_pin}
       mode:
         input: true
         pullup: true

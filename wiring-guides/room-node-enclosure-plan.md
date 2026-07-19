@@ -1,34 +1,72 @@
 # Room node enclosures — mounting + LD2410C tuning plan
 
+> Audio add-on (per-room speakers driven by the node, 2026-07-18) lives in
+> `room-node-audio-plan.md` — DAC inside the box, speaker mounted off-box
+> below it, plus a mock-bay baseline addition (radar baseline captured with
+> audio playing).
+
 Constraints this plan is built around (decided 2026-07-17):
 
 - **No on-site tuning.** Every gate/sensitivity/timeout value is locked before
   departure via the mock-bay protocol below; geometry does the heavy lifting so
   thresholds only trim the edges.
-- **One custom wooden enclosure per room** holding all of that room's
-  electronics: XIAO ESP32-C3 node, LD2410C radar, power, and screw terminals
-  for any wired extras (buttons).
+- **One custom wooden enclosure per room** holding ALL of that room's sensing
+  and electronics: XIAO ESP32-C3 node, the room's ranging sensor (LD2410C
+  radar *or* VL53L1X ToF — no room needs both today), power, and screw
+  terminals for the wired extras. Buttons and piezo knock pads are the one
+  physical exception: they sense the surface a visitor touches, so the
+  disc/switch stays at the interaction point and 2-wires back to the box
+  (arcade buttons → GPIO, piezo discs → ADC front-ends; Cuddle's box also
+  terminates the hex 4-button station on the back faces beside it).
 - **Mounts on scaffold frames only** — legs, headers/top rails, doorway tubes.
   Never on the 7'×4' scissor cross braces (flexy, in the way, and they get
   removed/re-pinned during assembly).
 
 ## The enclosure
 
+- **Outer size 17 × 22 × 10 cm** (W×H×D, the box the sim renders). With 6 mm
+  walls the interior is ~15.8 × 20.8 × 8.8 cm — comfortable for the worst-case
+  fill (Porto: node + radar + three piezo ADC front-ends + terminals + a
+  20 Ah bank at 15 × 7 × 2.5 cm; depth stack at the window plane stays under
+  ~6 cm of the 8.8 available).
 - Wood is radar-friendly: mmWave passes plywood with a few dB loss. The **panel
   in front of the radar must be ≤6 mm ply** (or a thinned window recess),
   knot-free, **no metal** in the aperture zone — no staples, mesh, foil tape,
   or screws within ~5 cm of the radar's forward view. Paint is fine
   (non-metallic).
+- **The ToF is different: 940 nm IR does NOT pass wood.** ToF boxes get a
+  ~8 mm open aperture (or IR-clear window) in the panel, with the VL53L1X
+  recessed a couple of cm behind it as dust shielding — plus the generous
+  range thresholds from hardware-recommendations.md so dust-shortened
+  readings don't false. If a box ever hosts both sensors, keep the ToF module
+  (it has metal) ≥5 cm from the radar window; 24 GHz and 940 nm don't
+  interfere with each other.
 - Layout inside: **radar flush against the inner face of the window panel**,
   aimed out; node PCB and power behind it — their mass adds rear-lobe
   shielding, which matters because the street audience is usually *behind* the
   box.
 - Mounting: two hose clamps / pipe straps around the 1.69" frame tube (top +
   bottom of the box), same clamp fleet as the rest of the build. One cable
-  gland for power + button runs.
+  gland for power + button/piezo runs.
 - Angles are built into the box, not adjusted on-site: cut the mounting cleat
   so the window panel faces the aim direction below (azimuth) and shim the
   cleat for the down-tilt. Label each box with room name before departure.
+  The per-room numbers live in `sim/maze_layout.json` (`sensors` entries:
+  `yaw_deg`/`tilt_deg`/`fov_deg`/`range_m`, pos = the box) and render in the
+  sim as each box's detection wedge + boresight — the cut list:
+
+| Box (room) | Level | Sensor | Azimuth* | Down-tilt | Reach |
+|---|---|---|---|---|---|
+| Monkey / Temple / NFM / Cop Dodge / Gate | ground | LD2410C | +124° (into the room, at the far back corner) | 10° | gates 0–3, 3.0 m |
+| Bike Lock / Deep Playa / Photo Bomb / Porto / Sparkle | upper | LD2410C | −124° (mirrored) | 5° | gates 0–3, 3.0 m |
+| Cuddle Cross (hex back corner, 1.5 m) | upper | LD2410C | 0° (across the deck at the front corner) | 0° | gate 4, 3.0 m |
+| Entrance (back leg) | ground | VL53L1X | −18° (out through the START arch) | 10° | range gate 2.1 m |
+| Exit (back leg) | ground | VL53L1X | +18° (out through the FINISH arch) | 10° | range gate 2.1 m |
+| Guy Line Climb (entry-side front leg) | ground | VL53L1X | −174° (diagonally across the entry arch) | 0° | 1.05 m (far door tube = baseline) |
+| Vertical Moop March (entry-side front leg) | upper | VL53L1X | +174° (mirrored) | 0° | 1.05 m |
+
+\* azimuth 0° = straight out toward the street (+z), positive toward east —
+same convention as `yaw_deg` in the sim layout.
 
 ## Standard wing bay (10 rooms)
 
@@ -84,8 +122,8 @@ gates 2–3.
 | Room | Mount | Notes |
 |---|---|---|
 | **Cuddle Cross** | Back-corner frame pair (the skinned faces' shared corner), 1.5 m above deck, aimed at the front corner across the deck | Max gate 4 (3.0 m = front corner; street crowd beyond and below). The 20 ft center mast sits dead-center at gate 2 — constant static reflector, so gate-2 still threshold gets set *above* its measured energy in the mock pass. Timeout 60 s+: sustained still presence = cuddling, the effect hook this room actually wants. |
-| **Entrance / Exit (hex)** | VL53L1X ToF on each arch's doorway tubes | Radar is wrong here: the Exit\|Entrance divider is radar-transparent, the two halves would cross-trigger. ToF beams on the arches match the BOM's doorway units. |
-| **Guy Line Climb / Vertical Moop March** | ToF beam across the shaft entry (doorway tubes) | Full-height shafts with ropes/hanging moop that move in wind — the worst radar environment in the maze. Beams at the entry boundary keep today's trigger semantics. Radar optional later, top-down from the upper header, if a "someone is mid-climb" state earns its keep. |
+| **Entrance / Exit (hex)** | Node box on the back leg, **VL53L1X inside the box** firing out through the START/FINISH arch (azimuth ∓18°, ~1.9 m to the arch, range gate 2.1 m) | Radar is wrong here: the Exit\|Entrance divider is radar-transparent, the two halves would cross-trigger. One-sided range-gating from the box needs no cross-doorway alignment; empty = no return past the gate, street crowd beyond the arch sits past the 2.1 m threshold. The 27° cone is ~0.9 m wide at the arch — full coverage of the 0.8 m opening. Exit's cone also catches arrival from No Friends Monday, preserving the old entry-trigger timing. |
+| **Guy Line Climb / Vertical Moop March** | Standard entry-leg box, **VL53L1X inside the box** firing diagonally across the shaft entry arch (azimuth ∓174°, i.e. nearly parallel to the frame plane); the far doorway tube at ~1.0 m is the empty-range baseline | Full-height shafts with ropes/hanging moop that move in wind — the worst radar environment in the maze. The box sits 10 cm inside the entry plane, so the cone hugs the arch like the old cross-doorway beam and keeps today's trigger semantics with nothing to align. Radar optional later, top-down from the upper header, if a "someone is mid-climb" state earns its keep. |
 | **Monkey Room** | Standard bay box + 2-wire run to the puzzle microswitch (GPIO3/GND, contract already in `packages/button_gpio_c3.example.yaml`) | Radar entry gets enabled only when a doorway effect is designed (placeholder was removed); the node + button ship regardless. |
 | **Photo Bomb Room** | Standard bay box + 2-wire run to the shutter arcade button on the back scaffold | Camera + flash stay on the server side (rack is on the adjacent shared frame). |
 

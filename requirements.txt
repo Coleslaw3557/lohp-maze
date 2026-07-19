@@ -3,3 +3,4 @@ quart-cors==0.6.0
 hypercorn==0.14.3
 pyftdi==0.54.0
 websockets==10.4
+aioesphomeapi==45.6.2
