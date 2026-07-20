@@ -156,16 +156,16 @@ module panel_floor() difference() {
 
 module floor_etch() {                            // component-side marks
   translate([16, 14]) oring(gx16_d);             // connector positions
-  for (i = [0:2]) translate([38 + i*18, 14]) oring(gx12_d);
-  translate([16, 25]) label("GX16");
-  translate([56, 25]) label("GX12 x3");
+  for (i = [0:2]) translate([38 + i*16, 14]) oring(gx12_d);  // 16mm pitch:
+  translate([16, 25]) label("GX16");             //  GX12 nuts (15mm) clear
+  translate([54, 25]) label("GX12 x3");          //  each other AND the XIAO
   translate([dac_cx, dac_cy]) oline(30.5, 21);   // PCM5102A footprint
   for (px = [-dac_hx/2, dac_hx/2], py = [-dac_hy/2, dac_hy/2])
     translate([dac_cx + px, dac_cy + py]) cross(3.5);  // its screw corners
   translate([dac_cx, dac_cy + 15]) label("DAC");
-  translate([90, 21]) oline(21.4, 17.8);         // XIAO footprint (VHB), USB
-  translate([90, 21]) label("XIAO", 3);          //  toward the right wall
-}
+  translate([91, 13]) oline(21.4, 17.8);         // XIAO footprint (VHB): USB
+  translate([91, 13]) label("XIAO", 3);          //  faces the right-wall USB
+}                                                //  mark (x2d 16 -> y 13)
 
 module panel_lid() square([W, D]);
 
