@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Export the xTool cut files from node-enclosure.scad.
+"""Export THE xTool cut file from node-enclosure.scad.
 
-Each panel becomes ONE SVG with two colors sharing one coordinate frame:
+One SVG (node-enclosure.svg): all seven panels nested on one bed, two
+colors in one coordinate frame:
   black paths = CUT        red paths = ETCH/MARK (score or engrave in XCS)
 XCS: import, select the red objects -> processing "score" (or engrave),
 black -> cut. Run from enclosure/:  python3 export.py
@@ -14,8 +15,9 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 SCAD = HERE / 'node-enclosure.scad'
-PANELS = ['front', 'back', 'left', 'right', 'floor', 'lid', 'window', 'sheet']
-HAS_ETCH = {'front', 'back', 'right', 'floor', 'lid', 'window', 'sheet'}
+PANELS = ['sheet']              # ONE file: every panel nested, cut + etch
+HAS_ETCH = {'sheet'}
+OUTNAME = {'sheet': 'node-enclosure.svg'}
 
 PATH_RE = re.compile(r'<path[^>]*\sd="([^"]+)"[^>]*/?>')
 VIEW_RE = re.compile(r'viewBox="([-\d. ]+)"')
@@ -58,7 +60,7 @@ def write_panel(name):
         parts += [f'<path d="{d}"/>' for d in etch_paths]
         parts.append('</g>')
     parts.append('</svg>')
-    out = HERE / f'panel-{name}.svg'
+    out = HERE / OUTNAME.get(name, f'panel-{name}.svg')
     out.write_text('\n'.join(parts))
     print(f'{out.name}: {len(cut_paths)} cut, {len(etch_paths)} etch, '
           f'{w:g} x {h:g} mm')
