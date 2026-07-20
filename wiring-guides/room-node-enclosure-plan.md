@@ -1,11 +1,12 @@
 # Room node enclosures — mounting + LD2410C tuning plan
 
 > **Box construction superseded 2026-07-20**: the shop-built 17×22×10 cm
-> wooden box is replaced by the 3D-printed universal enclosure in
-> `../enclosure/` (one OpenSCAD design for every room; GX panel connectors
-> for all IO; swappable laser-cut sensor-window panel). Everything else in
-> this plan — mounting positions, boresight yaw/tilt angles, the mock-bay
-> tuning protocol — still applies unchanged.
+> wooden box is replaced by the LASER-CUT universal enclosure in
+> `../enclosure/` (one OpenSCAD design → xTool SVGs; finger-jointed glued
+> panels, screw-off lid; GX panel connectors for all IO; swappable acrylic
+> sensor-window panel). Everything else in this plan — mounting positions,
+> boresight yaw/tilt angles, the mock-bay tuning protocol — still applies
+> unchanged.
 
 > Audio add-on (per-room speakers driven by the node, 2026-07-18) lives in
 > `room-node-audio-plan.md` — DAC inside the box, speaker mounted off-box

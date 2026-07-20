@@ -1,72 +1,73 @@
-# Room-node enclosure (one design, every room)
+# Room-node enclosure (laser-cut, one design for every room)
 
-`node-enclosure.scad` is the single parametric enclosure for all 15 room
-nodes. Exterior ~109 × 77 × 39 mm plus mounting tabs — sized to be as small
-as reasonable around the standard node build:
+`node-enclosure.scad` generates the single enclosure used by all 15 room
+nodes as **laser-cut panels for the xTool**: six finger-jointed pieces that
+glue together, plus the acrylic sensor-window panel. Outer 110 × 78 × 40 mm
+(interior 104 × 72 × 34) — as small as reasonable around the node build.
 
-| Inside the box | Mount |
+| Inside | Mounted how |
 |---|---|
-| XIAO ESP32-S3 | friction cradle, USB-C aligned to the right-wall slot |
-| PCM5102A DAC | 4 posts (M2 self-tap), 3.5 mm jack aligned to the right-wall hole |
-| LD2410C radar and/or LD2450 (Cuddle) and/or VL53L1X ToF | shelf behind the window, zip-tie slots |
+| XIAO ESP32-S3 | VHB tape to the floor, USB-C at the right-wall slot |
+| PCM5102A DAC | M2 screws through the floor holes (**verify hole spacing against a real board before cutting 15** — `dac_hx/dac_hy` params) |
+| LD2410C / VL53L1X / Cuddle's 2410+2450 | zip-tied through the front-panel holes, boresight out the window |
 
 ## IO — everything leaves through a connector
 
-| Where | Connector | Carries |
+| Where | What | Carries |
 |---|---|---|
-| floor (faces down — dust/rain smart) | 1× GX16-8 | up to 6 arcade buttons + common (Gate 6, DPH 5, hex station 4, Bike 4) |
+| floor (faces DOWN mounted — dust/rain smart) | 1× GX16-8 | up to 6 arcade buttons + common (Gate 6, DPH 5, hex 4, Bike 4, NFM ladder) |
 | floor | 3× GX12-2 | Porto piezos ×3, single buttons, spares |
 | right wall | USB-C slot | XIAO power |
-| right wall | 6.5 mm hole | DAC 3.5 mm line-out → Creative Pebble |
-| right wall | 6.5 mm hole | XIAO external antenna pigtail |
+| right wall | 6.5 mm holes ×2 | 3.5 mm line-out → Pebble; antenna pigtail |
 
-Unused holes get a blank GX plug or a printed cap — that's what makes one
-design serve every room.
+Unused holes take a blank GX plug — that's what lets one design serve every room.
 
 ## Sensor window
 
-The front face has a 56 × 24 mm aperture with a recessed ledge that seats a
-**64 × 32 mm, 3 mm laser-cut panel** (M2.5 screws into the 4 pilot holes;
-outline exports from this same file):
+56 × 24 aperture in the front panel; the **64 × 32 × 3 mm acrylic panel**
+(`panel-window.svg`) screws over it with M2.5 into the four pilot holes.
 
-- **Radar rooms (LD2410C / LD2450):** plain 3 mm acrylic — 24 GHz passes
-  right through it. No paint, nothing metallic on or behind the panel.
-- **ToF rooms (Entrance / Exit / Guy Line / VMM):** 940 nm does NOT pass
-  plain acrylic or ply — cut the marked aperture through the panel (uncomment
-  the `OPTIONAL ToF aperture` line in `panel_2d()`), or use IR-pass acrylic.
-- **Cuddle:** LD2410C + LD2450 sit side by side behind the one window.
+- **Radar rooms** (LD2410C / LD2450): solid plain acrylic — 24 GHz passes
+  through. Nothing metallic on or behind it.
+- **ToF rooms** (Entrance / Exit / Guy Line / VMM): 940 nm does NOT pass
+  plain acrylic — uncomment the marked aperture in `panel_window()` and
+  re-export, or use IR-pass acrylic.
 
 ## Files
 
 - `node-enclosure.scad` — the design; every dimension is a named parameter
-- `box.stl`, `lid.stl` — print-ready exports
-- `window-panel.dxf` — the laser-cut panel outline
-- `box.png`, `lid.png`, `window-panel.png` — per-part renders
-- `preview-inside.png`, `preview-assembly.png` — overview renders
+- `panel-{front,back,left,right,floor,lid}.svg` — wall cuts (3 mm ply)
+- `panel-window.svg` — the window panel (3 mm acrylic)
+- `panel-sheet.svg` — all seven nested on one bed (~260 × 190 mm)
+- `sheet.png`, `preview-assembly.png`, `preview-underside.png` — renders
 
-Re-export after edits (PNG needs a display; headless use `xvfb-run -a openscad …`):
+SVGs export at true mm scale — import straight into xTool XCS. Outlines are
+exact; add kerf compensation in XCS if you want piston-fit joints (glue
+fills a normal kerf fine).
+
+Re-export after edits:
 
 ```bash
-openscad -D 'part="box"'   -o box.stl          node-enclosure.scad
-openscad -D 'part="lid"'   -o lid.stl          node-enclosure.scad
-openscad -D 'part="panel"' -o window-panel.dxf node-enclosure.scad
-openscad -D 'part="box"'   --autocenter --viewall --imgsize=1200,900 -o box.png node-enclosure.scad
+for p in front back left right floor lid window sheet; do
+  openscad -D "part=\"$p\"" -o panel-$p.svg node-enclosure.scad
+done
+xvfb-run -a openscad -D 'part="3d"' --autocenter --viewall --imgsize=1100,850 -o preview-assembly.png node-enclosure.scad
 ```
 
-## Print & assembly
+## Assembly
 
-- PETG or ASA (playa heat — PLA sags in an August car, let alone on-site),
-  0.2 mm layers, 3–4 perimeters, no supports (both parts print flat as
-  modeled: box open-face up, lid top-down).
-- Assembly: DAC on its posts → XIAO into the cradle (dab of VHB under it) →
-  sensor zip-tied to the shelf, boresight out the window → GX connectors
-  nutted into the floor holes, pigtails to the boards → panel screwed into
-  the recess → lid on (4× M3 into the corner posts).
-- Mounting: two vertical back tabs (5 mm holes) screw it flat to wood/plate,
-  or run an SAE#24 hose clamp through the two back-wall strap slots to hug a
-  scaffold tube — same mounting standard as before.
+1. Dry-fit first. Corner fingers interlock front/back ↔ left/right; the
+   floor's tabs mortise through the wall-bottom notches (flush outside).
+2. Glue everything EXCEPT the lid (wood glue for ply joints).
+3. Drop M3 nuts into the four T-slot pockets on the front/back top edges.
+4. Fit connectors (GX nuts inside the floor), boards, sensor; window panel
+   screws on (M2.5); route pigtails.
+5. Lid = the service hatch: 4× M3×12 into the T-slot nuts. No glue.
+6. Mount: back ears (5 mm holes) screw flat to wood/plate, or SAE#24 hose
+   clamps through the back strap slots hug a scaffold tube — the existing
+   mounting standard.
 
-The wooden 17×22×10 cm box construction this replaces is superseded; the
-per-room mounting positions, boresight yaw/tilt angles, and the mock-bay
-tuning protocol in `../wiring-guides/room-node-enclosure-plan.md` still
-apply unchanged — this is the same box contract in a smaller printed shell.
+Hardware per box: 4× M3×12 + nuts (lid), 4× M2.5 self-tap (window), 4× M2
+(DAC), zips, VHB. The wooden 17×22×10 box this replaces is superseded; the
+mounting positions, boresight yaw/tilt angles, and mock-bay tuning in
+`../wiring-guides/room-node-enclosure-plan.md` still apply unchanged.
