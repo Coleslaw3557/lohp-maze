@@ -265,7 +265,8 @@ Consolidations checked against every sensor in the maze; what stays and why:
   effect hook is *sustained still presence* via the LD2410C's still-energy
   gates. Not consolidatable.
 - **Hex 4-button station → optional 1-pin resistor ladder.** Cuddle's box is
-  the only exactly-full one (11/11 pins). If it ever needs a pin back, the
+  exactly full (11/11 pins) — and since the 2026-07-20 game layer, Gate's is
+  too (6 game pads + radar + I2S, `room-games-plan.md`). If it ever needs a pin back, the
   four buttons collapse onto one ADC pin with a resistor ladder (frees 3
   GPIOs); costs a tiny resistor board + threshold logic, slightly less robust
   with dusty contacts. Keep 4 digital pins for now; this is the relief valve.

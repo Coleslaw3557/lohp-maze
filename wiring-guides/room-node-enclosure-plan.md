@@ -4,6 +4,11 @@
 > `room-node-audio-plan.md` — DAC inside the box, speaker mounted off-box
 > below it, plus a mock-bay baseline addition (radar baseline captured with
 > audio playing).
+>
+> Game add-on (arcade-button room games, 2026-07-20) lives in
+> `room-games-plan.md` — changes several rooms' pin fills (Gate goes exactly
+> full at 11/11: 6 pads + radar + I2S; DPH 5 buttons; Bike 4; NFM ladder +
+> WS2812) and adds 4 standalone battery button pucks in Moop.
 
 Constraints this plan is built around (decided 2026-07-17):
 

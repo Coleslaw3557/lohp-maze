@@ -1,0 +1,20 @@
+# Vertical Moop March button puck 3 of 4 — trigger map from triggers.json
+# STANDALONE wireless unit, not the room node box: XIAO ESP32-C3 (spare-pool)
+# + 30mm illuminated arcade button + 18650 cell in a small case, always-on,
+# recharged nightly with the rest of the fleet. Game rule TBD — for now every
+# press fires the CorrectAnswer victory chime (spec:
+# wiring-guides/room-games-plan.md). Flash target: hardware_c3 (button D1,
+# no radar/audio on pucks).
+substitutions:
+  node_name: lohp-moop-button-3
+  room: "Vertical Moop March"
+  button_effect: "CorrectAnswer"
+  button_cooldown: 3s
+  server_host: "127.0.0.1"   # sim: local server; real puck: 192.168.1.238
+  api_port: "6078"
+  host_mac: "06:35:69:00:00:12"
+
+packages:
+  logic: !include ../packages/logic.yaml
+  button: !include ../packages/button.yaml
+  platform: !include ../packages/sim_host.yaml   # -> hardware_c3.yaml when flashing (pucks stay C3)

@@ -1,0 +1,59 @@
+# Deep Playa Handshake game — 5 arcade buttons, exactly ONE (random) is the
+# winner: it fires the CorrectAnswer victory chime and the winner re-rolls;
+# every other button fires WrongAnswer. Winner persists across failed presses.
+# Spec: wiring-guides/room-games-plan.md.
+# Sim/harness: `call <host>:<port> press_shake n=1` (n = 1-5).
+# Real S3 wiring: buttons on D0-D4, LEDs hardwired to the 5V rail.
+globals:
+  - id: dph_winner
+    type: int
+    initial_value: '2'
+  - id: dph_seeded
+    type: bool
+    initial_value: 'false'
+
+api:
+  actions:
+    - action: press_shake
+      variables:
+        n: int
+      then:
+        - script.execute:
+            id: dph_press
+            n: !lambda 'return n;'
+
+script:
+  - id: dph_press
+    mode: single   # 2s lockout between presses
+    parameters:
+      n: int
+    then:
+      - lambda: |-
+          if (!id(dph_seeded)) { id(dph_winner) = random_uint32() % 5; id(dph_seeded) = true; }
+      - if:
+          condition:
+            lambda: 'return (n - 1) == id(dph_winner);'
+          then:
+            - logger.log: "Handshake: WINNER — re-rolling"
+            - lambda: 'id(dph_winner) = random_uint32() % 5;'
+            - script.execute:
+                id: dph_fire
+                effect: "CorrectAnswer"
+          else:
+            - logger.log: "Handshake: wrong button"
+            - script.execute:
+                id: dph_fire
+                effect: "WrongAnswer"
+      - delay: 2s
+  - id: dph_fire
+    mode: queued
+    parameters:
+      effect: string
+    then:
+      - http_request.post:
+          url: http://${server_host}:5000/api/run_effect
+          request_headers:
+            Content-Type: application/json
+          json: !lambda |-
+            root["room"] = "${room}";
+            root["effect_name"] = effect;

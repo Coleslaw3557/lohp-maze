@@ -10,4 +10,5 @@ substitutions:
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
+  game: !include ../packages/game_lightsout.yaml
   platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)

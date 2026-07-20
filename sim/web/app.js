@@ -1679,7 +1679,8 @@ function buildSensors(cfg) {
       : (geo.pos && geo.pos[1] > S.levelHeight ? 1 : 0);
     const sensor = {
       name: trig.name, kind: geo.kind || trig.type, room: trig.room, level,
-      action: trig.action, type: trig.type, lastFired: -1e9, meshes: [], seg: geo.seg || null,
+      action: trig.action, type: trig.type, game: trig.game || null,
+      lastFired: -1e9, meshes: [], seg: geo.seg || null,
     };
 
     if (geo.kind === 'beam' && geo.seg) {
@@ -1740,8 +1741,9 @@ function buildSensors(cfg) {
       sensor.meshes.push(wedge, bore);
     } else if (geo.kind === 'button' && geo.pos) {
       const colors = { 'Button 1': 0x3d7bff, 'Button 2': 0xffc93d, 'Button 3': 0x3dff70, 'Button 4': 0xff4d4d };
+      const bcol = geo.color ? parseInt(geo.color, 16) : (colors[trig.name] || 0xcccccc);
       const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.05, 24),
-        new THREE.MeshStandardMaterial({ color: colors[trig.name] || 0xcccccc, roughness: 0.4, emissive: colors[trig.name] || 0x333333, emissiveIntensity: 0.25 }));
+        new THREE.MeshStandardMaterial({ color: bcol, roughness: 0.4, emissive: bcol, emissiveIntensity: 0.25 }));
       btn.rotation.x = Math.PI / 2;
       btn.position.set(geo.pos[0], geo.pos[1], geo.pos[2]);
       btn.userData.sensor = sensor;
@@ -1786,16 +1788,129 @@ function buildSensors(cfg) {
   }
 }
 
+// --- room game logic (mirrors the node firmware; spec: wiring-guides/room-games-plan.md) ---
+const GAME = { gateStage: 0, gateAt: -1e9, dphWinner: Math.floor(Math.random() * 5), bike: {}, lamps: null };
+
+function lampSensors() {
+  return S.sensors.filter(s => s.game && s.game.id === 'lightsout')
+    .sort((a, b) => a.game.index - b.game.index);
+}
+
+function paintLamps() {
+  for (const s of lampSensors()) {
+    const on = GAME.lamps ? GAME.lamps[s.game.index] : false;
+    for (const m of s.meshes) {
+      if (!m.material) continue;
+      m.userData.origColor = null; // lamp state owns the colour; skip flash restores
+      m.material.color.set(on ? 0xffe27a : 0x3a3a3a);
+      m.material.emissive.set(on ? 0xffe27a : 0x111111);
+      m.material.emissiveIntensity = on ? 0.95 : 0.12;
+    }
+  }
+}
+
+function scrambleLamps() {
+  GAME.lamps = [];
+  do {
+    for (let i = 0; i < 5; i++) GAME.lamps[i] = Math.random() < 0.5;
+  } while (GAME.lamps.every(Boolean));  // never start solved
+  paintLamps();
+}
+
+function chimeThen(sensor, finalEffect, source) {
+  // maze-wide victory chime, then the room's big effect once the chime lands
+  post(sensor.action.path, Object.assign({}, sensor.action.data, { effect_name: 'CorrectAnswer' }), source);
+  setTimeout(() => post(sensor.action.path,
+    Object.assign({}, sensor.action.data, { effect_name: finalEffect }), source), 2500);
+}
+
+// Returns {effect} to POST, null when the game already POSTed, or 'silent'.
+function resolveGame(sensor, source) {
+  const g = sensor.game;
+  const now = clock.getElapsedTime();
+  switch (g.id) {
+    case 'gate': {
+      // sim stand-in: one click = the whole bank pressed at once (the real
+      // node requires all 3 pads of a bank held within its 350ms window)
+      if (GAME.gateStage === 1 && now - GAME.gateAt > 30) GAME.gateStage = 0;
+      if (g.bank === 1) {
+        GAME.gateStage = 1; GAME.gateAt = now;
+        toast('Gate: first three hit — now the far three!');
+        return { effect: 'CorrectAnswer' };
+      }
+      if (GAME.gateStage === 1) {
+        GAME.gateStage = 0;
+        toast('Gate complete!');
+        return { effect: 'GateInspection' };
+      }
+      toast('Gate: hit pads 1-3 first');
+      return { effect: 'WrongAnswer' };
+    }
+    case 'dph': {
+      if (g.index === GAME.dphWinner) {
+        GAME.dphWinner = Math.floor(Math.random() * 5);
+        toast('Handshake: WINNER!');
+        return { effect: 'CorrectAnswer' };
+      }
+      toast('Handshake: not this one…');
+      return { effect: 'WrongAnswer' };
+    }
+    case 'bike': {
+      if (GAME.bike.at && now - GAME.bike.at > 60) GAME.bike = {};
+      if (!g.correct) {
+        GAME.bike = {};
+        toast(`Bike Q${g.question}: wrong — start over`);
+        return { effect: 'WrongAnswer' };
+      }
+      GAME.bike['q' + g.question] = true;
+      GAME.bike.at = now;
+      if (GAME.bike.q1 && GAME.bike.q2) {
+        GAME.bike = {};
+        toast('Bike: both questions right!');
+        chimeThen(sensor, 'BikeLockRoom', source);
+        return null;
+      }
+      toast(`Bike Q${g.question}: correct`);
+      return { effect: 'CorrectAnswer' };
+    }
+    case 'moop':  // standalone pucks; game rule TBD — every press chimes
+      return { effect: 'CorrectAnswer' };
+    case 'lightsout': {
+      if (!GAME.lamps) scrambleLamps();
+      for (const j of [g.index - 1, g.index, g.index + 1])
+        if (j >= 0 && j < 5) GAME.lamps[j] = !GAME.lamps[j];
+      paintLamps();
+      if (GAME.lamps.every(Boolean)) {
+        toast('Truck: LIGHTS ON — solved!');
+        GAME.lamps = null;
+        setTimeout(scrambleLamps, 4000);
+        chimeThen(sensor, 'NoFriendsMonday', source);
+        return null;
+      }
+      return 'silent';  // toggles don't fire effects; only the solve does
+    }
+  }
+  return { effect: sensor.action.data.effect_name };
+}
+
 function fireSensor(sensor, manual) {
   const now = clock.getElapsedTime();
-  if (now - sensor.lastFired < COOLDOWN_S) {
+  const cooldown = sensor.game ? (sensor.game.id === 'lightsout' ? 0.4 : 1.5) : COOLDOWN_S;
+  if (now - sensor.lastFired < cooldown) {
     if (manual) toast(`${sensor.name}: cooling down`);
     return;
   }
   sensor.lastFired = now;
   const source = manual ? 'click' : 'walkthrough';
 
-  if (sensor.type === 'piezo') {
+  if (sensor.game) {
+    const r = resolveGame(sensor, source);
+    if (r === 'silent') return;  // lamp paint owns the button look; no flash
+    if (r && r.effect) {
+      toast(`${sensor.name} → ${r.effect}`);
+      post(sensor.action.path, Object.assign({}, sensor.action.data, { effect_name: r.effect }), source);
+    }
+  } else if (sensor.type === 'piezo') {
     const ps = S.cfg.piezo_settings;
     S.piezoAttempts += 1;
     let effect = 'WrongAnswer';

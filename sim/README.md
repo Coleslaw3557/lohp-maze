@@ -307,7 +307,7 @@ open and you'll see the "ghost" activity they produce.
 |---|---|---|
 | DMX output | `virtual_dmx.py` replaces the FTDI thread; same 44Hz loop over `DMXStateManager` | Same frames that would hit the wire |
 | Fixtures | Each 3D fixture decodes the **raw universe at its configured start address** using the channel map from `light_config.json` | Reproduces addressing bugs |
-| Sensors | Radar/ToF detection wedges fired from each room's node box (pos + yaw/tilt/fov/range in `maze_layout.json`, floor-aware, clipped to room bounds) plus button/pad geometry; actions verbatim from `triggers.json` (the canonical trigger map); piezo 3-attempt/25% logic mirrors `trigger_manager.py`; 5s cooldowns | Same HTTP POSTs as the ESP32 nodes (and the retired Pi units before them) |
+| Sensors | Radar/ToF detection wedges fired from each room's node box (pos + yaw/tilt/fov/range in `maze_layout.json`, floor-aware, clipped to room bounds) plus button/pad geometry; actions verbatim from `triggers.json` (the canonical trigger map); piezo 3-attempt/25% logic mirrors `trigger_manager.py`; room games (Gate banks, Handshake winner, Bike quiz, Moop pucks, truck Lights-Out) mirror the node `game_*.yaml` packages per `wiring-guides/room-games-plan.md`; 5s cooldowns (games faster) | Same HTTP POSTs as the ESP32 nodes (and the retired Pi units before them) |
 | Audio | The page connects to `:8765` speaking the unit protocol, claims all 16 rooms (incl. Camp Sign), plays served MP3s via Web Audio, spatialized at room+floor positions | Same messages a unit client receives |
 | ESP32 nodes | Real ESPHome YAML compiled for the `host` platform → native Linux processes that fire real `http_request` POSTs (`esphome/`, verified end-to-end) | Real firmware engine, virtual sensor input |
 
@@ -323,6 +323,7 @@ sim/.venv/bin/python sim/tools/walkthrough.py    # scripted visitor walks the tw
 sim/.venv/bin/python sim/tools/concurrency_test.py  # simultaneous-trigger storms, stop/supersede semantics
 sim/.venv/bin/python sim/tools/photobooth_test.py   # Photo Bomb countdown/flash/photo + Monkey fanfare timelines
 sim/.venv/bin/python sim/tools/ws_registry_test.py  # two same-IP audio clients coexist, both get room audio, exact disconnect
+sim/.venv/bin/python sim/tools/gate_game_test.py    # Gate two-bank game vs the REAL node firmware (start it first: sim/esphome/run_node.sh gate -d)
 ```
 
 Note: the server holds `/api/run_effect` open until the effect finishes (up to ~20s);

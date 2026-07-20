@@ -1,0 +1,90 @@
+# Bike Lock Room quiz — a sign with TWO true/false questions, 4 arcade
+# buttons: Q1-TRUE(1) Q1-FALSE(2) Q2-TRUE(3) Q2-FALSE(4).
+#   correct button              -> CorrectAnswer chime, question latched 60s
+#   wrong button                -> WrongAnswer, progress reset
+#   both questions correct      -> chime then ${bike_complete_effect}
+# ANSWER KEY IS A PLACEHOLDER (Q1=TRUE, Q2=FALSE) until the sign is made —
+# edit bike_press's `correct` lambda when the real questions exist.
+# Spec: wiring-guides/room-games-plan.md.
+# Sim/harness: `call <host>:<port> press_bike n=1` (n = 1-4).
+# Real S3 wiring: buttons on D0-D3, LEDs hardwired to the 5V rail.
+substitutions:
+  bike_complete_effect: "BikeLockRoom"
+
+globals:
+  - id: bike_q1_ok
+    type: bool
+    initial_value: 'false'
+  - id: bike_q2_ok
+    type: bool
+    initial_value: 'false'
+  - id: bike_at_ms
+    type: uint32_t
+    initial_value: '0'
+
+api:
+  actions:
+    - action: press_bike
+      variables:
+        n: int
+      then:
+        - script.execute:
+            id: bike_press
+            n: !lambda 'return n;'
+
+script:
+  - id: bike_press
+    mode: single
+    parameters:
+      n: int
+    then:
+      - lambda: |-
+          // 60s window: both answers must land close together
+          if (id(bike_at_ms) != 0 && (millis() - id(bike_at_ms)) > 60000) {
+            id(bike_q1_ok) = false; id(bike_q2_ok) = false; id(bike_at_ms) = 0;
+          }
+      - if:
+          condition:
+            # PLACEHOLDER answer key: buttons 1 (Q1-TRUE) and 4 (Q2-FALSE) are correct
+            lambda: 'return n == 1 || n == 4;'
+          then:
+            - lambda: |-
+                if (n <= 2) id(bike_q1_ok) = true; else id(bike_q2_ok) = true;
+                id(bike_at_ms) = millis();
+            - if:
+                condition:
+                  lambda: 'return id(bike_q1_ok) && id(bike_q2_ok);'
+                then:
+                  - logger.log: "Bike quiz: both right — complete"
+                  - lambda: 'id(bike_q1_ok) = false; id(bike_q2_ok) = false; id(bike_at_ms) = 0;'
+                  - script.execute:
+                      id: bike_fire
+                      effect: "CorrectAnswer"
+                  - delay: 2500ms   # let the chime land before the big effect
+                  - script.execute:
+                      id: bike_fire
+                      effect: "${bike_complete_effect}"
+                else:
+                  - logger.log: "Bike quiz: correct"
+                  - script.execute:
+                      id: bike_fire
+                      effect: "CorrectAnswer"
+          else:
+            - logger.log: "Bike quiz: wrong — reset"
+            - lambda: 'id(bike_q1_ok) = false; id(bike_q2_ok) = false; id(bike_at_ms) = 0;'
+            - script.execute:
+                id: bike_fire
+                effect: "WrongAnswer"
+      - delay: 1500ms
+  - id: bike_fire
+    mode: queued
+    parameters:
+      effect: string
+    then:
+      - http_request.post:
+          url: http://${server_host}:5000/api/run_effect
+          request_headers:
+            Content-Type: application/json
+          json: !lambda |-
+            root["room"] = "${room}";
+            root["effect_name"] = effect;

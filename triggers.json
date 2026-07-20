@@ -259,6 +259,415 @@
         "method": "POST",
         "path": "/api/run_effect"
       }
+    },
+    {
+      "name": "Gate Pad 1",
+      "type": "button",
+      "room": "Gate",
+      "game": {
+        "id": "gate",
+        "bank": 1
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Gate",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Gate Pad 2",
+      "type": "button",
+      "room": "Gate",
+      "game": {
+        "id": "gate",
+        "bank": 1
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Gate",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Gate Pad 3",
+      "type": "button",
+      "room": "Gate",
+      "game": {
+        "id": "gate",
+        "bank": 1
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Gate",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Gate Pad 4",
+      "type": "button",
+      "room": "Gate",
+      "game": {
+        "id": "gate",
+        "bank": 2
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Gate",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Gate Pad 5",
+      "type": "button",
+      "room": "Gate",
+      "game": {
+        "id": "gate",
+        "bank": 2
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Gate",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Gate Pad 6",
+      "type": "button",
+      "room": "Gate",
+      "game": {
+        "id": "gate",
+        "bank": 2
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Gate",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Handshake Button 1",
+      "type": "button",
+      "room": "Deep Playa Handshake",
+      "game": {
+        "id": "dph",
+        "index": 0
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Deep Playa Handshake",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Handshake Button 2",
+      "type": "button",
+      "room": "Deep Playa Handshake",
+      "game": {
+        "id": "dph",
+        "index": 1
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Deep Playa Handshake",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Handshake Button 3",
+      "type": "button",
+      "room": "Deep Playa Handshake",
+      "game": {
+        "id": "dph",
+        "index": 2
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Deep Playa Handshake",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Handshake Button 4",
+      "type": "button",
+      "room": "Deep Playa Handshake",
+      "game": {
+        "id": "dph",
+        "index": 3
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Deep Playa Handshake",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Handshake Button 5",
+      "type": "button",
+      "room": "Deep Playa Handshake",
+      "game": {
+        "id": "dph",
+        "index": 4
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Deep Playa Handshake",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Bike Q1 True",
+      "type": "button",
+      "room": "Bike Lock Room",
+      "game": {
+        "id": "bike",
+        "question": 1,
+        "correct": true
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Bike Lock Room",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Bike Q1 False",
+      "type": "button",
+      "room": "Bike Lock Room",
+      "game": {
+        "id": "bike",
+        "question": 1,
+        "correct": false
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Bike Lock Room",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Bike Q2 True",
+      "type": "button",
+      "room": "Bike Lock Room",
+      "game": {
+        "id": "bike",
+        "question": 2,
+        "correct": false
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Bike Lock Room",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Bike Q2 False",
+      "type": "button",
+      "room": "Bike Lock Room",
+      "game": {
+        "id": "bike",
+        "question": 2,
+        "correct": true
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Bike Lock Room",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Moop Button 1",
+      "type": "button",
+      "room": "Vertical Moop March",
+      "game": {
+        "id": "moop"
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Vertical Moop March",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Moop Button 2",
+      "type": "button",
+      "room": "Vertical Moop March",
+      "game": {
+        "id": "moop"
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Vertical Moop March",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Moop Button 3",
+      "type": "button",
+      "room": "Vertical Moop March",
+      "game": {
+        "id": "moop"
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Vertical Moop March",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Moop Button 4",
+      "type": "button",
+      "room": "Vertical Moop March",
+      "game": {
+        "id": "moop"
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Vertical Moop March",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Truck Button 1",
+      "type": "button",
+      "room": "No Friends Monday",
+      "game": {
+        "id": "lightsout",
+        "index": 0
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "No Friends Monday",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Truck Button 2",
+      "type": "button",
+      "room": "No Friends Monday",
+      "game": {
+        "id": "lightsout",
+        "index": 1
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "No Friends Monday",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Truck Button 3",
+      "type": "button",
+      "room": "No Friends Monday",
+      "game": {
+        "id": "lightsout",
+        "index": 2
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "No Friends Monday",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Truck Button 4",
+      "type": "button",
+      "room": "No Friends Monday",
+      "game": {
+        "id": "lightsout",
+        "index": 3
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "No Friends Monday",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Truck Button 5",
+      "type": "button",
+      "room": "No Friends Monday",
+      "game": {
+        "id": "lightsout",
+        "index": 4
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "No Friends Monday",
+          "effect_name": "WrongAnswer"
+        }
+      }
     }
-  ]
+  ],
+  "_games_comment": "Triggers with a `game` key resolve through per-room game logic (mirrored in sim/web/app.js and the room node firmware, wiring-guides/room-games-plan.md): gate = two banks of 3 simultaneous body-pressed arcade buttons (bank 1 -> CorrectAnswer chime, then bank 2 -> GateInspection); dph = 1 random winner of 5 (CorrectAnswer, re-rolled on win; others WrongAnswer); bike = 2 true/false questions, correct key TBD until the sign is made (both right -> chime then BikeLockRoom); moop = 4 standalone battery button pucks, game rule TBD (any press chimes); lightsout = 5 lit truck buttons, press toggles self+neighbors, all lit -> chime then NoFriendsMonday."
 }

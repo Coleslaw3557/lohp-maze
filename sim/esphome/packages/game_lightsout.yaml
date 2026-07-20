@@ -1,0 +1,69 @@
+# No Friends Monday truck game — simplified 1-D Lights Out: 5 lit arcade
+# buttons in a row on the wooden truck model. Pressing button n toggles
+# n-1/n/n+1; when all 5 lamps are lit -> CorrectAnswer chime then
+# ${lightsout_complete_effect}, and the board re-scrambles.
+# Lamp state lives in the bitmask global (bit 0 = button 1). Real hardware:
+# 5 buttons on ONE resistor-ladder ADC pin + lamps as a 5-px WS2812 chain on
+# one data pin (2 pins total) — the WS2812 output component is added on the
+# hardware flash; this package carries the game state and server POSTs.
+# Starts on a fixed unsolved pattern (0b01010); re-scrambles randomly per win.
+# Spec: wiring-guides/room-games-plan.md.
+# Sim/harness: `call <host>:<port> press_truck n=1` (n = 1-5).
+substitutions:
+  lightsout_complete_effect: "NoFriendsMonday"
+
+globals:
+  - id: nfm_lamp_mask
+    type: int
+    initial_value: '10'   # 0b01010 — never start solved
+
+api:
+  actions:
+    - action: press_truck
+      variables:
+        n: int
+      then:
+        - script.execute:
+            id: nfm_press
+            n: !lambda 'return n;'
+
+script:
+  - id: nfm_press
+    mode: single
+    parameters:
+      n: int
+    then:
+      - lambda: |-
+          int i = n - 1;
+          for (int j = i - 1; j <= i + 1; j++)
+            if (j >= 0 && j < 5) id(nfm_lamp_mask) ^= (1 << j);
+          ESP_LOGI("nfm", "lamps now %d%d%d%d%d",
+                   (id(nfm_lamp_mask) >> 0) & 1, (id(nfm_lamp_mask) >> 1) & 1,
+                   (id(nfm_lamp_mask) >> 2) & 1, (id(nfm_lamp_mask) >> 3) & 1,
+                   (id(nfm_lamp_mask) >> 4) & 1);
+      - if:
+          condition:
+            lambda: 'return id(nfm_lamp_mask) == 31;'
+          then:
+            - logger.log: "Truck lights ALL ON — solved"
+            - script.execute:
+                id: nfm_fire
+                effect: "CorrectAnswer"
+            - delay: 2500ms   # chime lands, then the room celebrates
+            - script.execute:
+                id: nfm_fire
+                effect: "${lightsout_complete_effect}"
+            - lambda: 'id(nfm_lamp_mask) = (int)(random_uint32() % 31);  // 0..30, never solved'
+      - delay: 400ms   # fast enough to actually play the puzzle
+  - id: nfm_fire
+    mode: queued
+    parameters:
+      effect: string
+    then:
+      - http_request.post:
+          url: http://${server_host}:5000/api/run_effect
+          request_headers:
+            Content-Type: application/json
+          json: !lambda |-
+            root["room"] = "${room}";
+            root["effect_name"] = effect;
