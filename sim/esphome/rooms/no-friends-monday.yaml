@@ -1,4 +1,4 @@
-# No Friends Monday sensor node — trigger map from client/config-unit-*.json
+# No Friends Monday sensor node — trigger map from triggers.json
 substitutions:
   node_name: lohp-node-no-friends-monday
   room: "No Friends Monday"

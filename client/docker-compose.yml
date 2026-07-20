@@ -12,7 +12,7 @@ services:
       - ./cache:/app/cache
     environment:
       - PYTHONUNBUFFERED=1
-      - UNIT_CONFIG=${UNIT_CONFIG:-config-unit-a.json}
+      - UNIT_CONFIG=${UNIT_CONFIG:-config-single-pi.json}
     restart: always
     logging:
       driver: "json-file"

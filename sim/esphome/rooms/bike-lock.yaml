@@ -1,4 +1,4 @@
-# Bike Lock Room sensor node — trigger map from client/config-unit-*.json
+# Bike Lock Room sensor node — trigger map from triggers.json
 substitutions:
   node_name: lohp-node-bike-lock
   room: "Bike Lock Room"

@@ -6,9 +6,9 @@ node boxes; it does not change any sensing geometry there.
 
 ## Why move audio off the Pis
 
-Today audio is per-**zone**, not per-room: units A/B/C each drive one output
-shared by 5 rooms (`client/config-unit-*.json`), so most visitors hear a
-speaker several rooms away. Putting a speaker at every node box:
+The old audio was per-**zone**, not per-room: units A/B/C each drove one
+output shared by 5 rooms (`client/config-unit-*.json`, historical), so most
+visitors heard a speaker several rooms away. A speaker at every node box:
 
 - puts sound ≤2.6 m from the visitor in every room (beats today's arrangement
   by proximity, not wattage);

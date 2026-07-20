@@ -1,4 +1,4 @@
-# Deep Playa Handshake sensor node — trigger map from client/config-unit-*.json
+# Deep Playa Handshake sensor node — trigger map from triggers.json
 substitutions:
   node_name: lohp-node-deep-playa-handshake
   room: "Deep Playa Handshake"

@@ -30,7 +30,7 @@ One JSON file per deployment, selected with the `UNIT_CONFIG` environment variab
 
 - `config-unit-a.json` / `config-unit-b.json` / `config-unit-c.json` — HISTORICAL: the
   original three-Pi layout (each Pi ~5 rooms, one audio output, local sensor triggers).
-  Kept as the authoritative record of the old trigger map; the hardware is decommissioned.
+  Purely a record now — the live sensor→effect map is `triggers.json` at the repo root.
 - `config-single-pi.json` — the live fallback: one host covers all rooms, with a `zones` map
   routing each room's audio to its own USB sound card. No triggers (the ESP32 nodes own those).
 
@@ -66,7 +66,7 @@ physical USB port with the included udev rule:
 UNIT_CONFIG=config-single-pi.json docker compose up -d --build
 ```
 
-`UNIT_CONFIG` defaults to `config-unit-a.json`. For boot-time startup via systemd see
+`UNIT_CONFIG` defaults to `config-single-pi.json` (the fallback mode). For boot-time startup via systemd see
 [pi-notes.md](pi-notes.md). Audio files are downloaded from the server on startup and cached
 in `cache/`, so first boot needs the server reachable.
 

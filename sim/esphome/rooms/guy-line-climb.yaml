@@ -1,4 +1,4 @@
-# Guy Line Climb sensor node — trigger map from client/config-unit-*.json
+# Guy Line Climb sensor node — trigger map from triggers.json
 substitutions:
   node_name: lohp-node-guy-line-climb
   room: "Guy Line Climb"

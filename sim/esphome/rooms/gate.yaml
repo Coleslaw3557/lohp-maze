@@ -1,4 +1,4 @@
-# Gate sensor node — trigger map from client/config-unit-*.json
+# Gate sensor node — trigger map from triggers.json
 substitutions:
   node_name: lohp-node-gate
   room: "Gate"

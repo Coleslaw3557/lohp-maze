@@ -1,4 +1,4 @@
-# Sparkle Pony Room sensor node — trigger map from client/config-unit-*.json
+# Sparkle Pony Room sensor node — trigger map from triggers.json
 substitutions:
   node_name: lohp-node-sparkle-pony
   room: "Sparkle Pony Room"

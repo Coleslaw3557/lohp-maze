@@ -1,4 +1,4 @@
-# Temple Room sensor node — trigger map from client/config-unit-*.json
+# Temple Room sensor node — trigger map from triggers.json
 # No trigger packages yet: the Lightning-on-entry placeholder was test wiring
 # (removed 2026-07-17). Include tripwire.yaml + an `effect` substitution once
 # this room gets its bespoke effect.

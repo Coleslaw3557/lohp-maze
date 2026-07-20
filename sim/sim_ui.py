@@ -17,7 +17,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 import time
 
 from quart import Quart, jsonify, send_from_directory, websocket
@@ -46,38 +45,19 @@ def _load_json(path):
 
 
 def _extract_triggers():
-    """Flatten the three unit configs into one browser-friendly trigger list.
+    """Load the canonical trigger map (triggers.json at the repo root).
 
-    URLs like http://${server_ip}:5000/api/run_effect become just the path;
-    the browser re-targets them at location.hostname.
+    Actions store bare paths (`/api/run_effect`, ...) that the browser
+    re-targets at location.hostname. Promoted 2026-07-20 from the retired
+    client/config-unit-*.json unit configs.
     """
-    triggers = []
-    piezo_settings = {"attempts_required": 3, "correct_answer_probability": 0.25}
-    for unit in ('a', 'b', 'c'):
-        path = os.path.join(REPO_DIR, 'client', f'config-unit-{unit}.json')
-        try:
-            cfg = _load_json(path)
-        except (OSError, json.JSONDecodeError) as e:
-            logger.warning(f"Skipping {path}: {e}")
-            continue
-        piezo_settings = cfg.get('piezo_settings') or piezo_settings  # explicit null must not propagate
-        for t in cfg.get('triggers', []):
-            action = t.get('action', {})
-            url = action.get('url', '')
-            m = re.search(r':5000(/.*)$', url)
-            triggers.append({
-                'unit': cfg.get('unit_name', f'unit-{unit}'),
-                'name': t.get('name'),
-                'type': t.get('type'),
-                'room': action.get('data', {}).get('room'),
-                'threshold': t.get('threshold'),
-                'action': {
-                    'method': action.get('method', 'POST'),
-                    'path': m.group(1) if m else '/api/run_effect',
-                    'data': action.get('data', {}),
-                },
-            })
-    return triggers, piezo_settings
+    defaults = {"attempts_required": 3, "correct_answer_probability": 0.25}
+    try:
+        cfg = _load_json(os.path.join(REPO_DIR, 'triggers.json'))
+    except (OSError, json.JSONDecodeError) as e:
+        logger.warning(f"triggers.json unreadable ({e}); trigger panel will be empty")
+        return [], defaults
+    return cfg.get('triggers', []), cfg.get('piezo_settings') or defaults
 
 
 @app.route('/')

@@ -1,4 +1,4 @@
-# Photo Bomb Room sensor node — trigger map from client/config-unit-*.json
+# Photo Bomb Room sensor node — trigger map from triggers.json
 # Tripwire fires the room ambience; the shutter BUTTON starts the camera
 # sequence (countdown -> flash -> the Pi's USB webcam takes the photo).
 substitutions:

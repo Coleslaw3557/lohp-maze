@@ -26,7 +26,8 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   tuning, next-theme).
 
 Effects are defined in code in `effects/` and registered in `effects_manager.py`.
-Audio for each effect is mapped in `audio_config.json`; fixtures and rooms in `light_config.json`.
+Audio for each effect is mapped in `audio_config.json`; fixtures and rooms in
+`light_config.json`; the sensor→effect trigger map in `triggers.json`.
 
 ## Running the server
 

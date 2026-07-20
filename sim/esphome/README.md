@@ -64,7 +64,7 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
   `files:` list and the `play_cue` dispatch the server calls). Outputs are
   gitignored — rerun after config/mp3 changes and before any flash.
 - `rooms/*.yaml` — one node per room: substitutions only (room, effect, server,
-  api port 6061–6075, MAC). Room→effect mapping matches `client/config-unit-*.json`.
+  api port 6061–6075, MAC). Room→effect mapping matches `triggers.json` (repo root, the canonical map).
 
 ## Flashing a real node later
 

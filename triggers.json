@@ -1,0 +1,264 @@
+{
+  "_comment": "Canonical sensor-trigger map: which sensor in which room fires which action. Sensors live in the per-room ESP32-S3 node boxes (wiring-guides/room-node-enclosure-plan.md); sim/esphome/rooms/*.yaml and the sim's trigger panel are both built from this file. Promoted 2026-07-20 from the retired client/config-unit-*.json (units A/B/C decommissioned); thresholds are the bench-proven ADC/piezo values carried over as node-tuning reference.",
+  "piezo_settings": {
+    "attempts_required": 3,
+    "correct_answer_probability": 0.25
+  },
+  "triggers": [
+    {
+      "name": "Entrance LT",
+      "type": "laser",
+      "room": "Entrance",
+      "action": {
+        "data": {
+          "effect_name": "Entrance",
+          "room": "Entrance"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Cuddle Cross LT",
+      "type": "laser",
+      "room": "Cuddle Cross",
+      "action": {
+        "data": {
+          "effect_name": "CuddlePuddle",
+          "room": "Cuddle Cross"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Photo Bomb LT",
+      "type": "laser",
+      "room": "Photo Bomb Room",
+      "action": {
+        "data": {
+          "effect_name": "PhotoBomb-Spot",
+          "room": "Photo Bomb Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "No Friends Monday LT",
+      "type": "laser",
+      "room": "No Friends Monday",
+      "action": {
+        "data": {
+          "effect_name": "NoFriendsMonday",
+          "room": "No Friends Monday"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Button 1",
+      "type": "adc",
+      "room": null,
+      "action": {
+        "data": {
+          "next_theme": true
+        },
+        "method": "POST",
+        "path": "/api/set_theme"
+      }
+    },
+    {
+      "name": "Button 2",
+      "type": "adc",
+      "room": null,
+      "action": {
+        "data": {
+          "effect_name": "Lightning"
+        },
+        "method": "POST",
+        "path": "/api/run_effect_all_rooms"
+      }
+    },
+    {
+      "name": "Button 3",
+      "type": "adc",
+      "room": null,
+      "action": {
+        "data": {},
+        "method": "POST",
+        "path": "/api/start_music"
+      }
+    },
+    {
+      "name": "Button 4",
+      "type": "adc",
+      "room": null,
+      "action": {
+        "data": {},
+        "method": "POST",
+        "path": "/api/stop_music"
+      }
+    },
+    {
+      "name": "Photo Bomb Shutter Button",
+      "type": "button",
+      "room": "Photo Bomb Room",
+      "action": {
+        "data": {
+          "effect_name": "PhotoBomb-Shot",
+          "room": "Photo Bomb Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Cop Dodge Laser",
+      "type": "laser",
+      "room": "Cop Dodge",
+      "action": {
+        "data": {
+          "effect_name": "PoliceLights",
+          "room": "Cop Dodge"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Gate Laser",
+      "type": "laser",
+      "room": "Gate",
+      "action": {
+        "data": {
+          "effect_name": "GateInspection",
+          "room": "Gate"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Guy Line Laser",
+      "type": "laser",
+      "room": "Guy Line Climb",
+      "action": {
+        "data": {
+          "effect_name": "ImageEnhancement",
+          "room": "Guy Line Climb"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Sparkle Pony Laser",
+      "type": "laser",
+      "room": "Sparkle Pony Room",
+      "action": {
+        "data": {
+          "effect_name": "SparkPony",
+          "room": "Sparkle Pony Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Porto Laser",
+      "type": "laser",
+      "room": "Porto Room",
+      "action": {
+        "data": {
+          "effect_name": "PortoStandBy",
+          "room": "Porto Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Porto Room Piezo 1",
+      "type": "piezo",
+      "room": "Porto Room",
+      "threshold": 0.5,
+      "action": {
+        "data": {
+          "effect_name": "WrongAnswer",
+          "room": "Porto Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Porto Room Piezo 2",
+      "type": "piezo",
+      "room": "Porto Room",
+      "threshold": 0.5,
+      "action": {
+        "data": {
+          "effect_name": "WrongAnswer",
+          "room": "Porto Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Porto Room Piezo 3",
+      "type": "piezo",
+      "room": "Porto Room",
+      "threshold": 0.5,
+      "action": {
+        "data": {
+          "effect_name": "WrongAnswer",
+          "room": "Porto Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Bike Lock Room Laser",
+      "type": "laser",
+      "room": "Bike Lock Room",
+      "action": {
+        "data": {
+          "effect_name": "BikeLockRoom",
+          "room": "Bike Lock Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Deep Playa Handshake Laser",
+      "type": "laser",
+      "room": "Deep Playa Handshake",
+      "action": {
+        "data": {
+          "effect_name": "DeepPlaya-Hit",
+          "room": "Deep Playa Handshake"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
+      "name": "Monkey Puzzle Button",
+      "type": "button",
+      "room": "Monkey Room",
+      "action": {
+        "data": {
+          "effect_name": "MonkeyBusiness",
+          "room": "Monkey Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    }
+  ]
+}

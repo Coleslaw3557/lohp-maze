@@ -1,4 +1,4 @@
-# Monkey Room sensor node — trigger map from client/config-unit-*.json
+# Monkey Room sensor node — trigger map from triggers.json
 # No doorway trigger (the Lightning-on-entry placeholder was test wiring). The
 # BUTTON is closed by the silver monkey puzzle when the assembly seats home ->
 # MonkeyBusiness (Shrine of the Silver Monkey fanfare + gold flashes).

@@ -182,9 +182,9 @@ shows comes from **production configs and code**, with one sim-only exception:
 | Ambient themes | `../theme_manager.py` | **REAL** |
 | Which sound an effect plays, volumes | `../audio_config.json` | **REAL** |
 | Sound/music files | `../audio_files/`, `../music/` | **REAL** |
-| Which effect a sensor/room triggers | `../client/config-unit-*.json` (today's Pis) and `esphome/rooms/*.yaml` (ESP32 nodes) | **REAL** — sim reads the unit configs live |
+| Which effect a sensor/room triggers | `../triggers.json` (the canonical trigger map) and `esphome/rooms/*.yaml` (ESP32 nodes) | **REAL** — sim reads `triggers.json` live |
 | Fixtures: rooms, models, DMX addresses | `../light_config.json` | **REAL** |
-| Buttons (what the 4 arcade buttons do) | `../client/config-unit-a.json` | **REAL** |
+| Buttons (what the 4 arcade buttons do) | `../triggers.json` (the hex-station `adc` entries) | **REAL** |
 | 3D geometry: room bays, floor levels, node-box sensor zones (pos/yaw/tilt/fov/range), button/pad positions, doorways, route, spawn, playa environment | `maze_layout.json` (+ `web/app.js` for looks) | **sim-only** (visualization) |
 
 Restart needed after editing Python (`sim/stop.sh && sim/run.sh -d`); JSON config
@@ -307,7 +307,7 @@ open and you'll see the "ghost" activity they produce.
 |---|---|---|
 | DMX output | `virtual_dmx.py` replaces the FTDI thread; same 44Hz loop over `DMXStateManager` | Same frames that would hit the wire |
 | Fixtures | Each 3D fixture decodes the **raw universe at its configured start address** using the channel map from `light_config.json` | Reproduces addressing bugs |
-| Sensors | Radar/ToF detection wedges fired from each room's node box (pos + yaw/tilt/fov/range in `maze_layout.json`, floor-aware, clipped to room bounds) plus button/pad geometry; actions verbatim from `client/config-unit-*.json` (the historical trigger map); piezo 3-attempt/25% logic mirrors `trigger_manager.py`; 5s cooldowns | Same HTTP POSTs as the ESP32 nodes (and the retired Pi units before them) |
+| Sensors | Radar/ToF detection wedges fired from each room's node box (pos + yaw/tilt/fov/range in `maze_layout.json`, floor-aware, clipped to room bounds) plus button/pad geometry; actions verbatim from `triggers.json` (the canonical trigger map); piezo 3-attempt/25% logic mirrors `trigger_manager.py`; 5s cooldowns | Same HTTP POSTs as the ESP32 nodes (and the retired Pi units before them) |
 | Audio | The page connects to `:8765` speaking the unit protocol, claims all 16 rooms (incl. Camp Sign), plays served MP3s via Web Audio, spatialized at room+floor positions | Same messages a unit client receives |
 | ESP32 nodes | Real ESPHome YAML compiled for the `host` platform → native Linux processes that fire real `http_request` POSTs (`esphome/`, verified end-to-end) | Real firmware engine, virtual sensor input |
 

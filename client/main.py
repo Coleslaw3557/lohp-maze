@@ -24,7 +24,7 @@ def log_and_exit(error_message):
 
 async def main():
     try:
-        config_file = os.environ.get('UNIT_CONFIG', 'config-unit-a.json')
+        config_file = os.environ.get('UNIT_CONFIG', 'config-single-pi.json')
         config = ConfigManager(config_file)
 
         try:

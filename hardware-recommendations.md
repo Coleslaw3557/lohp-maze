@@ -225,10 +225,10 @@ Adds to the BOM: 3 × USB sound dongles (~$30), replaces two Pi power feeds.
    `/api/run_effect` fire. The server can't tell an ESP32 trigger from a Pi trigger.
 2. Build the fleet: the shared packages (`sim/esphome/packages/`) + one substitution file per room, checked in here. Label each
    enclosure with node name = room = static IP suffix. Flash 3 spares.
-3. At the maze: unplug the sensor harnesses/level shifters/ADS1115s from the Pis and delete the
-   `triggers` arrays from `client/config-unit-*.json`. Pis keep doing audio unchanged.
-4. Run both systems in parallel for a test night before ripping out the old wiring for good.
-5. Audio: bench the S3 speaker chain (`sim/esphome/bench-xiao-s3.yaml` + the checklist in
+3. At the maze: mount each labeled box at its clamp point (`wiring-guides/room-node-enclosure-plan.md`)
+   and power it. (The old Pi harnesses are already history — units A/B/C were decommissioned
+   2026-07; `triggers.json` at the repo root is the canonical sensor→effect map.)
+4. Audio: bench the S3 speaker chain (`sim/esphome/bench-xiao-s3.yaml` + the checklist in
    `wiring-guides/room-node-audio-plan.md`), then migrate rooms into `node_audio_config.json`
-   one at a time — the node path is additive beside the WS units, so a room can run both for a
-   test night. Units A/B/C retire when all speaker rooms are migrated.
+   one at a time — the node path is additive beside the WS fallback client, so a room can run
+   both for a test night.

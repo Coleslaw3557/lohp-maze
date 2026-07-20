@@ -1,4 +1,4 @@
-# Cuddle Cross sensor node — trigger map from client/config-unit-*.json
+# Cuddle Cross sensor node — trigger map from triggers.json
 substitutions:
   node_name: lohp-node-cuddle-cross
   room: "Cuddle Cross"
