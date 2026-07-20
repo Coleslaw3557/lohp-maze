@@ -41,14 +41,16 @@ outline exports from this same file):
 - `node-enclosure.scad` — the design; every dimension is a named parameter
 - `box.stl`, `lid.stl` — print-ready exports
 - `window-panel.dxf` — the laser-cut panel outline
-- `preview-inside.png`, `preview-assembly.png` — renders
+- `box.png`, `lid.png`, `window-panel.png` — per-part renders
+- `preview-inside.png`, `preview-assembly.png` — overview renders
 
-Re-export after edits:
+Re-export after edits (PNG needs a display; headless use `xvfb-run -a openscad …`):
 
 ```bash
 openscad -D 'part="box"'   -o box.stl          node-enclosure.scad
 openscad -D 'part="lid"'   -o lid.stl          node-enclosure.scad
 openscad -D 'part="panel"' -o window-panel.dxf node-enclosure.scad
+openscad -D 'part="box"'   --autocenter --viewall --imgsize=1200,900 -o box.png node-enclosure.scad
 ```
 
 ## Print & assembly
