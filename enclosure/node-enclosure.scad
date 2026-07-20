@@ -186,8 +186,10 @@ module window_etch() {
 }
 
 // ---- layouts -----------------------------------------------------------
-// One-bed nesting, 6mm gaps. sheet() = cut layer, sheet_etch() = the same
-// placements' marks; they share coordinates so the merged SVG aligns.
+// PLY job: the six wall panels nested with 6mm gaps. sheet() = cut layer,
+// sheet_etch() = the same placements' marks — shared coordinates, so the
+// merged SVG aligns. The ACRYLIC job is the separate window part
+// (part="window"/"window_etch" -> window-acrylic.svg).
 module sheet() {
   panel_front();
   translate([0, Hw + 6])       panel_back();
@@ -195,7 +197,6 @@ module sheet() {
   translate([W + 12, 0])   panel_left();
   translate([W + 12, Hw + 6]) panel_right();
   translate([W + 12, 2*Hw + 12]) panel_lid();
-  translate([W + 12 + panel_w/2, 2*Hw + D + 18 + panel_h/2]) panel_window();
 }
 
 module sheet_etch() {
@@ -204,7 +205,6 @@ module sheet_etch() {
   translate([t, 2*Hw + 12 + t]) floor_etch();
   translate([W + 12, Hw + 6]) right_etch();
   translate([W + 12, 2*Hw + 12]) lid_etch();
-  translate([W + 12 + panel_w/2, 2*Hw + D + 18 + panel_h/2]) window_etch();
 }
 
 module assembly() {

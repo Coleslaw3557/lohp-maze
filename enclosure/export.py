@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Export THE xTool cut file from node-enclosure.scad.
+"""Export the xTool cut files from node-enclosure.scad.
 
-One SVG (node-enclosure.svg): all seven panels nested on one bed, two
-colors in one coordinate frame:
+Two SVGs, one per stock/job:
+  node-enclosure.svg   the six wall panels nested on one bed (3mm ply)
+  window-acrylic.svg   the sensor-window panel alone (3mm acrylic)
+Both carry two colors in one coordinate frame:
   black paths = CUT        red paths = ETCH/MARK (score or engrave in XCS)
 XCS: import, select the red objects -> processing "score" (or engrave),
 black -> cut. Run from enclosure/:  python3 export.py
@@ -15,9 +17,9 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 SCAD = HERE / 'node-enclosure.scad'
-PANELS = ['sheet']              # ONE file: every panel nested, cut + etch
-HAS_ETCH = {'sheet'}
-OUTNAME = {'sheet': 'node-enclosure.svg'}
+PANELS = ['sheet', 'window']    # ply job + the acrylic window job
+HAS_ETCH = {'sheet', 'window'}
+OUTNAME = {'sheet': 'node-enclosure.svg', 'window': 'window-acrylic.svg'}
 
 PATH_RE = re.compile(r'<path[^>]*\sd="([^"]+)"[^>]*/?>')
 VIEW_RE = re.compile(r'viewBox="([-\d. ]+)"')

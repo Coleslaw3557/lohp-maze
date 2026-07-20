@@ -31,7 +31,7 @@ never opened at all.
 ## Sensor window
 
 56 × 24 aperture in the front panel; the **64 × 32 × 3 mm acrylic panel**
-(the small piece on the sheet) screws over it at the four etched positions.
+(`window-acrylic.svg`, its own job) screws over it at the four etched positions.
 
 - **Radar rooms** (LD2410C / LD2450): solid plain acrylic — 24 GHz passes
   through. Nothing metallic on or behind it.
@@ -44,7 +44,7 @@ never opened at all.
 **The only cuts are the window aperture and the two velcro-strap slots** —
 no fastener holes, no port holes, no zip holes, no vents. Screws and ports
 happen on the bench as needed.
-Every position is on the **etch layer**: each SVG carries two colors in one
+Every position is on the **etch layer**: each SVG carries two colours in one
 coordinate frame — **black = CUT, red = ETCH**. In XCS: import the SVG,
 select the red objects → processing **score** (or engrave), black → cut.
 The red marks are:
@@ -62,9 +62,10 @@ The red marks are:
 ## Files
 
 - `node-enclosure.scad` — the design; every dimension is a named parameter
-- `node-enclosure.svg` — THE cut file: all seven panels nested on one
-  ~232 × 202 mm bed, black = cut + red = etch (walls in 3 mm ply; the
-  window piece in 3 mm acrylic — cut it in a second pass or separate run)
+- `node-enclosure.svg` — the PLY job: the six wall panels nested on one
+  ~232 × 164 mm bed, black = cut + red = etch (3 mm ply)
+- `window-acrylic.svg` — the ACRYLIC job: the 64 × 32 sensor-window panel
+  alone (3 mm acrylic), same black/red convention
 - `export.py` — regenerates the SVG from the .scad
 - `sheet.png` / `sheet-etch.png` — the two layers; `preview-assembly.png`,
   `preview-underside.png` — glued-up views
@@ -74,7 +75,7 @@ exact; add kerf compensation in XCS if you want piston-fit joints (glue
 fills a normal kerf fine).
 
 ```bash
-python3 export.py    # re-export node-enclosure.svg after editing the .scad
+python3 export.py    # re-export both SVGs after editing the .scad
 ```
 
 ## Assembly
