@@ -53,8 +53,9 @@ seg  = Hw / nseg;            // front/back own segments 0,2,4 at the corners
 ftab_w = 20;                 // floor mortise tab width
 long_cs  = [-32, 0, 32];     // tab centers on the W edges (about midline)
 short_cs = [-18, 18];        // tab centers on the D edges
-tslot_cs = [-38, 38];        // lid T-slot centers (about midline)
-m3 = 3.4; m3_nut_w = 5.7; m3_nut_t = 2.7;
+// No fastener holes anywhere — screws go in as needed on the bench; all
+// mounting positions live on the ETCH layer (part="*_etch", red in the
+// merged SVGs -> set to score/engrave in xTool XCS).
 
 $fn = 40;
 eps = 0.01;
@@ -68,39 +69,53 @@ module corner_notches(len)                   // notch a panel's vertical edges
   for (s = [1, 3], x = [0, len - t])         //  at segments 1 and 3
     translate([x - eps, s * seg]) square([t + 2*eps, seg]);
 
-module tslot(cx, h)                          // lid screw T-slot from top edge
-  translate([cx, 0]) {
-    translate([-m3/2, h - 14]) square([m3, 14 + eps]);
-    translate([-m3_nut_w/2, h - 9 - m3_nut_t]) square([m3_nut_w, m3_nut_t]);
-  }
+// ---- etch helpers (2D marks — the RED layer, score/engrave in XCS) -----
+module oline(w, h, lw = 0.4)                 // rectangle outline
+  difference() { square([w, h], center = true);
+                 square([w - 2*lw, h - 2*lw], center = true); }
+
+module cross(s = 4, lw = 0.5) {              // screw-position mark
+  square([s, lw], center = true);
+  square([lw, s], center = true);
+}
+
+module label(txt, size = 3.2)
+  text(txt, size = size, halign = "center", valign = "center",
+       font = "Liberation Sans:style=Bold");
 
 // ---- panels (2D) -------------------------------------------------------
 module panel_front() difference() {
   square([W, Hw]);
   corner_notches(W);
   bottom_notches(W, long_cs);
-  for (c = tslot_cs) tslot(W/2 + c, Hw);
   translate([W/2 - win_w/2, win_cz - win_h/2]) square([win_w, win_h]); // aperture
-  for (px = [-30, 30], pz = [-14, 14])                                // window screws
-    translate([W/2 + px, win_cz + pz]) circle(d = 2.2);               // M2.5 self-tap
-  for (px = [-10, 10], pz = [7, 33])                                  // sensor zip holes
-    translate([W/2 + px, pz]) circle(d = 3.4);
+  for (px = [-10, 10], pz = [7, 33])                     // sensor zip-tie holes
+    translate([W/2 + px, pz]) circle(d = 3.4);           //  (functional, not screws)
+}
+
+module front_etch() {                        // interior face marks
+  translate([W/2, win_cz]) oline(64, 32);    // acrylic window panel sits here
+  for (px = [-30, 30], pz = [-14, 14])       // its screw positions
+    translate([W/2 + px, win_cz + pz]) cross();
+  translate([W/2, win_cz]) oline(22, 16);    // LD2410C footprint in the aperture
+  translate([10, win_cz]) label("SENSOR");
 }
 
 module panel_back() difference() {
   union() {
     square([W, Hw]);
-    for (px = [-ear_w, W])                       // mounting ears, 5mm holes
+    for (px = [-ear_w, W])                       // mounting ears
       translate([px, 14]) square([ear_w, ear_h]);
   }
   corner_notches(W);
   bottom_notches(W, long_cs);
-  for (c = tslot_cs) tslot(W/2 + c, Hw);
-  for (px = [-ear_w/2, W + ear_w/2])
-    translate([px, 14 + ear_h/2]) circle(d = ear_hole);
   for (c = [-27, 27])                            // hose-clamp strap slots
     translate([W/2 + c - strap_w/2, Hw - 9]) square([strap_w, strap_h]);
 }
+
+module back_etch()                               // ear screw positions
+  for (px = [-ear_w/2, W + ear_w/2])
+    translate([px, 14 + ear_h/2]) cross(5);
 
 module panel_side() {          // common left/right: full-D, notched 0/2/4
   difference() {
@@ -135,26 +150,41 @@ module panel_floor() difference() {
   translate([16, 14]) circle(d = gx16_d);        // connector row (faces down)
   for (i = [0:2]) translate([38 + i*18, 14]) circle(d = gx12_d);
   for (i = [0:4]) translate([58 + i*8, 38]) square([3, 24]);  // vents
-  for (px = [-dac_hx/2, dac_hx/2], py = [-dac_hy/2, dac_hy/2])
-    translate([dac_cx + px, dac_cy + py]) circle(d = 2.4);    // DAC M2
 }
 
-module panel_lid() difference() {
-  square([W, D]);
-  for (c = tslot_cs, y = [t/2, D - t/2])
-    translate([W/2 + c, y]) circle(d = m3);
+module floor_etch() {                            // component-side marks
+  translate([dac_cx, dac_cy]) oline(30.5, 21);   // PCM5102A footprint
+  for (px = [-dac_hx/2, dac_hx/2], py = [-dac_hy/2, dac_hy/2])
+    translate([dac_cx + px, dac_cy + py]) cross(3.5);  // its screw corners
+  translate([dac_cx, dac_cy + 15]) label("DAC");
+  translate([90, 21]) oline(21.4, 17.8);         // XIAO footprint (VHB), USB
+  translate([90, 21]) label("XIAO", 3);          //  toward the right wall
+  translate([16, 25]) label("GX16");
+  translate([56, 25]) label("GX12 x3");
 }
+
+module panel_lid() square([W, D]);
+
+module lid_etch()                                // screw down into the wall
+  for (x = [12, W - 12], y = [t/2, D - t/2])     //  top edges as needed
+    translate([x, y]) cross(3);                  // stays inside the outline
 
 module panel_window() difference() {             // cut this one in acrylic
   translate([-panel_w/2, -panel_h/2]) square([panel_w, panel_h]);
-  for (px = [-30, 30], pz = [-14, 14]) translate([px, pz]) circle(d = 2.8);
   // OPTIONAL ToF aperture — uncomment for Entrance/Exit/Guy Line/VMM
   // (940nm won't pass plain acrylic; radar rooms keep the panel solid)
   // square([16, 16], center = true);
 }
 
+module window_etch() {
+  for (px = [-30, 30], pz = [-14, 14]) translate([px, pz]) cross();  // screws
+  oline(16, 16);                                 // ToF aperture, if this room
+}
+
 // ---- layouts -----------------------------------------------------------
-module sheet() {                                 // one-bed nesting, 6mm gaps
+// One-bed nesting, 6mm gaps. sheet() = cut layer, sheet_etch() = the same
+// placements' marks; they share coordinates so the merged SVG aligns.
+module sheet() {
   translate([ear_w, 0])            panel_front();
   translate([ear_w, Hw + 6])       panel_back();
   translate([ear_w + t, 2*Hw + 12 + t]) panel_floor();
@@ -162,6 +192,14 @@ module sheet() {                                 // one-bed nesting, 6mm gaps
   translate([W + ear_w + 12, Hw + 6]) panel_right();
   translate([W + ear_w + 12, 2*Hw + 12]) panel_lid();
   translate([W + ear_w + 12 + panel_w/2, 2*Hw + D + 18 + panel_h/2]) panel_window();
+}
+
+module sheet_etch() {
+  translate([ear_w, 0])            front_etch();
+  translate([ear_w, Hw + 6])       back_etch();
+  translate([ear_w + t, 2*Hw + 12 + t]) floor_etch();
+  translate([W + ear_w + 12, 2*Hw + 12]) lid_etch();
+  translate([W + ear_w + 12 + panel_w/2, 2*Hw + D + 18 + panel_h/2]) window_etch();
 }
 
 module assembly() {
@@ -184,4 +222,10 @@ else if (part == "floor")  panel_floor();
 else if (part == "lid")    panel_lid();
 else if (part == "window") panel_window();
 else if (part == "sheet")  sheet();
+else if (part == "front_etch")  front_etch();
+else if (part == "back_etch")   back_etch();
+else if (part == "floor_etch")  floor_etch();
+else if (part == "lid_etch")    lid_etch();
+else if (part == "window_etch") window_etch();
+else if (part == "sheet_etch")  sheet_etch();
 else assembly();
