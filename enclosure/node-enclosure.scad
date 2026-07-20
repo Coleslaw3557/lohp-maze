@@ -38,12 +38,13 @@ kerf_note = "cut outlines are exact; add kerf offset in xTool XCS";
 // ---- box (outer) -------------------------------------------------------
 W  = 110;        // width  (front/back length)
 D  = 78;         // depth  (left/right length)
-Hw = 44;         // wall height = outer height. Interior stays 104 x 72 x 34;
-                 // above it: 3.4mm lid slide channel + 3.2mm cap.
+inner_h = 34;    // interior height (floor top -> lid underside)
 
 // ---- sliding lid -------------------------------------------------------
-slide_z = 37;            // channel bottom (floor_t + 34 interior)
-slide_w = 3.4;           // channel width (t + play)
+slide_w = 3.4;           // channel width (t + 0.4 play)
+slide_z = t + inner_h;   // channel bottom
+cap_h   = 3.6;           // rail above the channel
+Hw = slide_z + slide_w + cap_h;  // wall height = outer height (44 at t=3)
 lid_w   = W - 2*t + 4.4; // side tongues ride 2.2mm into each side channel
 lid_d   = D - t;         // front edge flush outside; back edge stops
                          //  against the back wall's inner face
