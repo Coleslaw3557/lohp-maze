@@ -96,7 +96,7 @@ async def handle_status_update(ws, data):
 async def handle_trigger_event(ws, data):
     # Units trigger effects via the REST API; this message is informational only.
     logger.info(f"Trigger event received: {data}")
-    await ws.send(json.dumps({"status": "success", "message": "Trigger event processed"}))
+    await ws.send(json.dumps({"type": "trigger_event_response", "status": "success", "message": "Trigger event processed"}))
 
 
 # --- Component initialization ---

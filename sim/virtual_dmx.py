@@ -44,9 +44,16 @@ class DMXOutputManager(threading.Thread):
         logger.info("Virtual DMX output initialized (simulation — no FTDI hardware)")
 
     def run(self):
+        # Deadline-based pacing, mirroring the real dmx_interface loop.
+        next_frame = time.monotonic()
         while self.running:
             self._send_frame()
-            time.sleep(1 / self.FREQUENCY)
+            next_frame += 1 / self.FREQUENCY
+            delay = next_frame - time.monotonic()
+            if delay > 0:
+                time.sleep(delay)
+            else:
+                next_frame = time.monotonic()
 
     def _send_frame(self):
         state = self.dmx_state_manager.get_full_state()

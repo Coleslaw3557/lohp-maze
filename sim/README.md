@@ -322,6 +322,7 @@ sim/.venv/bin/python sim/tools/smoke_test.py     # headless end-to-end: frames, 
 sim/.venv/bin/python sim/tools/walkthrough.py    # scripted visitor walks the two-story route; fires each room's doorway trigger (4 rooms have none and are skipped); all fired triggers must 200
 sim/.venv/bin/python sim/tools/concurrency_test.py  # simultaneous-trigger storms, stop/supersede semantics
 sim/.venv/bin/python sim/tools/photobooth_test.py   # Photo Bomb countdown/flash/photo + Monkey fanfare timelines
+sim/.venv/bin/python sim/tools/ws_registry_test.py  # two same-IP audio clients coexist, both get room audio, exact disconnect
 ```
 
 Note: the server holds `/api/run_effect` open until the effect finishes (up to ~20s);
@@ -341,7 +342,7 @@ with synced gold flashes. Same POSTs the room ESP32 buttons send.
 - No collision — you can walk through walls; floors change only via ladders (E) or
   teleporting. Sensors fire only on their beams (level-aware) and clicks.
 - One browser tab should own audio: the server sends each room's audio to EVERY client
-  that claimed it (`remote_host_manager.get_client_ips_by_room`), so two tabs — or a tab
+  that claimed it (`remote_host_manager.get_websockets_by_room`), so two tabs — or a tab
   plus a real unit — play the same sounds simultaneously.
 - `function_selection`/`function_speed` channels aren't visualized; strobe is approximated.
 - Headless/software-GL browsers run slowly; use a real GPU browser.

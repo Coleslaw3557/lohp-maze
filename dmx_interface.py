@@ -38,9 +38,17 @@ class DMXOutputManager(threading.Thread):
             raise
 
     def run(self):
+        # Deadline-based pacing: the frame's own transmit time (~15.7ms for 353
+        # bytes at 250kbaud) counts toward the period, instead of adding to it.
+        next_frame = time.monotonic()
         while self.running:
             self.send_dmx_data()
-            time.sleep(1 / self.FREQUENCY)
+            next_frame += 1 / self.FREQUENCY
+            delay = next_frame - time.monotonic()
+            if delay > 0:
+                time.sleep(delay)
+            else:
+                next_frame = time.monotonic()  # fell behind; don't burst to catch up
 
     def send_dmx_data(self):
         try:

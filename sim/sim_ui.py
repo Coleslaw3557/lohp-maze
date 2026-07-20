@@ -60,7 +60,7 @@ def _extract_triggers():
         except (OSError, json.JSONDecodeError) as e:
             logger.warning(f"Skipping {path}: {e}")
             continue
-        piezo_settings = cfg.get('piezo_settings', piezo_settings)
+        piezo_settings = cfg.get('piezo_settings') or piezo_settings  # explicit null must not propagate
         for t in cfg.get('triggers', []):
             action = t.get('action', {})
             url = action.get('url', '')

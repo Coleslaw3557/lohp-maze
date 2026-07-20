@@ -9,62 +9,66 @@ logger = logging.getLogger(__name__)
 
 class RemoteHostManager:
     def __init__(self, audio_manager=None, node_audio=None):
-        self.clients = {}  # client_ip -> {"name": unit_name, "rooms": [...], "websocket": ws}
+        # Keyed by websocket, one entry per CONNECTION: two clients on the same
+        # IP (sim browser tab + a test unit, or two tabs) must coexist — an
+        # IP-keyed registry silently replaces the first and strands its socket.
+        self.clients = {}  # websocket -> {"name": unit_name, "rooms": [...], "ip": client_ip}
         self.audio_manager = audio_manager
         self.node_audio = node_audio  # NodeAudioManager: ESP32 node boxes with speakers
         self.background_music_task = None
         self.music_lock = asyncio.Lock()  # serializes background music start/stop
 
     async def update_client_rooms(self, unit_name, client_ip, rooms, websocket):
-        self.clients[client_ip] = {"name": unit_name, "rooms": rooms, "websocket": websocket}
+        self.clients[websocket] = {"name": unit_name, "rooms": rooms, "ip": client_ip}
         logger.info(f"Client {unit_name} ({client_ip}) associated with rooms: {rooms}")
-        await self._send(client_ip, {
+        await self._send(websocket, {
             "type": "audio_files_to_download",
             "data": self.audio_manager.get_audio_files_to_download(),
         })
 
     def remove_client_by_websocket(self, websocket):
-        for client_ip, client in list(self.clients.items()):
-            if client["websocket"] is websocket:
-                del self.clients[client_ip]
-                logger.info(f"Removed disconnected client {client_ip}")
+        client = self.clients.pop(websocket, None)
+        if client:
+            logger.info(f"Removed disconnected client {client['name']} ({client['ip']})")
 
     def get_connected_clients_info(self):
-        return [{'ip': ip, 'rooms': client['rooms'], 'name': client['name']}
-                for ip, client in self.clients.items()]
+        return [{'ip': client['ip'], 'rooms': client['rooms'], 'name': client['name']}
+                for client in self.clients.values()]
 
     async def terminate_client(self, client_ip):
-        client = self.clients.pop(client_ip, None)
-        if not client:
+        """Close every connection from client_ip (the /api/terminate_client contract)."""
+        sockets = [ws for ws, client in self.clients.items() if client["ip"] == client_ip]
+        if not sockets:
             logger.warning(f"Client {client_ip} not found in connected clients")
             return False
-        try:
-            await client["websocket"].close()
-            logger.info(f"Client {client_ip} terminated successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Error terminating client {client_ip}: {e}")
-            return False
+        ok = True
+        for ws in sockets:
+            self.clients.pop(ws, None)
+            try:
+                await ws.close()
+                logger.info(f"Client {client_ip} terminated successfully")
+            except Exception as e:
+                logger.error(f"Error terminating client {client_ip}: {e}")
+                ok = False
+        return ok
 
-    def get_client_ips_by_room(self, room, warn_if_empty=True):
+    def get_websockets_by_room(self, room, warn_if_empty=True):
         """All clients covering a room (a real unit and the sim web UI can both
         claim it — every one of them must get the room's audio)."""
-        ips = [ip for ip, client in self.clients.items()
-               if room.lower() in [r.lower() for r in client["rooms"]]]
-        if not ips and warn_if_empty:
-            logger.warning(f"No client IP found for room: {room}")
-        return ips
+        sockets = [ws for ws, client in self.clients.items()
+                   if room.lower() in [r.lower() for r in client["rooms"]]]
+        if not sockets and warn_if_empty:
+            logger.warning(f"No audio client found for room: {room}")
+        return sockets
 
-    async def _send(self, client_ip, message):
-        client = self.clients.get(client_ip)
-        if not client:
-            logger.error(f"Client {client_ip} is not connected. Cannot send {message.get('type')}.")
-            return False
+    async def _send(self, websocket, message):
+        client = self.clients.get(websocket)
+        label = f"{client['name']} ({client['ip']})" if client else "unregistered client"
         try:
-            await client["websocket"].send(json.dumps(message))
+            await websocket.send(json.dumps(message))
             return True
         except Exception as e:
-            logger.error(f"Error sending {message.get('type')} to client {client_ip}: {e}")
+            logger.error(f"Error sending {message.get('type')} to {label}: {e}")
             return False
 
     async def send_audio_command(self, room, command, data=None):
@@ -77,17 +81,17 @@ class RemoteHostManager:
         message = {"type": command, "data": data if data is not None else {}}
         node_handled = bool(self.node_audio) and self.node_audio.handle_command(room, command, data)
         if room is None:
-            results = [await self._send(ip, message) for ip in list(self.clients)]
+            results = [await self._send(ws, message) for ws in list(self.clients)]
             return all(results)
         message["room"] = room
-        client_ips = self.get_client_ips_by_room(room, warn_if_empty=not node_handled)
-        if not client_ips:
+        sockets = self.get_websockets_by_room(room, warn_if_empty=not node_handled)
+        if not sockets:
             if node_handled:
                 logger.debug(f"Room {room}: {command} handled by the audio node only (no WS client)")
                 return True
             logger.error(f"No connected client found for room: {room}. Cannot send {command}.")
             return False
-        results = [await self._send(ip, message) for ip in client_ips]
+        results = [await self._send(ws, message) for ws in sockets]
         return all(results)
 
     async def play_effect_audio(self, effect_name, rooms=None, audio_params=None):
