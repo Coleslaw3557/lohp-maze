@@ -18,7 +18,8 @@
 //   front wall: 56x24 sensor aperture; the acrylic window panel screws
 //     over it (M2.5). Radar sees through plain acrylic; the 4 ToF rooms
 //     cut the marked aperture through the panel (940nm won't pass acrylic).
-//   back wall: velcro patch zones (mounting) + two mounting ears.
+//   back wall: two vertical velcro-strap slots (CUT — the strap threads
+//     through and wraps the scaffold leg) + two mounting ears.
 //
 // Export (SVG for xTool; kerf compensate in XCS if you want tight joints):
 //   for p in front back left right floor lid window sheet; do
@@ -42,6 +43,10 @@ win_w = 56;  win_h = 24;  win_cz = t + 17;   // aperture, center height
 panel_w = 64; panel_h = 32;                  // acrylic window panel
 gx16_d = 16.2;  gx12_d = 12.2;               // aviation connector holes
 usb_w = 10; usb_h = 4;  jack_d = 6.5;  ant_d = 6.5;
+strap_w = 5; strap_h = 24;                   // velcro-strap slots (back wall,
+                                             //  vertical: a 20mm one-wrap
+                                             //  passes horizontally around a
+                                             //  scaffold leg and through both)
 ear_w = 14; ear_h = 16; ear_hole = 5;        // mounting ears (back)
 dac_hx = 25.4; dac_hy = 15.3;                // PCM5102A hole spacing — VERIFY
 dac_cx = 84;  dac_cy = 51;                   //  on the real board before
@@ -111,14 +116,15 @@ module panel_back() difference() {
   }
   corner_notches(W);
   bottom_notches(W, long_cs);
+  for (c = [-27, 27])                            // velcro-strap slots (CUT):
+    translate([W/2 + c - strap_w/2, (Hw - strap_h)/2])  // strap threads both,
+      square([strap_w, strap_h]);                //  wraps the scaffold leg
 }
 
 module back_etch() {
   for (px = [-ear_w/2, W + ear_w/2])             // ear screw positions
     translate([px, 14 + ear_h/2]) cross(5);
-  for (c = [-27, 27])                            // velcro patch zones (Tim:
-    translate([W/2 + c, 19]) oline(30, 24);      //  velcro to the scaffold,
-  translate([W/2, 19]) label("VELCRO", 2.8);     //  no clamp slots)
+  translate([W/2, 19]) label("VELCRO", 2.8);     // strap between the slots
 }
 
 module panel_side() {          // common left/right: full-D, notched 0/2/4
