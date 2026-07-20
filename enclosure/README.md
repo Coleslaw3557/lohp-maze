@@ -41,8 +41,9 @@ never opened at all.
 
 ## Cut layer vs mark layer
 
-**Nothing but sensor openings is cut** — no fastener holes, no port holes,
-no vents, no strap slots. Screws and ports happen on the bench as needed.
+**The only cuts are the sensor openings and the two velcro-strap slots** —
+no fastener holes, no port holes, no vents. Screws and ports happen on the
+bench as needed.
 Every position is on the **etch layer**: each SVG carries two colors in one
 coordinate frame — **black = CUT, red = ETCH**. In XCS: import the SVG,
 select the red objects → processing **score** (or engrave), black → cut.
