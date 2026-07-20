@@ -5,9 +5,10 @@
 // (floor mortises through the wall bottoms, corner fingers interlock);
 // the LID is the service hatch — no glue, 4x M3 screws into T-slot nuts.
 //
-// Holds the standard node build: XIAO ESP32-S3 (VHB tape) + PCM5102A DAC
-// (M2 screws through the floor) + the room's ranging sensor(s) zip-tied
-// against the window (LD2410C, VL53L1X, Cuddle's 2410+2450 side by side).
+// Holds the standard node build: XIAO ESP32-S3 + PCM5102A DAC + the room's
+// ranging sensor(s) against the window (LD2410C, VL53L1X, Cuddle's
+// 2410+2450 side by side) — all fixed at their ETCHED footprint marks
+// however works on the bench (VHB/screws/glue); nothing is pre-drilled.
 //
 // IO — everything leaves through a panel connector:
 //   floor (faces DOWN when mounted — dust/rain smart):
@@ -96,8 +97,6 @@ module panel_front() difference() {
   corner_notches(W);
   bottom_notches(W, long_cs);
   translate([W/2 - win_w/2, win_cz - win_h/2]) square([win_w, win_h]); // aperture
-  for (px = [-10, 10], pz = [7, 33])                     // sensor zip-tie holes
-    translate([W/2 + px, pz]) circle(d = 3.4);           //  (functional, not screws)
 }
 
 module front_etch() {                        // interior face marks

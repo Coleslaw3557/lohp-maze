@@ -9,14 +9,14 @@ glue together, plus the acrylic sensor-window panel. Outer 110 × 78 × 40 mm
 |---|---|
 | XIAO ESP32-S3 | VHB tape to the floor, USB-C at the right-wall slot |
 | PCM5102A DAC | screwed at its etched footprint marks (**verify the etched corner spacing against a real board** — `dac_hx/dac_hy` params) |
-| LD2410C / VL53L1X / Cuddle's 2410+2450 | zip-tied through the front-panel holes, boresight out the window |
+| LD2410C / VL53L1X / Cuddle's 2410+2450 | fixed at the etched footprint behind the window (VHB or your call), boresight out the aperture |
 
 ## IO — positions etched, opened per room on the bench
 
-**The only cut openings in the whole kit are for the sensors** (the window
-aperture + its four zip-tie holes) **and the two back strap slots the
-velcro mounting strap threads through.** Every port is an etched, labelled
-position instead — drill/cut just the ones a given room uses:
+**The only cut openings in the whole kit are the sensor window aperture
+and the two back strap slots the velcro mounting strap threads through.**
+Every port is an etched, labelled position instead — drill/cut just the
+ones a given room uses:
 
 | Where (etched) | What | Carries |
 |---|---|---|
@@ -41,9 +41,9 @@ never opened at all.
 
 ## Cut layer vs mark layer
 
-**The only cuts are the sensor openings and the two velcro-strap slots** —
-no fastener holes, no port holes, no vents. Screws and ports happen on the
-bench as needed.
+**The only cuts are the window aperture and the two velcro-strap slots** —
+no fastener holes, no port holes, no zip holes, no vents. Screws and ports
+happen on the bench as needed.
 Every position is on the **etch layer**: each SVG carries two colors in one
 coordinate frame — **black = CUT, red = ETCH**. In XCS: import the SVG,
 select the red objects → processing **score** (or engrave), black → cut.
