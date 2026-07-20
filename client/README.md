@@ -1,9 +1,15 @@
 # LoHP-MazeManager Remote Unit Client
 
-Runs on a Raspberry Pi. Plays effect audio and background music on command from the central
-server (WebSocket), and fires sensor triggers at the server's REST API (laser tripwires,
-ADS1115 buttons, piezo knock sensors — until the ESP32 nodes replace them, see
-[../hardware-recommendations.md](../hardware-recommendations.md)).
+**Status (2026-07): retired from the fleet.** The three unit Pis (A/B/C) this client ran on
+are gone; ESP32-S3 node boxes now own both sensing and per-room audio
+([../wiring-guides/room-node-audio-plan.md](../wiring-guides/room-node-audio-plan.md)), and
+the system runs on exactly one Pi (the server). This stack is kept working as the **fallback
+audio path**: `config-single-pi.json` on the server box (or any Linux host) with USB sound
+cards, should the S3 audio nodes disappoint.
+
+What it does: plays effect audio and background music on command from the central server
+(WebSocket :8765), and — in the historical unit configs — fired sensor triggers at the
+server's REST API (laser tripwires, ADS1115 buttons, piezo knock sensors).
 
 ## Components
 
@@ -22,9 +28,10 @@ ADS1115 buttons, piezo knock sensors — until the ESP32 nodes replace them, see
 
 One JSON file per deployment, selected with the `UNIT_CONFIG` environment variable:
 
-- `config-unit-a.json` / `config-unit-b.json` / `config-unit-c.json` — the original three-Pi
-  layout: each Pi covers ~5 rooms with one audio output and its local sensor triggers.
-- `config-single-pi.json` — consolidated mode: one Pi covers all rooms, with a `zones` map
+- `config-unit-a.json` / `config-unit-b.json` / `config-unit-c.json` — HISTORICAL: the
+  original three-Pi layout (each Pi ~5 rooms, one audio output, local sensor triggers).
+  Kept as the authoritative record of the old trigger map; the hardware is decommissioned.
+- `config-single-pi.json` — the live fallback: one host covers all rooms, with a `zones` map
   routing each room's audio to its own USB sound card. No triggers (the ESP32 nodes own those).
 
 ### Multi-zone audio (`zones`)

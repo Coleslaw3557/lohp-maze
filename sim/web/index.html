@@ -20,12 +20,12 @@
       <li><b>M</b> — cycle Street / First-person / Overhead views &nbsp;·&nbsp; <b>N</b> — day / night</li>
       <li><b>W A S D</b> move &nbsp;·&nbsp; <b>Shift</b> run &nbsp;·&nbsp; click canvas for mouse-look</li>
       <li><b>E</b> / click — buttons, knock pads &amp; <b>ladders</b> (climb up in Guy Line Climb, down in Vertical Moop March)</li>
-      <li>Walk through a doorway beam to trip its sensor; click floor to teleport (street/overhead)</li>
+      <li>Walk into a room sensor's detection wedge to trip it; click floor to teleport (street/overhead)</li>
     </ul>
     <button id="enter-btn">Enter the maze (enables audio)</button>
     <button id="enter-muted-btn" class="secondary">Enter without audio</button>
-    <p class="fine">Audio: keep only one tab as the audio client — the server routes each
-    room's audio to the first client that claimed it (same rule as the real Pi units).</p>
+    <p class="fine">Audio: keep only one tab as the audio client — the server sends each
+    room's audio to every client that claimed it, so extra tabs double the sound.</p>
   </div>
 </div>
 
@@ -42,7 +42,8 @@
       <button id="btn-view" title="Cycle Street / First-person / Overhead (M)">View</button>
       <button id="btn-respawn" title="Back to the entrance">Respawn</button>
       <button id="btn-daynight" title="Toggle day / night (N)">☀ Day</button>
-      <button id="btn-towers" title="Show / hide the decorative entrance towers + arch sign">Towers ✓</button>
+      <button id="btn-towers" title="Show / hide the decorative entrance towers">Towers ✓</button>
+      <button id="btn-sign" title="Show / hide the camp sign — 24 REAL DMX letter zones @161–352 (cad-items/camp-sign.svg)">Sign ✓</button>
       <button id="btn-steel" title="Show the custom hex deck steel (cad-items drawings) — cycles deck / roof / both; the ply ghosts while it's shown">Steel ✕</button>
     </div>
     <div class="row hidden" id="floor-filter">
@@ -98,6 +99,7 @@
 
   <details open>
     <summary>Fixtures (live DMX)</summary>
+    <div id="sign-strip" title="Camp Sign letter zones @161–352, reading order (live DMX)"></div>
     <div id="fixture-grid"></div>
   </details>
 

@@ -100,7 +100,7 @@ Bring-up order (full checklist: `wiring-guides/room-node-audio-plan.md`):
 
 ## Hardware-day caveats (learned from the sim)
 
-- **The server holds `/api/run_effect` until the effect finishes** (up to ~15s) and
+- **The server holds `/api/run_effect` until the effect finishes** (up to ~20s) and
   ESPHome's `http_request` blocks the node's loop while waiting — a button press
   during a tripwire's hold would queue behind it. `http_request: timeout: 3s` keeps
   the node responsive: hanging up early does **not** cancel the in-flight effect

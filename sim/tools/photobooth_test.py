@@ -27,7 +27,7 @@ HOST = sys.argv[1] if len(sys.argv) > 1 else 'localhost'
 API = f'http://{HOST}:5000'
 FAILS = []
 
-# fixture channel bases (0-indexed into the 168ch universe), from light_config.json
+# fixture channel bases (0-indexed into the 352ch universe), from light_config.json
 PB_PAR, PB_SPOT = 80, 88     # Photo Bomb Room @81 / @89
 MK_PAR, MK_SPOT = 120, 128   # Monkey Room @121 / @129
 

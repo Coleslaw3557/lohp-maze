@@ -2,6 +2,16 @@
 # UNIT - A
 ## 192.168.1.238
 
+> **DECOMMISSIONED 2026-07 — historical record.** The three unit Pis are gone;
+> sensing lives in the per-room ESP32-S3 node boxes
+> (`room-node-enclosure-plan.md`) and audio on the same nodes
+> (`room-node-audio-plan.md`). Where this guide disagrees with
+> `client/config-unit-a.json`, the config is what actually ran. Known drift:
+> the IP above is the SERVER's address in every config (`server_ip`), not this
+> unit's; the Exit laser rows wire a doorway trigger removed 2026-07-17; the
+> Photo Bomb shutter button lives on that room's ESP32 node — the Pi client
+> never polled `type: "button"` entries.
+
 ## Raspberry Pi Full 40-pin Pinout Connections
 
 | Pin | GPIO | Function | Connection |

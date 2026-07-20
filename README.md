@@ -1,7 +1,8 @@
 # LoHP-MazeManager Control System
 
-Lighting and audio control for the LoHP maze — a central server drives DMX fixtures and coordinates
-Raspberry Pi room units that play audio and report sensor triggers.
+Lighting and audio control for the LoHP maze — one central server (the system's only Pi) drives
+DMX fixtures and coordinates wireless ESP32-S3 room nodes that fire sensor triggers and play
+per-room audio.
 
 The maze in the simulator (`sim/` — the 3D representation is the layout reference):
 
@@ -14,11 +15,13 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
 - **Server** (this directory): Quart REST API on port 5000, WebSocket server on port 8765,
   DMX output at 44Hz over an FTDI USB-DMX interface. Runs themes (ambient, whole-maze lighting)
   and effects (short per-room sequences that interrupt the theme).
-- **Clients** (`client/`): Raspberry Pi units that play effect audio and background music on
-  command from the server via WebSocket, and (until the planned ESP32 sensor nodes take over)
-  watch sensors over GPIO/ADC and fire effects by POSTing to the server's REST API. Runs either
-  as the original three units (A/B/C, ~5 rooms each) or as a single Pi driving one USB sound
-  card per zone (`client/config-single-pi.json`).
+- **Room nodes** (`sim/esphome/`): battery/AC-powered XIAO ESP32-S3 node boxes, one per room,
+  on the maze WiFi. Sensors (mmWave radar, ToF, buttons, piezos) fire effects by POSTing to the
+  server's REST API; each node's speaker plays effect cues and streamed music, commanded by the
+  server over the ESPHome native API (`node_audio_manager.py` + `node_audio_config.json`).
+- **Fallback audio client** (`client/`): the retired Pi-unit stack (units A/B/C are
+  decommissioned), kept working as a fallback — one Linux host with a USB sound card per zone
+  (`client/config-single-pi.json`) speaking the same WebSocket protocol.
 - **Frontend**: a small control panel served at `http://<server>:5000/` (brightness, live theme
   tuning, next-theme).
 
@@ -38,9 +41,10 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Requires the FTDI USB-DMX interface to be attached. See `client/README.md` for the room units,
-`wiring-guides/` for unit wiring, and [hardware-recommendations.md](hardware-recommendations.md)
-for the planned wireless sensor-node replacement.
+Requires the FTDI USB-DMX interface to be attached. See
+[hardware-recommendations.md](hardware-recommendations.md) for the wireless sensor-node
+architecture, `wiring-guides/` for the node-box, audio, and sign build plans (the unit-a/b/c
+guides are historical), and `client/README.md` for the fallback audio client.
 
 ## Basic operations
 
@@ -84,6 +88,8 @@ Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,
 - `theme_manager.py` — ambient theme loop (its own thread, paused per-room during effects)
 - `interrupt_handler.py` — takes fixtures over from the theme while an effect runs
 - `dmx_state_manager.py` / `dmx_interface.py` — DMX channel state and the 44Hz FTDI output thread
-- `remote_host_manager.py` — WebSocket commands to the room units (effect audio, background music)
+- `remote_host_manager.py` — audio command fan-out: WebSocket to every claiming client, mirrored
+  to ESP32 nodes via `node_audio_manager.py` (ESPHome native API: firmware cues + streamed music)
 - `audio_manager.py` — audio catalog from `audio_config.json`, served to clients over HTTP
+- `camera_manager.py` — Photo Bomb webcam capture scheduling (synthetic backend without hardware)
 - `effects/` — one file per effect; `effect_utils.py` — shared step interpolation and theme math

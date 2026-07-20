@@ -1,6 +1,17 @@
 # LoHP Maze Wiring Guide
 # UNIT - C (Updated)
 
+> **DECOMMISSIONED 2026-07 — historical record.** The three unit Pis are gone;
+> sensing lives in the per-room ESP32-S3 node boxes
+> (`room-node-enclosure-plan.md`) and audio on the same nodes
+> (`room-node-audio-plan.md`). Where this guide disagrees with
+> `client/config-unit-c.json`, the config is what actually ran. Known drift:
+> the ADS1115 has no "A4" channel (it's a 4-channel part, A0-A3) and the five
+> Deep Playa buttons have no ADC triggers in config; the Temple/VMM/Monkey
+> laser rows wire doorway triggers removed 2026-07-17; the Monkey puzzle
+> button lives on that room's ESP32 node — the Pi client never polled GPIO
+> buttons.
+
 ## Raspberry Pi Full 40-pin Pinout Connections
 
 | Pin | GPIO | Function | Connection |

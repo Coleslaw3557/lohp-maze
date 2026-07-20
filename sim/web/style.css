@@ -58,6 +58,13 @@ button.active { background: #2c4a86; border-color: #4a6cb8; }
 #trigger-list { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 6px; }
 #trigger-list button { font-size: 11px; padding: 3px 7px; }
 
+/* camp sign letter strip (one mini-swatch per DMX zone, reading order) */
+#sign-strip { display: flex; gap: 2px; padding-top: 6px; }
+#sign-strip:empty { display: none; }
+.sign-cell { flex: 1 1 0; min-width: 0; height: 18px; border-radius: 3px; font-size: 9px;
+  line-height: 18px; text-align: center; border: 1px solid #262940; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.9); background: #000; overflow: hidden; cursor: default; }
+
 /* fixture grid */
 #fixture-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-top: 6px; }
 .fixture-cell { border-radius: 5px; padding: 4px 6px; font-size: 10px; line-height: 1.25;

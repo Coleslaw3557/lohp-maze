@@ -308,7 +308,7 @@ curl http://localhost:5000/api/light_models
 | GET | `/api/rooms_units_fixtures` | Rooms with their fixtures and the client units covering them |
 | GET | `/api/connected_clients` | Connected room units (name, IP, rooms) |
 | POST | `/api/terminate_client` | Close a unit's WebSocket. Body: `{"ip": "<client-ip>"}` |
-| POST | `/api/update_theme_value` | Live-tune the running theme. Body: `{"control_id": "color-variation", "value": 0.5}`. Control IDs: `transition-speed`, `color-variation`, `intensity-fluctuation`, `color-wheel-speed`, `wave-effect` |
+| POST | `/api/update_theme_value` | Live-tune the running theme. Body: `{"control_id": "color-variation", "value": 0.5}`. Control IDs read by themes: `transition-speed`, `color-variation`, `intensity-fluctuation`, `color-wheel-speed`, `wave-effect` (unknown IDs are accepted and stored but never read) |
 | GET | `/api/light_fixtures` | Plain-text fixture listing (ROBCO terminal style) |
 | GET | `/api/audio_files_to_download` | Lists effect/music audio files clients should cache |
 | GET | `/api/audio/<filename>` | Serves an audio file (music or effect clip) |
@@ -345,4 +345,4 @@ In addition to the RESTful API, the system communicates with the room units via 
 ws://<server-ip>:8765
 ```
 
-Clients send `client_connected` (with `unit_name` and `associated_rooms`), `status_update`, and `trigger_event`. The server sends `connection_response`, `status_update_response`, `audio_files_to_download`, `play_effect_audio`, `audio_stop`, `start_background_music`, `stop_background_music`, and `shutdown`. See `client/websocket_client.py` for the message shapes.
+Clients send `client_connected` (with `unit_name` and `associated_rooms`) and `status_update`. (`trigger_event` is accepted but legacy/unused — nothing sends it; all triggering is the REST API.) The server sends `connection_response`, `status_update_response`, `audio_files_to_download`, `play_effect_audio`, `audio_stop`, `start_background_music`, `stop_background_music`, and `shutdown`. See `client/websocket_client.py` for the message shapes.

@@ -28,7 +28,7 @@ const EYE = 1.69;
 
 const S = {
   cfg: null,
-  frame: new Uint8Array(168),
+  frame: new Uint8Array(352),
   seq: -1,
   levelHeight: 3.2,
   fixtures: [],            // {room, addr, channels, level, light, lens, cone, cell}
@@ -39,6 +39,7 @@ const S = {
   interactables: [],       // meshes with .userData.{sensor|ladder}
   piezoAttempts: 0,
   projection: null,        // planned Cuddle floor-projection rig (layout `projection` key)
+  sign: null,              // Camp Sign live-DMX letter zones (layout `camp_sign` key)
   mode: 'street',
   keys: {},
   pos: new THREE.Vector3(11.7, EYE, 4.5),
@@ -593,6 +594,23 @@ function buildMaze(cfg) {
         }
       }
     }
+    // flat plywood discs screwed to a bay's brace scissor at the center rivet
+    // (per-room `brace_disc` key): Sparkle Pony's 3 ft circle on the rear plane.
+    // A bay IS its room's x-span, so the rivet sits at the room's x center.
+    for (const [name, r] of Object.entries(L.rooms)) {
+      const bd = r.brace_disc;
+      if (!bd || hexRooms.has(name)) continue;
+      const lv = bd.level != null ? bd.level : (r.floor === 1 ? 1 : 0);
+      const side = bd.plane === 'front' ? -1 : 1;   // which way the room lies
+      const zb = bd.plane === 'front' ? r.z + r.d - 0.085 : r.z + 0.085;
+      const rad = ((bd.diameter_ft || 2) * 0.3048) / 2;
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, 0.018, 48), matPly);
+      disc.rotation.x = Math.PI / 2;
+      // back face flush on the room-side scissor half: half offset + tube R + half ply
+      disc.position.set(r.x + r.w / 2, lv * LH + (STUD_TOP + STUD_BOT) / 2,
+        zb + side * (0.012 + 0.011 + 0.009));
+      grp(lv).add(disc);
+    }
   }
 
   if (L.hex_center) buildHexCenter(L);
@@ -1078,26 +1096,29 @@ function buildEntranceTowers(L) {
     }
   }
 
-  // the painted-ply sign arching between the tower tops
-  const sg = ET.sign || {};
-  const band = sg.band || 0.58, medR = sg.medallion_r || 0.52;
-  const endY = towerH + 0.02;               // band centerline where it meets the towers
-  const apexY = endY + (sg.rise || 0.95);
-  const y1 = apexY + medR + 0.06, y0 = endY - band / 2 - 0.10;
-  const opts = {
-    W: ET.spacing + 0.6, H: y1 - y0, y1, a: ET.spacing / 2, endY, apexY, band, medR,
-    textLeft: sg.text_left || 'LEGENDS OF THE', textRight: sg.text_right || 'HIDDEN PLAYA',
-  };
-  for (const [withText, rotY, dz] of [[true, 0, 0.012], [false, Math.PI, -0.012]]) {
-    const tex = makeArchSignTexture(Object.assign({ withText }, opts));
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(opts.W, opts.H),
-      new THREE.MeshStandardMaterial({
-        map: tex, alphaTest: 0.5, roughness: 0.85,
-        emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.2,
-      }));
-    m.position.set(ET.cx, (y0 + y1) / 2, ET.front_z + 0.1 + dz);
-    m.rotation.y = rotY;
-    g.add(m);
+  // the old painted-ply arch sign — only if the real DMX camp_sign isn't
+  // configured (buildCampSign supersedes it; delete the layout key to revert)
+  if (!L.camp_sign) {
+    const sg = ET.sign || {};
+    const band = sg.band || 0.58, medR = sg.medallion_r || 0.52;
+    const endY = towerH + 0.02;               // band centerline where it meets the towers
+    const apexY = endY + (sg.rise || 0.95);
+    const y1 = apexY + medR + 0.06, y0 = endY - band / 2 - 0.10;
+    const opts = {
+      W: ET.spacing + 0.6, H: y1 - y0, y1, a: ET.spacing / 2, endY, apexY, band, medR,
+      textLeft: sg.text_left || 'LEGENDS OF THE', textRight: sg.text_right || 'HIDDEN PLAYA',
+    };
+    for (const [withText, rotY, dz] of [[true, 0, 0.012], [false, Math.PI, -0.012]]) {
+      const tex = makeArchSignTexture(Object.assign({ withText }, opts));
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(opts.W, opts.H),
+        new THREE.MeshStandardMaterial({
+          map: tex, alphaTest: 0.5, roughness: 0.85,
+          emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.2,
+        }));
+      m.position.set(ET.cx, (y0 + y1) / 2, ET.front_z + 0.1 + dz);
+      m.rotation.y = rotY;
+      g.add(m);
+    }
   }
 
   let show = true;
@@ -1203,6 +1224,270 @@ function makeArchSignTexture(o) {
   return tex;
 }
 
+// --------------------------------------------------------------- camp sign
+// The REAL front sign (cad-items/camp-sign.svg → layout `camp_sign` key): a
+// 14 ft arched band whose ends land flush on the two tower tops, carrying 23
+// letters + the logo disc. Every letter/logo is one 8ch DMX zone from
+// light_config.json room "Camp Sign" — on the build an ESP32 DMX bridge maps
+// each zone to that letter's WS2811 pixels (wiring-guides/camp-sign-plan.md).
+// Construction (letters-raised.jpg): each letter is a separate wood cut-out
+// standing off the solid band on spacers, strip serpentined on its back with
+// the LEDs facing the band — so here the DMX color drives an additive halo
+// plane BEHIND an opaque scene-lit wood face, and themes/effects preview
+// per-letter exactly as the wire will carry them. The CAD condenses its type
+// to fit (scale(0.65 1) / (0.56 1)); the walk below does the same by
+// narrowing glyphs to the available arc, never shrinking height.
+let signGroup = null;
+function setSignVisible(on) {
+  if (!signGroup) return;
+  signGroup.visible = on;
+  $('btn-sign').textContent = on ? 'Sign ✓' : 'Sign ✕';
+  try { localStorage.setItem('lohp-sim-sign', on ? '1' : '0'); } catch (e) { /* private mode */ }
+}
+
+const SIGN_UNLIT = 0.14; // unlit-LED gray floor
+
+function buildCampSign(cfg) {
+  const L = cfg.layout, CS = L.camp_sign, ET = L.entrance_towers;
+  if (!CS || !ET) return;
+  const lights = cfg.room_layout[CS.room] || [];
+  if (!lights.length) log('err', `camp sign: room "${CS.room}" missing from light_config.json — zones stay dark`);
+  const channels = lights.length ? cfg.light_models[lights[0].model].channels : {};
+
+  const towerH = ET.frame_h * (ET.tiers || 2);
+  const a = ET.spacing / 2 + ET.frame_w / 2;   // band ends at the tower OUTER edges = 14 ft overall
+  const band = CS.band || 0.5486;
+  const logoR = CS.logo_r || 0.3658;
+  const endY = towerH - band / 2;              // band top flush with the tower tops at the ends
+  const apexY = endY + (CS.rise || 0.4839);
+  // centerline: the circle through (±a, endY) and (0, apexY) — same
+  // construction as the old painted arch
+  const yc = (apexY * apexY - endY * endY - a * a) / (2 * (apexY - endY));
+  const R = apexY - yc;
+  const thEnd = Math.acos(a / R);
+  const zBand = ET.front_z + 0.09;             // just in front of the tower skins
+
+  signGroup = new THREE.Group();
+  levelGroups[2].add(signGroup); // street furniture: visible in every floor filter
+
+  // dark stained-ply band the LED letters pop against
+  const shape = new THREE.Shape();
+  shape.absarc(0, 0, R + band / 2, Math.PI - thEnd, thEnd, true);
+  shape.absarc(0, 0, R - band / 2, thEnd, Math.PI - thEnd, false);
+  const bandMesh = new THREE.Mesh(new THREE.ShapeGeometry(shape, 48),
+    new THREE.MeshStandardMaterial({ color: 0x241d18, roughness: 0.9, side: THREE.DoubleSide }));
+  bandMesh.position.set(ET.cx, yc, zBand);
+  signGroup.add(bandMesh);
+
+  // glyph list in reading order; each word carries its em (letter height as a
+  // fraction of the band, from the CAD's 33px/15px type)
+  const glyphs = [];
+  for (const w of (CS.words || [])) {
+    if (w.logo) { glyphs.push({ logo: true }); continue; }
+    if (glyphs.length && !glyphs[glyphs.length - 1].logo) glyphs.push({ gap: true, em: w.em || 0.62 });
+    for (const ch of w.text) glyphs.push(ch === ' ' ? { gap: true, em: w.em || 0.62 } : { ch, em: w.em || 0.62 });
+  }
+  const iLogo = glyphs.findIndex(g => g.logo);
+
+  const meas = document.createElement('canvas').getContext('2d');
+  const FONT = (px) => `700 ${px}px 'JFRockSolid', Georgia, 'Times New Roman', serif`;
+  const MPX = 128;
+  const wOf = (g) => { // natural advance in meters (before condensing)
+    const em = band * (g.em || 0.62);
+    if (g.gap) return em * 0.42;
+    meas.font = FONT(MPX);
+    return (meas.measureText(g.ch).width / MPX) * em;
+  };
+  const TRACK = 0.05; // tracking, in em
+
+  const glyphTex = (ch, fill) => {
+    const px = 180;
+    const c = document.createElement('canvas');
+    const g2 = c.getContext('2d');
+    g2.font = FONT(px);
+    const wpx = Math.max(24, Math.ceil(g2.measureText(ch).width)) + 18;
+    c.width = wpx; c.height = Math.ceil(px * 1.3);
+    g2.font = FONT(px); // canvas resize resets the ctx
+    g2.fillStyle = fill || '#ffffff';
+    g2.textAlign = 'center'; g2.textBaseline = 'middle';
+    g2.fillText(ch, wpx / 2, c.height * 0.52);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return { tex, aspect: wpx / c.height, hScale: c.height / px };
+  };
+
+  // the glow that escapes around a raised letter (letters-raised.jpg: strip
+  // serpentined on the letter's back, LEDs facing the band): the same glyph
+  // blurred out well past its outline
+  const haloTex = (ch) => {
+    const px = 180, pad = Math.ceil(px * 0.45);
+    const c = document.createElement('canvas');
+    const g2 = c.getContext('2d');
+    g2.font = FONT(px);
+    const wpx = Math.max(24, Math.ceil(g2.measureText(ch).width)) + pad * 2;
+    c.width = wpx; c.height = Math.ceil(px * 1.3) + pad * 2;
+    g2.font = FONT(px);
+    g2.textAlign = 'center'; g2.textBaseline = 'middle';
+    g2.shadowColor = '#ffffff';
+    g2.shadowBlur = px * 0.26;
+    g2.fillStyle = '#ffffff';
+    for (let i = 0; i < 3; i++) g2.fillText(ch, wpx / 2, c.height * 0.51); // build up the glow
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return { tex, aspect: wpx / c.height, hScale: c.height / px };
+  };
+
+  const zones = [];
+  // lay one side's glyphs along the centerline arc between the band end and
+  // the logo margin, condensing widths to fit exactly like the CAD does
+  const laySide = (sideGlyphs, side) => {
+    const thOut = Math.acos((a - 0.12) / R), thIn = Math.acos((logoR + 0.1) / R);
+    const avail = R * (thIn - thOut);
+    const natural = sideGlyphs.reduce((p, g) => p + wOf(g) + TRACK * band * (g.em || 0.62), 0);
+    const squeeze = Math.min(1, avail / natural);
+    let s = 0; // arc-length cursor; reading order walks outer→inner on the
+    for (const g of sideGlyphs) { // left side, inner→outer on the right
+      const em = band * (g.em || 0.62);
+      const w = (wOf(g) + TRACK * em) * squeeze;
+      if (!g.gap) {
+        const th = (side < 0 ? Math.PI - thOut : thIn) - (s + w / 2) / R;
+        const x = ET.cx + R * Math.cos(th), y = yc + R * Math.sin(th);
+        const rot = th - Math.PI / 2;
+        // the raised letter is halo-lit (letters-raised.jpg): the DMX color
+        // lives in the additive glow BEHIND the letter, spilling around it
+        // onto the band; the letter face itself is opaque wood, never lit
+        // by its own LEDs
+        const ht = haloTex(g.ch);
+        const haloMat = new THREE.MeshBasicMaterial({
+          map: ht.tex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+        });
+        haloMat.color.setScalar(SIGN_UNLIT * 0.4);
+        const halo = new THREE.Mesh(
+          new THREE.PlaneGeometry(ht.aspect * em * ht.hScale * squeeze, em * ht.hScale), haloMat);
+        halo.position.set(x, y, zBand + 0.008);
+        halo.rotation.z = rot;
+        halo.renderOrder = 1;
+        signGroup.add(halo);
+        const gt = glyphTex(g.ch, '#8a6b43'); // stained-ply face, scene-lit
+        const face = new THREE.Mesh(
+          new THREE.PlaneGeometry(gt.aspect * em * gt.hScale * squeeze, em * gt.hScale),
+          new THREE.MeshStandardMaterial({ map: gt.tex, transparent: true, roughness: 0.85 }));
+        face.position.set(x, y, zBand + 0.016);
+        face.rotation.z = rot;
+        face.renderOrder = 2;
+        signGroup.add(face);
+        zones.push({ label: g.ch, mat: haloMat, channels });
+      }
+      s += w;
+    }
+  };
+  laySide(glyphs.slice(0, iLogo), -1);
+
+  // the logo disc at the crest — laser-cut piece-work like the tikis:
+  // cad-items/logo.svg is 91 wood pieces (its letters/numbers are assembly
+  // labels, stripped here) mounted with the design living in the GAPS between
+  // them; the LED strip behind the disc glows through the gaps and the wood
+  // blocks. Two rasters, same trick as tikiTexture: a wood color pass and a
+  // white-gaps-on-black mask driven as emissive by the zone-12 DMX color.
+  const LOGO_PX = 640;
+  const logoMat = new THREE.MeshStandardMaterial({
+    roughness: 0.85, emissive: new THREE.Color(0, 0, 0), emissiveIntensity: 1.35,
+  });
+  const discMesh = new THREE.Mesh(new THREE.CircleGeometry(logoR, 48), logoMat);
+  discMesh.position.set(ET.cx, apexY, zBand + 0.01);
+  discMesh.visible = false; // until the rasters arrive
+  signGroup.add(discMesh);
+  fetch(CS.logo_svg).then((r) => {
+    if (!r.ok) throw new Error(`${CS.logo_svg}: ${r.status}`);
+    return r.text();
+  }).then((src) => {
+    const noText = src.replace(/<text[\s\S]*?<\/text>/g, '');
+    const raster = (fill, discBg) => new Promise((resolve, reject) => {
+      const restyled = noText.replace(/<style>[\s\S]*?<\/style>/, `<style>.cls-1{fill:${fill};}</style>`);
+      const url = URL.createObjectURL(new Blob([restyled], { type: 'image/svg+xml' }));
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const c = document.createElement('canvas');
+        c.width = c.height = LOGO_PX;
+        const g2 = c.getContext('2d');
+        g2.fillStyle = '#000';
+        g2.fillRect(0, 0, LOGO_PX, LOGO_PX);
+        g2.fillStyle = discBg; // the gap channels, clipped to the disc
+        g2.beginPath(); g2.arc(LOGO_PX / 2, LOGO_PX / 2, LOGO_PX / 2, 0, Math.PI * 2); g2.fill();
+        g2.drawImage(img, 0, 0, LOGO_PX, LOGO_PX);
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        resolve(tex);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('logo raster')); };
+      img.src = url;
+    });
+    return Promise.all([
+      raster('#8a6b43', '#17120e'), // wood pieces over dark gap channels
+      raster('#000000', '#ffffff'), // emissive mask: gaps glow, wood blocks
+    ]);
+  }).then(([mapTex, maskTex]) => {
+    logoMat.map = mapTex;
+    logoMat.emissiveMap = maskTex;
+    logoMat.needsUpdate = true;
+    discMesh.visible = true;
+  }).catch(() => {
+    log('err', `camp sign: logo art failed (${CS.logo_svg}) — plain disc`);
+    logoMat.color.set(0xc9a052);
+    discMesh.visible = true;
+  });
+  zones.push({ label: '◉', isLogo: true, mat: logoMat, channels });
+
+  laySide(glyphs.slice(iLogo + 1), 1);
+
+  zones.forEach((z, i) => { z.addr = lights[i] ? lights[i].start_address : null; });
+  if (lights.length && lights.length !== zones.length) {
+    log('err', `camp sign: ${zones.length} zones vs ${lights.length} lights in light_config room "${CS.room}"`);
+  }
+
+  // per-letter swatch strip above the fixture grid
+  const strip = $('sign-strip');
+  if (strip) {
+    strip.innerHTML = '';
+    for (const z of zones) {
+      const cell = document.createElement('div');
+      cell.className = 'sign-cell';
+      cell.textContent = z.label;
+      strip.appendChild(cell);
+      z.cell = cell;
+    }
+  }
+  S.sign = { room: CS.room, zones };
+
+  let show = true;
+  try { show = localStorage.getItem('lohp-sim-sign') !== '0'; } catch (e) { /* private mode */ }
+  setSignVisible(show);
+}
+
+let signGridTimer = 0;
+function updateCampSign(t) {
+  if (!S.sign) return;
+  const cells = t - signGridTimer >= 0.2;
+  if (cells) signGridTimer = t;
+  for (const z of S.sign.zones) {
+    const { R, G, B } = z.addr ? decodeFixture(z, t) : { R: 0, G: 0, B: 0 };
+    // faint idle floor so the sign stays findable when dark; the LED color
+    // rides the halo behind each raised letter (additive) or glows through
+    // the logo's gap mask (emissive) — the wood itself never lights up
+    const fR = Math.max(R, SIGN_UNLIT * 0.4), fG = Math.max(G, SIGN_UNLIT * 0.35), fB = Math.max(B, SIGN_UNLIT * 0.3);
+    if (z.isLogo) z.mat.emissive.setRGB(fR, fG, fB);
+    else z.mat.color.setRGB(fR, fG, fB);
+    if (cells && z.cell) {
+      z.cell.style.background = `rgb(${(R * 255) | 0},${(G * 255) | 0},${(B * 255) | 0})`;
+      if (z.addr) {
+        const a2 = z.addr - 1;
+        z.cell.title = `Camp Sign "${z.label}" @${z.addr}\nraw: ${Array.from(S.frame.slice(a2, a2 + 8)).join(' ')}`;
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------- fixtures
 function fixtureLevel(cfgRoom, posEntry) {
   if (posEntry && posEntry.length > 2) return posEntry[2];
@@ -1211,7 +1496,9 @@ function fixtureLevel(cfgRoom, posEntry) {
 
 function buildFixtures(cfg) {
   const grid = $('fixture-grid');
+  const signRoom = (cfg.layout.camp_sign || {}).room;
   for (const [room, lights] of Object.entries(cfg.room_layout)) {
+    if (room === signRoom) continue; // letter zones render via buildCampSign, not as pars
     const layoutRoom = cfg.layout.rooms[room];
     lights.forEach((f, i) => {
       let x, z, posEntry = null;
@@ -2137,6 +2424,7 @@ function setupControls(cfg) {
   $('btn-view').onclick = () => setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]);
   $('btn-daynight').onclick = () => setDayNight(!ENV.day);
   $('btn-towers').onclick = () => setTowersVisible(!(towersGroup && towersGroup.visible));
+  $('btn-sign').onclick = () => setSignVisible(!(signGroup && signGroup.visible));
   $('btn-steel').onclick = () => setSteelMode(STEEL_MODES[(STEEL_MODES.indexOf(steelMode) + 1) % STEEL_MODES.length]);
   $('btn-respawn').onclick = () => {
     const sp = cfg.layout.spawn;
@@ -2284,12 +2572,13 @@ async function boot() {
   S.cfg = cfg;
   API = `http://${HOST}:${cfg.ports.api}`;
   AUDIO_WS = `ws://${HOST}:${cfg.ports.audio_ws}`;
-  S.frame = new Uint8Array(cfg.num_channels || 168);
+  S.frame = new Uint8Array(cfg.num_channels || 352);
 
   buildMaze(cfg);
   buildFixtures(cfg);
   buildSensors(cfg);
   buildProjection(cfg);
+  buildCampSign(cfg);
   buildAvatar();
 
   const sp = cfg.layout.spawn;
@@ -2332,7 +2621,7 @@ async function boot() {
     $('enter-overlay').classList.add('hidden');
   };
 
-  log('info', `sim ready — ${S.fixtures.length} fixtures, ${S.sensors.length} sensors, ${Object.keys(cfg.room_layout).length} rooms, two stories`);
+  log('info', `sim ready — ${S.fixtures.length} fixtures${S.sign ? `, ${S.sign.zones.length} sign zones` : ''}, ${S.sensors.length} sensors, ${Object.keys(cfg.room_layout).length} rooms, two stories`);
   log('info', 'note: lights/audio also react to OTHER clients & test scripts — this log only shows YOUR actions');
   animate();
 }
@@ -2347,6 +2636,7 @@ function animate() {
   updateProjection(dt);
   updateFixtures(t);
   updateFixtureGrid(t);
+  updateCampSign(t);
   updateInteractHint();
   updateListener();
 

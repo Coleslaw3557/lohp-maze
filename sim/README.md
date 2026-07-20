@@ -30,7 +30,9 @@ spread** — wide flat scissors crossing just above mid-height, not corner-to-co
 X's — on both the front and back planes. The wings **share the hexagon's flat
 east/west frames**: the hex-adjacent bays' braces pin directly to those frames
 (one frame per junction, no doubled scaffold), so the whole run — seven 7ft
-wing bays plus the 10ft hexagon — is ≈ 57.6 ft long, ~12.7 ft tall.
+wing bays plus the 10ft hexagon — is ≈ 57.6 ft long, ~12.7 ft tall. Sparkle
+Pony mounts a **3 ft flat plywood circle on its rear braces at the scissor
+rivet** (per-room `brace_disc` key in `maze_layout.json`).
 
 Ground floor: Entrance, Cop Dodge, Gate, Monkey, Temple, No Friends Monday, Exit.
 Upper floor (+6'4"): Sparkle Pony, Porto, Cuddle Cross, Photo Bomb, Deep Playa
@@ -92,8 +94,8 @@ The structure has a **roof** over the top floor (hidden automatically in the
 overhead plan view), and **all lights mount on the back scaffolding/cross
 members**: fixtures are bracket-mounted, tilted down into their rooms (no
 poles in the walkways, nothing hangs mid-room). **Each room's entire sensing
-lives in its wooden node-enclosure box** (XIAO C3 + the room's LD2410C radar
-or VL53L1X ToF + power) at the planned mount from
+lives in its wooden node-enclosure box** (XIAO ESP32-S3 — the fleet standard —
++ the room's LD2410C radar or VL53L1X ToF + power) at the planned mount from
 `wiring-guides/room-node-enclosure-plan.md` — wing bays on the entry-side front
 leg with the radar window aimed at the opposite back corner, ToF rooms with the
 window facing their arch (`enclosure` keys in `maze_layout.json`). The sim
@@ -163,8 +165,11 @@ cone (red) to trip its sensor)
 **Day / night** (N or the ☀/☾ button, remembered across reloads): night is the
 default show environment; day mode brings up playa daylight — handy for checking
 the unlit structure itself, like the entrance towers. The **Towers button**
-shows/hides the decorative entrance towers + arch sign (also remembered), since
-they stand in front of part of the facade in street view.
+shows/hides the decorative entrance towers (also remembered), since they stand
+in front of part of the facade in street view. The **Sign button** shows/hides
+the camp sign arching between them — unlike the towers it is REAL: 24 DMX
+letter/logo zones (@161–352) tinted live from the frame, with a per-letter
+swatch strip above the fixture grid (see "Camp sign" below).
 
 ## Editing workflow — what's real vs. sim-only
 
@@ -213,12 +218,34 @@ box (faint blue wedge). Walk onto the deck
 in first person — or click the **Cuddle Cross LT** trigger — and the floor
 show starts: placeholder snakes wander the playfield and flee your tracked
 position, filtered through the tracker's coverage wedge and ~150 ms
-sensor+render latency to match the real LD2450 → Pi 3B → projector chain.
+sensor+render latency to match the real LD2450 → server-Pi render → projector
+chain (the fleet is exactly one Pi; the earlier spare-3B renderer is dead).
 The center mast base renders as the content island with its real shadow
 wedge falling SW toward the back-west corner; the show times out 60 s after
 presence is lost,
 like the planned cue daemon. **Sim-only** — no production config exists for
 this yet; delete the `projection` key to remove the rig.
+
+## Camp sign: 24 real DMX zones out front (2026-07-19)
+
+The arched "Legends of the ◉ Hidden Playa" sign between the entrance towers is
+now a **production fixture set**, not decoration: `light_config.json` room
+**"Camp Sign"** = 24 zones (23 letters + logo disc) of 8-ch slots at
+**DMX 161–352**, `main.py NUM_FIXTURES = 44`. On the build an ESP32 bridge on
+the wired DMX chain maps each zone to that letter's WS2811 pixels —
+`wiring-guides/camp-sign-plan.md` is the full plan. Geometry comes from
+`cad-items/camp-sign.svg` (28.35 SVG units = 1 ft): 14 ft band flush on the
+8 ft tower tops (towers tightened to 11 ft centers = 8 ft clear walk-through),
+crest +19 in, letters ~14 in / "of the" ~6 in, logo 28.8 in Ø. The logo disc
+renders tiki-style from the real cut file: `/cad/logo.svg` is 91 wood pieces
+(its letters/numbers are assembly labels) and the LED glows through the **gaps
+between them** — wood color pass + white-gaps emissive mask, emissive color =
+zone 12 live. The letters are halo-lit raised cut-outs (`letters-raised.jpg`:
+separate wood letters on standoffs, strip on the back facing the band), so
+each is an opaque scene-lit wood face with an additive DMX glow plane behind
+it — themes and effects — try Lightning on room "Camp Sign" — preview
+per-letter exactly as the wire will carry them. Layout key `camp_sign`
+in `maze_layout.json`; delete it to fall back to the old painted arch.
 
 ## Rooms without designed lighting/audio yet (updated 2026-07-17)
 
@@ -258,6 +285,12 @@ effects actually drive the two spots. The wire format is untouched (ch0=dimmer,
 1=R, 2=G, 3=B, 4=W) and `color_macro` keeps its own name so nothing ever writes
 the fixture's built-in color-program channel.
 
+The camp sign (@161–352) needs **no re-addressing** — it's net-new above the
+maze's 1–160. Its ESP32 bridge keeps base 161 and receives the universe over a
+Dfi 2.4G wireless DMX hop (TX on the wired chain, RX inside the sign), so the
+wired chain keeps its 120Ω at its own last fixture and the sign's short RX
+stub terminates internally.
+
 ## "Sensors firing at idle?"
 
 They aren't — the server is **shared**. Every connected browser tab, test script
@@ -274,8 +307,8 @@ open and you'll see the "ghost" activity they produce.
 |---|---|---|
 | DMX output | `virtual_dmx.py` replaces the FTDI thread; same 44Hz loop over `DMXStateManager` | Same frames that would hit the wire |
 | Fixtures | Each 3D fixture decodes the **raw universe at its configured start address** using the channel map from `light_config.json` | Reproduces addressing bugs |
-| Sensors | Radar/ToF detection wedges fired from each room's node box (pos + yaw/tilt/fov/range in `maze_layout.json`, floor-aware, clipped to room bounds) plus button/pad geometry; actions verbatim from `client/config-unit-*.json`; piezo 3-attempt/25% logic mirrors `trigger_manager.py`; 5s cooldowns | Same HTTP POSTs as the Pis / planned ESP32s |
-| Audio | The page connects to `:8765` speaking the unit protocol, claims all 15 rooms, plays served MP3s via Web Audio, spatialized at room+floor positions | Same messages a Pi unit receives |
+| Sensors | Radar/ToF detection wedges fired from each room's node box (pos + yaw/tilt/fov/range in `maze_layout.json`, floor-aware, clipped to room bounds) plus button/pad geometry; actions verbatim from `client/config-unit-*.json` (the historical trigger map); piezo 3-attempt/25% logic mirrors `trigger_manager.py`; 5s cooldowns | Same HTTP POSTs as the ESP32 nodes (and the retired Pi units before them) |
+| Audio | The page connects to `:8765` speaking the unit protocol, claims all 16 rooms (incl. Camp Sign), plays served MP3s via Web Audio, spatialized at room+floor positions | Same messages a unit client receives |
 | ESP32 nodes | Real ESPHome YAML compiled for the `host` platform → native Linux processes that fire real `http_request` POSTs (`esphome/`, verified end-to-end) | Real firmware engine, virtual sensor input |
 
 Extra: set `SIM_ARTNET=<ip>` before launch to also unicast the universe as Art-Net —
@@ -286,7 +319,7 @@ this same machine (UDP 6454 clash).
 
 ```bash
 sim/.venv/bin/python sim/tools/smoke_test.py     # headless end-to-end: frames, trigger→DMX, theme, audio protocol
-sim/.venv/bin/python sim/tools/walkthrough.py    # scripted visitor walks the full two-story route; all triggers must 200
+sim/.venv/bin/python sim/tools/walkthrough.py    # scripted visitor walks the two-story route; fires each room's doorway trigger (4 rooms have none and are skipped); all fired triggers must 200
 sim/.venv/bin/python sim/tools/concurrency_test.py  # simultaneous-trigger storms, stop/supersede semantics
 sim/.venv/bin/python sim/tools/photobooth_test.py   # Photo Bomb countdown/flash/photo + Monkey fanfare timelines
 ```
@@ -307,7 +340,8 @@ with synced gold flashes. Same POSTs the room ESP32 buttons send.
 
 - No collision — you can walk through walls; floors change only via ladders (E) or
   teleporting. Sensors fire only on their beams (level-aware) and clicks.
-- One browser tab should own audio: the server routes each room to the first client
-  that claimed it (same rule as the real units).
+- One browser tab should own audio: the server sends each room's audio to EVERY client
+  that claimed it (`remote_host_manager.get_client_ips_by_room`), so two tabs — or a tab
+  plus a real unit — play the same sounds simultaneously.
 - `function_selection`/`function_speed` channels aren't visualized; strobe is approximated.
 - Headless/software-GL browsers run slowly; use a real GPU browser.

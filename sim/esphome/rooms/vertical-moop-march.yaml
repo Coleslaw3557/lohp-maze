@@ -11,4 +11,4 @@ substitutions:
 
 packages:
   logic: !include ../packages/logic.yaml
-  platform: !include ../packages/sim_host.yaml   # -> hardware_c3.yaml when flashing
+  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)

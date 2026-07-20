@@ -23,6 +23,18 @@
                 "w_dimming": 4,
                 "color_macro": 5
             }
+        },
+        "Camp Sign Zone - WS2811 via ESP32 DMX bridge": {
+            "_comment": "One zone of the front camp sign (cad-items/camp-sign.svg): a single letter (or the logo disc) of 12V WS2811 strip. Not a discrete DMX fixture - the sign's ESP32 (wiring-guides/camp-sign-plan.md) receives the wired universe and maps each 8ch slot to its letter's pixel range: out = min(255, color + 0.92*w) * total_dimming/255, total_strobe>5 gates at 1-12Hz (mirrors the sim's decodeFixture so preview == wire). Byte layout matches the ZQ01424 par so raw effect frames land identically; bytes 6-7 ignored. Room 'Camp Sign' zones are in READING ORDER: 161..209=Legends, 217/225=of, 233..249=the, 257=logo, 265..305=Hidden, 313..345=Playa.",
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 1,
+                "g_dimming": 2,
+                "b_dimming": 3,
+                "w_dimming": 4,
+                "total_strobe": 5
+            },
+            "type": "RGB"
         }
     },
     "room_layout": {
@@ -55,6 +67,32 @@
         "Vertical Moop March": [
             {"model": "Par Light - Model ZQ01424", "start_address": 145},
             {"model": "Par Light - Model ZQ01424", "start_address": 153}
+        ],
+        "Camp Sign": [
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 161},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 169},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 177},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 185},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 193},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 201},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 209},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 217},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 225},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 233},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 241},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 249},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 257},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 265},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 273},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 281},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 289},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 297},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 305},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 313},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 321},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 329},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 337},
+            {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 345}
         ]
     }
 }

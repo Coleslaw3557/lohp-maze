@@ -40,9 +40,9 @@
     "label": "RPi + USB-DMX"
   },
   "entrance_towers": {
-    "note": "Two decorative towers on the street out front (hiddenplaya.art/maze-1.jpeg) with the 'Legends of the Hidden Playa' sign arching between them. Each tower = three 3'W x 4'T ladder frames from the same tube-and-pin fleet as the walk-thru sets, hose-clamped into a triangle in plan (flat face to the street, apex toward the maze), stacked two tiers high (8ft), skinned on the outside like the maze walls and guyed to playa stakes with orange ratchet straps. Purely decorative: no fixtures, no sensors.",
+    "note": "Two towers on the street out front (hiddenplaya.art/maze-1.jpeg). Each tower = three 3'W x 4'T ladder frames from the same tube-and-pin fleet as the walk-thru sets, hose-clamped into a triangle in plan (flat face to the street, apex toward the maze), stacked two tiers high (8ft), skinned on the outside like the maze walls and guyed to playa stakes with orange ratchet straps. Spacing CAD'd 2026-07-19 from cad-items/camp-sign.svg: 11ft centers so the 14ft sign band lands flush on the outer edges with an 8ft clear walk-through between the towers (3+8+3 = 14ft). The towers themselves stay non-DMX; the arch sign between them is now the REAL 'camp_sign' fixture below (the old painted-arch fallback in `sign` only renders if camp_sign is deleted).",
     "cx": 10.044,
-    "spacing": 5.2,
+    "spacing": 3.3528,
     "front_z": 5.6,
     "frame_w": 0.9144,
     "frame_h": 1.2192,
@@ -56,6 +56,21 @@
     },
     "skin_image": "img/backgrounds/towers.jpg",
     "skin_image_note": "the Towers canvas wraps around each tower\u2019s three outside faces (image split in thirds, middle third on the street face, seam at the back apex)"
+  },
+  "camp_sign": {
+    "note": "The REAL front sign from cad-items/camp-sign.svg (that drawing: 28.35 SVG units = 1ft): a 14ft arched band spanning the two tower tops \u2014 ends flush with the 8ft tops, crest +19in, band 21.6in tall \u2014 carrying 23 LED-lit letters plus the 28.8in logo disc between 'the' and 'Hidden'. Every letter/logo is one REAL 8ch DMX zone: light_config.json room 'Camp Sign', @161-352 in reading order (Legends=0-6, of=7-8, the=9-11, logo=12, Hidden=13-18, Playa=19-23), driven on the build by the sign's ESP32 DMX bridge per wiring-guides/camp-sign-plan.md. The sim tints each letter straight off the live frame (Sign button toggles the mesh); em = letter height as a fraction of the band, from the CAD's 33px/15px type. Delete this key to fall back to the old decorative painted arch.",
+    "room": "Camp Sign",
+    "band": 0.5486,
+    "rise": 0.4839,
+    "logo_r": 0.3658,
+    "logo_svg": "/cad/logo.svg",
+    "words": [
+      {"text": "Legends", "em": 0.62},
+      {"text": "of the", "em": 0.3},
+      {"logo": true},
+      {"text": "Hidden", "em": 0.62},
+      {"text": "Playa", "em": 0.62}
+    ]
   },
   "hex_center": {
     "note": "The center is a hexagon of SIX complete 5'W x 6'4\" walk-thru frames per level (12 total), hose-clamped in pairs at every corner \u2014 NO cross braces, no cut-down pieces. Side = 5ft (1.524m). A CORNER points at the street: the two angled street frames meeting at it are the split entry (START, east) and exit (FINISH, west) \u2014 each frame's walk-thru arch is one door, and the ground-floor Exit/Entrance divider runs front corner to back corner between them. The flat east/west frames' arches are the doorways the side rooms walk in through (the wings END at these flat frames \u2014 x=8.724 / x=11.364 \u2014 sharing them: one frame per junction, the wing bays\u2019 cross braces pin directly to the hex frames); the two back frames are skinned. Upper deck = Cuddle Cross.",
@@ -396,6 +411,10 @@
       "d": 1.52,
       "floor": 1,
       "background": "img/backgrounds/sparkle.jpg",
+      "brace_disc": {
+        "diameter_ft": 3,
+        "plane": "rear"
+      },
       "fixture_positions": [
         [
           15.374,

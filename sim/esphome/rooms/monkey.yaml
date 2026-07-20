@@ -13,4 +13,4 @@ substitutions:
 packages:
   logic: !include ../packages/logic.yaml
   button: !include ../packages/button.yaml       # + button_gpio_c3.example.yaml on hardware
-  platform: !include ../packages/sim_host.yaml   # -> hardware_c3.yaml when flashing
+  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)

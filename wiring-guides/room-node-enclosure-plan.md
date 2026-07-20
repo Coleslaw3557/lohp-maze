@@ -11,7 +11,8 @@ Constraints this plan is built around (decided 2026-07-17):
   departure via the mock-bay protocol below; geometry does the heavy lifting so
   thresholds only trim the edges.
 - **One custom wooden enclosure per room** holding ALL of that room's sensing
-  and electronics: XIAO ESP32-C3 node, the room's ranging sensor (LD2410C
+  and electronics: XIAO ESP32-S3 node (fleet standard since the 2026-07-18
+  audio revisit; C3s are bench/spares), the room's ranging sensor (LD2410C
   radar *or* VL53L1X ToF — no room needs both today), power, and screw
   terminals for the wired extras. Buttons and piezo knock pads are the one
   physical exception: they sense the surface a visitor touches, so the

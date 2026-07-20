@@ -20,7 +20,10 @@ from effects.photobomb_shot import SHUTTER_OFFSET
 
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
-NUM_FIXTURES = 21
+# ids 0-19: the 20 maze pars/spots (ch 1-160); ids 20-43: the 24 Camp Sign
+# letter/logo zones (ch 161-352, ESP32 DMX bridge out front). This one constant
+# sizes the DMX state, the FTDI frame and the sim's virtual universe.
+NUM_FIXTURES = 44
 CHANNELS_PER_FIXTURE = 8
 
 # Set up logging

@@ -6,7 +6,7 @@ server (its own thread + event loop, so nothing in main.py changes):
     GET  /              the Three.js walkthrough page (sim/web/)
     GET  /sim/config    merged config: fixtures, maze geometry, sensor map
     GET  /sim/health    frame counter / uptime
-    WS   /sim/dmx       raw 168-channel universe frames as JSON, ~30/s max
+    WS   /sim/dmx       raw universe frames (NUM_FIXTURES x 8 ch) as JSON, ~30/s max
 
 The browser talks to the *real* server directly for everything else:
 REST on :5000 (triggers, themes, effects) and the unit-audio WebSocket

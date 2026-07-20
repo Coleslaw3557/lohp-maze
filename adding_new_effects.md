@@ -12,7 +12,7 @@ This guide explains how to add new effects and maintain existing ones in the LoH
    - Import the new effect creation function.
 
 3. Update `effects_manager.py`:
-   - Add the new effect to the `initialize_effects()` method.
+   - Add the new effect to the `self.effects` dict literal in `EffectsManager.__init__`.
 
 4. (Optional) Update `api-docs.md`:
    - If your effect can be triggered via API, add an example of how to call it.
@@ -50,10 +50,10 @@ from .strobe import create_strobe_effect
 from .lightning_storm import create_lightning_storm_effect
 ```
 
-3. In `effects_manager.py`, add to the `initialize_effects()` method:
+3. In `effects_manager.py`, add an entry to the `self.effects` dict in `__init__`:
 
 ```python
-("Strobe", create_strobe_effect()),
+"Strobe": create_strobe_effect(),
 ```
 
 4. In `api-docs.md`, add:
@@ -76,7 +76,7 @@ curl -X POST http://$CONTROLLER_IP:5000/api/run_effect \
    - If you've changed the function name or file name, update `effects/__init__.py` accordingly.
 
 2. If you've changed the effect's parameters or behavior significantly:
-   - Update the `initialize_effects()` method in `effects_manager.py` if necessary.
+   - Update its entry in the `self.effects` dict in `effects_manager.py` if necessary.
    - Update the API documentation in `api-docs.md` if the usage has changed.
 
 3. Always test your changes thoroughly to ensure they work as expected and don't interfere with other system functionalities.

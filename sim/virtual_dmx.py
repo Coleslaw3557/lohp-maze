@@ -7,7 +7,7 @@ have gone down the wire is published to sim_state for the web UI, and can
 optionally also be unicast as Art-Net for external visualizers (BlenderDMX,
 QLC+, ...):
 
-    SIM_ARTNET=192.168.1.50        # or ip:port; universe 0, 44Hz
+    SIM_ARTNET=192.168.1.50        # or ip:port; universe 0, sent on change (1s heartbeat when static)
 """
 import logging
 import os

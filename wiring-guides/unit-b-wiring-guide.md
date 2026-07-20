@@ -2,6 +2,14 @@
 # UNIT - B
 # 192.168.1.186
 
+> **DECOMMISSIONED 2026-07 — historical record.** The three unit Pis are gone;
+> sensing lives in the per-room ESP32-S3 node boxes
+> (`room-node-enclosure-plan.md`) and audio on the same nodes
+> (`room-node-audio-plan.md`). Where this guide disagrees with
+> `client/config-unit-b.json`, the config is what actually ran. Known drift:
+> the "six SPST buttons" on two ADS1115s never made it into config — the unit
+> ran only the 3 Porto piezo discs on channels 0-2 of the single 0x48 ADC.
+
 ## Raspberry Pi Full 40-pin Pinout Connections
 
 | Pin | GPIO | Function | Connection |

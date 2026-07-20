@@ -15,7 +15,8 @@ speaker several rooms away. Putting a speaker at every node box:
 - makes reality match the sim, which already spatializes audio per room;
 - retires units A/B/C completely — after the sensor migration they were
   audio-only, the Photo Bomb camera lives on the server Pi, and Cuddle
-  projection is its own planned Pi.
+  projection renders from the server Pi too. One Pi total; A/B/C leave the
+  fleet, no spares kept.
 
 ## Node chip: XIAO ESP32-S3 for audio rooms
 
@@ -54,6 +55,12 @@ volume knob comes built into the right satellite.
 program peaks mid-80s dB @1 m → high-70s/low-80s at visitor distance: per-room
 parity with today's zone speaker, at close range, in every room. Already
 playa-proven in this maze.
+
+Considered and passed on (2026-07-19): **Dell AC511/AC511M USB soundbar** —
+it *would* drop in (Dell's manual confirms a 3.5 mm analog aux-in alongside
+USB audio, plus USB power; renewed ~$20, eBay lots ~$10), but it's 2.5 W
+total vs the Pebble's 4.4 W RMS and Amazon pricing ties a Pebble *pair* —
+Tim's call: stick with Pebbles.
 
 **Path B (compact/sealed alternative, only where dust-sealed matters):
 PCM5102A → PAM8403-with-pot ($5.19, single board) → sealed 4 Ω speaker.**
@@ -107,23 +114,36 @@ piezos sit on D0/D1/D2.
   ≈ **200 mA @5 V** — above bank auto-off thresholds (and `power_save_mode:
   none` already enforces this). Pebble adds its own draw from a second bank
   port; music at party volume averages roughly +0.5–1 W.
-- **Topology (2026-07-19 v4, Tim's call): one cheap 20000mAh USB bank
-  velcro'd at every box — no stations, no long 5V runs.** Pick: **Miady
-  2-pack 20000mAh PD 22.5W, $28.99/pair** (amzn B0GQM3SB65; per bank 74Wh,
-  2×USB-A + 1×USB-C out). Room plug set: Pebble's captive A-male straight
+- **Topology (2026-07-19 v5, Tim's calls): the generator IS the night power
+  — it runs all evening/night (the same backstage AC that feeds the DMX
+  fixtures). On-hand USB banks ($0, "assume I have them") bridge ONLY the
+  ~12h day shift, recharging overnight at their own boxes.** NIGHT: box gear
+  runs off a small AC→USB wall cube on the fixture runs, the room's bank
+  charging on the same cube (~3 A-ports ≈ 15W per room; drawer cubes first,
+  a 6-port PowerPort-6-class shared between two adjacent rooms fills gaps).
+  DAY: the bank carries the box — ~15–25Wh per shift (~1W node steady +
+  lighter daytime Pebble duty), so **any ≥10000mAh bank covers a full day**
+  (~24Wh usable); big banks go to loud rooms and the server Pi (biggest day
+  load, 50–70Wh; the mast router ~25Wh charges in place overnight via a 10ft
+  A-extension — charge current tolerates the droop — or swaps daily). Daily
+  flip = two 10-second plug moves per room (dawn: gear cube→bank; dusk:
+  gear→cube, bank→charge port); **banks that pass through skip the flips**
+  — leave them inline 24/7 and feed the input from the cube at night (the
+  plug-in blip = one harmless node reboot at dusk; banks that won't output
+  while charging use flips). Per-bank requirements: ≥2 outputs with at least
+  one USB-A (the Pebble's captive plug is A-male; the node takes A or C),
+  holds the ~200 mA load without auto-off (10-min node test, cull flunkers —
+  the draw sits 3–4× over typical cutoffs), pass-through check sorts the
+  fleet into inline-24/7 vs flip piles. Room plug set: Pebble captive A-male
   into an A port, node USB-C via a 1ft A-to-C; bank velcro'd OUTSIDE the box
-  (swap without opening it, no battery heat inside, shaded). ~50Wh usable vs
-  ~18–24Wh per 12h room-night = two nights per charge; the ~200 mA continuous
-  box draw above sits 3–4× over cheap-bank auto-off thresholds, and the
-  Pebble idles on top. Recharge is a day rotation on ONE PowerPort 6 (~9
-  banks/day in two waves; 18 banks total = 15 rooms + mast router + 2 spares
-  floating the rotation). v3 (3× SOLIX C300 cluster stations + mandatory
-  PowerPort fan-out, ~$840) superseded: ~$260 of banks does the same 5V job,
-  and a bank failure is a one-room 60-second swap, not a 5-room cluster
-  event. Unchanged physics: 5V won't survive 30–50ft runs — that's exactly
-  why the banks sit AT the boxes. Bench gate before the 9-pack buy: one bank
-  + node + Pebble overnight with audio duty-cycling (ESPHome uptime sensor =
-  the witness).
+  (flips without opening it, no battery heat inside, shaded). v3 (3× SOLIX
+  C300 cluster stations, ~$840) superseded: the night problem is the
+  generator's, and the day problem is bank-drawer sized. Unchanged physics:
+  5V won't survive 30–50ft runs — banks and cubes sit AT the boxes. Top-up
+  reference if the fleet runs short: Miady 2-pack 20000mAh $28.99
+  (B0GQM3SB65) / INIU single $29.99 (B0DFLSQBHT). Bench gate before install
+  week: one representative bank + node + Pebble through a full day-shift
+  discharge with audio duty-cycling (ESPHome uptime sensor = the witness).
 - **Wiring collapses without the amp board:** port 1 → XIAO USB-C; the
   radar's VCC and the DAC's VIN tap the XIAO's **5 V pin** (~105 mA combined,
   well within the pin's budget); port 2 → Pebble USB. No USB breakout board,
@@ -148,7 +168,7 @@ piezos sit on D0/D1/D2.
   wind rehearsal) so speaker vibration is inside the thresholds before they're
   locked.
 
-## ESPHome sketch (S3, dual pipeline — current 2026.4+ syntax)
+## ESPHome sketch (S3, dual pipeline — simplified; the shipped firmware is `sim/esphome/packages/audio_s3.yaml`)
 
 ```yaml
 i2s_audio:
@@ -191,6 +211,11 @@ api:
             media_file: cue_room_effect
             announcement: true
 ```
+
+The shipped package (`audio_s3.yaml`) additionally routes both pipelines
+through a `mixer` speaker with per-pipeline resamplers and the 12 dB ducking
+automations — this sketch omits them for brevity, but they're required:
+without the mixer a cue would seize the speaker instead of ducking the music.
 
 ## Server changes — IMPLEMENTED 2026-07-18
 
@@ -249,8 +274,11 @@ Consolidations checked against every sensor in the maze; what stays and why:
 - **Photo Bomb camera stays on the server Pi.** The XIAO S3-Sense camera is a
   2 MP OV2640 — wrong tool for keepsake photos, and the USB-webcam pipeline
   already works.
-- **Cuddle projection Pi 3B stays** — nothing ESP-class drives an HDMI
-  projector.
+- **Cuddle projection renders on the server Pi** (2026-07-20: fleet is
+  exactly one Pi, no spares) — nothing ESP-class drives an HDMI projector,
+  so the server Pi's HDMI out does it; the rack→hex cable run is unchanged
+  from the old spare-3B-at-the-rack plan. Bench-verify the render coexists
+  with Quart + DMX + camera on the one board.
 - **Config guardrail: no BLE components in audio nodes** (documented
   crash combination with ESPHome audio).
 - **RF: mount the show AP high on the 20 ft center mast** — 15 nodes
