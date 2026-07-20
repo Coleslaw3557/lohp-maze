@@ -20,7 +20,7 @@
 //     over it (M2.5). Radar sees through plain acrylic; the 4 ToF rooms
 //     cut the marked aperture through the panel (940nm won't pass acrylic).
 //   back wall: two vertical velcro-strap slots (CUT — the strap threads
-//     through and wraps the scaffold leg) + two mounting ears.
+//     through and wraps the scaffold leg).
 //
 // Export (SVG for xTool; kerf compensate in XCS if you want tight joints):
 //   for p in front back left right floor lid window sheet; do
@@ -48,7 +48,6 @@ strap_w = 5; strap_h = 24;                   // velcro-strap slots (back wall,
                                              //  vertical: a 20mm one-wrap
                                              //  passes horizontally around a
                                              //  scaffold leg and through both)
-ear_w = 14; ear_h = 16; ear_hole = 5;        // mounting ears (back)
 dac_hx = 25.4; dac_hy = 15.3;                // PCM5102A hole spacing — VERIFY
 dac_cx = 84;  dac_cy = 51;                   //  on the real board before
                                              //  cutting all 15!
@@ -108,11 +107,7 @@ module front_etch() {                        // interior face marks
 }
 
 module panel_back() difference() {
-  union() {
-    square([W, Hw]);
-    for (px = [-ear_w, W])                       // mounting ears
-      translate([px, 14]) square([ear_w, ear_h]);
-  }
+  square([W, Hw]);
   corner_notches(W);
   bottom_notches(W, long_cs);
   for (c = [-27, 27])                            // velcro-strap slots (CUT):
@@ -120,11 +115,8 @@ module panel_back() difference() {
       square([strap_w, strap_h]);                //  wraps the scaffold leg
 }
 
-module back_etch() {
-  for (px = [-ear_w/2, W + ear_w/2])             // ear screw positions
-    translate([px, 14 + ear_h/2]) cross(5);
+module back_etch()
   translate([W/2, 19]) label("VELCRO", 2.8);     // strap between the slots
-}
 
 module panel_side() {          // common left/right: full-D, notched 0/2/4
   difference() {
@@ -197,22 +189,22 @@ module window_etch() {
 // One-bed nesting, 6mm gaps. sheet() = cut layer, sheet_etch() = the same
 // placements' marks; they share coordinates so the merged SVG aligns.
 module sheet() {
-  translate([ear_w, 0])            panel_front();
-  translate([ear_w, Hw + 6])       panel_back();
-  translate([ear_w + t, 2*Hw + 12 + t]) panel_floor();
-  translate([W + ear_w + 12, 0])   panel_left();
-  translate([W + ear_w + 12, Hw + 6]) panel_right();
-  translate([W + ear_w + 12, 2*Hw + 12]) panel_lid();
-  translate([W + ear_w + 12 + panel_w/2, 2*Hw + D + 18 + panel_h/2]) panel_window();
+  panel_front();
+  translate([0, Hw + 6])       panel_back();
+  translate([t, 2*Hw + 12 + t]) panel_floor();
+  translate([W + 12, 0])   panel_left();
+  translate([W + 12, Hw + 6]) panel_right();
+  translate([W + 12, 2*Hw + 12]) panel_lid();
+  translate([W + 12 + panel_w/2, 2*Hw + D + 18 + panel_h/2]) panel_window();
 }
 
 module sheet_etch() {
-  translate([ear_w, 0])            front_etch();
-  translate([ear_w, Hw + 6])       back_etch();
-  translate([ear_w + t, 2*Hw + 12 + t]) floor_etch();
-  translate([W + ear_w + 12, Hw + 6]) right_etch();
-  translate([W + ear_w + 12, 2*Hw + 12]) lid_etch();
-  translate([W + ear_w + 12 + panel_w/2, 2*Hw + D + 18 + panel_h/2]) window_etch();
+  front_etch();
+  translate([0, Hw + 6])       back_etch();
+  translate([t, 2*Hw + 12 + t]) floor_etch();
+  translate([W + 12, Hw + 6]) right_etch();
+  translate([W + 12, 2*Hw + 12]) lid_etch();
+  translate([W + 12 + panel_w/2, 2*Hw + D + 18 + panel_h/2]) window_etch();
 }
 
 module assembly() {

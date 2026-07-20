@@ -54,7 +54,7 @@ The red marks are:
 - front (interior face): window-panel outline + its 4 screw positions,
   LD2410C footprint centered in the aperture, SENSOR label
 - right wall: USB rectangle, AUX and ANT rings, labelled
-- back: ear screw positions + a VELCRO label between the two strap slots
+- back: a VELCRO label between the two strap slots
 - lid: 4 screw positions over the wall top edges
 - window: its 4 screw positions + the 16×16 ToF aperture outline (cut it
   through for the 4 ToF rooms; radar rooms just leave it marked)
@@ -65,7 +65,7 @@ The red marks are:
 - `export.py` — regenerates all SVGs (renders cut + etch, merges the colors)
 - `panel-{front,back,left,right,floor,lid}.svg` — wall panels (3 mm ply)
 - `panel-window.svg` — the window panel (3 mm acrylic)
-- `panel-sheet.svg` — all seven nested on one bed (~246 × 202 mm)
+- `panel-sheet.svg` — all seven nested on one bed (~232 × 202 mm)
 - `sheet.png` / `sheet-etch.png` — the two layers; `preview-assembly.png`,
   `preview-underside.png` — glued-up views
 
@@ -87,8 +87,7 @@ python3 export.py    # re-export all panel SVGs after editing the .scad
 4. Lid = the service hatch: screw at the etched corner marks into the wall
    top edges. No glue on the lid.
 5. Mount: thread a velcro strap through the two vertical back slots and
-   wrap it around the scaffold leg at the planned clamp point; the ears
-   with their etched screw marks stay as the screw-to-wood fallback.
+   wrap it around the scaffold leg at the planned clamp point.
 
 The wooden 17×22×10 box this replaces is superseded; the mounting
 positions, boresight yaw/tilt angles, and mock-bay tuning in
