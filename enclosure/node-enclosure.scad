@@ -74,6 +74,9 @@ module oline(w, h, lw = 0.4)                 // rectangle outline
   difference() { square([w, h], center = true);
                  square([w - 2*lw, h - 2*lw], center = true); }
 
+module oring(d, lw = 0.4)                    // circle outline (hole position)
+  difference() { circle(d = d); circle(d = d - 2*lw); }
+
 module cross(s = 4, lw = 0.5) {              // screw-position mark
   square([s, lw], center = true);
   square([lw, s], center = true);
@@ -109,13 +112,14 @@ module panel_back() difference() {
   }
   corner_notches(W);
   bottom_notches(W, long_cs);
-  for (c = [-27, 27])                            // hose-clamp strap slots
-    translate([W/2 + c - strap_w/2, Hw - 9]) square([strap_w, strap_h]);
 }
 
-module back_etch()                               // ear screw positions
-  for (px = [-ear_w/2, W + ear_w/2])
+module back_etch() {
+  for (px = [-ear_w/2, W + ear_w/2])             // ear screw positions
     translate([px, 14 + ear_h/2]) cross(5);
+  for (c = [-27, 27])                            // hose-clamp strap positions
+    translate([W/2 + c, Hw - 9 + strap_h/2]) oline(strap_w, strap_h);
+}
 
 module panel_side() {          // common left/right: full-D, notched 0/2/4
   difference() {
@@ -128,11 +132,15 @@ module panel_side() {          // common left/right: full-D, notched 0/2/4
 
 module panel_left() panel_side();
 
-module panel_right() difference() {
-  panel_side();                                  // x runs front->back
-  translate([16 - usb_w/2, t + 2]) square([usb_w, usb_h]);   // XIAO USB-C
-  translate([48, t + 11]) circle(d = jack_d);                // 3.5mm line-out
-  translate([62, Hw - 8]) circle(d = ant_d);                 // antenna
+module panel_right() panel_side();               // identical cut to the left;
+                                                 //  ports are etch marks only
+module right_etch() {                            // x runs front->back
+  translate([16, t + 2 + usb_h/2]) oline(usb_w, usb_h);      // XIAO USB-C
+  translate([16, t + 10]) label("USB", 2.8);
+  translate([48, t + 11]) oring(jack_d);                     // 3.5mm line-out
+  translate([48, t + 19]) label("AUX", 2.8);
+  translate([62, Hw - 8]) oring(ant_d);                      // antenna
+  translate([62, Hw - 16]) label("ANT", 2.8);
 }
 
 module panel_floor() difference() {
@@ -147,20 +155,19 @@ module panel_floor() difference() {
       translate([W - 2*t - eps, (D - 2*t)/2 + c - ftab_w/2]) square([t + eps, ftab_w]);
     }
   }
-  translate([16, 14]) circle(d = gx16_d);        // connector row (faces down)
-  for (i = [0:2]) translate([38 + i*18, 14]) circle(d = gx12_d);
-  for (i = [0:4]) translate([58 + i*8, 38]) square([3, 24]);  // vents
 }
 
 module floor_etch() {                            // component-side marks
+  translate([16, 14]) oring(gx16_d);             // connector positions
+  for (i = [0:2]) translate([38 + i*18, 14]) oring(gx12_d);
+  translate([16, 25]) label("GX16");
+  translate([56, 25]) label("GX12 x3");
   translate([dac_cx, dac_cy]) oline(30.5, 21);   // PCM5102A footprint
   for (px = [-dac_hx/2, dac_hx/2], py = [-dac_hy/2, dac_hy/2])
     translate([dac_cx + px, dac_cy + py]) cross(3.5);  // its screw corners
   translate([dac_cx, dac_cy + 15]) label("DAC");
   translate([90, 21]) oline(21.4, 17.8);         // XIAO footprint (VHB), USB
   translate([90, 21]) label("XIAO", 3);          //  toward the right wall
-  translate([16, 25]) label("GX16");
-  translate([56, 25]) label("GX12 x3");
 }
 
 module panel_lid() square([W, D]);
@@ -198,6 +205,7 @@ module sheet_etch() {
   translate([ear_w, 0])            front_etch();
   translate([ear_w, Hw + 6])       back_etch();
   translate([ear_w + t, 2*Hw + 12 + t]) floor_etch();
+  translate([W + ear_w + 12, Hw + 6]) right_etch();
   translate([W + ear_w + 12, 2*Hw + 12]) lid_etch();
   translate([W + ear_w + 12 + panel_w/2, 2*Hw + D + 18 + panel_h/2]) window_etch();
 }
@@ -224,6 +232,7 @@ else if (part == "window") panel_window();
 else if (part == "sheet")  sheet();
 else if (part == "front_etch")  front_etch();
 else if (part == "back_etch")   back_etch();
+else if (part == "right_etch")  right_etch();
 else if (part == "floor_etch")  floor_etch();
 else if (part == "lid_etch")    lid_etch();
 else if (part == "window_etch") window_etch();

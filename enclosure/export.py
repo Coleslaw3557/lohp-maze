@@ -15,7 +15,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 SCAD = HERE / 'node-enclosure.scad'
 PANELS = ['front', 'back', 'left', 'right', 'floor', 'lid', 'window', 'sheet']
-HAS_ETCH = {'front', 'back', 'floor', 'lid', 'window', 'sheet'}
+HAS_ETCH = {'front', 'back', 'right', 'floor', 'lid', 'window', 'sheet'}
 
 PATH_RE = re.compile(r'<path[^>]*\sd="([^"]+)"[^>]*/?>')
 VIEW_RE = re.compile(r'viewBox="([-\d. ]+)"')

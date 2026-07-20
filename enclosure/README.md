@@ -11,16 +11,21 @@ glue together, plus the acrylic sensor-window panel. Outer 110 × 78 × 40 mm
 | PCM5102A DAC | screwed at its etched footprint marks (**verify the etched corner spacing against a real board** — `dac_hx/dac_hy` params) |
 | LD2410C / VL53L1X / Cuddle's 2410+2450 | zip-tied through the front-panel holes, boresight out the window |
 
-## IO — everything leaves through a connector
+## IO — positions etched, opened per room on the bench
 
-| Where | What | Carries |
+**The only cut openings in the whole kit are for the sensors** (the window
+aperture + its four zip-tie holes). Every port is an etched, labelled
+position instead — drill/cut just the ones a given room uses:
+
+| Where (etched) | What | Carries |
 |---|---|---|
-| floor (faces DOWN mounted — dust/rain smart) | 1× GX16-8 | up to 6 arcade buttons + common (Gate 6, DPH 5, hex 4, Bike 4, NFM ladder) |
-| floor | 3× GX12-2 | Porto piezos ×3, single buttons, spares |
-| right wall | USB-C slot | XIAO power |
-| right wall | 6.5 mm holes ×2 | 3.5 mm line-out → Pebble; antenna pigtail |
+| floor (faces DOWN mounted — dust/rain smart) | GX16-8 ring | up to 6 arcade buttons + common (Gate 6, DPH 5, hex 4, Bike 4, NFM ladder) |
+| floor | 3× GX12-2 rings | Porto piezos ×3, single buttons, spares |
+| right wall | USB rectangle | XIAO power |
+| right wall | AUX / ANT rings | 3.5 mm line-out → Pebble; antenna pigtail |
 
-Unused holes take a blank GX plug — that's what lets one design serve every room.
+That's what lets one cut file serve every room — a room's unused ports are
+never opened at all.
 
 ## Sensor window
 
@@ -35,17 +40,19 @@ Unused holes take a blank GX plug — that's what lets one design serve every ro
 
 ## Cut layer vs mark layer
 
-**No fastener holes are cut anywhere** — screws go in on the bench as
-needed. Every mounting position is on the **etch layer instead**: each SVG
-carries two colors in one coordinate frame — **black = CUT, red = ETCH**.
-In XCS: import the SVG, select the red objects → processing **score** (or
-engrave), black → cut. The red marks are:
+**Nothing but sensor openings is cut** — no fastener holes, no port holes,
+no vents, no strap slots. Screws and ports happen on the bench as needed.
+Every position is on the **etch layer**: each SVG carries two colors in one
+coordinate frame — **black = CUT, red = ETCH**. In XCS: import the SVG,
+select the red objects → processing **score** (or engrave), black → cut.
+The red marks are:
 
-- floor: DAC footprint + its 4 screw corners, XIAO footprint (VHB),
-  GX16 / GX12 labels
+- floor: GX16 + GX12 ×3 connector rings with labels, DAC footprint + its
+  4 screw corners, XIAO footprint (VHB)
 - front (interior face): window-panel outline + its 4 screw positions,
   LD2410C footprint centered in the aperture, SENSOR label
-- back: ear screw positions
+- right wall: USB rectangle, AUX and ANT rings, labelled
+- back: ear screw positions + the two hose-clamp strap rectangles
 - lid: 4 screw positions over the wall top edges
 - window: its 4 screw positions + the 16×16 ToF aperture outline (cut it
   through for the 4 ToF rooms; radar rooms just leave it marked)
