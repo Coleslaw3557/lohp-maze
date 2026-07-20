@@ -45,8 +45,8 @@ Hw = 44;         // wall height = outer height. Interior stays 104 x 72 x 34;
 slide_z = 37;            // channel bottom (floor_t + 34 interior)
 slide_w = 3.4;           // channel width (t + play)
 lid_w   = W - 2*t + 4.4; // side tongues ride 2.2mm into each side channel
-lid_d   = D - t + 2.4;   // front edge flush outside; back edge 2.4 into
-                         //  the back channel
+lid_d   = D - t;         // front edge flush outside; back edge stops
+                         //  against the back wall's inner face
 lid_notch = 14;          // finger pull, front edge
 
 // ---- features ----------------------------------------------------------
@@ -118,13 +118,12 @@ module front_etch() {                        // interior face marks
 }
 
 module panel_back() difference() {
-  square([W, Hw]);
-  corner_notches(W);
-  bottom_notches(W, long_cs);
-  translate([t, slide_z]) square([W - 2*t, slide_w]);  // lid channel (back)
-  for (c = [-27, 27])                            // velcro-strap slots (CUT):
-    translate([W/2 + c - strap_w/2, (34 - strap_h)/2 + t])  // strap threads
-      square([strap_w, strap_h]);                //  both, wraps the leg
+  square([W, Hw]);                               // SOLID at lid height — the
+  corner_notches(W);                             //  lid STOPS against this
+  bottom_notches(W, long_cs);                    //  wall's inner face (a
+  for (c = [-27, 27])                            //  through-slot here would
+    translate([W/2 + c - strap_w/2, (34 - strap_h)/2 + t])  // be open to the
+      square([strap_w, strap_h]);                //  outside when closed)
 }
 
 module back_etch()
