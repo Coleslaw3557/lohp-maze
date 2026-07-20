@@ -89,6 +89,9 @@ kits, 5V LED + microswitch). Button LEDs wire straight to the node's 5V rail
 
 ## BOM additions
 
+All rolled into **`../shopping-list.xlsx`** — the one shopping list (Totals
+tab + a tab per room). Summary:
+
 | Item | Qty | Note |
 |---|---|---|
 | 30mm LED arcade buttons (EG Starts 5-colour 5-pk) | 24 → 5 pks | Gate 6, DPH 5, Bike 4, Moop 4, NFM 5 |

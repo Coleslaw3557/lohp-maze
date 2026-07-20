@@ -1,7 +1,7 @@
 # LoHP Maze Wiring Guide
 # CAMP SIGN (DMX 161–352)
 
-> Plan/rationale: `camp-sign-plan.md`. Parts: `../sign-shopping-list.xlsx`.
+> Plan/rationale: `camp-sign-plan.md`. Parts: `../shopping-list.xlsx` (Camp Sign tab).
 > This is the build-time reference: every item and where it goes.
 
 ## Placement

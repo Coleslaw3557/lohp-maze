@@ -221,7 +221,7 @@ PSU− ── common negative bus (both pillars bridged by the trunk's return)
 ## BOM (new parts only — PSUs owned)
 
 > Live shopping copy with links/quantities/pack math:
-> **`../sign-shopping-list.xlsx`** (same format as the node-fleet list).
+> **`../shopping-list.xlsx`** (the one shopping list — Camp Sign tab).
 > This table is the summary.
 
 Electronics to buy — essentials only, listings verified via browser
