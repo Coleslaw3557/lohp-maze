@@ -52,7 +52,7 @@ The red marks are:
 - front (interior face): window-panel outline + its 4 screw positions,
   LD2410C footprint centered in the aperture, SENSOR label
 - right wall: USB rectangle, AUX and ANT rings, labelled
-- back: ear screw positions + the two hose-clamp strap rectangles
+- back: ear screw positions + two VELCRO patch zones (the mounting method)
 - lid: 4 screw positions over the wall top edges
 - window: its 4 screw positions + the 16×16 ToF aperture outline (cut it
   through for the 4 ToF rooms; radar rooms just leave it marked)
@@ -84,9 +84,10 @@ python3 export.py    # re-export all panel SVGs after editing the .scad
    etched marks, window panel over its etched outline; route pigtails.
 4. Lid = the service hatch: screw at the etched corner marks into the wall
    top edges. No glue on the lid.
-5. Mount: screw through the ears at their etched marks, or SAE#24 hose
-   clamps through the back strap slots hug a scaffold tube — the existing
-   mounting standard.
+5. Mount: stick velcro at the two etched back zones (box velcros to the
+   scaffold at the planned clamp points — same house standard as the
+   battery banks); the ears with their etched screw marks stay as the
+   screw-to-wood fallback.
 
 The wooden 17×22×10 box this replaces is superseded; the mounting
 positions, boresight yaw/tilt angles, and mock-bay tuning in
