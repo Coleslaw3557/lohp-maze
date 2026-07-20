@@ -2,8 +2,11 @@
 
 `node-enclosure.scad` generates the single enclosure used by all 15 room
 nodes as **laser-cut panels for the xTool**: six finger-jointed pieces that
-glue together, plus the acrylic sensor-window panel. Outer 110 × 78 × 40 mm
+glue together, plus the acrylic sensor-window panel. Outer 110 × 78 × 44 mm
 (interior 104 × 72 × 34) — as small as reasonable around the node build.
+The lid is a **sliding tray**: it slides in and out through a mouth in the
+front wall, riding through-slot channels in the side and back walls — no
+fasteners, finger-pull notch at the front edge.
 
 | Inside | Mounted how |
 |---|---|
@@ -13,8 +16,9 @@ glue together, plus the acrylic sensor-window panel. Outer 110 × 78 × 40 mm
 
 ## IO — positions etched, opened per room on the bench
 
-**The only cut openings in the whole kit are the sensor window aperture
-and the two back strap slots the velcro mounting strap threads through.**
+**The only cut openings in the whole kit are the sensor window aperture,
+the two back strap slots the velcro mounting strap threads through, and
+the lid's slide channel/mouth (joinery, sealed by the lid itself).**
 Every port is an etched, labelled position instead — drill/cut just the
 ones a given room uses:
 
@@ -41,9 +45,9 @@ never opened at all.
 
 ## Cut layer vs mark layer
 
-**The only cuts are the window aperture and the two velcro-strap slots** —
-no fastener holes, no port holes, no zip holes, no vents. Screws and ports
-happen on the bench as needed.
+**The only cuts are the window aperture, the two velcro-strap slots and
+the lid slide channel** — no fastener holes, no port holes, no zip holes,
+no vents. Screws and ports happen on the bench as needed.
 Every position is on the **etch layer**: each SVG carries two colours in one
 coordinate frame — **black = CUT, red = ETCH**. In XCS: import the SVG,
 select the red objects → processing **score** (or engrave), black → cut.
@@ -55,7 +59,6 @@ The red marks are:
   LD2410C footprint centered in the aperture, SENSOR label
 - right wall: USB rectangle, AUX and ANT rings, labelled
 - back: a VELCRO label between the two strap slots
-- lid: 4 screw positions over the wall top edges
 - window: its 4 screw positions + the 16×16 ToF aperture outline (cut it
   through for the 4 ToF rooms; radar rooms just leave it marked)
 
@@ -85,8 +88,10 @@ python3 export.py    # re-export both SVGs after editing the .scad
 2. Glue everything EXCEPT the lid (wood glue for ply joints).
 3. Fit connectors (GX nuts inside the floor), boards and sensor at their
    etched marks, window panel over its etched outline; route pigtails.
-4. Lid = the service hatch: screw at the etched corner marks into the wall
-   top edges. No glue on the lid.
+4. Lid = the service hatch: slide it in through the front mouth until the
+   back edge seats in the back channel; finger notch pulls it out. No glue,
+   no fasteners (a dab of velcro or one bench screw through the front cap
+   stops dust-rattle if needed).
 5. Mount: thread a velcro strap through the two vertical back slots and
    wrap it around the scaffold leg at the planned clamp point.
 

@@ -3,7 +3,9 @@
 // ONE design for all 15 room nodes, cut on the xTool from 3mm ply (walls)
 // + 3mm acrylic (window panel). Six finger-jointed panels GLUE together
 // (floor mortises through the wall bottoms, corner fingers interlock);
-// the LID is the service hatch — no glue, 4x M3 screws into T-slot nuts.
+// the LID is the service hatch — it SLIDES in and out through a mouth in
+// the front wall, riding side tongues in through-slot channels (no
+// fasteners; finger-pull notch at the front edge).
 //
 // Holds the standard node build: XIAO ESP32-S3 + PCM5102A DAC + the room's
 // ranging sensor(s) against the window (LD2410C, VL53L1X, Cuddle's
@@ -36,8 +38,16 @@ kerf_note = "cut outlines are exact; add kerf offset in xTool XCS";
 // ---- box (outer) -------------------------------------------------------
 W  = 110;        // width  (front/back length)
 D  = 78;         // depth  (left/right length)
-Hw = 37;         // wall height; lid sits on top -> outer height Hw+t
-                 // interior: 104 x 72 x 34
+Hw = 44;         // wall height = outer height. Interior stays 104 x 72 x 34;
+                 // above it: 3.4mm lid slide channel + 3.2mm cap.
+
+// ---- sliding lid -------------------------------------------------------
+slide_z = 37;            // channel bottom (floor_t + 34 interior)
+slide_w = 3.4;           // channel width (t + play)
+lid_w   = W - 2*t + 4.4; // side tongues ride 2.2mm into each side channel
+lid_d   = D - t + 2.4;   // front edge flush outside; back edge 2.4 into
+                         //  the back channel
+lid_notch = 14;          // finger pull, front edge
 
 // ---- features ----------------------------------------------------------
 win_w = 56;  win_h = 24;  win_cz = t + 17;   // aperture, center height
@@ -96,6 +106,7 @@ module panel_front() difference() {
   corner_notches(W);
   bottom_notches(W, long_cs);
   translate([W/2 - win_w/2, win_cz - win_h/2]) square([win_w, win_h]); // aperture
+  translate([t, slide_z]) square([W - 2*t, slide_w]);  // lid entry mouth
 }
 
 module front_etch() {                        // interior face marks
@@ -110,9 +121,10 @@ module panel_back() difference() {
   square([W, Hw]);
   corner_notches(W);
   bottom_notches(W, long_cs);
+  translate([t, slide_z]) square([W - 2*t, slide_w]);  // lid channel (back)
   for (c = [-27, 27])                            // velcro-strap slots (CUT):
-    translate([W/2 + c - strap_w/2, (Hw - strap_h)/2])  // strap threads both,
-      square([strap_w, strap_h]);                //  wraps the scaffold leg
+    translate([W/2 + c - strap_w/2, (34 - strap_h)/2 + t])  // strap threads
+      square([strap_w, strap_h]);                //  both, wraps the leg
 }
 
 module back_etch()
@@ -124,6 +136,9 @@ module panel_side() {          // common left/right: full-D, notched 0/2/4
     for (s = [0, 2, 4], x = [0, D - t])
       translate([x - eps, s * seg]) square([t + 2*eps, seg]);
     bottom_notches(D, short_cs);
+    // lid channel: open at the front edge (x=0, where the lid enters),
+    // ends at the back wall's inner face
+    translate([-eps, slide_z]) square([D - t + eps, slide_w]);
   }
 }
 
@@ -136,8 +151,8 @@ module right_etch() {                            // x runs front->back
   translate([16, t + 10]) label("USB", 2.8);
   translate([48, t + 11]) oring(jack_d);                     // 3.5mm line-out
   translate([48, t + 19]) label("AUX", 2.8);
-  translate([62, Hw - 8]) oring(ant_d);                      // antenna
-  translate([62, Hw - 16]) label("ANT", 2.8);
+  translate([62, 30]) oring(ant_d);                          // antenna (below
+  translate([62, 22]) label("ANT", 2.8);                     //  the lid channel)
 }
 
 module panel_floor() difference() {
@@ -167,11 +182,15 @@ module floor_etch() {                            // component-side marks
   translate([91, 13]) label("XIAO", 3);          //  faces the right-wall USB
 }                                                //  mark (x2d 16 -> y 13)
 
-module panel_lid() square([W, D]);
-
-module lid_etch()                                // screw down into the wall
-  for (x = [12, W - 12], y = [t/2, D - t/2])     //  top edges as needed
-    translate([x, y]) cross(3);                  // stays inside the outline
+module panel_lid() difference() {
+  square([lid_w, lid_d]);
+  // front corner notches: the tongues start behind the front wall, so the
+  // central width passes through the front mouth while the tongues enter
+  // the side channels' open ends
+  for (x = [-eps, lid_w - 2.4])
+    translate([x, -eps]) square([2.4 + eps, t + 0.2 + eps]);
+  translate([lid_w/2, 0]) circle(d = lid_notch); // finger pull
+}
 
 module panel_window() difference() {             // cut this one in acrylic
   translate([-panel_w/2, -panel_h/2]) square([panel_w, panel_h]);
@@ -204,7 +223,6 @@ module sheet_etch() {
   translate([0, Hw + 6])       back_etch();
   translate([t, 2*Hw + 12 + t]) floor_etch();
   translate([W + 12, Hw + 6]) right_etch();
-  translate([W + 12, 2*Hw + 12]) lid_etch();
 }
 
 module assembly() {
@@ -213,7 +231,8 @@ module assembly() {
   color("Peru")      translate([0, D, 0]) rotate([90, 0, 0]) linear_extrude(t) panel_back();
   color("Sienna")    rotate([90, 0, 90]) linear_extrude(t) panel_left();
   color("Sienna")    translate([W - t, 0, 0]) rotate([90, 0, 90]) linear_extrude(t) panel_right();
-  color("Tan", 0.85) translate([0, 0, Hw + 8]) linear_extrude(t) panel_lid();  // lifted
+  color("Tan", 0.85)                              // lid shown half-slid-out
+    translate([(W - lid_w)/2, -22, slide_z]) linear_extrude(t) panel_lid();
   color("LightBlue", 0.6)
     translate([W/2, t + 4 + eps, win_cz]) rotate([90, 0, 0]) linear_extrude(t) panel_window();
 }
@@ -231,7 +250,6 @@ else if (part == "front_etch")  front_etch();
 else if (part == "back_etch")   back_etch();
 else if (part == "right_etch")  right_etch();
 else if (part == "floor_etch")  floor_etch();
-else if (part == "lid_etch")    lid_etch();
 else if (part == "window_etch") window_etch();
 else if (part == "sheet_etch")  sheet_etch();
 else assembly();
