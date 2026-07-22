@@ -1,0 +1,75 @@
+# REAL-HARDWARE companion to game_gate.yaml — Gate's 6 pads via MCP23017.
+#
+# Gate's XIAO was pin-full (6 pads D0-D5 + LD2410C D6/D7 + I2S D8-D10 = 11/11)
+# with nothing left for the DMX TX (dmx-over-wifi.md), so Gate opens the
+# MCP23017 growth path db9-field-wiring.md reserved: the DB9-A cable and
+# per-pin map are UNCHANGED — inside the box the six signal wires land on MCP
+# GPA0-5 instead of XIAO pads. That frees D0-D3; D0 (GPIO1) becomes DMX TX.
+#
+#   packages:                                     # gate.yaml, hardware flash
+#     logic:    !include ../packages/logic.yaml
+#     tripwire: !include ../packages/tripwire.yaml
+#     game:     !include ../packages/game_gate.yaml
+#     game_hw:  !include ../packages/game_gate_hw_mcp.yaml
+#     dmx:      !include ../packages/dmx_out.yaml   # with dmx_tx_pin: "1"
+#     platform: !include ../packages/hardware_s3.yaml
+#
+# Wiring: MCP23017 VCC->3V3, GND, SDA->D4 (GPIO5), SCL->D5 (GPIO6), A0-A2->GND
+# (addr 0x20), RESET->3V3. DB9-A signals 1-6 -> GPA0-5; pads still close to
+# GND, internal MCP pull-ups on. Feeds the same gate_padN template sensors, so
+# the bench-verified bank logic in game_gate.yaml is untouched — RE-RUN the
+# gate bench test (sim/tools/gate_game_test.py against the flashed node) anyway.
+# NOT validated by validate_all.sh (i2c needs the esp32 platform).
+
+i2c:
+  sda: GPIO5   # XIAO D4
+  scl: GPIO6   # XIAO D5
+  frequency: 400kHz
+
+mcp23017:
+  - id: gate_mcp
+    address: 0x20
+
+binary_sensor:
+  - platform: gpio
+    id: gate_pad1_hw
+    pin: {mcp23xxx: gate_mcp, number: 0, mode: {input: true, pullup: true}, inverted: true}
+    on_press:
+      then: [binary_sensor.template.publish: {id: gate_pad1, state: ON}]
+    on_release:
+      then: [binary_sensor.template.publish: {id: gate_pad1, state: OFF}]
+  - platform: gpio
+    id: gate_pad2_hw
+    pin: {mcp23xxx: gate_mcp, number: 1, mode: {input: true, pullup: true}, inverted: true}
+    on_press:
+      then: [binary_sensor.template.publish: {id: gate_pad2, state: ON}]
+    on_release:
+      then: [binary_sensor.template.publish: {id: gate_pad2, state: OFF}]
+  - platform: gpio
+    id: gate_pad3_hw
+    pin: {mcp23xxx: gate_mcp, number: 2, mode: {input: true, pullup: true}, inverted: true}
+    on_press:
+      then: [binary_sensor.template.publish: {id: gate_pad3, state: ON}]
+    on_release:
+      then: [binary_sensor.template.publish: {id: gate_pad3, state: OFF}]
+  - platform: gpio
+    id: gate_pad4_hw
+    pin: {mcp23xxx: gate_mcp, number: 3, mode: {input: true, pullup: true}, inverted: true}
+    on_press:
+      then: [binary_sensor.template.publish: {id: gate_pad4, state: ON}]
+    on_release:
+      then: [binary_sensor.template.publish: {id: gate_pad4, state: OFF}]
+  - platform: gpio
+    id: gate_pad5_hw
+    pin: {mcp23xxx: gate_mcp, number: 4, mode: {input: true, pullup: true}, inverted: true}
+    on_press:
+      then: [binary_sensor.template.publish: {id: gate_pad5, state: ON}]
+    on_release:
+      then: [binary_sensor.template.publish: {id: gate_pad5, state: OFF}]
+  - platform: gpio
+    id: gate_pad6_hw
+    pin: {mcp23xxx: gate_mcp, number: 5, mode: {input: true, pullup: true}, inverted: true}
+    on_press:
+      then: [binary_sensor.template.publish: {id: gate_pad6, state: ON}]
+    on_release:
+      then: [binary_sensor.template.publish: {id: gate_pad6, state: OFF}]

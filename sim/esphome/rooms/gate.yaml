@@ -12,3 +12,8 @@ packages:
   tripwire: !include ../packages/tripwire.yaml
   game: !include ../packages/game_gate.yaml
   platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
+
+# FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
+#   substitutions:      dmx_tx_pin: "1"   # D0 — pads live on the MCP23017, add game_gate_hw_mcp.yaml too
+#   packages:           dmx: !include ../packages/dmx_out.yaml
+#   external_components: [{source: {type: local, path: ../components}}]

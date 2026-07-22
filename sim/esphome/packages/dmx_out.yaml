@@ -1,0 +1,31 @@
+# DMX512 out over Art-Net — the node end of wiring-guides/dmx-over-wifi.md.
+# HARDWARE-FLASH package (like audio_s3.yaml): real S3 builds only; the
+# host-platform sim rooms never include it, so validate_all.sh is unaffected.
+#
+#   packages:
+#     dmx: !include ../packages/dmx_out.yaml
+#   substitutions:
+#     dmx_tx_pin: "6"     # the room's DMX TX GPIO — see the per-room table:
+#                         #   "6"  = XIAO D5 — radar rooms + Cuddle (default)
+#                         #   "44" = XIAO D7 — ToF rooms (Entrance/Exit/GuyLine/VMM)
+#                         #   "1"  = XIAO D0 — Gate (pads moved to the MCP23017)
+#   external_components:  # in the MAIN yaml, not here: ESPHome resolves local
+#     - source:           #  paths from the main config's dir, which differs —
+#         type: local     #  bench files: "components", rooms/*.yaml flashes:
+#         path: components  #  "../components"
+#
+# Wiring (in-box, no crimping): XIAO pad -> MAX485 DI; DE+RE jumpered to VCC
+# (5V rail); A -> DB9-B pin 3 (Data+); B -> DB9-B pin 4 (Data-); GND -> pin 2.
+# RO stays unconnected (5V logic). DB9->XLR adapter + 120R terminator at the
+# room chain's last fixture. WiFi loss HOLDS the last frame — by design.
+substitutions:
+  dmx_tx_pin: "6"
+  dmx_universe: "0"
+  dmx_uart: "2"      # free fleet-wide: sensors auto-assign UART0/1, logger is USB-JTAG
+
+artnet_dmx:
+  tx_pin: ${dmx_tx_pin}
+  universe: ${dmx_universe}
+  uart_num: ${dmx_uart}
+  signal:
+    name: "${room} DMX signal"   # false = no ArtDMX for 5s -> check WiFi first

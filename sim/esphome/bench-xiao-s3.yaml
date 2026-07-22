@@ -29,9 +29,16 @@ packages:
   button_hw: !include packages/button_gpio_c3.example.yaml
   audio: !include packages/audio_s3.yaml
   cues: !include audio/cues-bench-s3.yaml   # generated — run ./make_node_audio.py
+  dmx: !include packages/dmx_out.yaml       # MAX485 DI on D5/GPIO6 — bench a real
+                                            #  par per dmx-over-wifi.md rollout §1
   platform: !include packages/hardware_s3.yaml
 
 # bench extras layered over the production packages
+external_components:   # for dmx_out.yaml — path is main-config-relative
+  - source:
+      type: local
+      path: components
+
 wifi:
   # Same marginal-RF treatment as the C3 bench node: pin the stronger mesh AP,
   # skip the pre-connect scan.
