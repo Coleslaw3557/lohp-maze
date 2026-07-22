@@ -61,8 +61,11 @@ swapped polarity is the classic "fixture flickers randomly" field failure.
 | Porto | piezo 1 + | piezo 2 + | piezo 3 + | — | — | — | — |
 
 Gate banks: pads 1–3 = bank A, 4–6 = bank B. NFM's resistor ladder and
-lamp chain live at the truck; pins 1/2 power the WS2812s. Porto piezo −
-legs all common to pin 2.
+lamp chain live at the truck; pins 1/2 power the lamps — **5V addressable
+strip only (from Tim's stash), never 12V sign stock**, and the 74AHCT125
+data shifter sits in the box so pin 4 carries 5V-level data down the cable
+(ladder values + decode: `room-games-plan.md` / `game_lightsout_hw.yaml`).
+Porto piezo − legs all common to pin 2.
 
 **Gate's pads land on an MCP23017 (GPA0–5), not XIAO pads** — the DMX plan
 found Gate pin-full (6 pads + radar + I2S = 11/11), so it opens the

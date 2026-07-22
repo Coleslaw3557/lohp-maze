@@ -77,15 +77,27 @@ kits, 5V LED + microswitch). Button LEDs wire straight to the node's 5V rail
 ## No Friends Monday — truck Lights-Out
 
 - **Hardware:** 5 lit arcade buttons in a row on the existing wooden truck
-  model. **2 pins total**: buttons on ONE resistor-ladder ADC pin, lamps as a
-  5-pixel WS2812 chain on one data pin (a spare HiLetgo 74AHCT125 from the
-  sign build shifts the data line). + radar UART + I2S = 7/11.
+  model (confirmed real, 2026-07-22). **2 pins total**: buttons on ONE
+  resistor-ladder ADC pin (D0), lamps as a 5-pixel addressable chain on one
+  data pin (D1; a spare HiLetgo 74AHCT125 from the sign build shifts the
+  data line — shifter lives IN THE BOX fed 5V, so DB9-A pin 4 carries
+  5V-level data down the cable). + radar UART + I2S + DMX = 9/11.
+- **Lamps come from Tim's strip stash — any 5V addressable (WS2812B/SK6812
+  class), NOT 12V WS2811 sign stock** (DB9-A pins 1/2 supply 5V). Set
+  `truck_chipset`/`truck_rgb_order` in the flash substitutions to match the
+  strip grabbed; nothing is purchased for this.
+- **Ladder values** (10k top resistor 3V3→ADC node; each button grounds the
+  node through its own R): btn1 = wire (0.00V), btn2 = 2.2k (0.60V),
+  btn3 = 4.7k (1.06V), btn4 = 10k (1.65V), btn5 = 22k (2.27V), open = 3.3V.
+  Decode windows at the midpoints, 2-sample confirmation — implemented in
+  `game_lightsout_hw.yaml`.
 - **Logic** (`game_lightsout.yaml`): classic 1-D Lights Out — pressing button
   n toggles lamps n−1/n/n+1; all five lit → chime then **NoFriendsMonday**,
   then the board re-scrambles (random, never solved). Starts on the fixed
-  unsolved pattern 0b01010. Lamp state lives in the firmware bitmask; the
-  WS2812 output component gets added on the hardware flash (state + POSTs are
-  already in the package).
+  unsolved pattern 0b01010. Lamp state lives in the firmware bitmask;
+  `game_lightsout_hw.yaml` is the hardware-flash companion that renders the
+  bitmask to the chain (50ms addressable lambda) and decodes the ladder
+  (state + POSTs are already in the base package).
 
 ## BOM additions
 

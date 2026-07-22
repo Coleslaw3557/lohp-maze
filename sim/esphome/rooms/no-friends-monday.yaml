@@ -16,4 +16,7 @@ packages:
 # FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
 #   substitutions:      dmx_tx_pin: "6"   # D5, radar room
 #   packages:           dmx: !include ../packages/dmx_out.yaml
+#                       game_hw: !include ../packages/game_lightsout_hw.yaml
+#                         # ^ truck lamps (D1) + button ladder (D0 ADC); set
+#                         #   truck_chipset/truck_rgb_order to the stash strip
 #   external_components: [{source: {type: local, path: ../components}}]
