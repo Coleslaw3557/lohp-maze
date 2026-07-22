@@ -14,9 +14,12 @@
 #     dmx:      !include ../packages/dmx_out.yaml   # with dmx_tx_pin: "1"
 #     platform: !include ../packages/hardware_s3.yaml
 #
-# Wiring: MCP23017 VCC->3V3, GND, SDA->D4 (GPIO5), SCL->D5 (GPIO6), A0-A2->GND
-# (addr 0x20), RESET->3V3. DB9-A signals 1-6 -> GPA0-5; pads still close to
-# GND, internal MCP pull-ups on. Feeds the same gate_padN template sensors, so
+# Wiring: MCP23017 VCC->3V3, GND, SDA->D4 (GPIO5), SCL->D5 (GPIO6), RESET->3V3.
+# Address 0x27 = the Waveshare board UNTOUCHED: its A0-A2 float HIGH open /
+# go low only when shorted (wiki FAQ) — leaving them alone keeps the no-solder
+# rule. I2C at 100kHz for margin (board pull-up value unverified; buttons
+# don't need speed). DB9-A signals 1-6 -> GPA0-5; pads still close to
+# GND, internal MCP 100k pull-ups on. Feeds the same gate_padN template sensors, so
 # the bench-verified bank logic in game_gate.yaml is untouched — RE-RUN the
 # gate bench test (sim/tools/gate_game_test.py against the flashed node) anyway.
 # NOT validated by validate_all.sh (i2c needs the esp32 platform).
@@ -24,11 +27,11 @@
 i2c:
   sda: GPIO5   # XIAO D4
   scl: GPIO6   # XIAO D5
-  frequency: 400kHz
+  frequency: 100kHz  # margin — board pull-ups unverified; buttons need no speed
 
 mcp23017:
   - id: gate_mcp
-    address: 0x20
+    address: 0x27  # Waveshare A0-A2 float HIGH untouched (short = low -> 0x20)
 
 binary_sensor:
   - platform: gpio

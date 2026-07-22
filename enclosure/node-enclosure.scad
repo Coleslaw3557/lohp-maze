@@ -92,8 +92,11 @@ jack_hole = 9;               // must swallow the aux PLUG's sleeve (~8)
 grom_main = 10;              // floor SPARE pass-through (rubber grommet)
 // ---- DB9 field ports (left wall) ---------------------------------------
 db9_cut_w = 19.7; db9_cut_h = 11.1;  // D-sub 9 panel cutout (rect; file the
-                                     //  D corners) — VERIFY against the
-                                     //  breakout bought
+                                     //  D corners) — standard DE-9 geometry;
+                                     //  part on order = ANMBEST B09WD2V37T
+                                     //  (52x34x21.5 cased, bolts incl) —
+                                     //  CALIPER-VERIFY flange + screws on
+                                     //  arrival before cutting 15
 db9_screw = 24.99;                   // jackscrew hole spacing (Ø3.2)
 db9_cx = [22, 56];                   // port A (front, etched) / port B (CUT
 db9_cz = 14;                         //  = DMX out, every box); center height
