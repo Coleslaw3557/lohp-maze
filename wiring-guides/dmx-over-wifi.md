@@ -1,8 +1,9 @@
 # DMX over WiFi — per-room Art-Net into the node boxes (plan of record 2026-07-21)
 
-> Companion docs: `db9-field-wiring.md` (port B carries this), `room-node-audio-plan.md`
-> (the pin map this squeezes into), `camp-sign-plan.md` (the sign joins the same
-> transport), `../enclosure/README.md` (port B is now a cut, not an etch).
+> Companion docs: `db9-field-wiring.md` (the field-connector standard; its DMX
+> jack section summarizes this), `room-node-audio-plan.md` (the pin map this
+> squeezes into), `camp-sign-plan.md` (the sign joins the same transport),
+> `../enclosure/README.md` (the XLR DMX cut in every box).
 > Status: **software DONE 2026-07-21; CUT OVER 2026-07-22** (Tim's call): every
 > room + the sign enabled in `dmx_nodes.json`, `ftdi:false`, USB dongle retired,
 > docker USB passthrough removed. Rooms light up as their nodes come online;
@@ -27,9 +28,9 @@ cutover the Pi needs no DMX hardware at all — its DMX output is a UDP socket.
 ```text
 RPi server ── artnet_output_manager.py ── 44Hz ArtDMX unicast, one shared universe
    │                                       (send-on-change + 1s heartbeat/node)
-   ├─ ~ WiFi ~ ─ room node ESP32 ── MAX485 (TX-only) ── DB9-B ──► XLR ── room's
-   │                └ re-clocks the wire locally at ~43Hz;      1–2 fixtures
-   │                  holds the last frame through WiFi blips     └ 120Ω term
+   ├─ ~ WiFi ~ ─ room node ESP32 ── MAX485 (TX-only) ── XLR3 jack ──► room's
+   │                └ re-clocks the wire locally at ~43Hz;       1–2 fixtures
+   │                  holds the last frame through WiFi blips      └ 120Ω term
    ├─ ~ WiFi ~ ─ (× every room, same universe — fixtures keep their addresses)
    ├─ ~ WiFi ~ ─ sign bridge S3 (ch 161–352 → pixels; Dfi RX = fallback only)
    └─ FTDI USB-DMX ── legacy wired chain — RETIRED 2026-07-22 (ftdi:false; flag
@@ -126,7 +127,7 @@ the four ToF rooms, which use D7 (GPIO44), and Gate, which uses D0 (GPIO1):**
 
 **Gate was pin-full** (6 pads D0–D5 + radar D6/D7 + I2S D8–D10 = 11/11). Its
 pads move to an **MCP23017 on I2C D4/D5** — the exact growth path
-`db9-field-wiring.md` reserved, arriving one room early. The DB9-A cable and
+`db9-field-wiring.md` planned for, arriving one room early. The DB9-A cable and
 per-pin map are unchanged; inside the box the 6 signal wires land on MCP GPA0–5
 instead of XIAO pads. `packages/game_gate_hw_mcp.yaml` provides the six
 binary_sensors under the same ids `game_gate.yaml` expects, so the
@@ -139,54 +140,50 @@ its DMX stays on 2). If `uart_driver_install` finds the port taken it logs an
 error and disables itself rather than fighting; set `uart_num:` explicitly if a
 room ever needs it.
 
-## In the box — wiring (no crimping, per the field standard)
+## In the box — wiring (bench-soldered once; nothing solders in the field)
 
 New parts per box: one **MAX485 module** (classic 8-pin blue breakout, DE/RE
-broken out) VHB'd to the floor near port B, and the **port-B DB9 breakout**
-(same female screw-terminal shell as port A).
+broken out) VHB'd to the floor near the jack — clear of its rear barrel,
+which reaches ~19 mm into the box — and the **XLR3 female panel jack**
+(D-size footprint, e.g. Devinal amzn B07S6J8WVD) sat in the wall cut and
+held by 2 short wood screws through its own flange holes (no pre-cut
+screw holes; jacks ship with none). Solder the jack's three cups to the
+MAX485 leads at the bench — easier before mounting — and heat-shrink
+each cup.
+
+> Rev 2026-07-22: this replaced one day of "port B" — a second DB9 plus a
+> DB9→XLR screw-terminal adapter. The no-solder rule that justified it is
+> a FIELD rule, not a bench rule; with that gone, the adapter was just a
+> polarity mistake waiting to happen. The jack solders once and the room
+> run is a standard DMX cable.
 
 | MAX485 pin | lands on |
 |---|---|
 | VCC | 5 V rail (same rail as the PCM5102A VIN) |
-| GND | node GND |
+| GND | node GND + **XLR pin 1** |
 | DI | XIAO DMX TX pad (D5 / D7 / D0 per the table — 3.3 V logic into a 5 V-fed MAX485 is in spec, V_IH = 2.0 V) |
 | DE + RE | **jumpered together to VCC** — permanently transmitting; deterministic at 250 kbaud where auto-flow modules get marginal (the HiLetgo auto-flow stock stays for the sign's RX fallback, where auto-direction is moot) |
 | RO | **leave unconnected** (5 V logic — never wire it to the S3) |
-| A | DB9-B pin 3 (Data+) |
-| B | DB9-B pin 4 (Data−) |
+| A | **XLR pin 3** (Data+) |
+| B | **XLR pin 2** (Data−) |
 
 Power: the always-on driver into a single 120Ω termination adds ~30 mA @5 V —
 noise next to the ~200 mA audio budget.
 
-### DB9 port B pinout — every box, the DMX port
+### Box → fixtures
 
-| DB9-B pin | Carries |
-|---|---|
-| 1 | 5 V (universal-pinout convention — unused by the DMX adapter, do wire it) |
-| 2 | GND (DMX common / XLR 1) |
-| 3 | Data+ (XLR 3) |
-| 4 | Data− (XLR 2) |
-| 5–9 | reserved (a future MCP23017's extra signals may share the shell) |
+The jack is **female** (DMX512 transmitter convention), so the room run is
+one ordinary **XLR3 M-F cable used whole**: male end into the box, female
+end into the first fixture's DMX IN, fixture-to-fixture hops on normal
+DMX/mic cable, and a **120Ω XLR terminator plug** on the last fixture's OUT
+(1–2 fixture stubs would usually survive unterminated; $2 says never debug
+it). Spec-compliant fixtures have male DMX IN — verify ours on hardware
+day; if one turns out backwards, a $3 gender turnaround is the fix, not a
+rewire.
 
-### The DB9→XLR adapter (one per room + spares)
-
-Male DB9 screw-terminal breakout + a cheap XLR3 M-F cable with the **female end
-cut off**, stripped, landed under the screws — no crimping, matches the system:
-
-```text
-DB9-B (box, F shell) ── straight M-F pigtail or direct ── DB9-M breakout
-                                                            ├ pin 2 → XLR pin 1 (GND)
-                                                            ├ pin 4 → XLR pin 2 (D−)
-                                                            └ pin 3 → XLR pin 3 (D+)
-XLR-M end → room fixture DMX IN → (second fixture, if any) → 120Ω terminator plug
-```
-
-Get the polarity right at the screw terminals once per adapter and label it —
-swapped D+/D− is the classic "fixture flickers randomly" field failure. Every
-room's chain gets a **120Ω XLR terminator plug** on the last fixture's OUT
-(1–2 fixture stubs would usually survive unterminated; $2 says never debug it).
-Room-scale runs (a few meters) on DB9-grade wire are fine at 250 kbaud; the
-fixture-to-fixture hops use normal DMX/mic cable.
+Solder polarity right once per box and it's right forever — swapped D+/D−
+was the classic "fixture flickers randomly" failure back when it lived in
+an adapter's field screw terminals.
 
 ## Rollout — config is already cut over; build in this order
 
@@ -201,8 +198,9 @@ order:
 2. **Per room on hardware days:** flash the room YAML per its `# FLASH ADDS`
    comment (right `dmx_tx_pin` baked in), give the node a DHCP reservation and
    put the IP into `dmx_nodes.json` (the container can't resolve `.local`),
-   build the box with MAX485 + port-B breakout, hang the room's fixtures off
-   the node's XLR adapter. The room lights the moment the node joins.
+   build the box with MAX485 + the bench-soldered XLR jack, hang the room's
+   fixtures off it with a standard DMX cable. The room lights the moment the
+   node joins.
 3. **Sign:** per `camp-sign-plan.md` — Art-Net over WiFi is its primary feed
    (same packets, ch 161–352); the Dfi TX/RX pair is fallback, bought/kept
    only if the entrance-tower WiFi fails its on-site test.
@@ -214,7 +212,7 @@ order:
 | Symptom | First checks |
 |---|---|
 | Room lights frozen | node `signal` sensor false? → WiFi (RSSI, AP). true? → effects engine (sim shows same?) |
-| Room dark, others fine | MAX485 5 V? DE/RE jumper? D+/D− swapped at an adapter? terminator missing on a long chain? |
+| Room dark, others fine | MAX485 5 V? DE/RE jumper? D+/D− swapped at the jack's cups (bench solder — check against `db9-field-wiring.md`)? terminator missing on a long chain? |
 | Flicker in one room | polarity, then cable route (not bundled with a PSU lead), then termination |
 | All rooms frozen | server thread — `docker logs lohp-server \| grep -i artnet`; heartbeat should tick 1/s/node |
 | One node never gets packets | container mDNS (use the IP in `dmx_nodes.json`), DHCP lease changed |
@@ -224,11 +222,15 @@ order:
 | Item | Qty | Note |
 |---|---|---|
 | MAX485 TTL→RS485 module (DE/RE broken out) | 17 | 15 rooms + 2 spares; DE/RE tied high, TX-only |
-| DB9 **female** screw-terminal breakout | +16 | port B in all 15 boxes + spare (port A's 9 already counted) |
-| DB9 **male** screw-terminal breakout | +16 | 15 XLR adapters + spare (pod-end 9 already counted) |
-| XLR3 M-F cable, 6 ft | 17 | cut the female end off → adapter tail; 2 spares stay whole as fixture hops |
+| XLR3 **female** panel jack, D-size (Devinal 4-pack, amzn B07S6J8WVD, $8.99) | 20 | 5 packs: 15 boxes + 5 spares; solder cups, wired at the bench |
+| Short wood screws (#4-ish, 6–10mm) | ~34 | 2 per jack through its flange holes — **from stash**; jacks ship with no screws |
+| XLR3 M-F cable, 6 ft | 17 | box → first fixture, used WHOLE; 2 spares double as fixture hops |
 | DMX 120Ω XLR terminator plug | 17 | one per room chain + spares |
 | MCP23017 breakout | 2 | Gate now + 1 spare (was "0 now" — the growth path arrived) |
+
+(The 2026-07-22 jack rev also *removes* the port-B rows an earlier draft
+added: the +16/+16 DB9 screw-terminal breakouts. DB9 hardware is back to
+port A's own count — see `db9-field-wiring.md`.)
 
 Removed/demoted: per-room Dfi 2.4G modules (never bought — this plan replaces
 them); the sign's Dfi kit + HiLetgo RS485 + XLR pigtail rows are **fallback

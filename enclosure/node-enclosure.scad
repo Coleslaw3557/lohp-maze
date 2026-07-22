@@ -3,34 +3,41 @@
 // ONE design for all 15 room nodes, cut on the xTool from 3mm ply (walls)
 // + 3mm acrylic (window panel). Six finger-jointed panels GLUE together
 // (floor mortises through the wall bottoms, corner fingers interlock);
-// the LID is the service hatch — it SLIDES in and out through a mouth in
-// the front wall, riding side tongues in through-slot channels (no
-// fasteners; finger-pull notch at the front edge).
+// the LID is the service hatch — it SLIDES in and out OVER the SHORT
+// front wall (wall top = channel bottom; 07-22 rev3 — the old full-height
+// wall + entry mouth could never pass the lid's tongues), riding side
+// tongues in through-slot channels (no fasteners; finger-pull notch at
+// the front edge).
 //
 // Holds the standard node build: XIAO ESP32-S3 + PCM5102A DAC + the room's
 // ranging sensor(s) against the window (LD2410C, VL53L1X, Cuddle's
 // 2410C+2450 pair — the pair needs the WIDER aperture: cuddle=true below;
 // export.py emits both jobs). Boards fix at their ETCHED footprint marks
-// however works on the bench (VHB/screws); nothing is pre-drilled.
+// however works on the bench (VHB/screws); no fastener holes are pre-drilled
+// (the PORT openings are pre-cut since 07-22).
 // Board footprints + ply thickness measured on the real parts 2026-07-21.
 //
-// IO — port B cut, everything else etched + opened per room on the bench:
-//   left wall: 2x DB9 positions — the field IO for the traveling maze
+// IO — ALL port openings CUT in every box (07-22 rev; labels + footprint
+// marks stay on the etch layer -> score in XCS, so nothing text-like cuts):
+//   left wall: DB9 A (CUT window) — the field IO for the traveling maze
 //     (rapid setup: one premade straight-through M-F serial extension
 //     cable per wired room, screw-terminal breakout shells at both ends —
-//     no crimping or soldering anywhere). UNIVERSAL PINOUT on every box,
-//     used or not: 1 = 5V, 2 = GND, 3-9 = signals 1-7. Per-room map in
-//     wiring-guides/db9-field-wiring.md. Port A = etched, opened in the
-//     7 wired rooms. Port B = CUT in every box: it is the room's DMX OUT
-//     (MAX485 inside -> DB9->XLR adapter -> the room's fixtures, pinout
-//     2=GND 3=Data+ 4=Data-, wiring-guides/dmx-over-wifi.md); a future
-//     MCP23017's extra signals may share its shell. Wall-mounted because
-//     plugs insert horizontally — the 34mm interior can't take a vertical
-//     connector. Dust caps on playa.
-//   floor (faces DOWN when mounted): 1x ~10mm SPARE grommet hole — the
-//     wildcard for anything that isn't a DB9 someday.
-//   right wall: USB-C slot (XIAO power) + AUX hole — the DAC's OWN 3.5mm
-//     jack barrel sits behind it (board butts the wall); no separate
+//     nothing crimped or soldered in the FIELD; the bench solders freely).
+//     UNIVERSAL PINOUT on every box, used or not: 1 = 5V, 2 = GND,
+//     3-9 = signals 1-7. Per-room map in wiring-guides/db9-field-wiring.md.
+//     Populated in the 7 wired rooms; the other 8 blank the open window
+//     (tape/cover) against dust — one universal cut file for every room.
+//   left wall: DMX OUT (CUT in every box) — XLR3 FEMALE panel jack on the
+//     Neutrik D-size footprint; MAX485 inside -> its solder cups (a one-
+//     time bench solder: 1=GND 2=Data- 3=Data+) -> a standard DMX cable
+//     to the room's fixtures (wiring-guides/dmx-over-wifi.md). Replaced
+//     the one-day DB9 "port B" + DB9->XLR adapter 2026-07-22 — a DMX
+//     port should be a DMX port. Wall-mounted because plugs insert
+//     horizontally — the 34mm interior can't take a vertical connector.
+//     Dust caps/covers on playa.
+//   right wall: USB-C slot (CUT — the XIAO's USB end butts this wall so
+//     the port reaches through the slot) + AUX hole (CUT) — the DAC's OWN
+//     3.5mm jack barrel sits behind it (board butts the wall); no separate
 //     panel-mount jack. Antenna stays INSIDE the box — no hole.
 //   front wall: sensor aperture; the acrylic window panel screws over it
 //     (2x M2 self-tap on the midline). Radar sees through plain acrylic;
@@ -60,19 +67,39 @@ inner_h = 34;    // interior height (floor top -> lid underside)
 slide_w = t + 0.4;       // channel width (lid thickness + play)
 slide_z = t + inner_h;   // channel bottom
 cap_h   = 3.6;           // rail above the channel
-Hw = slide_z + slide_w + cap_h;  // wall height = outer height (43.8 at t=2.9)
+Hw = slide_z + slide_w + cap_h;  // SIDE/BACK wall height = outer height
+                         //  (43.8 at t=2.9). The FRONT wall is SHORT —
+                         //  its top edge sits at slide_z and the lid
+                         //  slides in over it (rev3)
 lid_w   = W - 2*t + 4.4; // side tongues ride 2.2mm into each side channel
 lid_d   = D - t;         // front edge flush outside; back edge stops
                          //  against the back wall's inner face
 lid_notch = 14;          // finger pull, front edge
+cap_bridge = 3;          // side channel stops this short of the back wall
+                         //  so the cap rail stays attached to the panel;
+                         //  lid back tongues relieved cap_bridge+0.2
 
 // ---- measured boards (calipers on the real parts, 2026-07-21) ----------
-dac_l = 31.93;  dac_w = 17.23;  // PCM5102A; 3.5mm jack on a short edge, its
-dac_cy = 51;                    //  barrel +2.44 past the PCB -> butt that
-                                //  edge to the right wall, barrel lands in
-                                //  the AUX hole. Screwed down where it sits.
-xiao_l = 21.46; xiao_w = 17.78; // XIAO ESP32-S3; USB-C on a LONG edge, +2
-xiao_cy = 13;                   //  past the PCB -> that edge to the wall
+dac_l = 31.93;  dac_w = 17.23;  // PCM5102A; 3.5mm jack on a LONG edge (Tim
+dac_cy = 51;                    //  07-22 — the short-edge note was wrong),
+                                //  barrel +2.44 past the PCB -> the LONG
+                                //  edge butts the right wall, board reaches
+                                //  only 17.23 into the box, barrel fills
+                                //  the AUX hole at dac_cy. Jack offset
+                                //  along that edge unmeasured -> footprint
+                                //  assumes centered; the cut hole is the
+                                //  datum (barrel-in-hole locates the board,
+                                //  screw down where it lands).
+xiao_l = 21.46; xiao_w = 17.78; // XIAO ESP32-S3; USB-C on the SHORT (17.78)
+xiao_cy = (D - 2*t)/2 - 18;     //  end, +2 past the PCB -> that END butts the
+                                //  right wall, long axis into the box, port
+                                //  out the CUT slot (07-22 rotate — the old
+                                //  long-edge-to-wall pointed the USB into
+                                //  the box). cy = the front floor-mortise
+                                //  tab center (short_cs[0] = -18): the
+                                //  17.78 board sits inside the 20 tab, so
+                                //  the tab seams at the joint line the
+                                //  board up on the bench
 ld2410_w = 22.14; ld2410_h = 16;   // radar, sensor side faces the window
 ld2450_w = 44.12; ld2450_h = 15.4; // Cuddle's second radar
 
@@ -80,26 +107,80 @@ ld2450_w = 44.12; ld2450_h = 15.4; // Cuddle's second radar
 win_w = cuddle ? 68 : 56;         // aperture (68 fits 2450+2410C side by side)
 win_h = 24;  win_cz = t + 17;     // aperture center height
 panel_w = cuddle ? 82 : 70;  panel_h = 32;   // acrylic window panel
-wscrew_x = panel_w/2 - 3.5;  // 2 window screws on the midline: M2 self-tap
-                             //  (~4 head). Corner screws would leave <1mm
-                             //  acrylic web at these margins -> cracks.
-usb_w = 10; usb_h = 4;       // XIAO USB-C slot
+// window screws: 2x M2 self-tap ON THE MIDLINE near the panel ends — never
+// the corners (corner screws leave <1mm acrylic web -> CRACKS). No etched
+// positions; drill 2mm pilots through acrylic + ply on the bench
+usb_w = 10; usb_h = 4;       // XIAO USB-C slot — CUT (07-22, was etch+bench)
 usb_z = 3.7;                 // floor -> shell center (VHB 1 + PCB + shell/2)
 jack_z = 6;                  // floor -> DAC jack barrel center (PCB + barrel
-                             //  + solder stubs) — ESTIMATE; drill after the
-                             //  DAC is screwed down
-jack_hole = 9;               // must swallow the aux PLUG's sleeve (~8)
-grom_main = 10;              // floor SPARE pass-through (rubber grommet)
-// ---- DB9 field ports (left wall) ---------------------------------------
-db9_cut_w = 19.7; db9_cut_h = 11.1;  // D-sub 9 panel cutout (rect; file the
-                                     //  D corners) — standard DE-9 geometry;
-                                     //  part on order = ANMBEST B09WD2V37T
-                                     //  (52x34x21.5 cased, bolts incl) —
-                                     //  CALIPER-VERIFY flange + screws on
-                                     //  arrival before cutting 15
-db9_screw = 24.99;                   // jackscrew hole spacing (Ø3.2)
-db9_cx = [22, 56];                   // port A (front, etched) / port B (CUT
-db9_cz = 14;                         //  = DMX out, every box); center height
+                             //  + solder stubs) — still an ESTIMATE but now
+                             //  a pre-CUT hole (07-22): caliper the real
+                             //  barrel height before burning a sheet; Ø9
+                             //  vs the ~Ø8 plug sleeve leaves only ±0.5
+jack_hole = 7;               // frames the DAC jack's barrel (~Ø6.75 — Tim
+                             //  07-22: the port is ~75% of the old Ø9,
+                             //  which over-cut). The plug's Ø3.5 shank
+                             //  goes INSIDE the barrel; its molded boot
+                             //  stops on the wall face — the plug body
+                             //  never needs to pass the hole
+// ---- left-wall ports: DB9 A (field IO) + the XLR DMX out ---------------
+// ANMBEST B09WD2V37T calipered 2026-07-22: socket opening 16.5x7.92 (outer
+// D shell = standard ~19.3x10.9), screwlock posts protrude 6.3 past the
+// front face -> they PASS THROUGH the 2.9 ply and stand 3.4 proud outside
+// for the cable thumbscrews. 9 pins + shell-GND terminal. MOUNT = BARE PCB
+// screwed to the floor at its corner holes (Tim's call after inspection —
+// plastic case OFF; it has no floor-mount provision). The wall opening
+// only frames the face: a loose window, not a registration fit.
+db9_cut_w = 20.3; db9_cut_h = 11.7;  // CUT window, every box (07-22 — was
+                                     //  etch + bench-cut) for the outer D
+                                     //  shell (loose — floor screws locate
+                                     //  the part, not this opening)
+db9_screw = 24.99;                   // screwlock pitch, nominal DE-9 (Tim
+                                     //  measured 24.26 — likely hex-corner
+                                     //  artifact): drill the marks Ø6 so
+                                     //  the hex posts clear at either value
+db9_cx = 22;                         // port A center (toward the front)
+db9_cz = 12.2;                       // center height. MEASURED
+                                     //  2026-07-22: floor 2.9 + 3.89 (PCB
+                                     //  bottom -> shell bottom) + 5.45
+                                     //  (half a std 10.9 shell). If the
+                                     //  case ever goes back ON, this rises
+                                     //  ~2 (case bottom wall)
+db9_zone = [34, 31.75];              // floor keep-out at port A: along wall
+                                     //  x depth-into-box. Depth = the bare
+                                     //  PCB, 1-1/4" MEASURED 2026-07-22,
+                                     //  D-sub barrel excluded (it lives in
+                                     //  the wall). The old 52 was oversized
+                                     //  headroom for a re-cased part
+xlr_hole = 22.0;                     // XLR jack barrel hole, sized to the
+                                     //  PART not the D-standard cutout
+                                     //  (Tim 07-22: 24 was too big).
+                                     //  Looked up: male XLR body ~Ø19-19.5
+                                     //  (EIZZ listing: 19); the female
+                                     //  nose just wraps it -> ~Ø21 on
+                                     //  economy jacks (Devinal's 31x26x21).
+                                     //  Ø22 = nose + slop, flange covers.
+                                     //  CAVEAT: a TRUE Neutrik D female
+                                     //  needs >Ø23.6 (their rear-mount
+                                     //  drawing, ST-NC3FD-LX) — caliper on
+                                     //  arrival is a HARD GATE: if the
+                                     //  Devinal nose measures like a real
+                                     //  D front, put this back to 24.
+                                     //  Jacks = Devinal (amzn B07S6J8WVD),
+                                     //  flange 31x26x21 per reseller specs,
+                                     //  ships with NO screws — Tim drives
+                                     //  short wood screws through the
+                                     //  flange's own holes (a 19x24-diag
+                                     //  pattern on genuine Neutrik; the
+                                     //  jack is its own jig, so the clone's
+                                     //  diagonal doesn't matter). NO cut
+                                     //  fastener holes, per the house rule.
+                                     //  CALIPER-VERIFY barrel Ø on arrival
+                                     //  before cutting 15
+xlr_cx = 56;                         // same wall spot the one-day "port B"
+xlr_cz = 19;                         //  had; raised so barrel + flange clear
+                                     //  the floor mortise below and the lid
+                                     //  channel above
 strap_w = 5; strap_h = 24;   // velcro-strap slots (back wall, vertical: a
                              //  20mm one-wrap passes horizontally around a
                              //  scaffold leg and through both)
@@ -133,36 +214,36 @@ module oline(w, h, lw = 0.4)                 // rectangle outline
 module oring(d, lw = 0.4)                    // circle outline (hole position)
   difference() { circle(d = d); circle(d = d - 2*lw); }
 
-module cross(s = 4, lw = 0.5) {              // screw-position mark
-  square([s, lw], center = true);
-  square([lw, s], center = true);
-}
-
 module label(txt, size = 3.2)
   text(txt, size = size, halign = "center", valign = "center",
        font = "Liberation Sans:style=Bold");
 
 // ---- panels (2D) -------------------------------------------------------
 module panel_front() difference() {
-  square([W, Hw]);
-  corner_notches(W);
+  // SHORT wall — top edge AT the channel bottom, the lid slides in over it
+  // (rev3, replacing the full-height wall + entry mouth). Why: the lid's
+  // tongues make it 108.6 wide, but a mouth can only ever span 104.2
+  // before the top strip severs — and the wall's seg-4 corner fingers sit
+  // exactly at channel height, so anything wider than the mouth can NEVER
+  // cross the wall plane. The lid could not be inserted at all (Tim
+  // caught it 07-22; 3D previews don't collision-check a sliding part —
+  // walk the insertion kinematics). Short wall = the classic laser-cut
+  // sliding-lid form. Above the seg-3 notch a 1.86-tall stub finger
+  // remains at each end, filling the side wall's stub notch just below
+  // the channel.
+  square([W, slide_z]);
+  corner_notches(W);                   // segs 1,3 — both below slide_z
   bottom_notches(W, long_cs);
   translate([W/2 - win_w/2, win_cz - win_h/2]) square([win_w, win_h]); // aperture
-  translate([t, slide_z]) square([W - 2*t, slide_w]);  // lid entry mouth
 }
 
 module front_etch() {                        // interior face marks
   translate([W/2, win_cz]) oline(panel_w, panel_h);  // acrylic window panel
-  for (px = [-wscrew_x, wscrew_x])                   //  sits here; 2 screws
-    translate([W/2 + px, win_cz]) cross();
-  if (cuddle) {                              // the radar pair, side by side
-    cud_t = ld2450_w + 1 + ld2410_w;
-    translate([W/2 + (ld2450_w - cud_t)/2, win_cz]) oline(ld2450_w, ld2450_h);
-    translate([W/2 + (cud_t - ld2410_w)/2, win_cz]) oline(ld2410_w, ld2410_h);
-  } else {
-    translate([W/2, win_cz]) oline(ld2410_w, ld2410_h);  // LD2410C footprint
-    translate([10, win_cz]) label("SENSOR");
-  }
+  translate([10, win_cz]) label("SENSOR");           //  sits here
+  // no screw marks (M2s on the midline by eye — see the window comment);
+  // sensor footprints are etched on the WINDOW PANEL (window_etch), not
+  // here — anything drawn inside the aperture lands on the cutout scrap
+  // (caught 2026-07-22; the sensors VHB to the acrylic's inner face)
 }
 
 module panel_back() difference() {
@@ -177,45 +258,67 @@ module panel_back() difference() {
 module back_etch()
   translate([W/2, 19]) label("VELCRO", 2.8);     // strap between the slots
 
-module panel_side() {          // common left/right: full-D, notched 0/2/4
+module panel_side() {          // common left/right: full-D
   difference() {
     square([D, Hw]);
-    for (s = [0, 2, 4], x = [0, D - t])
-      translate([x - eps, s * seg]) square([t + 2*eps, seg]);
+    // back edge: full segs 0,2,4 — the back wall keeps full height
+    for (s = [0, 2, 4])
+      translate([D - t - eps, s * seg]) square([t + 2*eps, seg]);
+    // front edge: segs 0,2 + only a STUB of seg 4 below the channel (the
+    // front wall is short, rev3). The channel slot below cuts the
+    // 36.9-40.2 band open to the front edge for the tongues; ABOVE it the
+    // cap rail now runs clear to the front edge (this also closes the old
+    // top-front corner void the full seg-4 notch used to leave)
+    for (s = [0, 2])
+      translate([-eps, s * seg]) square([t + 2*eps, seg]);
+    translate([-eps, 4 * seg]) square([t + 2*eps, slide_z - 4*seg + eps]);
     bottom_notches(D, short_cs);
     // lid channel: open at the front edge (x=0, where the lid enters),
-    // ends at the back wall's inner face
-    translate([-eps, slide_z]) square([D - t + eps, slide_w]);
+    // STOPS cap_bridge short of the back wall's inner face. That bridge
+    // is what keeps the cap rail above the channel attached — the seg-4
+    // corner notches sever the channel band at both ends, so a full-
+    // length slot turns the rail into a loose stick (Tim caught it on
+    // the 2D sheet 2026-07-22; the 3D preview renders islands in place).
+    // The lid's back tongue corners are relieved to match.
+    translate([-eps, slide_z]) square([D - t - cap_bridge + eps, slide_w]);
   }
 }
 
 module panel_left() difference() {               // x runs front->back
   panel_side();
-  // port B is a CUT in every box — the room's DMX out (dmx-over-wifi.md):
-  // D-sub opening + its two jackscrew holes, breakout bolts straight in
-  translate([db9_cx[1] - db9_cut_w/2, db9_cz - db9_cut_h/2])
-    square([db9_cut_w, db9_cut_h]);
-  for (s = [-1, 1])
-    translate([db9_cx[1] + s*db9_screw/2, db9_cz]) circle(d = 3.2);
+  // the DMX out is a CUT in every box (dmx-over-wifi.md): XLR3 female
+  // panel jack, D-size footprint — BARREL HOLE ONLY. No fastener holes
+  // (house rule): the jack is its own jig — hold it in the hole, drive
+  // wood screws through whichever flange diagonal the part has
+  translate([xlr_cx, xlr_cz]) circle(d = xlr_hole);
+  // DB9 A window — CUT in every box since 07-22 (was etched, opened on the
+  // bench in the wired rooms). A loose frame only; the floor screws locate
+  // the PCB. The screwlock Ø6s stay a bench drill from the real part's posts
+  translate([db9_cx, db9_cz]) square([db9_cut_w, db9_cut_h], center = true);
 }
 
 module left_etch() {                             // x runs front->back
-  translate([db9_cx[0], db9_cz]) oline(db9_cut_w, db9_cut_h);
-  for (s = [-1, 1])                              // jackscrew positions
-    translate([db9_cx[0] + s*db9_screw/2, db9_cz]) cross();
-  translate([db9_cx[0], db9_cz + 12]) label("DB9 A", 3);
-  translate([db9_cx[1], db9_cz + 12]) label("DB9 B DMX", 3);
-}                                                // A etched = 7 wired rooms
-                                                 //  open it; B cut = DMX out
+  translate([db9_cx, db9_cz + 12]) label("DB9", 3);   // the window = CUT now;
+  translate([xlr_cx, xlr_cz + 14]) label("DMX", 2.8); //  labels score only
+  // no screwlock marks: sit the breakout PCB in its floor zone, let the
+  // posts touch the wall, mark the contact points, drill those Ø6 — the
+  // real part beats the nominal 24.99 spacing (measured 24.26-ish)
+}
 
-module panel_right() panel_side();               // identical cut to the left;
-                                                 //  ports are etch marks only
+module panel_right() difference() {              // x runs front->back
+  panel_side();
+  // USB + AUX are CUTS (07-22, was etch + bench-drill). The boards behind
+  // register themselves: the XIAO's USB-C noses into the slot (PCB flush
+  // on the wall), the DAC's own jack barrel fills AUX. Both sit over a
+  // floor-mortise notch — the USB slot leaves only a ~1.7mm ply bridge
+  // (AUX ~2.5 at Ø7) until the floor tab glues in behind — handle gently
+  translate([t + xiao_cy, t + usb_z]) square([usb_w, usb_h], center = true);
+  translate([t + dac_cy, t + jack_z]) circle(d = jack_hole);
+}
 module right_etch() {                            // x runs front->back
-  translate([t + xiao_cy, t + usb_z]) oline(usb_w, usb_h);   // XIAO USB-C
-  translate([t + xiao_cy, t + 11]) label("USB", 2.8);
-  translate([t + dac_cy, t + jack_z]) oring(jack_hole);      // the DAC's own
-  translate([t + dac_cy, t + 15]) label("AUX", 2.8);         //  jack barrel
-}                                                            //  behind this
+  translate([t + xiao_cy, t + 9]) label("USB", 2.8);   // holes = CUT layer;
+  translate([t + dac_cy, t + 13]) label("AUX", 2.8);   //  labels score only
+}
 
 module panel_floor() difference() {
   union() {
@@ -232,23 +335,32 @@ module panel_floor() difference() {
 }
 
 module floor_etch() {                            // component-side marks
-  translate([16, 14]) oring(grom_main);          // wildcard pass-through —
-  translate([16, 25]) label("SPARE", 3);         //  field IO rides the DB9s
-  translate([W - 2*t - dac_l/2, dac_cy]) oline(dac_l, dac_w);   // PCM5102A —
-  translate([W - 2*t - dac_l/2, dac_cy + 13]) label("DAC");     //  jack edge
-                                                 //  butts the right wall so
-                                                 //  the barrel meets AUX
-  translate([W - 2*t - xiao_w/2, xiao_cy]) oline(xiao_w, xiao_l);  // XIAO
-  translate([W - 2*t - xiao_w/2, xiao_cy]) label("XIAO", 3);       //  (VHB),
-}                                                //  USB edge to the wall too
+  // DB9-A breakout: bare PCB screwed to the floor in this zone (7 wired
+  // rooms), face through the wall window; screw positions per the real
+  // part (nothing pre-drilled, house rule)
+  translate([db9_zone[1]/2, db9_cx - t]) oline(db9_zone[1], db9_zone[0]);
+  translate([db9_zone[1]/2, db9_cx - t]) label("DB9 PCB", 2.8);
+  translate([W - 2*t - dac_w/2, dac_cy]) oline(dac_w, dac_l);   // PCM5102A —
+  translate([W - 2*t - dac_w/2, dac_cy]) label("DAC");          //  the LONG
+                                                 //  jack edge butts the
+                                                 //  right wall so the
+                                                 //  barrel meets AUX
+  translate([W - 2*t - xiao_l/2, xiao_cy]) oline(xiao_l, xiao_w);  // XIAO
+  translate([W - 2*t - xiao_l/2, xiao_cy]) label("ESP32", 3);      //  (VHB),
+}                                                //  USB END to the wall, the
+                                                 //  port out the cut slot
 
 module panel_lid() difference() {
   square([lid_w, lid_d]);
-  // front corner notches: the tongues start behind the front wall, so the
-  // central width passes through the front mouth while the tongues enter
-  // the side channels' open ends
+  // no front corner notches since rev3 — with the short front wall there
+  // is no mouth to squeeze through, and the full-width front corners plug
+  // the top-front corner columns against dust
+  // back corner relief: the side channels stop cap_bridge short of the
+  // back wall — clear the tongues past that, so the lid's center span
+  // still seats against the back wall's inner face
   for (x = [-eps, lid_w - 2.4])
-    translate([x, -eps]) square([2.4 + eps, t + 0.2 + eps]);
+    translate([x, lid_d - cap_bridge - 0.2])
+      square([2.4 + eps, cap_bridge + 0.2 + eps]);
   translate([lid_w/2, 0]) circle(d = lid_notch); // finger pull
 }
 
@@ -260,8 +372,16 @@ module panel_window() difference() {             // cut this one in acrylic
 }
 
 module window_etch() {
-  for (px = [-wscrew_x, wscrew_x]) translate([px, 0]) cross();  // M2 screws
-  if (!cuddle) oline(16, 16);                    // ToF aperture, if this room
+  // sensor footprints: the sensor VHBs to THIS panel's inner face (tape at
+  // the board edges, clear of the antennas), looking out the wall aperture
+  if (cuddle) {                                  // the radar pair, side by side
+    cud_t = ld2450_w + 1 + ld2410_w;
+    translate([(ld2450_w - cud_t)/2, 0]) oline(ld2450_w, ld2450_h);
+    translate([(cud_t - ld2410_w)/2, 0]) oline(ld2410_w, ld2410_h);
+  } else {
+    oline(ld2410_w, ld2410_h);                   // LD2410C footprint (11 rooms)
+    oline(16, 16);                               // ToF aperture — the 4 ToF
+  }                                              //  rooms cut this through
 }
 
 // ---- layouts -----------------------------------------------------------
