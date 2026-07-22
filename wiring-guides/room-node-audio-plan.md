@@ -94,16 +94,20 @@ An unprepped board is silent; this is the #1 bring-up trap.
 
 | Dx | C3 GPIO | S3 GPIO | Reserved for |
 |---|---|---|---|
-| D0, D2, D3 | 2, 4, 5 | 1, 3, 4 | ADC / aux (Porto piezos; Cuddle LD2450 UART1 on D2/D3) |
+| D0, D2, D3 | 2, 4, 5 | 1, 3, 4 | ADC / aux (Porto piezos; Cuddle LD2450 UART1 on D2/D3; **Gate: D0 = DMX TX**) |
 | D1 | 3 | 2 | Button contract (`button_gpio_c3.example.yaml`) |
-| D4 / D5 | 6 / 7 | 5 / 6 | I2C — VL53L1X (ToF rooms) |
-| D6 / D7 | 21 / 20 | 43 / 44 | UART — LD2410C (radar rooms) |
+| D4 / D5 | 6 / 7 | 5 / 6 | I2C — VL53L1X (ToF rooms) + Gate's MCP23017; **D5 = DMX512 TX in radar rooms + Cuddle** (`dmx-over-wifi.md`) |
+| D6 / D7 | 21 / 20 | 43 / 44 | UART — LD2410C (radar rooms); **D7 = DMX512 TX in the 4 ToF rooms** |
 | **D8** | **8** | **7** | **I2S BCLK → PCM5102A BCK** |
 | **D9** | **9** | **8** | **I2S LRCLK → PCM5102A LCK** |
 | **D10** | **10** | **9** | **I2S DOUT → PCM5102A DIN** |
 
-D8–D10 (the unused SPI trio) is conflict-free in every room type — including
-worst-case Cuddle (2 radar UARTs + 4 hex buttons + I2S = exactly 11/11 pins).
+D8–D10 (the unused SPI trio) is conflict-free in every room type. Post-DMX
+pin budgets (`dmx-over-wifi.md`): Cuddle = 2 radar UARTs + DMX on D5 + I2S
+(the old hex-button-station idea is superseded — the games plan gives Cuddle
+no wired inputs, `db9-field-wiring.md` agrees); **Gate hit 11/11 full**, so
+its 6 pads move to an MCP23017 on I2C D4/D5
+(`sim/esphome/packages/game_gate_hw_mcp.yaml`) and DMX TX takes the freed D0.
 C3 note: GPIO8/9 are strapping pins but the DAC's inputs are Hi-Z, so boot is
 unaffected. C3 Porto note: GPIO5/D3 is ADC2 (unusable with WiFi) — the three
 piezos sit on D0/D1/D2.

@@ -9,30 +9,46 @@
 //
 // Holds the standard node build: XIAO ESP32-S3 + PCM5102A DAC + the room's
 // ranging sensor(s) against the window (LD2410C, VL53L1X, Cuddle's
-// 2410+2450 side by side) — all fixed at their ETCHED footprint marks
-// however works on the bench (VHB/screws/glue); nothing is pre-drilled.
+// 2410C+2450 pair — the pair needs the WIDER aperture: cuddle=true below;
+// export.py emits both jobs). Boards fix at their ETCHED footprint marks
+// however works on the bench (VHB/screws); nothing is pre-drilled.
+// Board footprints + ply thickness measured on the real parts 2026-07-21.
 //
-// IO — everything leaves through a panel connector:
-//   floor (faces DOWN when mounted — dust/rain smart):
-//     1x GX16-8  -> up to 6 arcade buttons + common
-//     3x GX12-2  -> piezos / single buttons / spares
-//   right wall: USB-C slot (XIAO power), 6.5mm jack hole (3.5mm line-out
-//     to the Pebble), 6.5mm antenna hole
-//   front wall: 56x24 sensor aperture; the acrylic window panel screws
-//     over it (M2.5). Radar sees through plain acrylic; the 4 ToF rooms
-//     cut the marked aperture through the panel (940nm won't pass acrylic).
-//   back wall: two vertical velcro-strap slots (CUT — the strap threads
-//     through and wraps the scaffold leg).
+// IO — port B cut, everything else etched + opened per room on the bench:
+//   left wall: 2x DB9 positions — the field IO for the traveling maze
+//     (rapid setup: one premade straight-through M-F serial extension
+//     cable per wired room, screw-terminal breakout shells at both ends —
+//     no crimping or soldering anywhere). UNIVERSAL PINOUT on every box,
+//     used or not: 1 = 5V, 2 = GND, 3-9 = signals 1-7. Per-room map in
+//     wiring-guides/db9-field-wiring.md. Port A = etched, opened in the
+//     7 wired rooms. Port B = CUT in every box: it is the room's DMX OUT
+//     (MAX485 inside -> DB9->XLR adapter -> the room's fixtures, pinout
+//     2=GND 3=Data+ 4=Data-, wiring-guides/dmx-over-wifi.md); a future
+//     MCP23017's extra signals may share its shell. Wall-mounted because
+//     plugs insert horizontally — the 34mm interior can't take a vertical
+//     connector. Dust caps on playa.
+//   floor (faces DOWN when mounted): 1x ~10mm SPARE grommet hole — the
+//     wildcard for anything that isn't a DB9 someday.
+//   right wall: USB-C slot (XIAO power) + AUX hole — the DAC's OWN 3.5mm
+//     jack barrel sits behind it (board butts the wall); no separate
+//     panel-mount jack. Antenna stays INSIDE the box — no hole.
+//   front wall: sensor aperture; the acrylic window panel screws over it
+//     (2x M2 self-tap on the midline). Radar sees through plain acrylic;
+//     the 4 ToF rooms cut the marked aperture through the panel (940nm
+//     won't pass acrylic).
+//   back wall: two vertical velcro-strap slots (CUT — a 20mm one-wrap
+//     threads through and wraps the scaffold leg).
 //
 // Export (SVG for xTool; kerf compensate in XCS if you want tight joints):
-//   for p in front back left right floor lid window sheet; do
-//     openscad -D "part=\"$p\"" -o panel-$p.svg node-enclosure.scad; done
+//   python3 export.py    # standard + cuddle variants, ply + acrylic jobs
 //   part="3d" is the glued-up assembly preview.
 
 part = "3d";     // front|back|left|right|floor|lid|window|sheet|3d
+cuddle = false;  // true = Cuddle's wide-aperture one-off (2450 + 2410C)
 
 // ---- stock -------------------------------------------------------------
-t  = 3;          // material thickness (ply/acrylic)
+t  = 2.9;        // ply thickness — MEASURED on the sheet 2026-07-21
+acrylic_t = 3;   // window stock, nominal (preview + screw length only)
 kerf_note = "cut outlines are exact; add kerf offset in xTool XCS";
 
 // ---- box (outer) -------------------------------------------------------
@@ -41,27 +57,49 @@ D  = 78;         // depth  (left/right length)
 inner_h = 34;    // interior height (floor top -> lid underside)
 
 // ---- sliding lid -------------------------------------------------------
-slide_w = 3.4;           // channel width (t + 0.4 play)
+slide_w = t + 0.4;       // channel width (lid thickness + play)
 slide_z = t + inner_h;   // channel bottom
 cap_h   = 3.6;           // rail above the channel
-Hw = slide_z + slide_w + cap_h;  // wall height = outer height (44 at t=3)
+Hw = slide_z + slide_w + cap_h;  // wall height = outer height (43.8 at t=2.9)
 lid_w   = W - 2*t + 4.4; // side tongues ride 2.2mm into each side channel
 lid_d   = D - t;         // front edge flush outside; back edge stops
                          //  against the back wall's inner face
 lid_notch = 14;          // finger pull, front edge
 
+// ---- measured boards (calipers on the real parts, 2026-07-21) ----------
+dac_l = 31.93;  dac_w = 17.23;  // PCM5102A; 3.5mm jack on a short edge, its
+dac_cy = 51;                    //  barrel +2.44 past the PCB -> butt that
+                                //  edge to the right wall, barrel lands in
+                                //  the AUX hole. Screwed down where it sits.
+xiao_l = 21.46; xiao_w = 17.78; // XIAO ESP32-S3; USB-C on a LONG edge, +2
+xiao_cy = 13;                   //  past the PCB -> that edge to the wall
+ld2410_w = 22.14; ld2410_h = 16;   // radar, sensor side faces the window
+ld2450_w = 44.12; ld2450_h = 15.4; // Cuddle's second radar
+
 // ---- features ----------------------------------------------------------
-win_w = 56;  win_h = 24;  win_cz = t + 17;   // aperture, center height
-panel_w = 64; panel_h = 32;                  // acrylic window panel
-gx16_d = 16.2;  gx12_d = 12.2;               // aviation connector holes
-usb_w = 10; usb_h = 4;  jack_d = 6.5;  ant_d = 6.5;
-strap_w = 5; strap_h = 24;                   // velcro-strap slots (back wall,
-                                             //  vertical: a 20mm one-wrap
-                                             //  passes horizontally around a
-                                             //  scaffold leg and through both)
-dac_hx = 25.4; dac_hy = 15.3;                // PCM5102A hole spacing — VERIFY
-dac_cx = 84;  dac_cy = 51;                   //  on the real board before
-                                             //  cutting all 15!
+win_w = cuddle ? 68 : 56;         // aperture (68 fits 2450+2410C side by side)
+win_h = 24;  win_cz = t + 17;     // aperture center height
+panel_w = cuddle ? 82 : 70;  panel_h = 32;   // acrylic window panel
+wscrew_x = panel_w/2 - 3.5;  // 2 window screws on the midline: M2 self-tap
+                             //  (~4 head). Corner screws would leave <1mm
+                             //  acrylic web at these margins -> cracks.
+usb_w = 10; usb_h = 4;       // XIAO USB-C slot
+usb_z = 3.7;                 // floor -> shell center (VHB 1 + PCB + shell/2)
+jack_z = 6;                  // floor -> DAC jack barrel center (PCB + barrel
+                             //  + solder stubs) — ESTIMATE; drill after the
+                             //  DAC is screwed down
+jack_hole = 9;               // must swallow the aux PLUG's sleeve (~8)
+grom_main = 10;              // floor SPARE pass-through (rubber grommet)
+// ---- DB9 field ports (left wall) ---------------------------------------
+db9_cut_w = 19.7; db9_cut_h = 11.1;  // D-sub 9 panel cutout (rect; file the
+                                     //  D corners) — VERIFY against the
+                                     //  breakout bought
+db9_screw = 24.99;                   // jackscrew hole spacing (Ø3.2)
+db9_cx = [22, 56];                   // port A (front, etched) / port B (CUT
+db9_cz = 14;                         //  = DMX out, every box); center height
+strap_w = 5; strap_h = 24;   // velcro-strap slots (back wall, vertical: a
+                             //  20mm one-wrap passes horizontally around a
+                             //  scaffold leg and through both)
 // ---- joinery -----------------------------------------------------------
 nseg = 5;                    // corner finger segments over Hw
 seg  = Hw / nseg;            // front/back own segments 0,2,4 at the corners
@@ -111,11 +149,17 @@ module panel_front() difference() {
 }
 
 module front_etch() {                        // interior face marks
-  translate([W/2, win_cz]) oline(64, 32);    // acrylic window panel sits here
-  for (px = [-30, 30], pz = [-14, 14])       // its screw positions
-    translate([W/2 + px, win_cz + pz]) cross();
-  translate([W/2, win_cz]) oline(22, 16);    // LD2410C footprint in the aperture
-  translate([10, win_cz]) label("SENSOR");
+  translate([W/2, win_cz]) oline(panel_w, panel_h);  // acrylic window panel
+  for (px = [-wscrew_x, wscrew_x])                   //  sits here; 2 screws
+    translate([W/2 + px, win_cz]) cross();
+  if (cuddle) {                              // the radar pair, side by side
+    cud_t = ld2450_w + 1 + ld2410_w;
+    translate([W/2 + (ld2450_w - cud_t)/2, win_cz]) oline(ld2450_w, ld2450_h);
+    translate([W/2 + (cud_t - ld2410_w)/2, win_cz]) oline(ld2410_w, ld2410_h);
+  } else {
+    translate([W/2, win_cz]) oline(ld2410_w, ld2410_h);  // LD2410C footprint
+    translate([10, win_cz]) label("SENSOR");
+  }
 }
 
 module panel_back() difference() {
@@ -142,18 +186,33 @@ module panel_side() {          // common left/right: full-D, notched 0/2/4
   }
 }
 
-module panel_left() panel_side();
+module panel_left() difference() {               // x runs front->back
+  panel_side();
+  // port B is a CUT in every box — the room's DMX out (dmx-over-wifi.md):
+  // D-sub opening + its two jackscrew holes, breakout bolts straight in
+  translate([db9_cx[1] - db9_cut_w/2, db9_cz - db9_cut_h/2])
+    square([db9_cut_w, db9_cut_h]);
+  for (s = [-1, 1])
+    translate([db9_cx[1] + s*db9_screw/2, db9_cz]) circle(d = 3.2);
+}
+
+module left_etch() {                             // x runs front->back
+  translate([db9_cx[0], db9_cz]) oline(db9_cut_w, db9_cut_h);
+  for (s = [-1, 1])                              // jackscrew positions
+    translate([db9_cx[0] + s*db9_screw/2, db9_cz]) cross();
+  translate([db9_cx[0], db9_cz + 12]) label("DB9 A", 3);
+  translate([db9_cx[1], db9_cz + 12]) label("DB9 B DMX", 3);
+}                                                // A etched = 7 wired rooms
+                                                 //  open it; B cut = DMX out
 
 module panel_right() panel_side();               // identical cut to the left;
                                                  //  ports are etch marks only
 module right_etch() {                            // x runs front->back
-  translate([16, t + 2 + usb_h/2]) oline(usb_w, usb_h);      // XIAO USB-C
-  translate([16, t + 10]) label("USB", 2.8);
-  translate([48, t + 11]) oring(jack_d);                     // 3.5mm line-out
-  translate([48, t + 19]) label("AUX", 2.8);
-  translate([62, 30]) oring(ant_d);                          // antenna (below
-  translate([62, 22]) label("ANT", 2.8);                     //  the lid channel)
-}
+  translate([t + xiao_cy, t + usb_z]) oline(usb_w, usb_h);   // XIAO USB-C
+  translate([t + xiao_cy, t + 11]) label("USB", 2.8);
+  translate([t + dac_cy, t + jack_z]) oring(jack_hole);      // the DAC's own
+  translate([t + dac_cy, t + 15]) label("AUX", 2.8);         //  jack barrel
+}                                                            //  behind this
 
 module panel_floor() difference() {
   union() {
@@ -170,17 +229,15 @@ module panel_floor() difference() {
 }
 
 module floor_etch() {                            // component-side marks
-  translate([16, 14]) oring(gx16_d);             // connector positions
-  for (i = [0:2]) translate([38 + i*16, 14]) oring(gx12_d);  // 16mm pitch:
-  translate([16, 25]) label("GX16");             //  GX12 nuts (15mm) clear
-  translate([54, 25]) label("GX12 x3");          //  each other AND the XIAO
-  translate([dac_cx, dac_cy]) oline(30.5, 21);   // PCM5102A footprint
-  for (px = [-dac_hx/2, dac_hx/2], py = [-dac_hy/2, dac_hy/2])
-    translate([dac_cx + px, dac_cy + py]) cross(3.5);  // its screw corners
-  translate([dac_cx, dac_cy + 15]) label("DAC");
-  translate([91, 13]) oline(21.4, 17.8);         // XIAO footprint (VHB): USB
-  translate([91, 13]) label("XIAO", 3);          //  faces the right-wall USB
-}                                                //  mark (x2d 16 -> y 13)
+  translate([16, 14]) oring(grom_main);          // wildcard pass-through —
+  translate([16, 25]) label("SPARE", 3);         //  field IO rides the DB9s
+  translate([W - 2*t - dac_l/2, dac_cy]) oline(dac_l, dac_w);   // PCM5102A —
+  translate([W - 2*t - dac_l/2, dac_cy + 13]) label("DAC");     //  jack edge
+                                                 //  butts the right wall so
+                                                 //  the barrel meets AUX
+  translate([W - 2*t - xiao_w/2, xiao_cy]) oline(xiao_w, xiao_l);  // XIAO
+  translate([W - 2*t - xiao_w/2, xiao_cy]) label("XIAO", 3);       //  (VHB),
+}                                                //  USB edge to the wall too
 
 module panel_lid() difference() {
   square([lid_w, lid_d]);
@@ -200,8 +257,8 @@ module panel_window() difference() {             // cut this one in acrylic
 }
 
 module window_etch() {
-  for (px = [-30, 30], pz = [-14, 14]) translate([px, pz]) cross();  // screws
-  oline(16, 16);                                 // ToF aperture, if this room
+  for (px = [-wscrew_x, wscrew_x]) translate([px, 0]) cross();  // M2 screws
+  if (!cuddle) oline(16, 16);                    // ToF aperture, if this room
 }
 
 // ---- layouts -----------------------------------------------------------
@@ -222,6 +279,7 @@ module sheet_etch() {
   front_etch();
   translate([0, Hw + 6])       back_etch();
   translate([t, 2*Hw + 12 + t]) floor_etch();
+  translate([W + 12, 0])   left_etch();
   translate([W + 12, Hw + 6]) right_etch();
 }
 
@@ -234,7 +292,7 @@ module assembly() {
   color("Tan", 0.85)                              // lid shown half-slid-out
     translate([(W - lid_w)/2, -22, slide_z]) linear_extrude(t) panel_lid();
   color("LightBlue", 0.6)
-    translate([W/2, t + 4 + eps, win_cz]) rotate([90, 0, 0]) linear_extrude(t) panel_window();
+    translate([W/2, t + 4 + eps, win_cz]) rotate([90, 0, 0]) linear_extrude(acrylic_t) panel_window();
 }
 
 // ---- part selection ----------------------------------------------------
@@ -248,6 +306,7 @@ else if (part == "window") panel_window();
 else if (part == "sheet")  sheet();
 else if (part == "front_etch")  front_etch();
 else if (part == "back_etch")   back_etch();
+else if (part == "left_etch")   left_etch();
 else if (part == "right_etch")  right_etch();
 else if (part == "floor_etch")  floor_etch();
 else if (part == "window_etch") window_etch();

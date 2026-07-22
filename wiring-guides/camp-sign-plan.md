@@ -36,22 +36,25 @@ perimeter ring.
 
 ## Architecture — one decision that drives everything
 
-The sign is **not** a standalone WLED/Art-Net island. The Pi remains the one
-show controller, and the sign is 24 more fixtures on the same DMX universe it
-already outputs (FTDI Open-DMX at 44 Hz) — with the final hop to the sign over
-a **Dfi 2.4G wireless DMX link** instead of a long cable run:
+The sign is **not** a standalone WLED island running its own show. The Pi
+remains the one show controller, and the sign is 24 more fixtures on the same
+universe it already outputs — delivered, since the DMX-over-WiFi plan
+(`dmx-over-wifi.md`, 2026-07-21), as **ArtDMX over the camp WiFi**, exactly
+like every room node. The Dfi 2.4G DMX link that used to be this section is
+demoted to **fallback**, bought/kept only if the entrance-tower WiFi fails its
+on-site test — its full wiring stays documented below so bench day has it.
 
 ```text
 RPi (server rack, back wall)
-  └─ FTDI USB-DMX ── existing maze chain (20 fixtures, ch 1-160) ── 120Ω stays
-        │                                                    at the last fixture
-        └─ Dfi 2.4G TX (Y-stub at the rack, or hung off the last fixture's OUT)
-                    ~ ~ ~ 2.4 GHz, ~40-60 ft hop ~ ~ ~
-        Dfi RX (inside the sign) ── short stub ── SIGN ESP32 BRIDGE (ch 161-352)
+  └─ artnet_output_manager.py ~ ~ WiFi, ArtDMX unicast, ch 1-512 ~ ~ ┐
+                                                                     ▼
+                              SIGN ESP32 BRIDGE renders ch 161-352 as pixels
                                           ├─ data 1: "Legends"
                                           ├─ data 2: "of the" + logo
                                           ├─ data 3: "Hidden"
                                           └─ data 4: "Playa"
+FALLBACK (weak tower WiFi only): FTDI/maze chain ── Dfi 2.4G TX ~ ~ Dfi RX
+                                          ── short stub ── bridge UART1 RS485
 ```
 
 Consequences, all already in the repo:
@@ -97,20 +100,28 @@ ever get backlights: 4 zones @353–384, `NUM_FIXTURES 44→48`.
 **Board: XIAO ESP32-S3** — fleet standard, already stocked for room audio, and
 it has 4 RMT TX channels = exactly the 4 pixel outputs (the C3 only has 2).
 
-**Firmware is net-new** (nothing in `sim/esphome/` does DMX or addressable
-LEDs — ESPHome has no DMX input; a custom Arduino/IDF sketch with
-[`esp_dmx`](https://github.com/someweisguy/esp_dmx) + FastLED is the right
-shape; [`ESP32S3DMX`](https://github.com/TimRosener/ESP32S3DMX) is an
-S3-specific RX alternative if esp_dmx fights Arduino Core 3.x on bench day). It is deliberately dumb — all show logic stays on the Pi:
+**Firmware is net-new** — a custom IDF/Arduino sketch: ArtDMX-over-UDP receive
+(trivial — mirror the parser in `sim/esphome/components/artnet_dmx/`, the room
+nodes' component) + FastLED on 4 RMT outputs. DMX *input* only exists on the
+Dfi fallback path: that's where [`esp_dmx`](https://github.com/someweisguy/esp_dmx)
+comes in ([`ESP32S3DMX`](https://github.com/TimRosener/ESP32S3DMX) is an
+S3-specific RX alternative if esp_dmx fights Arduino Core 3.x on bench day) —
+leave it out of the build unless the tower WiFi test fails. It is deliberately
+dumb — all show logic stays on the Pi:
 
-1. Receive the universe on UART1 via a plain RS485→TTL module **fed 3.3V**
-   (HiLetgo auto-flow class). The old plan's isolated Waveshare converter was
-   dropped 2026-07-19 after reading its listing: its differentiators —
-   galvanic power/digital isolation, TVS surge, lightning-proofing, onboard
-   120R — all defend a long copper run between separately-powered structures,
-   and the radio hop eliminated that run. The RX and the ESP32 share one PSU
-   inches apart; plain conversion is the whole remaining job (and RX-only use
-   makes auto-direction timing moot at 250 kbaud).
+1. Receive the universe as **ArtDMX on UDP :6454 over WiFi** — the same
+   packets the room nodes take (`artnet.py` builds them; the parse is ~20
+   lines, mirror `sim/esphome/components/artnet_dmx/`). `dmx_nodes.json` gets
+   the bridge as room "Camp Sign". **Fallback input** (tower WiFi fails the
+   site test): wired DMX on UART1 via a plain RS485→TTL module **fed 3.3V**
+   (HiLetgo auto-flow class) hanging off the Dfi RX. The old plan's isolated
+   Waveshare converter was dropped 2026-07-19 after reading its listing: its
+   differentiators — galvanic power/digital isolation, TVS surge,
+   lightning-proofing, onboard 120R — all defend a long copper run between
+   separately-powered structures, and the radio (now WiFi) hop eliminated
+   that run. The RX and the ESP32 share one PSU inches apart; plain
+   conversion is the whole remaining job (and RX-only use makes
+   auto-direction timing moot at 250 kbaud).
 2. For each zone `k` (0–23): slot base = `160 + 8k` (0-indexed). Decode
    **exactly like the sim's `decodeFixture`** so preview == wire:
    `R = min(255, r + 0.92w) × total/255`, same for G, `B = min(255, b + 0.85w)

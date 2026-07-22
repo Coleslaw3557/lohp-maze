@@ -20,15 +20,18 @@ SCAD = HERE / 'node-enclosure.scad'
 PANELS = ['sheet', 'window']    # ply job + the acrylic window job
 HAS_ETCH = {'sheet', 'window'}
 OUTNAME = {'sheet': 'node-enclosure.svg', 'window': 'window-acrylic.svg'}
+# 14 rooms cut the standard files; Cuddle's 2410C+2450 pair needs the wide
+# aperture -> a second pass with cuddle=true, suffixed filenames
+VARIANTS = [('', []), ('-cuddle', ['-D', 'cuddle=true'])]
 
 PATH_RE = re.compile(r'<path[^>]*\sd="([^"]+)"[^>]*/?>')
 VIEW_RE = re.compile(r'viewBox="([-\d. ]+)"')
 
 
-def scad_svg(part):
+def scad_svg(part, defs=()):
     with tempfile.NamedTemporaryFile(suffix='.svg', delete=False) as f:
         out = f.name
-    r = subprocess.run(['openscad', '-D', f'part="{part}"', '-o', out, str(SCAD)],
+    r = subprocess.run(['openscad', '-D', f'part="{part}"', *defs, '-o', out, str(SCAD)],
                        capture_output=True, text=True)
     if r.returncode != 0:
         sys.exit(f'openscad failed for {part}:\n{r.stderr}')
@@ -45,11 +48,11 @@ def union_vb(a, b):
     return [x, y, max(ax + aw, bx + bw) - x, max(ay + ah, by + bh) - y]
 
 
-def write_panel(name):
-    cut_paths, vb = scad_svg(name)
+def write_panel(name, suffix='', defs=()):
+    cut_paths, vb = scad_svg(name, defs)
     etch_paths = []
     if name in HAS_ETCH:
-        etch_paths, evb = scad_svg(f'{name}_etch')
+        etch_paths, evb = scad_svg(f'{name}_etch', defs)
         vb = union_vb(vb, evb)
     x, y, w, h = vb
     parts = [f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" '
@@ -62,12 +65,14 @@ def write_panel(name):
         parts += [f'<path d="{d}"/>' for d in etch_paths]
         parts.append('</g>')
     parts.append('</svg>')
-    out = HERE / OUTNAME.get(name, f'panel-{name}.svg')
+    base = OUTNAME.get(name, f'panel-{name}.svg')
+    out = HERE / base.replace('.svg', f'{suffix}.svg')
     out.write_text('\n'.join(parts))
     print(f'{out.name}: {len(cut_paths)} cut, {len(etch_paths)} etch, '
           f'{w:g} x {h:g} mm')
 
 
 if __name__ == '__main__':
-    for p in PANELS:
-        write_panel(p)
+    for suffix, defs in VARIANTS:
+        for p in PANELS:
+            write_panel(p, suffix, defs)
