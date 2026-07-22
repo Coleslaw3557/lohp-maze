@@ -13,8 +13,10 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
 ## How it works
 
 - **Server** (this directory): Quart REST API on port 5000, WebSocket server on port 8765,
-  DMX output at 44Hz over an FTDI USB-DMX interface. Runs themes (ambient, whole-maze lighting)
-  and effects (short per-room sequences that interrupt the theme).
+  DMX output at 44Hz — Art-Net unicast over WiFi to the room nodes' RS-485 ports
+  (`dmx_nodes.json`, `wiring-guides/dmx-over-wifi.md`) and/or the legacy FTDI USB-DMX wired
+  chain during the transition. Runs themes (ambient, whole-maze lighting) and effects (short
+  per-room sequences that interrupt the theme).
 - **Room nodes** (`sim/esphome/`): battery/AC-powered XIAO ESP32-S3 node boxes, one per room,
   on the maze WiFi. Sensors (mmWave radar, ToF, buttons, piezos) fire effects by POSTing to the
   server's REST API; each node's speaker plays effect cues and streamed music, commanded by the
@@ -42,7 +44,9 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Requires the FTDI USB-DMX interface to be attached. See
+No DMX hardware needed on the server since the 2026-07-22 cutover — `dmx_nodes.json` ships
+with every room node enabled and `ftdi:false` (set `ftdi:true` with the dongle attached to
+resurrect the legacy wired chain). See
 [hardware-recommendations.md](hardware-recommendations.md) for the wireless sensor-node
 architecture, `wiring-guides/` for the node-box, audio, and sign build plans (the unit-a/b/c
 guides are historical), and `client/README.md` for the fallback audio client.
@@ -89,6 +93,9 @@ Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,
 - `theme_manager.py` — ambient theme loop (its own thread, paused per-room during effects)
 - `interrupt_handler.py` — takes fixtures over from the theme while an effect runs
 - `dmx_state_manager.py` / `dmx_interface.py` — DMX channel state and the 44Hz FTDI output thread
+- `artnet_output_manager.py` / `artnet.py` / `dmx_nodes.json` — Art-Net unicast to the room
+  nodes' DMX ports (`wiring-guides/dmx-over-wifi.md`); node firmware in
+  `sim/esphome/components/artnet_dmx/`
 - `remote_host_manager.py` — audio command fan-out: WebSocket to every claiming client, mirrored
   to ESP32 nodes via `node_audio_manager.py` (ESPHome native API: firmware cues + streamed music)
 - `audio_manager.py` — audio catalog from `audio_config.json`, served to clients over HTTP

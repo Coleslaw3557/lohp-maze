@@ -5,9 +5,13 @@ services:
     ports:
       - "5000:5000"
       - "8765:8765"
-    devices:
-      - "/dev/bus/usb:/dev/bus/usb"  # FTDI USB-DMX interface
-    privileged: true  # USB access; also required for /api/shutdown (sysrq power-off)
+    # USB passthrough removed 2026-07-22: DMX is Art-Net to the room nodes now
+    # (dmx_nodes.json / wiring-guides/dmx-over-wifi.md). If ftdi:true ever
+    # resurrects the wired chain, restore:
+    #   devices: ["/dev/bus/usb:/dev/bus/usb"]
+    # NOTE bridge networking cannot resolve .local — dmx_nodes.json hosts must
+    # be IPs (DHCP reservations) in production.
+    privileged: true  # required for /api/shutdown (sysrq power-off)
     volumes:
       - .:/app
     restart: always

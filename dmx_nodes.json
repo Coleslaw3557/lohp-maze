@@ -1,0 +1,24 @@
+{
+  "_comment": "Art-Net DMX targets — wiring-guides/dmx-over-wifi.md. CUT OVER 2026-07-22 (Tim's call): every room enabled, ftdi:false — the wired FTDI chain is retired and the dongle can stay unplugged (set ftdi:true to resurrect it; the code path remains). One shared universe unicast to every node; fixtures keep their light_config.json addresses — do NOT re-dial them. host: at flash time give each node a DHCP reservation on the travel router and replace the .local name with its IP — the production container is bridge-networked and CANNOT resolve mDNS; .local only works outside docker (bench/dev). Until a room's node is online its host just logs one warning and retries every 10s.",
+  "ftdi": false,
+  "universe": 0,
+  "port": 6454,
+  "nodes": {
+    "Entrance":             {"host": "lohp-node-entrance.local",             "enabled": true},
+    "Cop Dodge":            {"host": "lohp-node-cop-dodge.local",            "enabled": true},
+    "Gate":                 {"host": "lohp-node-gate.local",                 "enabled": true},
+    "Guy Line Climb":       {"host": "lohp-node-guy-line-climb.local",       "enabled": true},
+    "Sparkle Pony Room":    {"host": "lohp-node-sparkle-pony.local",         "enabled": true},
+    "Porto Room":           {"host": "lohp-node-porto.local",                "enabled": true},
+    "Cuddle Cross":         {"host": "lohp-node-cuddle-cross.local",         "enabled": true},
+    "Exit":                 {"host": "lohp-node-exit.local",                 "enabled": true},
+    "Photo Bomb Room":      {"host": "lohp-node-photo-bomb.local",           "enabled": true},
+    "Deep Playa Handshake": {"host": "lohp-node-deep-playa-handshake.local", "enabled": true},
+    "No Friends Monday":    {"host": "lohp-node-no-friends-monday.local",    "enabled": true},
+    "Temple Room":          {"host": "lohp-node-temple.local",               "enabled": true},
+    "Monkey Room":          {"host": "lohp-node-monkey.local",               "enabled": true},
+    "Bike Lock Room":       {"host": "lohp-node-bike-lock.local",            "enabled": true},
+    "Vertical Moop March":  {"host": "lohp-node-vertical-moop-march.local",  "enabled": true},
+    "Camp Sign":            {"host": "lohp-sign-bridge.local",               "enabled": true}
+  }
+}

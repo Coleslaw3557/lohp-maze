@@ -313,7 +313,10 @@ open and you'll see the "ghost" activity they produce.
 
 Extra: set `SIM_ARTNET=<ip>` before launch to also unicast the universe as Art-Net —
 point BlenderDMX (or QLC+, Capture, …) at it. Don't run an Art-Net *listener* on
-this same machine (UDP 6454 clash).
+this same machine (UDP 6454 clash). Production now uses the same ArtDMX packets
+(`artnet.py`) to feed the room nodes (`wiring-guides/dmx-over-wifi.md`);
+`run_server.py` stubs that path (`virtual_artnet.py`) so the sim never unicasts
+at real room-node hostnames — SIM_ARTNET is the only Art-Net the sim emits.
 
 ## Test tools (they light up the maze for everyone connected!)
 

@@ -9,7 +9,9 @@ import websockets
 from quart import Quart, request, jsonify, Response, send_from_directory, send_file
 from quart_cors import cors
 from dmx_state_manager import DMXStateManager
+import dmx_interface
 from dmx_interface import DMXOutputManager
+from artnet_output_manager import ArtNetOutputManager
 from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
 from remote_host_manager import RemoteHostManager
@@ -21,8 +23,9 @@ from effects.photobomb_shot import SHUTTER_OFFSET
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 # ids 0-19: the 20 maze pars/spots (ch 1-160); ids 20-43: the 24 Camp Sign
-# letter/logo zones (ch 161-352, ESP32 DMX bridge out front). This one constant
-# sizes the DMX state, the FTDI frame and the sim's virtual universe.
+# letter/logo zones (ch 161-352, ESP32 bridge out front). This one constant
+# sizes the DMX state, the FTDI frame, the Art-Net payload the room nodes
+# receive (zero-padded to 512 on the wire) and the sim's virtual universe.
 NUM_FIXTURES = 44
 CHANNELS_PER_FIXTURE = 8
 
@@ -102,7 +105,32 @@ async def handle_trigger_event(ws, data):
 # --- Component initialization ---
 
 dmx_state_manager = DMXStateManager(NUM_FIXTURES, CHANNELS_PER_FIXTURE)
-dmx_output_manager = DMXOutputManager(dmx_state_manager)
+
+# Two DMX sinks, config-gated by dmx_nodes.json (wiring-guides/dmx-over-wifi.md):
+# Art-Net unicast to the room nodes (the plan of record — cut over 2026-07-22)
+# and the legacy FTDI wired chain (ftdi:true resurrects it; a fixture is only
+# ever on one chain, so running both is safe). A missing/broken FTDI degrades
+# gracefully when Art-Net nodes are enabled; with NO output at all it still
+# raises — a maze with zero DMX outputs should crash-loop visibly, not run
+# dark. The sim's virtual sink (VIRTUAL flag) is the sim's frame feed, not
+# FTDI hardware, so the ftdi flag never gates it.
+artnet_output_manager = ArtNetOutputManager.from_config(dmx_state_manager)
+try:
+    with open('dmx_nodes.json') as _f:
+        _ftdi_wanted = json.load(_f).get('ftdi', True)
+except FileNotFoundError:
+    _ftdi_wanted = True
+dmx_output_manager = None
+if _ftdi_wanted or getattr(dmx_interface, 'VIRTUAL', False):
+    try:
+        dmx_output_manager = DMXOutputManager(dmx_state_manager)
+    except Exception as e:
+        if artnet_output_manager is None:
+            raise
+        logger.error(f"FTDI output unavailable ({e}) — continuing on Art-Net nodes only")
+elif artnet_output_manager is None:
+    log_and_exit("dmx_nodes.json disables FTDI but enables no Art-Net nodes — no DMX output")
+
 light_config = LightConfigManager()
 audio_manager = AudioManager()
 node_audio_manager = NodeAudioManager(audio_manager=audio_manager)
@@ -120,7 +148,10 @@ effects_manager.register_effect_hooks(
 )
 
 dmx_state_manager.reset_all_fixtures()
-dmx_output_manager.start()
+if dmx_output_manager:
+    dmx_output_manager.start()
+if artnet_output_manager:
+    artnet_output_manager.start()
 effects_manager.stop_current_theme()
 
 

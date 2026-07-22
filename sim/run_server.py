@@ -22,7 +22,9 @@ sys.path.insert(0, REPO_DIR)
 os.chdir(REPO_DIR)  # main.py reads light_config.json etc. relative to cwd
 
 import virtual_dmx  # noqa: E402
+import virtual_artnet  # noqa: E402
 sys.modules['dmx_interface'] = virtual_dmx
+sys.modules['artnet_output_manager'] = virtual_artnet
 
 import sim_ui  # noqa: E402
 threading.Thread(target=sim_ui.run, name='sim-ui', daemon=True).start()

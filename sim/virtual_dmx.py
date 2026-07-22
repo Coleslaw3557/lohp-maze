@@ -16,8 +16,14 @@ import threading
 import time
 
 import sim_state
+from artnet import build_artdmx  # repo root — the production packet builder
 
 logger = logging.getLogger(__name__)
+
+# main.py checks this: the virtual sink is the sim's whole frame feed, so it
+# must be constructed even when dmx_nodes.json says ftdi:false (that flag
+# retires the FTDI *hardware*, which this module replaces anyway).
+VIRTUAL = True
 
 
 class DMXOutputManager(threading.Thread):
@@ -69,16 +75,8 @@ class DMXOutputManager(threading.Thread):
 
     def _send_artnet(self, frame: bytes):
         self._artnet_seq = self._artnet_seq % 255 + 1  # 1..255, 0 means "disabled"
-        data = frame.ljust(self.DMX_CHANNELS, b'\x00')
-        packet = (
-            b'Art-Net\x00'
-            + bytes([0x00, 0x50])                        # OpDmx, little-endian
-            + bytes([0x00, 0x0e])                        # protocol version 14
-            + bytes([self._artnet_seq, 0x00])            # sequence, physical
-            + self.universe.to_bytes(2, 'little')        # SubUni + Net
-            + len(data).to_bytes(2, 'big')
-            + data
-        )
+        packet = build_artdmx(self._artnet_seq, self.universe, frame,
+                              pad_to=self.DMX_CHANNELS)
         try:
             self._artnet_sock.sendto(packet, self._artnet_addr)
         except OSError as e:
