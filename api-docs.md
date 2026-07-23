@@ -304,6 +304,7 @@ curl http://localhost:5000/api/light_models
 | Method | URL | Description |
 |--------|-----|-------------|
 | GET | `/` | Web control panel (serves `frontend/index.html`) |
+| GET | `/api/health` | Liveness probe: `{"status": "ok", "service": "lohp-server"}` — polled by `tools/deploy-rpi.sh` and the sim's RPI status dot |
 | GET | `/api/room_layout` | Alias of `/api/rooms` |
 | GET | `/api/rooms_units_fixtures` | Rooms with their fixtures and the client units covering them |
 | GET | `/api/connected_clients` | Connected room units (name, IP, rooms) |

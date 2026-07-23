@@ -195,15 +195,19 @@ below).
 
 ## Cuddle Cross floor projection — LAVA (live engine, 2026-07-22)
 
-The floor show is now REAL content with a production path: **stepping stones
-on lava** (`projection_engine.py` at the repo root, plan in
-`wiring-guides/cuddle-lava-plan.md`). The sim steps the engine in-process and
-streams state over `WS /sim/projection` (heat field + stones + events at
-~15 fps); the page renders that state and sends back the lagged radar
-position — the placeholder snakes are gone. On the real deck the SAME engine
-runs fullscreen on the server Pi's HDMI to the LS625X
-(`projection_renderer.py`, systemd `lohp-projection.service`, demo phantom
-walkers until the LD2450 lands). Rig geometry below is unchanged.
+The floor show is now REAL content with a production path: **a walkable chain
+of carved stepping stones on lava** — Mayan numerals in walking order, sink/
+rise mischief, bubbles, canopy dapple, embers, and **Kukulkan** surfacing to
+look around every minute or two (`projection_engine.py` at the repo root,
+plan + knobs in `wiring-guides/cuddle-lava-plan.md`). The sim steps the
+engine in-process and streams state over `WS /sim/projection` (heat field +
+stones + monster pose + events at ~15 fps); the page renders that state —
+using the engine's own precomputed rock/head artwork shipped in the hello —
+and sends back the lagged radar position. The placeholder snakes are gone.
+On the real deck the SAME engine runs on the server Pi, painted straight to
+the HDMI framebuffer (`projection_renderer.py`, systemd
+`lohp-projection.service`, demo phantom walkers until the LD2450 lands).
+Rig geometry below is unchanged.
 
 ## Rig geometry: Cuddle Cross floor projection (sim preview, 2026-07-18)
 

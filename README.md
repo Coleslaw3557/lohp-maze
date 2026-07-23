@@ -21,6 +21,12 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   on the maze WiFi. Sensors (mmWave radar, ToF, buttons, piezos) fire effects by POSTing to the
   server's REST API; each node's speaker plays effect cues and streamed music, commanded by the
   server over the ESPHome native API (`node_audio_manager.py` + `node_audio_config.json`).
+- **Floor projection** (`projection_engine.py` + `projection_renderer.py`): the Cuddle Cross
+  lava show — a Mayan stepping-stone crossing with sink/rise mischief and a surfacing
+  monster — rendered by the same server Pi straight to its HDMI framebuffer and thrown onto
+  the upper deck by a face-down short-throw projector. Its own systemd service outside the
+  container; walker input is the room's LD2450 radar (demo phantom walkers until it's wired).
+  Plan: `wiring-guides/cuddle-lava-plan.md`.
 - **Fallback audio client** (`client/`): the retired Pi-unit stack (units A/B/C are
   decommissioned), kept working as a fallback — one Linux host with a USB sound card per zone
   (`client/config-single-pi.json`) speaking the same WebSocket protocol.
@@ -50,6 +56,23 @@ resurrect the legacy wired chain). See
 [hardware-recommendations.md](hardware-recommendations.md) for the wireless sensor-node
 architecture, `wiring-guides/` for the node-box, audio, and sign build plans (the unit-a/b/c
 guides are historical), and `client/README.md` for the fallback audio client.
+
+### Deploying to the server Pi
+
+The production box is a DietPi Raspberry Pi 3B+ flashed from a preconfigured SD image —
+first boot joins the WiFi, installs Docker and authorizes the bench box's SSH key
+unattended ([pi-notes.md](pi-notes.md)). Then:
+
+```bash
+tools/deploy-rpi.sh                  # target lohp-server.local (mDNS), or pass an IP
+```
+
+rsyncs the repo to `/home/dietpi/lohp-server`, installs the `lohp-server` systemd unit,
+builds the compose image, and waits for `http://<pi>:5000/api/health`. The lava projection
+installs once per card with `tools/rpi-projection-setup.sh` (adds the KMS video overlay —
+one reboot — then the `lohp-projection` service paints the HDMI framebuffer directly).
+The sim's header **RPI** dot watches the box: green = server answering, amber = booted but
+not deployed, red = unreachable.
 
 ## Basic operations
 
@@ -86,6 +109,25 @@ Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,
   flashes synced to the fanfare, a white-gold mega flash on the final stinger, and emerald
   twinkles fading out.
 
+## The Cuddle Cross floor show (lava)
+
+The upper-deck crossing is projection-mapped molten lava with a chain of five carved grey
+stepping stones — Mayan numerals in walking order, one dot at the east door through one bar
+(five) at the west; the goal is to walk across the stones. Walk toward a stone and it may
+sink after its glyph flashes hot (a carved warning) while another rises off your line;
+lava bubbles pop, canopy shadows press in at the deck rim, embers drift, and every minute
+or two **Kukulkan** — the feathered serpent — surfaces, scans the room with pulsing amber
+eyes, and slips back under. Presence-cued: the show starts when the radar sees someone and
+fades out 60 s after the deck empties.
+
+One numpy engine (`projection_engine.py`) drives both displays: the projector
+(`projection_renderer.py` → `/dev/fb0`) and the sim preview (state + heat streamed over
+`WS /sim/projection`; the page renders the engine's own precomputed rock artwork). Content
+spec and tuning knobs: [wiring-guides/cuddle-lava-plan.md](wiring-guides/cuddle-lava-plan.md).
+The **Cuddle orb** — a round-display watching eye mounted under the rear sensor box,
+sharing the same radar — is specced in
+[wiring-guides/cuddle-orb-plan.md](wiring-guides/cuddle-orb-plan.md).
+
 ## Architecture
 
 - `main.py` — REST API, WebSocket server, component wiring
@@ -100,4 +142,8 @@ Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,
   to ESP32 nodes via `node_audio_manager.py` (ESPHome native API: firmware cues + streamed music)
 - `audio_manager.py` — audio catalog from `audio_config.json`, served to clients over HTTP
 - `camera_manager.py` — Photo Bomb webcam capture scheduling (synthetic backend without hardware)
+- `projection_engine.py` — the Cuddle lava floor show: stones, mischief, Kukulkan (shared by
+  sim and projector; pure numpy)
+- `projection_renderer.py` — fullscreen framebuffer output on the server Pi
+  (systemd `lohp-projection`, outside the container)
 - `effects/` — one file per effect; `effect_utils.py` — shared step interpolation and theme math
