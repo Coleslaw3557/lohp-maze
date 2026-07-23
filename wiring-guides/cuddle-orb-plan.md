@@ -1,6 +1,7 @@
 # Cuddle orb — Waveshare ESP32-S3 round display
 
-A watching eye on the Cuddle Cross center mast, plus a gesture control surface.
+A watching eye at the rear of Cuddle Cross, under the sensor box, plus a
+gesture control surface.
 Standalone Wi-Fi device; talks to the server over the existing REST API. Sim
 preview lives behind the **Eye** button; layout `eye` key in
 `sim/maze_layout.json`.
@@ -21,11 +22,15 @@ Four independent input channels — touch, tilt, shake, dock/undock — plus Wi-
 
 ## Placement
 
-Mounted on the hex **center mast** on the **upper deck (Cuddle Cross)**, facing
-the street/entry (`yaw_deg 0`). Fix it permanently over its **wireless-charge
-coil** on the mast so the battery stays topped (and acts as a brownout UPS) and
-the puck **can't be pocketed** — a loose battery puck in a maze becomes MOOP or
-walks off. The alternative is a deliberately leashed handheld talisman; pick one
+Mounted at the **rear of the room, directly under the back-corner sensor/node
+box** (Tim's placement 2026-07-23; supersedes both the center-mast idea — the
+display would sit inside the 3.5 in pole — and a high-on-the-canvas spot) —
+facing the street/entry (`yaw_deg 0`), watching the deck from behind, on the
+same plumb line as the LD2450 it reads. Under-box mounting keeps the orb off
+the printed canvas and puts it beside existing power/wiring. Fix it
+permanently over its **wireless-charge coil** so the battery stays topped (and
+acts as a brownout UPS) and the puck **can't be pocketed** — a loose battery
+puck in a maze becomes MOOP or walks off. The alternative is a deliberately leashed handheld talisman; pick one
 early, it changes the enclosure. Real panel is 32.5 mm; the sim draws it larger
 so the eye reads across the deck.
 
@@ -84,8 +89,9 @@ is ample for a full-frame graphics buffer and a generous partition layout.
 
 - **Eye** button (top row) cycles **off / HAL / Mayan** (persisted in
   localStorage, like the Steel button). Default `hal` (`skin` in the layout).
-- Climb to the **Cuddle Cross** upper deck to see it on the mast; walk around
-  inside the node-box radar wedge and the pupil tracks you.
+- Climb to the **Cuddle Cross** upper deck and look to the rear — it hangs
+  just under the back-corner node box; walk around inside that box's radar
+  wedge and the pupil tracks you.
 - Delete the `eye` key from `sim/maze_layout.json` to drop the orb entirely.
 
 ## Open TBDs
