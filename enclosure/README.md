@@ -2,14 +2,19 @@
 
 `node-enclosure.scad` generates the single enclosure used by all 15 room
 nodes as **laser-cut panels for the xTool**: six finger-jointed pieces that
-glue together, plus the acrylic sensor-window panel. Outer 110 × 78 × 43.8 mm
-(interior 104.2 × 72.2 × 34, ply measured at **t = 2.9**) — as small as
-reasonable around the node build. The lid is a **sliding tray**: it slides
-in and out **over the SHORT front wall** (that wall tops out at the channel
-bottom, 36.9 — the 07-22 rev3 fix: a full-height wall with an entry mouth
-can never pass the lid's tongues, which are wider than any mouth that
-leaves the wall in one piece), riding through-slot channels in the side
-walls — no fasteners, finger-pull notch at the front edge.
+glue together, plus the acrylic sensor-window panel. Stock is **6 mm ply**
+(Tim's call 2026-07-23; `t = 6.0` is NOMINAL — caliper the actual sheet,
+set `t`, re-export before burning: the earlier "3 mm" sheet measured 2.9).
+Outer 110 × 78 × 50 mm, interior 98 × 66 × 34 — as small as reasonable
+around the node build. Every derived position tracks `t`
+(`db9_cx`/`db9_cz`/`xlr_cz`/`dac_cy` are t-relative formulas since the
+6 mm switch), so re-exporting IS the thickness update. The lid is a
+**sliding tray**: it slides in and out **over the SHORT front wall** (that
+wall tops out at the channel bottom, t + 34 = 40 — the 07-22 rev3 fix: a
+full-height wall with an entry mouth can never pass the lid's tongues,
+which are wider than any mouth that leaves the wall in one piece), riding
+through-slot channels in the side walls — no fasteners, finger-pull notch
+at the front edge.
 
 Board footprints were measured with calipers on the real parts (2026-07-21;
 the DB9 breakout PCB re-measured 2026-07-22 at 1¼" = 31.75 long, D-sub
@@ -47,6 +52,28 @@ labels, board footprints and the DB9 floor zone:**
 
 (The DMX cut was a second DB9 "port B" + a DB9→XLR adapter for exactly one
 day — replaced 2026-07-22. A DMX port is a DMX port.)
+
+## 6 mm walls — port-reach counterbores (bench drills, not cut-file work)
+
+The 2026-07-23 switch from ~3 mm to 6 mm stock buries three connectors
+deeper in the wall. Each gets a shallow counterbore on the **outside**
+face at assembly (mark through the opening, forstner/spade to depth,
+leave ~2.5–3 mm of ply standing):
+
+- **DB9 screwlocks:** the posts protrude 6.3 mm past the shell face —
+  through 6 mm ply they'd surface only ~0.3 mm, no thread for the cable
+  thumbscrews. Counterbore the two bench-drilled Ø6 post holes to ~Ø10,
+  ~3 mm deep, and the posts present ~3 mm as before.
+- **USB-C slot:** the XIAO's port sticks 2 mm past the PCB, so it now
+  ends ~4 mm below the outer face — most USB-C plugs won't reach.
+  Counterbore ~12 × 8, ~3 mm deep around the slot. Check the actual
+  power cable's overmold first; a long-shell cable may not need it.
+- **AUX:** the DAC barrel ends ~3.6 mm below the outer face — marginal
+  reach for a standard 3.5 mm plug. Counterbore Ø10, ~3 mm deep; test
+  with the real cable before carving the wall.
+
+The XLR needs nothing: its 21 mm body passes 6 mm ply with room to spare
+and the flange still screws to the outside face.
 
 Box side of the DB9 = screw-terminal breakout bolted through the wall by
 its jackscrews; pod side = the matching breakout; cable = **straight-
@@ -105,7 +132,7 @@ corner screws leave <1mm acrylic web and it cracks.
 
 - `node-enclosure.scad` — the design; every dimension is a named parameter
 - `node-enclosure.svg` — the PLY job: six wall panels nested on one
-  ~231 × 178 mm bed, black = cut + red = etch (3 mm ply)
+  ~225 × 190 mm bed, black = cut + red = etch (6 mm ply)
 - `window-acrylic.svg` — the ACRYLIC job: the sensor-window panel alone
 - `node-enclosure-cuddle.svg` / `window-acrylic-cuddle.svg` — Cuddle's
   wide-aperture one-off (14 rooms cut standard, 1 cuts these)

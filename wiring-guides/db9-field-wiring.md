@@ -24,11 +24,14 @@ everything that travels lands under screws or plugs in:
 - **Box end (port A):** DB9 screw-terminal breakout (female, ANMBEST),
   run as the **bare PCB screwed to the box floor** in its etched zone
   (plastic case off — it has no floor-mount provision; fine inside a
-  closed box). The D-sub face pokes through the wall window and the
-  screwlock posts pass through Ø6 holes to stand ~3.4 mm proud outside
-  (calipered 2026-07-22: posts protrude 6.3 mm past the face; ply is 2.9;
-  connector center sits 12.2 mm up the wall = 2.9 floor + 3.89 PCB→shell
-  bottom + half shell). The cable's thumbscrews lock into the posts; the
+  closed box). The D-sub face pokes through the wall window; the
+  screwlock posts (6.3 mm past the face, calipered 2026-07-22) pass
+  through Ø6 holes — but through the 6 mm ply (stock switch 2026-07-23)
+  they'd surface only ~0.3 mm, so each post hole gets a **~Ø10 × 3 mm
+  counterbore on the outside face** and the posts present ~3 mm for the
+  cable's thumbscrews. Connector center sits at floor + 9.34 (3.89
+  PCB→shell bottom + half a 10.9 shell) — 15.3 mm up the wall at t = 6.
+  The cable's thumbscrews lock into the posts; the
   floor screws, not the wall, hold the part. Node wires land under screws
   on the PCB (9 pins + a shell-GND terminal).
 - **Cable:** premade **straight-through M-F DB9 serial extension** —

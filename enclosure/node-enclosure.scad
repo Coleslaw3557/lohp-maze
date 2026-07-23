@@ -1,6 +1,7 @@
 // LoHP maze — universal room-node enclosure, LASER-CUT edition
 // ============================================================
-// ONE design for all 15 room nodes, cut on the xTool from 3mm ply (walls)
+// ONE design for all 15 room nodes, cut on the xTool from 6mm ply (walls
+// — Tim's stock call 2026-07-23; t below is the caliper-gated real value)
 // + 3mm acrylic (window panel). Six finger-jointed panels GLUE together
 // (floor mortises through the wall bottoms, corner fingers interlock);
 // the LID is the service hatch — it SLIDES in and out OVER the SHORT
@@ -56,7 +57,12 @@ part = "3d";     // front|back|left|right|floor|lid|window|sheet|3d
 cuddle = false;  // true = Cuddle's wide-aperture one-off (2450 + 2410C)
 
 // ---- stock -------------------------------------------------------------
-t  = 2.9;        // ply thickness — MEASURED on the sheet 2026-07-21
+t  = 6.0;        // ply thickness — 6mm stock per Tim 2026-07-23. NOMINAL
+                 //  until the sheet is calipered (the 07-21 "3mm" sheet
+                 //  measured 2.9 — expect 6mm stock to run thin too):
+                 //  set the measured value + re-export before burning.
+                 //  Everything below derives from t — db9_cx/db9_cz/
+                 //  xlr_cz/dac_cy went t-relative with this switch
 acrylic_t = 3;   // window stock, nominal (preview + screw length only)
 kerf_note = "cut outlines are exact; add kerf offset in xTool XCS";
 
@@ -83,7 +89,11 @@ cap_bridge = 3;          // side channel stops this short of the back wall
 
 // ---- measured boards (calipers on the real parts, 2026-07-21) ----------
 dac_l = 31.93;  dac_w = 17.23;  // PCM5102A; 3.5mm jack on a LONG edge (Tim
-dac_cy = 51;                    //  07-22 — the short-edge note was wrong),
+dac_cy = (D - 2*t)/2 + 15;      //  07-22 — the short-edge note was wrong),
+                                //  cy t-relative since the 6mm switch (a
+                                //  fixed 51 ran the board into the back
+                                //  wall's inner face at t=6; =48 now, ~51
+                                //  at the old 2.9),
                                 //  barrel +2.44 past the PCB -> the LONG
                                 //  edge butts the right wall, board reaches
                                 //  only 17.23 into the box, barrel fills
@@ -150,13 +160,18 @@ db9_screw = 24.99;                   // screwlock pitch, nominal DE-9 (Tim
                                      //  measured 24.26 — likely hex-corner
                                      //  artifact): drill the marks Ø6 so
                                      //  the hex posts clear at either value
-db9_cx = 22;                         // port A center (toward the front)
-db9_cz = 12.2;                       // center height. MEASURED
-                                     //  2026-07-22: floor 2.9 + 3.89 (PCB
-                                     //  bottom -> shell bottom) + 5.45
-                                     //  (half a std 10.9 shell). If the
-                                     //  case ever goes back ON, this rises
-                                     //  ~2 (case bottom wall)
+db9_cx = t + 18;                     // port A center (toward the front) —
+                                     //  t-relative since the 6mm switch:
+                                     //  centers the 34-long floor zone at
+                                     //  interior y 18 so it keeps 1mm off
+                                     //  the front wall's inner face (the
+                                     //  old hardcoded 22 collided at t=6)
+db9_cz = t + 9.34;                   // center height = floor top + the
+                                     //  MEASURED 2026-07-22 stack: 3.89
+                                     //  (PCB bottom -> shell bottom) +
+                                     //  5.45 (half a std 10.9 shell). If
+                                     //  the case ever goes back ON, this
+                                     //  rises ~2 (case bottom wall)
 db9_zone = [34, 31.75];              // floor keep-out at port A: along wall
                                      //  x depth-into-box. Depth = the bare
                                      //  PCB, 1-1/4" MEASURED 2026-07-22,
@@ -184,15 +199,23 @@ xlr_hole = 24.0;                     // XLR jack barrel hole. CALIPER GATE
                                      //  diagonal doesn't matter). NO cut
                                      //  fastener holes, per the house rule.
 xlr_cx = 56;                         // same wall spot the one-day "port B"
-xlr_cz = 19;                         //  had; raised so barrel + flange clear
-                                     //  the floor mortise below and the lid
-                                     //  channel above
+xlr_cz = t + 16;                     //  had; t-relative so the Ø24 hole
+                                     //  keeps ~4mm of ply above the floor
+                                     //  mortise notch below it (a fixed 19
+                                     //  left a 1mm ligament at t=6) and
+                                     //  clears the lid channel above
 strap_w = 5; strap_h = 24;   // velcro-strap slots (back wall, vertical: a
                              //  20mm one-wrap passes horizontally around a
                              //  scaffold leg and through both)
 // ---- joinery -----------------------------------------------------------
 nseg = 5;                    // corner finger segments over Hw
 seg  = Hw / nseg;            // front/back own segments 0,2,4 at the corners
+stub = slide_z - 4*seg;      // front wall's finger above the seg-3 notch =
+                             //  (18-3t)/5: 1.86 at t=2.9, 0 exactly at
+                             //  t=6. A sub-mm sliver can't survive the
+                             //  laser, so both walls drop it when <=1 —
+                             //  the seg 0-3 alternation still locks the
+                             //  corner
 ftab_w = 20;                 // floor mortise tab width
 long_cs  = [-32, 0, 32];     // tab centers on the W edges (about midline)
 short_cs = [-18, 18];        // tab centers on the D edges
@@ -234,11 +257,16 @@ module panel_front() difference() {
   // cross the wall plane. The lid could not be inserted at all (Tim
   // caught it 07-22; 3D previews don't collision-check a sliding part —
   // walk the insertion kinematics). Short wall = the classic laser-cut
-  // sliding-lid form. Above the seg-3 notch a 1.86-tall stub finger
-  // remains at each end, filling the side wall's stub notch just below
-  // the channel.
+  // sliding-lid form. Above the seg-3 notch a stub finger (height = the
+  // shared `stub` param, 1.86 at t=2.9) remains at each end, filling the
+  // side wall's stub notch just below the channel — unless stub <= 1:
+  // sub-mm fingers char off, so both walls drop it (at t=6 it is 0).
   square([W, slide_z]);
   corner_notches(W);                   // segs 1,3 — both below slide_z
+  if (stub > 0.05 && stub <= 1)        // clear the unusable sliver so the
+    for (x = [0, W - t])               //  side wall's solid edge can butt
+      translate([x - eps, 4*seg - eps])
+        square([t + 2*eps, stub + 2*eps]);
   bottom_notches(W, long_cs);
   translate([W/2 - win_w/2, win_cz - win_h/2]) square([win_w, win_h]); // aperture
 }
@@ -277,7 +305,8 @@ module panel_side() {          // common left/right: full-D
     // top-front corner void the full seg-4 notch used to leave)
     for (s = [0, 2])
       translate([-eps, s * seg]) square([t + 2*eps, seg]);
-    translate([-eps, 4 * seg]) square([t + 2*eps, slide_z - 4*seg + eps]);
+    if (stub > 1)
+      translate([-eps, 4 * seg]) square([t + 2*eps, stub + eps]);
     bottom_notches(D, short_cs);
     // lid channel: open at the front edge (x=0, where the lid enters),
     // STOPS cap_bridge short of the back wall's inner face. That bridge
