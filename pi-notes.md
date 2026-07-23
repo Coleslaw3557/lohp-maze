@@ -43,18 +43,28 @@ amber = Pi on the network but server not running (booted, not deployed),
 red = unreachable. Default probe target is `lohp-server.local`; if mDNS
 doesn't resolve on the sim box, launch with `RPI_HOST=<ip> sim/run.sh`.
 
-### Lava projection (LS625X on HDMI)
+### Floor projection (LS625X on HDMI)
 
 `tools/rpi-projection-setup.sh` (run as root on the Pi, or via ssh) installs
-the floor-projection renderer: enables the vc4 KMS overlay in
-`/boot/firmware/config.txt` (first run exits 3 and asks for a reboot), builds
+the floor-projection renderer: configures the LEGACY display stack in
+`/boot/firmware/config.txt` — vc4 KMS overlay commented out, a tiny
+`framebuffer_width/height=192x144` firmware framebuffer that the VideoCore
+scaler stretches to the projector's native mode, `gpu_mem` 64, HDMI blanking
+off (first run exits 3 and asks for a reboot) — then builds
 `/opt/lohp-projection-venv` (apt numpy + pip aioesphomeapi), installs and
-starts `lohp-projection.service` — `projection_renderer.py --source demo`
-writing /dev/fb0 directly (no SDL/EGL: the vc4 EGL stack refused kmsdrm on
-the 3B+, and the framebuffer path has fewer layers to die on-playa). The unit
-unbinds fbcon while running. Runs OUTSIDE docker. Flip `--source demo` to
-`--source esphome --node <cuddle-node>` in the unit file once the LD2450 is
-wired (hardware day). Content plan: `wiring-guides/cuddle-lava-plan.md`.
+starts `lohp-projection.service` — `projection_renderer.py --source demo
+--theme jungle --grid 192 --fps 20` writing /dev/fb0 directly at grid
+resolution (k=1, ~1 ms blit; the GPU does the whole upscale with smoothing).
+History: no SDL/EGL — the vc4 EGL stack refused kmsdrm on the 3B+
+(2026-07-22), and the KMS-sized fb cost ~60 ms/frame of numpy packing
+(2026-07-23) — the firmware scaler is the free GPU on this box. The unit
+unbinds fbcon while running; a `fps …` heartbeat prints to the journal once
+a minute. Runs OUTSIDE docker. Theme switches live: `curl -X POST
+http://lohp-server.local:5002/theme/<lava|jungle>` (the sim Floor button
+does this for you). Flip `--source demo` to `--source esphome --node
+<cuddle-node>` in the unit file once the LD2450 is wired (hardware day).
+Content plans: `wiring-guides/cuddle-lava-plan.md`,
+`wiring-guides/cuddle-jungle-plan.md`.
 
 ### Reflash note
 

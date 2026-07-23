@@ -2010,8 +2010,12 @@ function checkSensorTriggers() {
 // paints a reactive playfield on the deck; an LD2450 in the node box tracks walker
 // positions. The sim's walker IS the target — filtered through the tracker's
 // real coverage wedge and first-order latency so the interactivity previews
-// how the hardware will feel. Placeholder snake content; delete the layout key
-// to remove the whole rig. No production config is involved.
+// how the hardware will feel. Content comes from the shared floor engine
+// (projection_engine.py, LAVA or JUNGLE theme — the Floor button switches it
+// for every tab). Delete the layout key to remove the whole rig. No
+// production config is involved.
+const FLOOR_THEMES = ['lava', 'jungle'];
+const FLOOR_LABEL = { lava: 'Floor: Lava', jungle: 'Floor: Jungle' };
 function buildProjection(cfg) {
   const P = cfg.layout.projection;
   if (!P) return;
@@ -2135,11 +2139,14 @@ function buildProjection(cfg) {
   S.projection = { cfg: P, canvas, ctx: canvas.getContext('2d'), tex, plane,
     cw, ch: chp, ppm, toPx, mast, winPx, deckPath, active: false, fade: 0,
     lastPresence: -1e9, smooth: null, accum: 0,
-    // LAVA engine link (projection_engine.py stepped by sim_ui, streamed over
-    // /sim/projection): the page renders engine STATE — heat field, stones,
-    // events — and sends back the lagged radar position. It computes nothing.
+    // floor engine link (projection_engine.py stepped by sim_ui, streamed
+    // over /sim/projection): the page renders engine STATE — scalar field,
+    // stones/snakes/tiki, events — and sends back the lagged radar position.
+    // It computes nothing. `theme` mirrors the server's active show.
     ws: null, grid: null, lut: null, heatCanvas: null, heatImg: null,
-    heatStep: 2, stones: [], tracksPx: [], fx: [], engineFade: 0, lastTrackSend: 0 };
+    heatStep: 2, theme: null, stones: [], snakes: [], snakeMeta: {}, flies: [],
+    glyphs: [], glyphGlint: {}, tiki: null, tikiImg: null,
+    tracksPx: [], fx: [], engineFade: 0, lastTrackSend: 0 };
   connectProjection();
 }
 
@@ -2159,9 +2166,18 @@ function connectProjection() {
       hc.height = Math.floor(pr.grid[1] / pr.heatStep);
       pr.heatCanvas = hc;
       pr.heatImg = hc.getContext('2d').createImageData(hc.width, hc.height);
+      // theme reset: a re-hello (theme switch) must not leak the other
+      // show's entities into this one
+      pr.theme = m.hello.theme || 'lava';
+      pr.stoneImg = null; pr.monsterImg = null; pr.tikiImg = null;
+      pr.stones = []; pr.monster = null; pr.snakes = []; pr.snakeMeta = {};
+      pr.flies = []; pr.glyphs = []; pr.glyphGlint = {}; pr.tiki = null;
+      pr.fx = [];
+      const fb = $('btn-floor');
+      if (fb) fb.textContent = FLOOR_LABEL[pr.theme] || `Floor: ${pr.theme}`;
       if (m.hello.textures) {
-        // the engine's precomputed rock artwork — the page draws the SAME
-        // pixels production projects (numeral glyphs, cracks, the altar)
+        // the engine's precomputed artwork — the page draws the SAME pixels
+        // production projects (numeral glyphs, cracks, the altar, the mask)
         const mk = (t) => {
           const c = document.createElement('canvas');
           c.width = t.w; c.height = t.h;
@@ -2170,20 +2186,31 @@ function connectProjection() {
             new ImageData(new Uint8ClampedArray(bytes.buffer), t.w, t.h), 0, 0);
           return c;
         };
-        pr.stoneImg = {};
-        for (const t of m.hello.textures.stones) pr.stoneImg[t.id] = mk(t);
-        pr.islandImg = mk(m.hello.textures.island);
-        pr.islandPos = m.hello.textures.island;
-        if (m.hello.textures.monster) pr.monsterImg = mk(m.hello.textures.monster);
+        const tex2 = m.hello.textures;
+        if (tex2.stones) {
+          pr.stoneImg = {};
+          for (const t of tex2.stones) pr.stoneImg[t.id] = mk(t);
+        }
+        pr.islandImg = mk(tex2.island);
+        pr.islandPos = tex2.island;
+        if (tex2.monster) pr.monsterImg = mk(tex2.monster);
+        if (tex2.tiki) pr.tikiImg = mk(tex2.tiki);
+        if (tex2.glyphs) pr.glyphs = tex2.glyphs.map(t => ({ id: t.id, x: t.x, y: t.y, img: mk(t) }));
+        if (tex2.snakes) for (const s of tex2.snakes) pr.snakeMeta[s.id] = s;
       }
       pr.ws = ws;
-      log('info', `projection: lava engine connected (${pr.grid[0]}×${pr.grid[1]})`);
+      log('info', `projection: floor engine connected — ${pr.theme.toUpperCase()} (${pr.grid[0]}×${pr.grid[1]})`);
       return;
     }
     pr.engineFade = m.fade || 0;
     pr.stones = m.stones || [];
     pr.tracksPx = m.tracks || [];
     pr.monster = m.monster || null;
+    pr.snakes = m.snakes || [];
+    pr.flies = m.flies || [];
+    pr.tiki = m.tiki || null;
+    pr.glyphGlint = {};
+    for (const g of m.glyphs || []) pr.glyphGlint[g.id] = g.glint;
     if (m.heat && pr.heatCanvas) paintHeat(pr, m.heat);
     for (const e of m.events || []) {
       if (e.x != null) pr.fx.push({ ...e, t0: clock.getElapsedTime() });
@@ -2192,6 +2219,10 @@ function connectProjection() {
       if (e.e === 'monster_swim') log('info', 'projection: something moves beneath the lava…');
       if (e.e === 'monster_breach') log('ok', 'projection: KUKULKAN breaches!');
       if (e.e === 'monster_sink') log('info', 'projection: Kukulkan slips back under');
+      if (e.e === 'snake_flee') log('info', 'projection: a snake darts away from your feet');
+      if (e.e === 'tiki_arrive') log('ok', 'projection: the tiki mask floats in (aku aku!)');
+      if (e.e === 'tiki_spin') log('info', 'projection: the tiki mask SPINS');
+      if (e.e === 'tiki_leave') log('info', 'projection: the tiki mask drifts off into the canopy');
     }
   };
   ws.onclose = () => { pr.ws = null; setTimeout(connectProjection, 2500); };
@@ -2351,6 +2382,91 @@ function drawProjection(pr, dt, now) {
     }
   }
 
+  // jungle: fallen glyph stones (mossy ruins; carve glints when noticed)
+  for (const g of pr.glyphs) {
+    const w = g.img.width * gs, h = g.img.height * gs;
+    ctx.drawImage(g.img, g.x * gs - w / 2, g.y * gs - h / 2, w, h);
+    const gl = pr.glyphGlint[g.id] || 0;
+    if (gl > 0.05) {
+      ctx.globalAlpha = gl * 0.35;
+      ctx.strokeStyle = 'rgb(205,235,130)';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(g.x * gs, g.y * gs, g.img.width * gs * 0.34, 0, 7); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // jungle: snakes — a smooth tapered body built from the engine spine: one
+  // colored quad per span between per-point width offsets (shared offset
+  // points → no seams), matching the production distance-field renderer.
+  // colors/w come per spine index in the hello meta.
+  for (const sn of pr.snakes) {
+    const meta = pr.snakeMeta[sn.id];
+    if (!meta || !meta.w || sn.pts.length < 2) continue;
+    const P = sn.pts, n = P.length;
+    const nrm = [];   // per-point normals from averaged neighbor directions
+    for (let i = 0; i < n; i++) {
+      const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)];
+      const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+      nrm.push([-dy / l, dx / l]);
+    }
+    const wAt = i => (meta.w[Math.min(i, meta.w.length - 1)] || 2) * gs;
+    for (let i = 0; i < n - 1; i++) {
+      const c = meta.colors[Math.min(i, meta.colors.length - 1)];
+      const w0 = wAt(i), w1 = wAt(i + 1);
+      ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+      ctx.strokeStyle = ctx.fillStyle;
+      ctx.lineWidth = 0.8;   // paints over antialias seams between quads
+      ctx.beginPath();
+      ctx.moveTo(P[i][0] * gs + nrm[i][0] * w0, P[i][1] * gs + nrm[i][1] * w0);
+      ctx.lineTo(P[i + 1][0] * gs + nrm[i + 1][0] * w1, P[i + 1][1] * gs + nrm[i + 1][1] * w1);
+      ctx.lineTo(P[i + 1][0] * gs - nrm[i + 1][0] * w1, P[i + 1][1] * gs - nrm[i + 1][1] * w1);
+      ctx.lineTo(P[i][0] * gs - nrm[i][0] * w0, P[i][1] * gs - nrm[i][1] * w0);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    // soft dorsal sheen down the spine
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(1, wAt(Math.floor(n / 2)) * 0.9);
+    ctx.beginPath();
+    ctx.moveTo(P[0][0] * gs, P[0][1] * gs);
+    for (let i = 1; i < n; i++) ctx.lineTo(P[i][0] * gs, P[i][1] * gs);
+    ctx.stroke();
+    // eyes on the spade sides (index 1 sits on the widest head arc), tongue
+    const [hx, hy] = P[0];
+    const a = Math.atan2(hy - P[1][1], hx - P[1][0]);
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const hw = meta.w[Math.min(1, meta.w.length - 1)];
+    ctx.fillStyle = 'rgb(250,214,90)';
+    for (const sv of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc((P[1][0] + nrm[1][0] * sv * hw * 0.72) * gs,
+        (P[1][1] + nrm[1][1] * sv * hw * 0.72) * gs,
+        Math.max(1.2, hw * gs * 0.20), 0, 7);
+      ctx.fill();
+    }
+    if (sn.tongue) {
+      const tip = hw * 0.35;
+      ctx.strokeStyle = 'rgb(205,62,48)';
+      ctx.lineWidth = Math.max(1.5, hw * gs * 0.16);
+      for (const sv of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo((hx + ca * tip) * gs, (hy + sa * tip) * gs);
+        ctx.lineTo((hx + ca * (tip + 2.6) - sa * sv * 1.1) * gs,
+          (hy + sa * (tip + 2.6) + ca * sv * 1.1) * gs);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // jungle: fireflies (the engine also glows the field under each one)
+  for (const f of pr.flies) {
+    ctx.fillStyle = 'rgba(255,240,170,0.9)';
+    ctx.beginPath(); ctx.arc(f.x * gs, f.y * gs, 2.5, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(220,230,120,0.25)';
+    ctx.beginPath(); ctx.arc(f.x * gs, f.y * gs, 7, 0, 7); ctx.fill();
+  }
+
   // Kukulkan, rotated to his heading (image points +x; engine pose drives)
   if (pr.monster && pr.monsterImg) {
     const mo = pr.monster;
@@ -2369,13 +2485,44 @@ function drawProjection(pr, dt, now) {
     }
   }
 
-  // engine events as short-lived rings: bubble pops small, sink/rise big,
-  // monster breach/sink biggest
+  // jungle: the flying tiki mask, rotated to its heading (image points +x);
+  // hollow eyes get a soft pulse aura, a spin gets motion rings
+  if (pr.tiki && pr.tikiImg) {
+    const tk = pr.tiki;
+    ctx.save();
+    ctx.translate(tk.x * gs, tk.y * gs);
+    ctx.rotate(tk.rot);
+    const w = pr.tikiImg.width * gs * tk.scale, h = pr.tikiImg.height * gs * tk.scale;
+    ctx.drawImage(pr.tikiImg, -w / 2, -h / 2, w, h);
+    ctx.restore();
+    if (tk.glow > 0.1) {
+      ctx.globalAlpha = tk.glow * 0.14;
+      ctx.strokeStyle = 'rgb(255,226,130)';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(tk.x * gs, tk.y * gs, pr.tikiImg.width * gs * 0.5, 0, 7); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (tk.spin) {
+      ctx.strokeStyle = 'rgba(255,226,130,0.5)';
+      ctx.lineWidth = 2.5;
+      for (const rr of [0.62, 0.78]) {
+        ctx.beginPath();
+        ctx.arc(tk.x * gs, tk.y * gs, pr.tikiImg.width * gs * rr,
+          now * 9 + rr * 4, now * 9 + rr * 4 + 2.2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // engine events as short-lived rings: bubble pops / snake flees small,
+  // sink/rise big, monster + tiki biggest; jungle rings go leaf-gold
   pr.fx = pr.fx.filter(e => now - e.t0 < 0.6);
   for (const e of pr.fx) {
     const a = (now - e.t0) / 0.6;
-    const base = e.e === 'pop' ? 6 : e.e.startsWith('monster') ? 24 : 14;
-    ctx.strokeStyle = `rgba(255,180,60,${0.7 * (1 - a)})`;
+    const base = e.e === 'pop' ? 6 : e.e === 'snake_flee' ? 9
+      : (e.e.startsWith('monster') || e.e.startsWith('tiki')) ? 24 : 14;
+    const col = pr.theme === 'jungle' ? '205,235,130' : '255,180,60';
+    ctx.strokeStyle = `rgba(${col},${0.7 * (1 - a)})`;
     ctx.lineWidth = 2 + 3 * (1 - a);
     ctx.beginPath();
     ctx.arc(e.x * gs, e.y * gs, base + 30 * a, 0, 7);
@@ -2393,18 +2540,18 @@ function drawProjection(pr, dt, now) {
 }
 
 // ------------------------------------------------- Cuddle orb (sim preview)
-// The Waveshare ESP32-S3-Touch-LCD-1.28 round display, mounted on the Cuddle
-// Cross center mast: a watching eye whose pupil tracks whoever the room's
-// LD2450 reports (the SAME node-box radar the floor projection reads), with a
-// first-order lag so the gaze previews how the hardware will feel. Two skins:
-//   hal   - the 2001 red camera lens (sci-fi easter egg in a Mayan jungle)
-//   mayan - jade-and-gold jaguar/serpent deity eye with an obsidian slit
-// Real panel is a 32.5 mm (1.28") disc; drawn bigger here so the eye reads
-// across the deck. Layout `eye` key drives it; the Eye button cycles skins.
-// The gestures the real orb sends (shake=storm all, touch-wheel=next theme,
-// dock=calm) hit the REST API directly — see wiring-guides/cuddle-orb-plan.md.
-const EYE_MODES = ['off', 'hal', 'mayan'];
-const EYE_LABEL = { off: 'Eye ✕', hal: 'Eye: HAL', mayan: 'Eye: Mayan' };
+// The Guition JC3636W518C round display (360x360 ST77916), rear of Cuddle
+// Cross: a carved Olmec colossal head whose ember eyes track whoever the
+// room's LD2450 reports (the SAME node-box radar the floor projection reads),
+// with a first-order lag so the gaze previews how the hardware will feel.
+// The device renderer (firmware/orb/face_olmec.h, per-pixel shaded stone) is
+// authoritative; this canvas port matches its character, not its pixels.
+// Real panel is a 47 mm (1.8") disc; drawn bigger here so the face reads
+// across the deck. Layout `eye` key drives it; the Eye button toggles it.
+// The gestures the real orb sends (tap=next theme, long-press=storm all)
+// hit the REST API directly — see wiring-guides/cuddle-orb-plan.md.
+const EYE_MODES = ['off', 'olmec'];
+const EYE_LABEL = { off: 'Eye ✕', olmec: 'Eye: Olmec' };
 
 function buildEye(cfg) {
   const E = cfg.layout.eye;
@@ -2426,13 +2573,13 @@ function buildEye(cfg) {
   g.add(bezel);
 
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 240;                 // native GC9A01 pixels
+  canvas.width = canvas.height = 360;                 // native ST77916 pixels
   const tex = new THREE.CanvasTexture(canvas);
   const disc = new THREE.Mesh(new THREE.CircleGeometry(D / 2, 48),
     new THREE.MeshBasicMaterial({ map: tex }));       // unlit: it's a screen
   disc.position.z = 0.012;
   g.add(disc);
-  const lbl = makeLabel(E.label || 'Cuddle orb (Waveshare S3 · sim)', 0.16);
+  const lbl = makeLabel(E.label || 'Cuddle orb (Guition S3 · sim)', 0.16);
   lbl.position.y = D / 2 + 0.06;
   g.add(lbl);
   grp(E.level || 0).add(g);
@@ -2441,7 +2588,7 @@ function buildEye(cfg) {
   S.eye = { cfg: E, group: g, canvas, ctx: canvas.getContext('2d'), tex,
     pupil: { x: 0, y: 0 }, dil: 0.5, smooth: null, awake: 0, lastSeen: -1e9,
     blinkT: 2.5, blink: 0, accum: 0, drift: Math.random() * 6.28 };
-  setEyeSkin(EYE_MODES.includes(saved) ? saved : (E.skin || 'hal'));
+  setEyeSkin(EYE_MODES.includes(saved) ? saved : (E.skin || 'olmec'));
 }
 
 function setEyeSkin(mode) {
@@ -2509,84 +2656,136 @@ function updateEye(dt) {
 }
 
 function drawEye(ey, now) {
-  const ctx = ey.ctx, R = 120, cx = 120, cy = 120;
-  const px = cx + ey.pupil.x * 32, py = cy + ey.pupil.y * 26;
+  const ctx = ey.ctx;
   const blink = ey.blink > 1 ? 2 - ey.blink : ey.blink; // 0 -> 1 -> 0
-  ctx.clearRect(0, 0, 240, 240);
+  ctx.clearRect(0, 0, 360, 360);
   ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip(); // round panel
-  if (S.eyeSkin === 'mayan') drawMayanEye(ctx, ey, cx, cy, R, px, py, blink, now);
-  else drawHalEye(ctx, ey, cx, cy, R, px, py, blink, now);
+  ctx.beginPath(); ctx.arc(180, 180, 180, 0, 7); ctx.clip(); // round panel
+  drawOlmecFace(ctx, ey, blink, now);
   ctx.restore();
   ey.tex.needsUpdate = true;
 }
 
-function drawHalEye(ctx, ey, cx, cy, R, px, py, blink, now) {
-  ctx.fillStyle = '#050505'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
-  ctx.strokeStyle = '#5b4a1c'; ctx.lineWidth = 10;
-  ctx.beginPath(); ctx.arc(cx, cy, R - 8, 0, 7); ctx.stroke();
-  ctx.strokeStyle = '#caa53a'; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.arc(cx, cy, R - 20, 0, 7); ctx.stroke();
-  const lens = ctx.createRadialGradient(cx, cy, 4, cx, cy, R - 24);
-  lens.addColorStop(0, '#7a0000'); lens.addColorStop(0.5, '#3d0000'); lens.addColorStop(1, '#0a0000');
-  ctx.fillStyle = lens; ctx.beginPath(); ctx.arc(cx, cy, R - 24, 0, 7); ctx.fill();
-  const pr = (13 + ey.dil * 15) * (1 - 0.8 * blink);   // hot pupil radius
-  const hr = pr * 3.4 * (1 + 0.12 * Math.sin(now * 4) * ey.awake);
-  const halo = ctx.createRadialGradient(px, py, 0, px, py, hr);
-  halo.addColorStop(0, `rgba(255,150,90,${0.5 + 0.25 * ey.awake})`);
-  halo.addColorStop(1, 'rgba(255,60,0,0)');
-  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(px, py, hr, 0, 7); ctx.fill();
-  const core = ctx.createRadialGradient(px - pr * 0.3, py - pr * 0.3, 1, px, py, pr);
-  core.addColorStop(0, '#fff6e0'); core.addColorStop(0.5, '#ffd27a'); core.addColorStop(1, '#c14a00');
-  ctx.fillStyle = core; ctx.beginPath(); ctx.arc(px, py, pr, 0, 7); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.beginPath(); ctx.arc(px - pr * 0.34, py - pr * 0.34, pr * 0.2, 0, 7); ctx.fill();
-  if (blink > 0.01) {                                  // no lids -> flicker
-    ctx.fillStyle = `rgba(0,0,0,${0.55 * blink})`;
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+// Carved basalt Olmec colossal head. Geometry mirrors firmware/orb/face_olmec.h
+// (face coords x SCALE 165, center 180): helmet band + bosses, brow ridges,
+// deep sockets with ember eyes that track, broad nose with breathing nostrils,
+// thick slightly-frowning lips. Canvas gradients stand in for the per-pixel
+// stone shader; the device render is the reference.
+function drawOlmecFace(ctx, ey, blink, now) {
+  // Legends of the Hidden Temple-style talking stone head (homage) —
+  // terracotta, stepped headdress with teal inlays, ear spools, big white
+  // glowing eyes, and a jaw slab that slides open in its slot to "speak".
+  const breath = 0.5 + 0.5 * Math.sin(now * 1.21);
+  const glow = ey.awake * (0.8 + 0.2 * Math.sin(now * 2.9));
+  let jaw = 0, talkGlow = 0;                          // stateless chatter
+  const cyc = now % 26;
+  if (cyc < 2.0) {
+    const env = Math.sin(Math.PI * Math.min(cyc / 2.0 * 1.15, 1));
+    jaw = env * (0.25 + 0.75 * Math.abs(Math.sin(now * 13.2)));
+    talkGlow = env;
   }
-}
 
-function drawMayanEye(ctx, ey, cx, cy, R, px, py, blink, now) {
-  ctx.fillStyle = '#0b0a06'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
-  const ring = ctx.createRadialGradient(cx, cy, R - 24, cx, cy, R); // gold sun-stone rim
-  ring.addColorStop(0, '#7a5a1e'); ring.addColorStop(0.5, '#e6b34e'); ring.addColorStop(1, '#8a6a24');
-  ctx.strokeStyle = ring; ctx.lineWidth = 22;
-  ctx.beginPath(); ctx.arc(cx, cy, R - 11, 0, 7); ctx.stroke();
-  ctx.fillStyle = '#4a3410';                           // glyph ticks around the rim
-  for (let i = 0; i < 24; i++) {
-    const a = i / 24 * 6.283;
-    ctx.save(); ctx.translate(cx + Math.cos(a) * (R - 11), cy + Math.sin(a) * (R - 11));
-    ctx.rotate(a); ctx.fillRect(-2.5, -5, 5, 10); ctx.restore();
+  const dome = ctx.createRadialGradient(140, 130, 30, 180, 190, 210);
+  dome.addColorStop(0, '#c9a26b'); dome.addColorStop(0.55, '#a37e50');
+  dome.addColorStop(0.85, '#5c4630'); dome.addColorStop(1, '#0b0a08');
+  ctx.fillStyle = dome; ctx.fillRect(0, 0, 360, 360);
+
+  // stepped headdress: block tier with teal fret gaps, medallion, crown ledge
+  const tierG = ctx.createLinearGradient(50, 0, 310, 0);
+  tierG.addColorStop(0, 'rgba(63,118,105,0)'); tierG.addColorStop(0.15, 'rgba(63,118,105,0.55)');
+  tierG.addColorStop(0.85, 'rgba(63,118,105,0.55)'); tierG.addColorStop(1, 'rgba(63,118,105,0)');
+  ctx.fillStyle = tierG; ctx.fillRect(50, 71, 260, 26);
+  for (let i = 0; i < 4; i++) {                        // raised blocks
+    const bx = 180 + (-0.54 + 0.36 * i) * 165;
+    ctx.fillStyle = '#b08a58';
+    ctx.beginPath(); ctx.ellipse(bx, 84, 15, 10, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,240,210,0.18)';
+    ctx.beginPath(); ctx.ellipse(bx - 2, 80, 11, 5, 0, 0, 7); ctx.fill();
   }
-  const jade = ctx.createRadialGradient(cx - 12, cy - 12, 6, cx, cy, R - 24); // carved jade sclera
-  jade.addColorStop(0, '#3fae86'); jade.addColorStop(0.7, '#1c7f63'); jade.addColorStop(1, '#0d4a3a');
-  ctx.fillStyle = jade; ctx.beginPath(); ctx.arc(cx, cy, R - 24, 0, 7); ctx.fill();
-  ctx.strokeStyle = 'rgba(9,60,46,0.5)'; ctx.lineWidth = 2;
-  for (let r = 30; r < R - 24; r += 14) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke(); }
-  const ir = 42;                                        // amber jaguar iris, follows gaze
-  ctx.fillStyle = '#080604'; ctx.beginPath(); ctx.arc(px, py, ir + 5, 0, 7); ctx.fill();
-  const iris = ctx.createRadialGradient(px, py, 4, px, py, ir);
-  iris.addColorStop(0, `rgba(240,190,90,${0.55 + 0.45 * ey.awake})`);
-  iris.addColorStop(0.6, '#b9781f'); iris.addColorStop(1, '#5c3a10');
-  ctx.fillStyle = iris; ctx.beginPath(); ctx.arc(px, py, ir, 0, 7); ctx.fill();
-  ctx.strokeStyle = 'rgba(90,50,12,0.55)'; ctx.lineWidth = 1.5;
-  for (let i = 0; i < 20; i++) {
-    const a = i / 20 * 6.283;
-    ctx.beginPath();
-    ctx.moveTo(px + Math.cos(a) * 8, py + Math.sin(a) * 8);
-    ctx.lineTo(px + Math.cos(a) * ir, py + Math.sin(a) * ir); ctx.stroke();
+  ctx.fillStyle = '#ba9260';                           // central medallion
+  ctx.beginPath(); ctx.arc(180, 88, 15, 0, 7); ctx.fill();
+  ctx.fillStyle = '#8a6a40';
+  ctx.beginPath(); ctx.arc(180, 88, 6, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(150,116,74,0.9)';              // crown ledge
+  ctx.fillRect(58, 106, 244, 12);
+  ctx.fillStyle = 'rgba(40,30,20,0.35)'; ctx.fillRect(58, 117, 244, 3);
+
+  // single heavy brow ledge
+  ctx.fillStyle = '#9d7a4c'; ctx.fillRect(97, 132, 166, 9);
+  ctx.fillStyle = 'rgba(35,26,17,0.5)'; ctx.fillRect(97, 141, 166, 5);
+
+  // sockets, then the big glowing eyes
+  for (const s of [-1, 1]) {
+    ctx.fillStyle = 'rgba(30,22,14,0.35)';
+    ctx.beginPath(); ctx.ellipse(180 + s * 46.2, 159, 36, 23, 0, 0, 7); ctx.fill();
   }
-  const sh = ir * (1.02 - 0.12 * blink);               // obsidian vertical slit
-  const sw = Math.max(1.5, ir * 0.4 * (1 - 0.5 * ey.dil) * (1 - 0.9 * blink));
-  ctx.fillStyle = '#040404'; ctx.beginPath(); ctx.ellipse(px, py, sw, sh, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = 'rgba(220,255,240,0.85)';            // teal catchlight
-  ctx.beginPath(); ctx.arc(px - sw * 0.3 - 3, py - sh * 0.35, 3, 0, 7); ctx.fill();
-  if (blink > 0.01) {                                  // jade eyelids close in
-    const lid = blink * (R - 24);
-    ctx.fillStyle = '#12563f';
-    ctx.fillRect(cx - R, cy - (R - 24), 2 * R, lid);
-    ctx.fillRect(cx - R, cy + (R - 24) - lid, 2 * R, lid);
+  for (const s of [-1, 1]) {
+    const ecx = 180 + s * 46.2, ecy = 158.5;
+    if (glow > 0.05) {                                 // lit-up halo
+      const halo = ctx.createRadialGradient(ecx, ecy, 20, ecx, ecy, 44);
+      halo.addColorStop(0, `rgba(255,190,90,${0.30 * glow})`);
+      halo.addColorStop(1, 'rgba(255,150,40,0)');
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(ecx, ecy, 44, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = `rgb(${Math.round(226 + 29 * glow)},${Math.round(212 + 20 * glow)},${Math.round(184 + 2 * glow)})`;
+    ctx.beginPath(); ctx.ellipse(ecx, ecy, 32, 20, 0, 0, 7); ctx.fill();
+    const px = ecx + ey.pupil.x * 16, py = ecy + ey.pupil.y * 9;
+    const ir = 12 + 3 * ey.dil;
+    ctx.fillStyle = '#50321e';
+    ctx.beginPath(); ctx.arc(px, py, ir, 0, 7); ctx.fill();
+    ctx.fillStyle = '#100b09';
+    ctx.beginPath(); ctx.arc(px, py, ir * 0.62, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(245,238,220,0.9)';
+    ctx.beginPath(); ctx.arc(px - 4, py - 4, 2, 0, 7); ctx.fill();
+  }
+
+  // broad nose: lit ridge, wide base, alae, breathing nostrils
+  ctx.strokeStyle = 'rgba(220,182,128,0.8)'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(175, 146); ctx.lineTo(175, 196); ctx.stroke();
+  ctx.strokeStyle = 'rgba(70,52,34,0.55)'; ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.moveTo(187, 152); ctx.lineTo(188, 198); ctx.stroke();
+  for (const s of [-1, 1]) {
+    ctx.fillStyle = '#b48c58';
+    ctx.beginPath(); ctx.ellipse(180 + s * 26.4, 201, 13, 10, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = `rgba(20,13,9,${0.55 + 0.3 * breath})`;
+    ctx.beginPath(); ctx.ellipse(180 + s * 17.3, 209, 6.5, 4.5, 0, 0, 7); ctx.fill();
+  }
+
+  // upper lip ledge, then the jaw slot + sliding slab
+  ctx.fillStyle = '#a88150'; ctx.fillRect(115, 224, 130, 10);
+  ctx.fillStyle = 'rgba(35,25,16,0.5)'; ctx.fillRect(115, 233, 130, 3);
+  ctx.fillStyle = '#1a0f0b';                           // the void
+  ctx.fillRect(117, 235, 126, 46);
+  if (talkGlow > 0.02) {
+    const vg = ctx.createLinearGradient(0, 235, 0, 281);
+    vg.addColorStop(0, `rgba(150,60,20,${0.2 * talkGlow})`);
+    vg.addColorStop(1, `rgba(220,95,30,${0.55 * talkGlow})`);
+    ctx.fillStyle = vg; ctx.fillRect(117, 235, 126, 46);
+  }
+  ctx.fillStyle = 'rgba(25,17,11,0.7)';                // slot grooves
+  ctx.fillRect(114, 235, 4, 62); ctx.fillRect(242, 235, 4, 62);
+  const slabTop = 232 + jaw * 30;                      // the slab itself
+  const slab = ctx.createLinearGradient(0, slabTop, 0, slabTop + 50);
+  slab.addColorStop(0, '#c39a63'); slab.addColorStop(0.25, '#a37c4d');
+  slab.addColorStop(1, '#7c5d3a');
+  ctx.fillStyle = slab;
+  ctx.beginPath(); ctx.roundRect(119, slabTop, 122, 50, [3, 3, 14, 14]); ctx.fill();
+  ctx.fillStyle = 'rgba(255,235,200,0.25)';            // lower lip highlight
+  ctx.fillRect(125, slabTop + 3, 110, 4);
+  ctx.fillStyle = 'rgba(40,29,18,0.35)';               // lip/chin crease
+  ctx.fillRect(127, slabTop + 17, 106, 3);
+  ctx.fillStyle = 'rgba(255,235,200,0.14)';            // chin catch-light
+  ctx.beginPath(); ctx.ellipse(180, slabTop + 36, 30, 9, 0, 0, 7); ctx.fill();
+
+  // ear spools at the rim
+  for (const s of [-1, 1]) {
+    const ex = 180 + s * 122;
+    ctx.fillStyle = '#ab855a';
+    ctx.beginPath(); ctx.arc(ex, 190, 15, 0, 7); ctx.fill();
+    ctx.fillStyle = '#6d5335';
+    ctx.beginPath(); ctx.arc(ex, 190, 8, 0, 7); ctx.fill();
+    ctx.fillStyle = '#bd955f';
+    ctx.beginPath(); ctx.arc(ex, 190, 3.5, 0, 7); ctx.fill();
   }
 }
 
@@ -2877,6 +3076,18 @@ function setupControls(cfg) {
   $('btn-sign').onclick = () => setSignVisible(!(signGroup && signGroup.visible));
   $('btn-steel').onclick = () => setSteelMode(STEEL_MODES[(STEEL_MODES.indexOf(steelMode) + 1) % STEEL_MODES.length]);
   $('btn-eye').onclick = () => setEyeSkin(EYE_MODES[(EYE_MODES.indexOf(S.eyeSkin) + 1) % EYE_MODES.length]);
+  $('btn-floor').onclick = () => {
+    // server-side shared state, deliberately NOT localStorage: every tab (and
+    // production, were it wired) shows one theme, like the one real deck
+    const pr = S.projection;
+    if (!pr || !pr.ws || pr.ws.readyState !== 1) {
+      log('err', 'projection: floor engine not connected — cannot switch theme');
+      return;
+    }
+    const next = FLOOR_THEMES[(FLOOR_THEMES.indexOf(pr.theme) + 1) % FLOOR_THEMES.length];
+    pr.ws.send(JSON.stringify({ theme: next }));
+    log('info', `projection: floor theme → ${next.toUpperCase()}`);
+  };
   $('btn-respawn').onclick = () => {
     const sp = cfg.layout.spawn;
     S.pos.set(sp.pos[0], EYE, sp.pos[1]);

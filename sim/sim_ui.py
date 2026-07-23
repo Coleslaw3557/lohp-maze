@@ -37,42 +37,91 @@ PORT = int(os.environ.get('SIM_UI_PORT', '5001'))
 # address is known, or RPI_HOST= (empty) to disable the probe.
 RPI_HOST = os.environ.get('RPI_HOST', 'lohp-server.local')
 RPI_API_PORT = 5000
+RPI_PROJ_PORT = int(os.environ.get('RPI_PROJ_PORT', '5002'))  # renderer theme ctl
 
-# LAVA floor-projection engine (projection_engine.py at the repo root):
-# stepped in this process, streamed to the page over /sim/projection.
-# Defensive import — without numpy the sim still runs, minus the lava feed.
+# Floor-projection engines (projection_engine.py at the repo root): the
+# ACTIVE theme is stepped in this process and streamed to the page over
+# /sim/projection. Themes are shared state — the Floor button switches every
+# tab (and matches what production would project). Inactive themes keep their
+# world frozen and resume where they left off.
+# Defensive import — without numpy the sim still runs, minus the floor feed.
 if REPO_DIR not in sys.path:
     sys.path.append(REPO_DIR)
 try:
-    from projection_engine import LavaShow, palette_lut
+    from projection_engine import THEMES
 except Exception as e:  # noqa: BLE001 — any import failure just disables the feed
-    LavaShow, palette_lut = None, None
-    logging.getLogger(__name__).warning(f"lava engine unavailable: {e}")
+    THEMES = None
+    logging.getLogger(__name__).warning(f"floor engine unavailable: {e}")
 
-_lava = None
+_shows = {}
+_floor_theme = 'lava'
 
 
-def _get_lava():
-    global _lava
-    if _lava is None and LavaShow is not None:
+def _get_show():
+    if THEMES is None:
+        return None
+    if _floor_theme not in _shows:
         try:
             layout = _load_json(os.path.join(SIM_DIR, 'maze_layout.json'))
             if layout.get('projection'):
-                _lava = LavaShow(layout)
+                _shows[_floor_theme] = THEMES[_floor_theme](layout)
         except Exception:
-            logger.exception("lava engine init failed")
-    return _lava
+            logger.exception("floor engine init failed")
+    return _shows.get(_floor_theme)
 
 
-async def _lava_loop():
-    lava = _get_lava()
-    if lava is None:
+async def _forward_theme_to_pi(name):
+    """Best-effort mirror of a theme switch to the Pi renderer's control
+    port, so the Floor button drives the REAL projector too when the Pi is
+    reachable. Hand-rolled HTTP like the /sim/rpi_status probe — no deps."""
+    if not RPI_HOST or not RPI_PROJ_PORT:
+        return
+    try:
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(RPI_HOST, RPI_PROJ_PORT), timeout=1.5)
+    except (OSError, asyncio.TimeoutError):
+        logger.info(f"Pi renderer unreachable — projector unchanged (switch it "
+                    f"with: curl -X POST http://{RPI_HOST}:{RPI_PROJ_PORT}/theme/{name})")
+        return
+    try:
+        writer.write((f'POST /theme/{name} HTTP/1.0\r\nHost: {RPI_HOST}\r\n'
+                      f'Content-Length: 0\r\n\r\n').encode())
+        await writer.drain()
+        status = await asyncio.wait_for(reader.readline(), timeout=1.5)
+        if b' 200 ' in status or status.endswith(b' 200\r\n'):
+            logger.info(f"Pi projector theme -> {name}")
+        else:
+            logger.warning(f"Pi renderer refused theme {name}: {status!r} "
+                           f"(old renderer build? redeploy + restart lohp-projection)")
+    except (OSError, asyncio.TimeoutError) as e:
+        logger.warning(f"Pi renderer theme forward failed mid-request: {e}")
+    finally:
+        writer.close()
+
+
+def _set_floor_theme(name):
+    global _floor_theme
+    if THEMES is None or name not in THEMES or name == _floor_theme:
+        return
+    was_active = (_shows.get(_floor_theme) or None) and _shows[_floor_theme].active
+    _floor_theme = name
+    show = _get_show()
+    logger.info(f"floor projection theme -> {name}")
+    if show is not None and was_active:
+        show.cue('theme-switch')  # carry a running show across the swap
+    asyncio.ensure_future(_forward_theme_to_pi(name))
+
+
+async def _floor_loop():
+    if _get_show() is None:
         return
     prev = time.monotonic()
     while True:
         await asyncio.sleep(1 / 20)
         now = time.monotonic()
-        lava.step(min(now - prev, 0.25))
+        show = _get_show()
+        if show is not None:
+            show.step(min(now - prev, 0.25))
         prev = now
 
 app = Quart(__name__, static_folder=WEB_DIR, static_url_path='')
@@ -174,38 +223,53 @@ async def rpi_status():
 
 @app.websocket('/sim/projection')
 async def projection_feed():
-    """LAVA engine stream: hello (grid + palette), then state at ~15 fps with
-    the heat field base64'd. Receives {'track': [x, z] | null} (world meters,
-    already radar-lagged by the page) and {'cue': name} back. Several tabs
-    share one engine — the show is shared state, like the real deck."""
-    lava = _get_lava()
-    if lava is None:
-        await websocket.send(json.dumps({'error': 'lava engine unavailable'}))
+    """Floor engine stream: hello (theme + grid + palette + textures), then
+    state at ~15 fps with the scalar field base64'd. Receives {'track':
+    [x, z] | null} (world meters, already radar-lagged by the page), {'cue':
+    name}, and {'theme': name} back. Several tabs share one engine — the show
+    (and its theme) is shared state, like the real deck. On a theme switch
+    the loop notices the active engine changed and re-hellos with the new
+    palette + artwork."""
+    def hello(s):
+        return json.dumps({'hello': {
+            'theme': s.THEME,
+            'grid': [s.gw, s.gh],
+            'palette': s.palette_list(),
+            'heat_step': 2,
+            'textures': s.hello_patches(),
+        }})
+
+    show = _get_show()
+    if show is None:
+        await websocket.send(json.dumps({'error': 'floor engine unavailable'}))
         return
     conn = f"sim-{id(asyncio.current_task()) & 0xffff:x}"
-    await websocket.send(json.dumps({'hello': {
-        'grid': [lava.gw, lava.gh],
-        'palette': palette_lut().tolist(),
-        'heat_step': 2,
-        'textures': lava.hello_patches(),
-    }}))
+    await websocket.send(hello(show))
 
     async def _rx():
         while True:
             msg = json.loads(await websocket.receive())
+            cur = _get_show()
             tr = msg.get('track')
-            if tr:
-                lava.set_tracks([{'id': conn, 'x': float(tr[0]), 'z': float(tr[1])}])
-            if msg.get('cue'):
-                lava.cue(str(msg['cue'])[:48])
+            if tr and cur is not None:
+                cur.set_tracks([{'id': conn, 'x': float(tr[0]), 'z': float(tr[1])}])
+            if msg.get('cue') and cur is not None:
+                cur.cue(str(msg['cue'])[:48])
+            if msg.get('theme'):
+                _set_floor_theme(str(msg['theme']))
 
     rx = asyncio.ensure_future(_rx())
-    seen = lava.event_total
+    seen = show.event_total
     try:
         while True:
-            st = lava.state(drain_events=False)
-            st['events'], seen = lava.fresh_events(seen)
-            st['heat'] = lava.heat_b64() if lava.fade > 0 else None
+            cur = _get_show()
+            if cur is not None and cur is not show:
+                show = cur
+                await websocket.send(hello(show))
+                seen = show.event_total
+            st = show.state(drain_events=False)
+            st['events'], seen = show.fresh_events(seen)
+            st['heat'] = show.heat_b64() if show.fade > 0 else None
             await websocket.send(json.dumps(st))
             await asyncio.sleep(1 / 15)
     finally:
@@ -235,7 +299,7 @@ def run():
     cfg.accesslog = None
     cfg.errorlog = '-'
     never = asyncio.Event()
-    loop.create_task(_lava_loop())
+    loop.create_task(_floor_loop())
     logger.info(f"Sim UI starting on http://0.0.0.0:{PORT}")
     try:
         loop.run_until_complete(serve(app, cfg, shutdown_trigger=never.wait))

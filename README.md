@@ -22,11 +22,13 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   server's REST API; each node's speaker plays effect cues and streamed music, commanded by the
   server over the ESPHome native API (`node_audio_manager.py` + `node_audio_config.json`).
 - **Floor projection** (`projection_engine.py` + `projection_renderer.py`): the Cuddle Cross
-  lava show — a Mayan stepping-stone crossing with sink/rise mischief and a surfacing
-  monster — rendered by the same server Pi straight to its HDMI framebuffer and thrown onto
-  the upper deck by a face-down short-throw projector. Its own systemd service outside the
-  container; walker input is the room's LD2450 radar (demo phantom walkers until it's wired).
-  Plan: `wiring-guides/cuddle-lava-plan.md`.
+  floor show, two themes on one engine — **lava** (a Mayan stepping-stone crossing with
+  sink/rise mischief and the surfacing Kukulkan) and **jungle** (snakes that flee your
+  feet, fireflies, and the flying tiki mask) — rendered by the same server Pi straight to
+  its HDMI framebuffer and thrown onto the upper deck by a face-down short-throw projector.
+  Its own systemd service outside the container; walker input is the room's LD2450 radar
+  (demo phantom walkers until it's wired). Plans: `wiring-guides/cuddle-lava-plan.md`,
+  `wiring-guides/cuddle-jungle-plan.md`.
 - **Fallback audio client** (`client/`): the retired Pi-unit stack (units A/B/C are
   decommissioned), kept working as a fallback — one Linux host with a USB sound card per zone
   (`client/config-single-pi.json`) speaking the same WebSocket protocol.
@@ -109,21 +111,34 @@ Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,
   flashes synced to the fanfare, a white-gold mega flash on the final stinger, and emerald
   twinkles fading out.
 
-## The Cuddle Cross floor show (lava)
+## The Cuddle Cross floor show (lava / jungle)
 
-The upper-deck crossing is projection-mapped molten lava with a chain of five carved grey
+The upper-deck crossing is a projection-mapped floor show with two selectable themes.
+
+**Lava**: molten lava with a chain of five carved grey
 stepping stones — Mayan numerals in walking order, one dot at the east door through one bar
 (five) at the west; the goal is to walk across the stones. Walk toward a stone and it may
 sink after its glyph flashes hot (a carved warning) while another rises off your line;
 lava bubbles pop, canopy shadows press in at the deck rim, embers drift, and every minute
 or two **Kukulkan** — the feathered serpent — surfaces, scans the room with pulsing amber
-eyes, and slips back under. Presence-cued: the show starts when the radar sees someone and
+eyes, and slips back under.
+
+**Jungle**: the temple floor reclaimed — sun-dappled undergrowth where jade
+and coral snakes slither across the deck and dart away from your feet, fallen glyph stones
+go mossy and glint as you approach, fireflies blink, a sun-pool follows each walker, and a
+little **flying tiki mask** (Aku Aku homage, procedural like everything else) drifts in
+every minute or so, orbits whoever it finds, spins, and floats off into the canopy.
+
+Both are presence-cued: the show starts when the radar sees someone and
 fades out 60 s after the deck empties.
 
-One numpy engine (`projection_engine.py`) drives both displays: the projector
-(`projection_renderer.py` → `/dev/fb0`) and the sim preview (state + heat streamed over
-`WS /sim/projection`; the page renders the engine's own precomputed rock artwork). Content
-spec and tuning knobs: [wiring-guides/cuddle-lava-plan.md](wiring-guides/cuddle-lava-plan.md).
+One numpy engine (`projection_engine.py`, `FloorShow` base + `THEMES` registry) drives both
+displays: the projector (`projection_renderer.py --theme lava|jungle` → `/dev/fb0`) and the
+sim preview (state + field streamed over `WS /sim/projection`; the page renders the
+engine's own precomputed artwork, and the header **Floor** button switches the shared
+theme for every tab). Content specs and tuning knobs:
+[wiring-guides/cuddle-lava-plan.md](wiring-guides/cuddle-lava-plan.md) and
+[wiring-guides/cuddle-jungle-plan.md](wiring-guides/cuddle-jungle-plan.md).
 The **Cuddle orb** — a round-display watching eye mounted under the rear sensor box,
 sharing the same radar — is specced in
 [wiring-guides/cuddle-orb-plan.md](wiring-guides/cuddle-orb-plan.md).

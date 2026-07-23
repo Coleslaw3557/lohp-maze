@@ -5,6 +5,15 @@ optimization and tracker: `sim/maze_layout.json` `projection` key +
 `sim/README.md` "Planned: Cuddle Cross floor projection"). Tim's content call
 2026-07-22: **stepping stones on lava**, supersedes the placeholder snakes.
 
+**2026-07-23: lava is now one of two selectable themes.** The engine grew a
+`FloorShow` base + `THEMES` registry; the JUNGLE theme (snakes + the flying
+tiki mask, `wiring-guides/cuddle-jungle-plan.md`) shares the skeleton. Switch
+in the sim with the header **Floor** button (shared across tabs; it also
+forwards to the Pi renderer's live control port :5002 when reachable), in
+production with `curl -X POST http://<pi>:5002/theme/<name>` — `--theme`
+sets only the boot theme. The refactor left this show's output
+byte-identical (golden-frame verified).
+
 ## The show
 
 The deck is molten lava (flowing heat field, masked to the deck outline as
@@ -77,13 +86,18 @@ positions in world meters; output is an RGB frame plus a JSON-able state dict.
   before sending, so hardware feel is preserved). The page is a thin view of
   engine state — same idiom as the `/sim/dmx` feed.
 - **Production** (`projection_renderer.py` + `tools/lohp-projection.service`):
-  the same engine writes the server Pi's KMS framebuffer (`/dev/fb0`, 16 bpp
-  RGB565 at the LS625X's native 1024×768) with a 4× integer upscale — no
-  SDL/EGL/GL in the chain (the vc4 EGL stack refused kmsdrm on the 3B+,
-  2026-07-22, and fewer layers is playa-robust anyway). Runs OUTSIDE the
-  Docker container; venv at `/opt/lohp-projection-venv`; the unit unbinds
-  fbcon while running. Budget note: ~one full core at 25 fps on the 3B+ —
-  drop `--fps` or `--grid` if the box ever needs the headroom.
+  the same engine writes the server Pi's framebuffer (`/dev/fb0`) — since
+  2026-07-23 a LEGACY firmware fb at exactly the render grid (192×144) that
+  the VideoCore scaler stretches to the LS625X's native 1024×768 (the KMS
+  fb needed ~60 ms/frame of numpy upscale+pack; no SDL/EGL/GL in the chain
+  either way — the vc4 EGL stack refused kmsdrm on the 3B+, 2026-07-22, and
+  fewer layers is playa-robust anyway). Runs OUTSIDE the Docker container;
+  venv at `/opt/lohp-projection-venv`; the unit unbinds fbcon while running.
+  Perf (re-measured 2026-07-23 — the original "25 fps" was never real; it
+  ran ~6 fps): after the octave-roll/sqrt-gamma/blob-cache engine pass and
+  the GPU-scaler display path the service holds a locked 20 fps at
+  `--grid 192` (lava engine capable of ~49) — details in
+  wiring-guides/cuddle-jungle-plan.md "Perf".
   Track sources, pluggable:
   - `--source demo` — phantom walkers wander the deck (bench/attract mode,
     works TODAY with no sensor)

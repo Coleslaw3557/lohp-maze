@@ -193,19 +193,34 @@ So: design an effect in the sim → it's already production code → deploy to t
 physical server → identical behavior on real fixtures (once addressing is fixed,
 below).
 
-## Cuddle Cross floor projection — LAVA (live engine, 2026-07-22)
+## Cuddle Cross floor projection — LAVA + JUNGLE themes (live engine, 2026-07-23)
 
-The floor show is now REAL content with a production path: **a walkable chain
-of carved stepping stones on lava** — Mayan numerals in walking order, sink/
-rise mischief, bubbles, canopy dapple, embers, and **Kukulkan** surfacing to
-look around every minute or two (`projection_engine.py` at the repo root,
-plan + knobs in `wiring-guides/cuddle-lava-plan.md`). The sim steps the
-engine in-process and streams state over `WS /sim/projection` (heat field +
-stones + monster pose + events at ~15 fps); the page renders that state —
-using the engine's own precomputed rock/head artwork shipped in the hello —
-and sends back the lagged radar position. The placeholder snakes are gone.
-On the real deck the SAME engine runs on the server Pi, painted straight to
-the HDMI framebuffer (`projection_renderer.py`, systemd
+The floor show is REAL content with a production path, and now has **two
+selectable themes** on one engine skeleton (`projection_engine.py` at the
+repo root: `FloorShow` base + `THEMES` registry):
+
+- **LAVA** (2026-07-22, `wiring-guides/cuddle-lava-plan.md`): a walkable
+  chain of carved stepping stones on lava — Mayan numerals in walking
+  order, sink/rise mischief, bubbles, canopy dapple, embers, and
+  **Kukulkan** surfacing to look around every minute or two.
+- **JUNGLE** (2026-07-23, `wiring-guides/cuddle-jungle-plan.md`): the
+  temple floor the jungle took back — jade + coral **snakes** that slither
+  across and dart away from feet, mossy fallen glyph stones, fireflies, a
+  sun-pool following each walker, and a little **flying tiki mask** (Aku
+  Aku homage) that visits, orbits whoever it finds, and spins.
+
+The header **Floor** button cycles the theme — it's server-side shared
+state, so every tab (like the one real deck) switches together and the
+server re-hellos each client with the new palette + artwork; the switch is
+also forwarded best-effort to the Pi renderer's control port
+(`RPI_HOST:5002`, env `RPI_PROJ_PORT`), so the button flips the REAL
+projector when the Pi is up. The sim steps
+the active engine in-process and streams state over `WS /sim/projection`
+(scalar field + entities + events at ~15 fps); the page renders that state
+using the engine's own precomputed artwork shipped in the hello, and sends
+back the lagged radar position. On the real deck the SAME engine runs on
+the server Pi, painted straight to the HDMI framebuffer
+(`projection_renderer.py --theme lava|jungle`, systemd
 `lohp-projection.service`, demo phantom walkers until the LD2450 lands).
 Rig geometry below is unchanged.
 
@@ -232,8 +247,8 @@ projection-mapped as before: masked to the actual deck outline, off-deck pixels
 black — plus the LD2450 position radar that joins the LD2410C inside the node
 box (faint blue wedge). Walk onto the deck
 in first person — or click the **Cuddle Cross LT** trigger — and the floor
-show starts: placeholder snakes wander the playfield and flee your tracked
-position, filtered through the tracker's coverage wedge and ~150 ms
+show starts (whichever theme the Floor button has up), reacting to your
+tracked position filtered through the tracker's coverage wedge and ~150 ms
 sensor+render latency to match the real LD2450 → server-Pi render → projector
 chain (the fleet is exactly one Pi; the earlier spare-3B renderer is dead).
 The center mast base renders as the content island with its real shadow

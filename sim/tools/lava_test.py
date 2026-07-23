@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Headless test of the Cuddle lava engine (projection_engine.py).
+"""Headless test of the Cuddle floor-show engines (projection_engine.py).
 
-Runs against the real maze_layout.json geometry: mask sanity, stone
+Runs against the real maze_layout.json geometry. Lava: mask sanity, stone
 placement, presence/fade, the mischief mechanic (a walker marching at a
-stone provokes sink + rise), timeout, and a perf budget check.
+stone provokes sink + rise), Kukulkan, timeout, perf budget. Jungle: snakes
+slither and flee feet, the tiki mask arrives / spins / leaves, fireflies,
+textures, perf.
 
     sim/.venv/bin/python sim/tools/lava_test.py
 """
@@ -19,8 +21,8 @@ REPO_DIR = os.path.dirname(SIM_DIR)
 sys.path.insert(0, REPO_DIR)
 
 import numpy as np  # noqa: E402
-from projection_engine import (LavaShow, STONE_N, STONE_MIN_SPACE_M,  # noqa: E402
-                               STONE_R_M)
+from projection_engine import (JungleShow, LavaShow, SNAKE_SPECS,  # noqa: E402
+                               STONE_N, STONE_MIN_SPACE_M, STONE_R_M)
 
 FAIL = 0
 
@@ -162,6 +164,83 @@ def main():
         eng.render()
     ms = (time.perf_counter() - t0) / n * 1000
     check(ms < 25, f"step+render {ms:.1f} ms/frame at {eng.gw}x{eng.gh}")
+
+    print("8) jungle theme: snakes on the deck")
+    jng = JungleShow(layout)
+    check(len(jng.snakes) == len(SNAKE_SPECS), f"{len(jng.snakes)} snakes placed")
+    check(all(jng._on_deck(sn.x, sn.z) for sn in jng.snakes),
+          "every snake head on the lit deck")
+    check(len(jng.glyphs) >= 2, f"{len(jng.glyphs)} fallen glyph stones")
+    heads0 = [(sn.x, sn.z) for sn in jng.snakes]
+    jng.cue('test')
+    for _ in range(100):  # 5 s, nobody around
+        jng.step(0.05)
+    moved = [math.hypot(sn.x - x0, sn.z - z0)
+             for sn, (x0, z0) in zip(jng.snakes, heads0)]
+    check(all(m > 0.25 for m in moved),
+          f"snakes slither ({min(moved):.2f}–{max(moved):.2f} m in 5 s)")
+    on_deck = all(jng._on_deck(x, z, thresh=0.3)
+                  for sn in jng.snakes for x, z in sn.trail[:3])
+    check(on_deck, "snake heads stay on the deck")
+
+    print("9) jungle: feet spook a snake")
+    prey = jng.snakes[0]
+    wx, wz = prey.x + 0.15, prey.z
+    fled = False
+    for _ in range(80):  # 4 s standing right next to its head
+        jng.set_tracks([{'id': 'w', 'x': wx, 'z': wz}])
+        jng.step(0.05)
+        fled = fled or any(e['e'] == 'snake_flee' and e['id'] == prey.sid
+                           for e in jng.state()['events'])
+    dist = math.hypot(prey.x - wx, prey.z - wz)
+    check(fled, "snake_flee event fired")
+    check(dist > 0.5, f"the snake got away ({dist:.2f} m from the feet)")
+
+    print("10) jungle: the tiki mask visits, spins, leaves")
+    jng2 = JungleShow(layout)
+    jng2._tiki['next'] = 1.0  # don't sit out the real first-visit gap
+    seen = {'tiki_arrive': False, 'tiki_spin': False, 'tiki_leave': False}
+    pose_seen = False
+    for _ in range(600):  # 60 s, walker standing on the deck
+        jng2.set_tracks([{'id': 'w', 'x': 9.6, 'z': 1.0}])
+        jng2.step(0.1)
+        st = jng2.state()
+        pose_seen = pose_seen or bool(st['tiki'])
+        for e in st['events']:
+            if e['e'] in seen:
+                seen[e['e']] = True
+        if all(seen.values()):
+            break
+    check(all(seen.values()), f"arrive → spin → leave all occurred ({seen})")
+    check(pose_seen, "mask pose streamed while visiting")
+    check(len(jng2.flies) > 0, f"fireflies out ({len(jng2.flies)})")
+
+    print("11) jungle: textures + render")
+    tex = jng.hello_patches()
+    ok = (all(len(base64.b64decode(t['rgba'])) == t['w'] * t['h'] * 4
+              for t in [tex['island'], tex['tiki']] + tex['glyphs'])
+          and len(tex['snakes']) == len(jng.snakes)
+          and all(len(s['colors']) == len(s['w']) for s in tex['snakes']))
+    check(ok, f"textures exported (altar + mask + {len(tex['glyphs'])} glyphs "
+              f"+ {len(tex['snakes'])} snake styles)")
+    frame = jng.render()
+    check(frame.max() > 40, f"jungle renders (max px {frame.max()})")
+    lit = frame[jng.mask > 0.9].astype(int)
+    check(lit[:, 1].mean() > lit[:, 0].mean() and lit[:, 1].mean() > lit[:, 2].mean(),
+          "the floor reads GREEN (jungle, not lava)")
+    st = jng.state()
+    check(all(len(s['pts']) <= sn.n_seg for s, sn in zip(st['snakes'], jng.snakes)),
+          "spine streams bounded by segment count")
+
+    print("12) jungle perf (dev-box proxy; Pi 3B+ budget is ~4x this)")
+    t0 = time.perf_counter()
+    n = 200
+    for _ in range(n):
+        jng.set_tracks([{'id': 'w', 'x': 10.0, 'z': 1.0}])
+        jng.step(1 / 30)
+        jng.render()
+    ms = (time.perf_counter() - t0) / n * 1000
+    check(ms < 25, f"step+render {ms:.1f} ms/frame at {jng.gw}x{jng.gh}")
 
     print("ALL PASS" if not FAIL else "FAILURES")
     sys.exit(FAIL)
