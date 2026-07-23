@@ -14,10 +14,12 @@ protocol on :8765 — the page is just another client unit as far as the
 production code is concerned.
 """
 import asyncio
+import http.server
 import json
 import logging
 import os
 import sys
+import threading
 import time
 
 from quart import Quart, jsonify, send_from_directory, websocket
@@ -54,7 +56,14 @@ except Exception as e:  # noqa: BLE001 — any import failure just disables the 
     logging.getLogger(__name__).warning(f"floor engine unavailable: {e}")
 
 _shows = {}
+_THEME_FILE = os.path.join(SIM_DIR, '.floor_theme')
 _floor_theme = 'lava'
+try:
+    _saved_theme = open(_THEME_FILE).read().strip()
+    if THEMES and _saved_theme in THEMES:
+        _floor_theme = _saved_theme  # sim restarts keep the last floor show
+except OSError:
+    pass
 
 
 def _get_show():
@@ -109,7 +118,74 @@ def _set_floor_theme(name):
     logger.info(f"floor projection theme -> {name}")
     if show is not None and was_active:
         show.cue('theme-switch')  # carry a running show across the swap
+    try:
+        with open(_THEME_FILE, 'w') as f:
+            f.write(name)
+    except OSError:
+        pass
     asyncio.ensure_future(_forward_theme_to_pi(name))
+
+
+# Bench stand-in for the Pi renderer's theme control (projection_renderer.py
+# ThemeControl): same GET /theme + POST /theme/<name|next> protocol on the same
+# port, driving _set_floor_theme — so main.py's /api/next_floor_theme relay
+# (the orb's very-long-press) behaves identically against the bench sim and the
+# playa Pi. 0 disables.
+FLOOR_CTL_PORT = int(os.environ.get('FLOOR_CTL_PORT', '5002'))
+_loop = None  # the sim-ui event loop, set by run(); the ctl thread marshals onto it
+
+
+def _start_floor_ctl():
+    if not FLOOR_CTL_PORT or THEMES is None:
+        return
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def _reply(self, code, obj):
+            body = json.dumps(obj).encode()
+            self.send_response(code)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            if self.path.rstrip('/') == '/theme':
+                self._reply(200, {'theme': _floor_theme, 'themes': sorted(THEMES)})
+            else:
+                self._reply(404, {'error': 'try /theme'})
+
+        def do_POST(self):
+            path = self.path.rstrip('/')
+            name = None
+            if path.startswith('/theme/'):
+                name = path.rsplit('/', 1)[-1]
+            elif path == '/theme':
+                try:
+                    n = int(self.headers.get('Content-Length') or 0)
+                    name = json.loads(self.rfile.read(n) or b'{}').get('theme')
+                except (ValueError, json.JSONDecodeError):
+                    name = None
+            if name == 'next':
+                themes = sorted(THEMES)
+                name = themes[(themes.index(_floor_theme) + 1) % len(themes)]
+            if name in THEMES and _loop is not None:
+                _loop.call_soon_threadsafe(_set_floor_theme, name)
+                self._reply(200, {'ok': True, 'theme': name})
+            else:
+                self._reply(400, {'error': f'unknown theme {name!r}',
+                                  'themes': sorted(THEMES)})
+
+        def log_message(self, *_):
+            pass  # switches already log from _set_floor_theme
+
+    try:
+        httpd = http.server.ThreadingHTTPServer(('', FLOOR_CTL_PORT), Handler)
+    except OSError as e:
+        logger.warning(f"floor theme ctl :{FLOOR_CTL_PORT} unavailable ({e}) — "
+                       f"the /api/next_floor_theme relay won't reach the sim")
+        return
+    threading.Thread(target=httpd.serve_forever, name='floor-ctl', daemon=True).start()
+    logger.info(f"floor theme ctl on :{FLOOR_CTL_PORT} (bench stand-in for the Pi renderer)")
 
 
 async def _floor_loop():
@@ -292,14 +368,17 @@ async def dmx_feed():
 
 def run():
     """Entry point for the sim-ui thread (non-main thread: no signal handlers)."""
+    global _loop
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    _loop = loop
     cfg = HyperConfig()
     cfg.bind = [f'0.0.0.0:{PORT}']
     cfg.accesslog = None
     cfg.errorlog = '-'
     never = asyncio.Event()
     loop.create_task(_floor_loop())
+    _start_floor_ctl()
     logger.info(f"Sim UI starting on http://0.0.0.0:{PORT}")
     try:
         loop.run_until_complete(serve(app, cfg, shutdown_trigger=never.wait))

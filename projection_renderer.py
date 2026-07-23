@@ -162,6 +162,7 @@ class ThemeControl:
 
         GET  /theme          -> {"theme": "lava", "themes": ["jungle","lava"]}
         POST /theme/jungle   -> switch (also accepts POST /theme {"theme": x})
+        POST /theme/next     -> cycle to the next theme in sorted order
 
     The sim's Floor button forwards here (sim_ui._set_floor_theme), and
     anything on the LAN can drive it:  curl -X POST http://<pi>:5002/theme/jungle
@@ -200,6 +201,9 @@ class ThemeControl:
                         name = json.loads(self.rfile.read(n) or b'{}').get('theme')
                     except (ValueError, json.JSONDecodeError):
                         name = None
+                if name == 'next':
+                    themes = sorted(THEMES)
+                    name = themes[(themes.index(ctl.current) + 1) % len(themes)]
                 if name in THEMES:
                     with ctl._lock:
                         ctl._want = name
@@ -334,8 +338,19 @@ def main():
     # every theme is built up front (a few seconds at startup) so a live
     # switch never stalls the render loop mid-show
     engines = {name: cls(layout, grid_w=args.grid) for name, cls in THEMES.items()}
-    engine = engines[args.theme]
-    ctl = ThemeControl(args.ctl_port, args.theme) if args.ctl_port else None
+    # the projector comes back as whatever it was last showing — a restart
+    # or power cycle must not silently revert the show (--theme is only the
+    # first-ever boot)
+    state_file = os.path.join(REPO_DIR, '.floor_theme')
+    boot = args.theme
+    try:
+        saved = open(state_file).read().strip()
+        if saved in THEMES:
+            boot = saved
+    except OSError:
+        pass
+    engine = engines[boot]
+    ctl = ThemeControl(args.ctl_port, boot) if args.ctl_port else None
     if args.source == 'esphome':
         if not args.node:
             ap.error('--source esphome needs --node')
@@ -344,7 +359,7 @@ def main():
         source = DemoTracks(layout)
 
     out = PygameOutput(engine.gw, engine.gh) if args.windowed else FbOutput()
-    print(f"floor renderer [{args.theme}]: {out.size()[0]}x{out.size()[1]} "
+    print(f"floor renderer [{boot}]: {out.size()[0]}x{out.size()[1]} "
           f"grid {engine.gw}x{engine.gh} source={args.source} fps<={args.fps} "
           f"ctl={'off' if not ctl else f':{args.ctl_port}/theme'}",
           flush=True)
@@ -366,6 +381,11 @@ def main():
                 engine = engines[want]
                 ctl.current = want
                 print(f"theme -> {want}", flush=True)
+                try:
+                    with open(state_file, 'w') as f:
+                        f.write(want)
+                except OSError:
+                    pass
             engine.set_tracks(source.tracks(dt, engine))
             engine.step(dt)
             frame = engine.render()

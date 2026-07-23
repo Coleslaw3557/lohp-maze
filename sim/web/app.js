@@ -2145,7 +2145,7 @@ function buildProjection(cfg) {
     // It computes nothing. `theme` mirrors the server's active show.
     ws: null, grid: null, lut: null, heatCanvas: null, heatImg: null,
     heatStep: 2, theme: null, stones: [], snakes: [], snakeMeta: {}, flies: [],
-    glyphs: [], glyphGlint: {}, scarabs: [], torch: null,
+    glyphs: [], glyphGlint: {}, scarabs: [],
     tracksPx: [], fx: [], engineFade: 0, lastTrackSend: 0 };
   connectProjection();
 }
@@ -2170,6 +2170,7 @@ function connectProjection() {
       // show's entities into this one
       pr.theme = m.hello.theme || 'lava';
       pr.stoneImg = null; pr.monsterImg = null; pr.baseImg = null;
+      pr.spiderImgs = null;
       pr.stones = []; pr.monster = null; pr.snakes = []; pr.snakeMeta = {};
       pr.flies = []; pr.glyphs = []; pr.glyphGlint = {};
       pr.fx = [];
@@ -2192,6 +2193,7 @@ function connectProjection() {
           for (const t of tex2.stones) pr.stoneImg[t.id] = mk(t);
         }
         if (tex2.base) pr.baseImg = mk(tex2.base);
+        if (tex2.spider) pr.spiderImgs = tex2.spider.map(mk);
         pr.islandImg = mk(tex2.island);
         pr.islandPos = tex2.island;
         if (tex2.monster) pr.monsterImg = mk(tex2.monster);
@@ -2211,7 +2213,7 @@ function connectProjection() {
     pr.glyphGlint = {};
     for (const g of m.glyphs || []) pr.glyphGlint[g.id] = g.glint;
     pr.scarabs = m.scarabs || [];
-    pr.torch = m.torch || null;
+    pr.spider = m.spider || null;
     if (m.heat && pr.heatCanvas) paintHeat(pr, m.heat);
     for (const e of m.events || []) {
       if (e.x != null) pr.fx.push({ ...e, t0: clock.getElapsedTime() });
@@ -2220,7 +2222,7 @@ function connectProjection() {
       if (e.e === 'monster_swim') log('info', 'projection: something moves beneath the lava…');
       if (e.e === 'monster_breach') log('ok', 'projection: KUKULKAN breaches!');
       if (e.e === 'monster_sink') log('info', 'projection: Kukulkan slips back under');
-      if (e.e === 'torch_sputter') log('info', 'projection: the fallen torch gutters…');
+      if (e.e === 'spider_scurry') log('ok', 'projection: the spider SCURRIES away!');
       if (e.e === 'scarab_erupt') log('ok', 'projection: SCARABS pour from the cracks!');
       if (e.e === 'scarab_drain') log('info', 'projection: the scarabs drain away between the stones');
       if (e.e === 'snake_flee') {
@@ -2493,37 +2495,16 @@ function drawProjection(pr, dt, now) {
     }
   }
 
-  // temple: the fallen torch's flame (handle + scorch live in the base
-  // texture; the flame animates from engine len/sway/glow)
-  if (pr.torch) {
-    const tk = pr.torch;
+  // temple: the resident spider (rotate to heading, gait frame from state)
+  if (pr.spider && pr.spiderImgs) {
+    const spd = pr.spider;
+    const img = pr.spiderImgs[Math.min(spd.gait, pr.spiderImgs.length - 1)];
     ctx.save();
-    ctx.translate(tk.x * gs, tk.y * gs);
-    ctx.rotate(tk.ang);
-    const L = tk.len * gs, sway = tk.sway * gs;
-    const layers = [
-      ['rgba(230,110,25,0.85)', 1.0, 0.055],
-      ['rgba(255,190,70,0.9)', 0.72, 0.038],
-      ['rgba(255,244,200,0.95)', 0.42, 0.022],
-    ];
-    for (const [c, f, wf] of layers) {
-      ctx.fillStyle = c;
-      ctx.beginPath();
-      ctx.ellipse(L * f * 0.5, sway * f * 0.5, L * f * 0.55,
-        Math.max(1.5, wf * pr.ppm), Math.atan2(sway * f, L * f) * 0.5, 0, 7);
-      ctx.fill();
-    }
+    ctx.translate(spd.x * gs, spd.y * gs);
+    ctx.rotate(spd.ang);
+    const w = img.width * gs, h = img.height * gs;
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
     ctx.restore();
-    if (tk.glow > 0.1) {  // faint halo over the pool the field already casts
-      ctx.globalAlpha = 0.08 * tk.glow;
-      ctx.fillStyle = 'rgb(255,200,110)';
-      ctx.beginPath();
-      ctx.arc(tk.x * gs + Math.cos(tk.ang) * tk.len * gs * 0.4,
-        tk.y * gs + Math.sin(tk.ang) * tk.len * gs * 0.4,
-        0.5 * pr.ppm, 0, 7);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
   }
 
   // temple: the scarab swarm — tiny dark ovals with a bronze-green sheen,
@@ -2600,9 +2581,12 @@ function drawProjection(pr, dt, now) {
 // authoritative; this canvas port matches its character, not its pixels.
 // Real panel is a 47 mm (1.8") disc; drawn bigger here so the face reads
 // across the deck. Layout `eye` key drives it; the Eye button toggles it.
-// The gestures the real orb sends (tap=next theme, swipe=music on/off,
-// long-press=storm all — the orb IS the Cuddle control surface, no wall
-// buttons there) hit the REST API directly — see wiring-guides/cuddle-orb-plan.md.
+// Touching the real orb opens a carved five-wedge action menu (firmware
+// menu_olmec.h: lights / music / storm-hold-to-charge / floor theme / calm —
+// the orb IS the Cuddle control surface, no wall buttons there) that hits
+// the REST API directly — see wiring-guides/cuddle-orb-plan.md. The sim
+// preview shows the idle face only; preview the menu art with
+// firmware/orb/tools/preview_face --menu.
 const EYE_MODES = ['off', 'olmec'];
 const EYE_LABEL = { off: 'Eye ✕', olmec: 'Eye: Olmec' };
 

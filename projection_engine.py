@@ -146,7 +146,6 @@ _TEMPLE_STOPS = [
     (0.85, (252, 230, 176)),
     (1.00, (255, 244, 204)),
 ]
-MOTE_N = 5                   # drifting dust motes catching the temple light
 CARVED_FLAGS = 3             # flagstones carrying a carved glyph (glint on approach)
 # scarab swarms, straight out of The Mummy: erupt from a crack mouth,
 # skitter across as a mass, circle a walker's feet, drain into another crack
@@ -163,18 +162,17 @@ SCARAB_L_M = 0.07            # body length
 SCARAB_ROT_STEPS = 16
 _SCARAB_BODY = np.array([22, 17, 11], np.float32)
 _SCARAB_SHEEN = np.array([96, 128, 72], np.float32)  # bronze-green iridescence
-# the fallen torch, Indiana Jones style: a BONE wrapped in cloth, dropped
-# at the deck edge and still burning — bone + wrap + scorch baked into the
-# floor (pale bone reads on dark stone), live flame + guttering light pool
-TORCH_BONE_M = 0.44          # femur length, condyle knobs to the wrap
-TORCH_WRAP_M = 0.15          # cloth-wrapped end that carries the fire
-TORCH_FLAME_M = 0.20         # nominal flame length along the floor
-TORCH_POOL_R_M = 0.55        # warm pool the flame throws
-TORCH_SPUTTER_S = (20.0, 50.0)  # gap between gutters (dip, then flare)
-_BONE = np.array([214, 204, 178], np.float32)
-_BONE_DARK = np.array([150, 138, 112], np.float32)
-_CLOTH = np.array([196, 178, 142], np.float32)
-_CLOTH_CHAR = np.array([52, 38, 28], np.float32)
+# the resident spider: a big dusty tarantula, very slow, easily spooked
+SPIDER_SPAN_M = 0.42         # leg-tip to leg-tip
+SPIDER_SPEED = 0.06          # crawl m/s
+SPIDER_SCURRY_SPEED = 0.85
+SPIDER_SCARE_R_M = 0.9       # feet closer than this spook it
+SPIDER_PAUSE_S = (2.0, 7.0)
+SPIDER_ROT_STEPS = 16
+SPIDER_GAITS = 4             # leg-cycle frames (advance by distance walked)
+_SPIDER_BODY = np.array([104, 80, 54], np.float32)
+_SPIDER_DARK = np.array([46, 36, 26], np.float32)
+_SPIDER_MARK = np.array([176, 144, 96], np.float32)
 _FLAME_CORE = np.array([255, 244, 200], np.float32)
 _FLAME_MID = np.array([255, 190, 70], np.float32)
 _FLAME_OUT = np.array([230, 110, 25], np.float32)
@@ -1888,9 +1886,10 @@ class JungleShow(FloorShow):
 class TempleShow(FloorShow):
     """The temple floor itself, swept and torch-lit: dark weathered
     flagstones with moss veining the joints, a few flags carrying carved
-    glyphs that glint gold as a walker approaches, dust motes drifting
-    through the light, torch flicker breathing over everything, and a warm
-    light-pool following each walker. The calm show of the three."""
+    glyphs that glint gold as a walker approaches, torchlight breathing
+    over everything from somewhere unseen, a warm light-pool following
+    each walker — and the resident spider, patrolling very slowly until
+    feet get close. The calm show of the three."""
 
     THEME = 'temple'
     PALETTE_STOPS = _TEMPLE_STOPS
@@ -1934,8 +1933,6 @@ class TempleShow(FloorShow):
             seed, edge_col=np.array([52, 46, 40], np.float32),
             core_col=np.array([108, 96, 80], np.float32))
 
-        self.flies = []  # dust motes (streamed under the same state key)
-
         # crack mouths: fixed spots in the floor the scarabs pour from and
         # drain into (repeat visitors learn the holes)
         pts2 = self._interior_pts(0.30)
@@ -1960,37 +1957,15 @@ class TempleShow(FloorShow):
                        'scarabs': [], 'n': 0, 'spawned': 0, 't0': 0.0,
                        'mouth': None, 'exit': None, 'wp': 'exit', 'orbit_t': 0.0}
 
-        # the fallen torch: dropped near the deck edge, flame licking toward
-        # the interior. Handle/head/scorch bake into the base; the flame and
-        # its guttering light pool are live.
-        pts3 = self._interior_pts(0.30)
-        best, best_d = None, -1.0
-        alt, alt_d = None, -1.0  # fallback: altar rule only
-        for _ in range(150):
-            py, px = pts3[self._rng.randrange(len(pts3))]
-            px, py = float(px), float(py)
-            wx, wz = self._px_to_world(px, py)
-            d = math.hypot(wx - self._cx, wz - self._cz)
-            if d < 0.8:  # never against the altar
-                continue
-            if d > alt_d:
-                alt, alt_d = (px, py, wx, wz), d
-            if any(math.hypot(px - m['px'], py - m['py']) < 0.35 * self.ppm
-                   for m in self.mouths):
-                continue
-            if any(math.hypot(px - g['px'], py - g['py']) < 0.35 * self.ppm
-                   for g in self.glyphs):
-                continue
-            if d > best_d:  # farthest from center wins = off to the side
-                best, best_d = (px, py, wx, wz), d
-        px, py, wx, wz = best or alt
-        ang = math.atan2(self.mast[1] - py, self.mast[0] - px) \
-            + self._rng.uniform(-0.7, 0.7)  # flame roughly toward the interior
-        self._torch = {'px': px, 'py': py, 'wx': wx, 'wz': wz, 'ang': ang,
-                       'len': TORCH_FLAME_M * self.ppm, 'sway': 0.0,
-                       'glow': 1.0, 'sput_next': self._rng.uniform(*TORCH_SPUTTER_S),
-                       'sput_t': -1.0}
-        self._bake_torch()
+        # the resident spider: one big slow tarantula
+        self._spider_sprites = [
+            [self._build_spider_sprite(k * math.tau / SPIDER_ROT_STEPS, g)
+             for g in range(SPIDER_GAITS)]
+            for k in range(SPIDER_ROT_STEPS)]
+        sx, sz = self._px_to_world(*self.to_px(self._cx + 1.0, self._cz - 0.8))
+        self._spider = {'x': sx, 'z': sz, 'ang': 0.0, 'mode': 'wander',
+                        'goal': None, 'pause': 2.0, 'trav': 0.0, 'spd': 0.0,
+                        'scurry_t': 0.0, 'px_prev': None}
 
     def _flag_base(self, seed):
         """Dark weathered flagstones, brick-offset with wandering joints,
@@ -2039,64 +2014,6 @@ class TempleShow(FloorShow):
         region *= 1.0 - c[..., None] * (1.0 - _CARVE_DARK)
         region += lip[..., None] * 16.0
 
-    def _bake_torch(self):
-        """Draw the dropped BONE torch into the base texture: a pale femur —
-        twin condyle knobs at the free end, shaft with a dome highlight —
-        with a mummy-cloth wrap at the burning end (diagonal bandage bands,
-        charring toward the flame), a contact shadow so it lifts off the
-        floor, and a soot scorch on the stone. The flame itself is live."""
-        t = self._torch
-        ca, sa = math.cos(t['ang']), math.sin(t['ang'])
-        bl = TORCH_BONE_M * self.ppm
-        wl = TORCH_WRAP_M * self.ppm
-        pad = int(bl + wl) + 6
-        x0 = max(0, int(t['px']) - pad)
-        x1 = min(self.gw, int(t['px']) + pad + 1)
-        y0 = max(0, int(t['py']) - pad)
-        y1 = min(self.gh, int(t['py']) + pad + 1)
-        ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
-        u = (xs - t['px']) * ca + (ys - t['py']) * sa   # +u = flame direction
-        v = -(xs - t['px']) * sa + (ys - t['py']) * ca
-        region = self._base[y0:y1, x0:x1]
-
-        # scorch first, so everything lies on top of it
-        d = np.hypot(u - 0.06 * self.ppm, v)
-        region *= (1.0 - 0.55 * np.exp(-(d / (0.13 * self.ppm)) ** 2))[..., None]
-
-        # silhouette pieces (alphas), assembled then shaded
-        wsh = max(1.8, 0.032 * self.ppm)               # shaft half-width
-        a_shaft = (np.clip((wsh - np.abs(v)) / 1.1, 0.0, 1.0)
-                   * np.clip((-u - wl * 0.35) / 1.5, 0.0, 1.0)
-                   * np.clip((u + bl - 0.05 * self.ppm) / 1.5, 0.0, 1.0))
-        rk = max(2.2, 0.048 * self.ppm)                # condyle knobs
-        a_knob = np.zeros_like(a_shaft)
-        for sv in (-1, 1):
-            dk = np.hypot(u + bl - 0.01 * self.ppm, v - sv * 0.034 * self.ppm)
-            a_knob = np.maximum(a_knob, np.clip((rk - dk) / 1.1, 0.0, 1.0))
-        a_bone = np.maximum(a_shaft, a_knob)
-        wwr = max(2.4, 0.058 * self.ppm)               # cloth wrap half-width
-        a_wrap = (np.clip((wwr - np.abs(v)) / 1.1, 0.0, 1.0)
-                  * np.clip((u + wl * 0.45) / 1.2, 0.0, 1.0)
-                  * np.clip((wl * 0.55 - u) / 1.2, 0.0, 1.0))
-
-        # contact shadow: the silhouette shifted a touch, darkening the stone
-        sil = np.maximum(a_bone, a_wrap)
-        sh = np.roll(np.roll(sil, 2, axis=0), 1, axis=1)
-        region *= (1.0 - 0.40 * sh)[..., None]
-
-        # bone: dome highlight across the shaft, worn shading at the edges
-        dome = np.clip(1.0 - np.abs(v) / (wsh * 1.4), 0.0, 1.0) ** 0.7
-        col_bone = _BONE_DARK + (_BONE - _BONE_DARK) * dome[..., None]
-        col_bone = col_bone * (1.0 + 0.06 * np.sin(u * 1.3))[..., None]
-        region[:] = region * (1 - a_bone[..., None]) + col_bone * a_bone[..., None]
-
-        # cloth: diagonal bandage bands, charring toward the flame end
-        band = 1.0 + 0.24 * np.sin((u - v * 0.9) * (4.2 / max(1.0, 0.02 * self.ppm)))
-        char = np.clip((u + wl * 0.1) / (wl * 0.6), 0.0, 1.0) ** 1.5
-        col_wrap = (_CLOTH * band[..., None]
-                    + char[..., None] * (_CLOTH_CHAR - _CLOTH * band[..., None]))
-        region[:] = region * (1 - a_wrap[..., None]) + col_wrap * a_wrap[..., None]
-
     def _bake_holes(self):
         """The pits the scarabs use, chipped into the floor: near-black
         irregular holes with a bright fractured rim — always visible, so
@@ -2125,6 +2042,67 @@ class TempleShow(FloorShow):
             region[:] = (region * (1 - hole)
                          + np.array([9, 8, 7], np.float32) * hole)
 
+    def _build_spider_sprite(self, ang, ph):
+        """One big dusty tarantula from above, heading along `ang`, at gait
+        frame `ph`: eight two-segment legs (alternating-tetrapod cycle —
+        opposite sets swing fore/aft), cephalothorax + larger abdomen with
+        chevron markings and a dome highlight. Sized to read across the
+        deck; SPIDER_ROT_STEPS x SPIDER_GAITS precomputed patches."""
+        S = SPIDER_SPAN_M * self.ppm / 2
+        pad = int(S) + 3
+        n = 2 * pad + 1
+        ys, xs = np.mgrid[0:n, 0:n].astype(np.float32)
+        dx, dy = xs - pad, ys - pad
+        ca, sa = math.cos(ang), math.sin(ang)
+        u = dx * ca + dy * sa
+        v = -dx * sa + dy * ca
+        swing = math.sin(math.tau * ph / SPIDER_GAITS) * 0.22
+
+        def seg_alpha(ax, ay, bx, by, w):
+            vx, vy = bx - ax, by - ay
+            l2 = max(vx * vx + vy * vy, 1e-6)
+            t = np.clip(((u - ax) * vx + (v - ay) * vy) / l2, 0.0, 1.0)
+            d = np.hypot(u - (ax + t * vx), v - (ay + t * vy))
+            return np.clip((w - d) / 1.0, 0.0, 1.0)
+
+        a_leg = np.zeros((n, n), np.float32)
+        for side in (-1, 1):
+            for i, base in enumerate((0.50, 0.92, 1.34, 1.76)):
+                # opposite leg sets swing in antiphase; swing tilts each leg
+                # fore/aft around its base angle
+                sw = swing if (i % 2 == 0) == (side > 0) else -swing
+                th = side * base + sw
+                ex = math.cos(th) * 0.58 * S
+                ey = math.sin(th) * 0.58 * S
+                th2 = th + side * 0.55
+                tx = ex + math.cos(th2) * 0.52 * S
+                ty = ey + math.sin(th2) * 0.52 * S
+                a_leg = np.maximum(a_leg, seg_alpha(0.10 * S, 0.0, ex, ey,
+                                                    max(1.2, 0.016 * self.ppm)))
+                a_leg = np.maximum(a_leg, seg_alpha(ex, ey, tx, ty,
+                                                    max(1.0, 0.012 * self.ppm)))
+        # bodies: cephalothorax forward, big abdomen behind
+        ceph = ((u - 0.22 * S) / (0.30 * S)) ** 2 + (v / (0.24 * S)) ** 2
+        a_ceph = np.clip((1.0 - ceph) * 4.0, 0.0, 1.0)
+        abd = ((u + 0.34 * S) / (0.42 * S)) ** 2 + (v / (0.34 * S)) ** 2
+        a_abd = np.clip((1.0 - abd) * 4.0, 0.0, 1.0)
+        a_body = np.maximum(a_ceph, a_abd)
+
+        rng = np.random.default_rng(1331)  # same hair at every angle/gait
+        hair = 0.82 + 0.36 * _static_noise(rng, n, n, max(4, n // 5))
+        dome = 0.65 + 0.35 * np.clip(1.0 - np.minimum(ceph, abd), 0.0, 1.0)
+        col_body = _SPIDER_BODY * (hair * dome)[..., None]
+        # chevron markings down the abdomen
+        chev = (np.clip(1.0 - np.abs(((-u - 0.20 * S) % (0.22 * S))
+                                     - 0.11 * S) / (0.035 * S), 0.0, 1.0)
+                * (a_abd > 0.3) * np.clip(1.0 - np.abs(v) / (0.26 * S), 0.0, 1.0))
+        col_body = col_body + chev[..., None] * (_SPIDER_MARK - col_body) * 0.55
+        col_leg = (_SPIDER_DARK + (_SPIDER_BODY - _SPIDER_DARK)
+                   * np.clip(1.0 - np.hypot(u, v) / (1.1 * S), 0.0, 1.0)[..., None])
+        alpha = np.maximum(a_body, a_leg * 0.9)[..., None]
+        col = np.where(a_body[..., None] > 0.35, col_body, col_leg)
+        return col.astype(np.float32), alpha.astype(np.float32)
+
     def _build_scarab_sprite(self, ang):
         """One scarab seen from above, pointing along `ang`: a tiny dark
         oval — split elytra line down the back, bronze-green iridescent
@@ -2150,39 +2128,63 @@ class TempleShow(FloorShow):
 
     # ---- simulation ----
     def _step_theme(self, dt):
-        self._step_torch(dt)
-        self._step_motes(dt)
+        self._step_spider(dt)
         self._step_scarabs(dt)
         self._step_glints(dt)
 
-    def _step_torch(self, dt):
-        """Flame flicker (two-sine + jitter), lateral sway, and the
-        occasional dramatic sputter: gutter down, flare, recover."""
-        t = self._torch
-        env = 1.0
-        if t['sput_t'] >= 0:
-            ph = t['sput_t'] = t['sput_t'] + dt
-            if ph < 0.5:
-                env = 1.0 - 1.3 * ph            # gutter down to ~0.35
-            elif ph < 0.8:
-                env = 0.35 + (ph - 0.5) * 3.0   # flare up through 1.25
-            elif ph < 1.3:
-                env = 1.25 - (ph - 0.8) * 0.5   # settle back
+    def _step_spider(self, dt):
+        """Very slow patrol with long pauses; feet inside SPIDER_SCARE_R_M
+        send it scurrying to somewhere far from the walker. The gait frame
+        advances with distance walked, so the legs move only when it does."""
+        sp = self._spider
+        fresh = self._fresh_tracks()
+        near = min((math.hypot(t.x - sp['x'], t.z - sp['z']) for t in fresh),
+                   default=1e9)
+        if sp['mode'] == 'wander' and near < SPIDER_SCARE_R_M and fresh:
+            w = min(fresh, key=lambda t: math.hypot(t.x - sp['x'], t.z - sp['z']))
+            sp['goal'] = self._spider_goal(away_from=w)
+            sp['mode'] = 'scurry'
+            sp['scurry_t'] = 2.6
+            px, py = self.to_px(sp['x'], sp['z'])
+            self._emit({'e': 'spider_scurry', 'x': round(px, 1), 'y': round(py, 1)})
+        if sp['mode'] == 'wander':
+            if sp['pause'] > 0:
+                sp['pause'] -= dt
+                sp['spd'] = 0.0
             else:
-                t['sput_t'] = -1.0
-                t['sput_next'] = self._rng.uniform(*TORCH_SPUTTER_S)
-        elif self.fade > 0.5:
-            t['sput_next'] -= dt
-            if t['sput_next'] <= 0:
-                t['sput_t'] = 0.0
-                self._emit({'e': 'torch_sputter'})
-        flick = (1.0 + 0.16 * math.sin(self.t * 9.1)
-                 + 0.09 * math.sin(self.t * 15.7)
-                 + self._rng.uniform(-0.05, 0.05))
-        t['len'] = TORCH_FLAME_M * self.ppm * flick * env
-        t['sway'] = (0.35 * math.sin(self.t * 7.3)
-                     + 0.22 * math.sin(self.t * 12.1)) * 0.05 * self.ppm
-        t['glow'] = max(0.15, flick * env)
+                if sp['goal'] is None:
+                    sp['goal'] = self._spider_goal()
+                sp['spd'] = SPIDER_SPEED
+        else:
+            sp['scurry_t'] -= dt
+            sp['spd'] = SPIDER_SCURRY_SPEED
+            if sp['scurry_t'] <= 0:
+                sp['mode'] = 'wander'
+                sp['goal'] = None
+                sp['pause'] = self._rng.uniform(*SPIDER_PAUSE_S)
+        if sp['goal'] is not None and sp['spd'] > 0:
+            gx, gz = sp['goal']
+            d = math.hypot(gx - sp['x'], gz - sp['z'])
+            step = sp['spd'] * dt
+            if d <= max(step, 0.05):
+                sp['goal'] = None
+                if sp['mode'] == 'wander':
+                    sp['pause'] = self._rng.uniform(*SPIDER_PAUSE_S)
+                else:
+                    sp['mode'] = 'wander'
+                    sp['pause'] = self._rng.uniform(*SPIDER_PAUSE_S)
+            else:
+                sp['x'] += (gx - sp['x']) / d * step
+                sp['z'] += (gz - sp['z']) / d * step
+                sp['trav'] += step
+        # face the motion (px-frame), like the other movers
+        px, py = self.to_px(sp['x'], sp['z'])
+        if sp['px_prev'] is not None:
+            dxp, dyp = px - sp['px_prev'][0], py - sp['px_prev'][1]
+            if math.hypot(dxp, dyp) > 0.05:
+                sp['ang'] += _angdiff(math.atan2(dyp, dxp), sp['ang']) \
+                    * min(1.0, 7.0 * dt)
+        sp['px_prev'] = (px, py)
 
     def _step_scarabs(self, dt):
         sw = self._swarm
@@ -2282,38 +2284,23 @@ class TempleShow(FloorShow):
             self._emit({'e': 'scarab_drain',
                         'x': round(ex['px'], 1), 'y': round(ex['py'], 1)})
 
-    def _step_motes(self, dt):
-        if (self.fade > 0 and len(self.flies) < MOTE_N
-                and self._rng.random() < 0.5 * dt * self.fade):
-            py, px = self._mask_pts[self._rng.randrange(len(self._mask_pts))]
-            a = self._rng.random() * math.tau
-            sp = self._rng.uniform(0.015, 0.04) * self.ppm  # slow drift
-            self.flies.append({'x': float(px), 'y': float(py),
-                               'vx': math.cos(a) * sp, 'vy': math.sin(a) * sp,
-                               't0': self.t, 'life': self._rng.uniform(12.0, 28.0),
-                               'on': False, 'sw': self._rng.uniform(0.8, 2.5)})
-        alive = []
-        for f in self.flies:
-            if self.t - f['t0'] >= f['life']:
+    def _spider_goal(self, away_from=None):
+        """A wander spot: interior, off the altar and the torch; when
+        fleeing, as far from the walker as the samples offer."""
+        pts = self._interior_pts(0.30)
+        best, best_d = None, -1.0
+        for _ in range(50):
+            py, px = pts[self._rng.randrange(len(pts))]
+            wx, wz = self._px_to_world(float(px), float(py))
+            if math.hypot(wx - self._cx, wz - self._cz) < self.mast[2] / self.ppm + 0.4:
                 continue
-            turn = self._rng.uniform(-1.0, 1.0) * 1.1 * dt
-            ca, sa = math.cos(turn), math.sin(turn)
-            f['vx'], f['vy'] = f['vx'] * ca - f['vy'] * sa, f['vx'] * sa + f['vy'] * ca
-            f['x'] += f['vx'] * dt
-            f['y'] += f['vy'] * dt
-            xi, yi = int(f['x']), int(f['y'])
-            if not (0 <= xi < self.gw and 0 <= yi < self.gh) or self.mask[yi, xi] < 0.5:
-                sp = math.hypot(f['vx'], f['vy'])
-                d = math.hypot(self.mast[0] - f['x'], self.mast[1] - f['y']) or 1.0
-                f['vx'] = (self.mast[0] - f['x']) / d * sp
-                f['vy'] = (self.mast[1] - f['y']) / d * sp
-            f['sw'] -= dt
-            if f['sw'] <= 0:
-                f['on'] = not f['on']
-                f['sw'] = (self._rng.uniform(1.2, 2.8) if f['on']
-                           else self._rng.uniform(1.5, 4.0))
-            alive.append(f)
-        self.flies = alive
+            if away_from is not None:
+                d = math.hypot(wx - away_from.x, wz - away_from.z)
+            else:
+                d = self._rng.random()
+            if d > best_d:
+                best, best_d = (wx, wz), d
+        return best or (self._cx + 1.0, self._cz)
 
     def _step_glints(self, dt):
         k = min(1.0, dt * 6.0)
@@ -2335,9 +2322,6 @@ class TempleShow(FloorShow):
             if self.t - t.last < TRACK_STALE_S:
                 px, py = self.to_px(t.x, t.z)
                 self._add_blob(h, px, py, SUN_R_M * self.ppm, SUN_AMOUNT)
-        for f in self.flies:
-            if f['on']:
-                self._add_blob(h, f['x'], f['y'], 2.0, 0.35)
         sw = self._swarm
         if sw['scarabs']:
             # the swarm carries its own shadow — the light dims under the mass
@@ -2348,12 +2332,9 @@ class TempleShow(FloorShow):
         if sw['mode'] == 'erupt':
             self._add_blob(h, sw['mouth']['px'], sw['mouth']['py'],
                            0.12 * self.ppm, 0.30)  # dust catching the light
-        # the fallen torch owns a guttering pool of light
-        t = self._torch
-        fx = t['px'] + math.cos(t['ang']) * t['len'] * 0.4
-        fy = t['py'] + math.sin(t['ang']) * t['len'] * 0.4
-        self._add_blob(h, fx, fy, TORCH_POOL_R_M * self.ppm, 0.34 * t['glow'])
-        self._add_blob(h, fx, fy, 0.16 * self.ppm, 0.30 * t['glow'])
+        sp = self._spider
+        spx, spy = self.to_px(sp['x'], sp['z'])
+        self._add_blob(h, spx, spy, 0.16 * self.ppm, -0.10)  # its small shadow
 
     def _draw(self, rgb):
         for g in self.glyphs:
@@ -2363,54 +2344,23 @@ class TempleShow(FloorShow):
                 self._composite_patch(rgb, g['px'], g['py'], gold,
                                       (g['carve'] * (g['glint'] * 0.85))[..., None])
         self._draw_island(rgb)
-        for f in self._swarm['scarabs']:
+        sp = self._spider
+        spx, spy = self.to_px(sp['x'], sp['z'])
+        k = int(round(sp['ang'] / (math.tau / SPIDER_ROT_STEPS))) % SPIDER_ROT_STEPS
+        g = int(sp['trav'] / 0.03) % SPIDER_GAITS  # a leg step every ~3 cm
+        scol, salpha = self._spider_sprites[k][g]
+        self._composite_patch(rgb, spx, spy, scol, salpha)
+        for f in self._swarm['scarabs']:  # scarabs crawl OVER everything
             px, py = self.to_px(f['x'], f['z'])
             k = int(round(f['ang'] / (math.tau / SCARAB_ROT_STEPS))) % SCARAB_ROT_STEPS
             col, alpha = self._scarab_sprites[k]
             self._composite_patch(rgb, px, py, col, alpha)
-        self._draw_flame(rgb)
-        for f in self.flies:
-            if f['on']:
-                self._dot(rgb, f['x'], f['y'], 1.0, _FLY_CORE)
-
-    def _draw_flame(self, rgb):
-        """The live flame licking along the floor from the torch head: a
-        sheared teardrop, three heat zones (outer orange → mid → white-hot
-        core), rebuilt every frame — the region is tiny."""
-        t = self._torch
-        L = max(3.0, t['len'])
-        ca, sa = math.cos(t['ang']), math.sin(t['ang'])
-        cx = t['px'] + ca * L * 0.45
-        cy = t['py'] + sa * L * 0.45
-        pad = int(L * 0.75) + 3
-        x0, x1 = max(0, int(cx) - pad), min(self.gw, int(cx) + pad + 1)
-        y0, y1 = max(0, int(cy) - pad), min(self.gh, int(cy) + pad + 1)
-        if x1 <= x0 or y1 <= y0:
-            return
-        ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
-        u = (xs - t['px']) * ca + (ys - t['py']) * sa
-        v = -(xs - t['px']) * sa + (ys - t['py']) * ca
-        s = np.clip(u / L, 0.0, 1.0)
-        v = v - t['sway'] * s * s        # tip sways harder than the root
-        w = 0.055 * self.ppm * (1.0 - s) ** 0.65 + 0.4
-        a = (np.clip((w - np.abs(v)) / 1.1, 0.0, 1.0)
-             * np.clip(u / 1.5 + 1.0, 0.0, 1.0)
-             * np.clip((L - u) / 1.5, 0.0, 1.0))
-        if a.max() <= 0:
-            return
-        heat = np.clip(s + np.abs(v) / (w + 0.5) * 0.35, 0.0, 1.0)
-        col = np.where(heat[..., None] < 0.35, _FLAME_CORE,
-                       np.where(heat[..., None] < 0.7, _FLAME_MID, _FLAME_OUT))
-        region = rgb[y0:y1, x0:x1]
-        aa = (a * 0.95)[..., None]
-        region[:] = region * (1 - aa) + col * aa
-
-    _dot = JungleShow._dot  # same tiny stamp helper
 
     def hello_patches(self):
         """Temple artwork for the sim page: the floor base (multiplied by
-        the light stream client-side), the altar, and per-glyph gold carve
-        sprites (glow: the page draws them at the streamed glint alpha)."""
+        the light stream client-side), the altar, the spider gait sprites
+        (angle 0 — the page rotates), and per-glyph gold carve sprites
+        (glow: the page draws them at the streamed glint alpha)."""
         icol, ialpha = self._island
         glyphs = []
         for g in self.glyphs:
@@ -2423,24 +2373,24 @@ class TempleShow(FloorShow):
         return {'base': self._pack_patch(self._base, ones),
                 'island': {'x': round(self.mast[0], 1), 'y': round(self.mast[1], 1),
                            **self._pack_patch(icol, ialpha)},
+                'spider': [self._pack_patch(*self._spider_sprites[0][g])
+                           for g in range(SPIDER_GAITS)],
                 'glyphs': glyphs}
 
     def _state_extra(self):
+        sp = self._spider
+        spx, spy = self.to_px(sp['x'], sp['z'])
         return {
-            'flies': [{'x': round(f['x'], 1), 'y': round(f['y'], 1)}
-                      for f in self.flies if f['on']],
             'glyphs': [{'id': g['gid'], 'glint': round(g['glint'], 2)}
                        for g in self.glyphs],
             'scarabs': [[round(px, 1), round(py, 1), round(f['ang'], 2)]
                         for px, py, f in
                         ((*self.to_px(f['x'], f['z']), f)
                          for f in self._swarm['scarabs'])],
-            'torch': {'x': round(self._torch['px'], 1),
-                      'y': round(self._torch['py'], 1),
-                      'ang': round(self._torch['ang'], 3),
-                      'len': round(self._torch['len'], 1),
-                      'sway': round(self._torch['sway'], 2),
-                      'glow': round(self._torch['glow'], 2)},
+            'spider': {'x': round(spx, 1), 'y': round(spy, 1),
+                       'ang': round(sp['ang'], 3),
+                       'gait': int(sp['trav'] / 0.03) % SPIDER_GAITS,
+                       'mode': sp['mode']},
         }
 
 

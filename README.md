@@ -24,8 +24,8 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
 - **Floor projection** (`projection_engine.py` + `projection_renderer.py`): the Cuddle Cross
   floor show, three themes on one engine — **lava** (a Mayan stepping-stone crossing with
   sink/rise mischief and the surfacing Kukulkan), **jungle** (snakes on a leaf-litter
-  floor that flee your feet, fireflies) and **temple** (torch-lit flagstones, carved
-  glyphs that glint gold as you pass) — rendered by the same server Pi straight to
+  floor that flee your feet, fireflies) and **temple** (torch-lit flagstones, scarab
+  swarms, a skittish resident spider) — rendered by the same server Pi straight to
   its HDMI framebuffer and thrown onto the upper deck by a face-down short-throw projector.
   Its own systemd service outside the container; walker input is the room's LD2450 radar
   (demo phantom walkers until it's wired). Plans: `wiring-guides/cuddle-lava-plan.md`,
@@ -131,8 +131,9 @@ snake slither across the deck and dart away from your feet, fallen glyph stones 
 and glint as you approach, fireflies blink, and a sun-pool follows each walker.
 
 **Temple**: the floor itself, swept and torch-lit — dark mossy flagstones under breathing
-torchlight, carved glyphs that fill with gold as you approach, dust motes drifting through
-the light. The calm one.
+torchlight, carved glyphs that fill with gold as you approach, scarab swarms (The Mummy)
+that pour from pits in the floor and circle your feet, and a big slow spider that
+scurries when you get close. The calm one.
 
 Both are presence-cued: the show starts when the radar sees someone and
 fades out 60 s after the deck empties.

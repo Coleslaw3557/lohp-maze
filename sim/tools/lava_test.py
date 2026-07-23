@@ -242,7 +242,6 @@ def main():
         tmp.set_tracks([{'id': 'w', 'x': g0['wx'] + 0.2, 'z': g0['wz']}])
         tmp.step(0.1)
     check(g0['glint'] > 0.3, f"carve glints on approach ({g0['glint']:.2f})")
-    check(len(tmp.flies) > 0, f"dust motes drifting ({len(tmp.flies)})")
     frame = tmp.render()
     check(frame.max() > 40, f"temple renders (max px {frame.max()})")
     lit2 = frame[tmp.mask > 0.9].astype(int)
@@ -252,20 +251,11 @@ def main():
                for t in [tex2['base'], tex2['island']] + tex2['glyphs'])
            and all(t.get('glow') for t in tex2['glyphs']))
     check(ok2, "textures exported (base + altar + glow carves)")
-    tk = tmp.state()['torch']
-    check(tk and tmp._on_deck(*tmp._px_to_world(tk['x'], tk['y'])),
-          f"fallen torch on the deck at ({tk['x']}, {tk['y']})")
-    fx2 = int(tk['x'] + math.cos(tk['ang']) * tk['len'] * 0.4)
-    fy2 = int(tk['y'] + math.sin(tk['ang']) * tk['len'] * 0.4)
-    fl = frame[max(0, fy2 - 3):fy2 + 4, max(0, fx2 - 3):fx2 + 4]
-    check(fl[..., 0].max() > 160, f"flame burns hot (max R {fl[..., 0].max()})")
 
     print("14) temple: scarabs erupt, circle the feet, drain away")
     tmp2 = TempleShow(layout)
     tmp2._swarm['next'] = 1.0  # don't sit out the real gap
-    tmp2._torch['sput_next'] = 2.0
-    seen_sc = {'scarab_erupt': False, 'scarab_drain': False,
-               'torch_sputter': False}
+    seen_sc = {'scarab_erupt': False, 'scarab_drain': False}
     peak = 0
     for _ in range(450):  # 45 s, walker standing on the deck
         tmp2.set_tracks([{'id': 'w', 'x': 9.6, 'z': 1.0}])
@@ -280,7 +270,30 @@ def main():
                 seen_sc[e['e']] = True
         if all(seen_sc.values()):
             break
-    check(all(seen_sc.values()), f"erupt → drain → sputter all occurred ({seen_sc})")
+    check(all(seen_sc.values()), f"erupt → drain both occurred ({seen_sc})")
+
+    print("15) temple: the spider crawls slowly, scurries from feet")
+    tmp3 = TempleShow(layout)
+    tmp3.cue('test')
+    sp = tmp3._spider
+    x0s, z0s = sp['x'], sp['z']
+    for _ in range(200):  # 20 s, nobody near
+        tmp3.step(0.1)
+    slow_d = math.hypot(sp['x'] - x0s, sp['z'] - z0s)
+    check(tmp3._on_deck(sp['x'], sp['z']), "spider on the lit deck")
+    check(slow_d < 2.5, f"crawl is slow ({slow_d:.2f} m in 20 s)")
+    xs2, zs2 = sp['x'], sp['z']
+    scurried = False
+    for _ in range(40):  # 4 s with feet right on it
+        tmp3.set_tracks([{'id': 'w', 'x': xs2, 'z': zs2}])
+        tmp3.step(0.1)
+        tmp3._heat_t = -1
+        tmp3.render()  # exercise the sprite path mid-scurry
+        scurried = scurried or any(
+            e['e'] == 'spider_scurry' for e in tmp3.state()['events'])
+    flee_d = math.hypot(sp['x'] - xs2, sp['z'] - zs2)
+    check(scurried, "spider_scurry event fired")
+    check(flee_d > 0.7, f"it got away ({flee_d:.2f} m)")
     check(peak >= 10, f"a proper swarm ({peak} scarabs at peak)")
     check(len(tmp2._swarm['scarabs']) == 0, "all scarabs gone after the drain")
     t0 = time.perf_counter()

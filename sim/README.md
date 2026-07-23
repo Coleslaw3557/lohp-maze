@@ -211,7 +211,8 @@ repo root: `FloorShow` base + `THEMES` registry):
   each walker.
 - **TEMPLE** (2026-07-23, `wiring-guides/cuddle-temple-plan.md`): the
   swept, torch-lit floor itself — mossy flagstones, carved glyphs that
-  fill with gold on approach, drifting dust motes. The calm one.
+  fill with gold on approach, Mummy-style scarab swarms pouring between
+  pits in the floor, and a big slow spider that scurries from feet.
 
 The header **Floor** button cycles the theme — it's server-side shared
 state, so every tab (like the one real deck) switches together and the

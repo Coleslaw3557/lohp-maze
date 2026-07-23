@@ -21,11 +21,17 @@ breathing across the whole floor.
   into the base texture (shell-zero + dots-and-bars, `_numeral_carve`).
   Walk near one and the carve **fills with gold** (glint streams per glyph;
   the sim page draws the same gold carve sprite at the streamed alpha).
-- **Dust motes**: up to `MOTE_N` (5) slow golden motes drifting through the
-  light, blinking on and off gently (streamed under the same `flies` key
-  the page already draws).
 - **Walker light-pool**: the same warm pool as the jungle's sun-pool —
-  torchlight finds you.
+  torchlight finds you. (v2 note: the show HAD drifting dust motes — on the
+  real projector they read as stray white speckles and Tim cut them.)
+- **THE SPIDER** (2026-07-23): one big dusty tarantula (`SPIDER_*` —
+  0.42 m legspan, chevroned abdomen, eight two-segment legs on an
+  alternating-tetrapod gait that only cycles while it walks), patrolling
+  VERY slowly (0.06 m/s with long pauses). Feet inside 0.9 m send it
+  **scurrying** (0.85 m/s) to the far side (`spider_scurry` event, page
+  log "the spider SCURRIES away!"). 16 rotations × 4 gait frames
+  precomputed; the page gets the angle-0 gait set and rotates. It casts a
+  small shadow in the light field and avoids the altar + torch.
 - **The altar**: the carved sun-stone around the mast base, warm stone
   colors.
 - **SCARABS** (2026-07-23, Tim: "think of the movie The Mummy"): every
@@ -41,22 +47,12 @@ breathing across the whole floor.
   funnels into another crack and drains away (formation offsets shrink
   with distance so they spiral in). Events `scarab_erupt` /
   `scarab_drain`; 25 s hard cap on a swarm's life. Knobs: `SCARAB_*`.
-- **The fallen torch** (2026-07-23, Tim: "think Indiana Jones… a bone
-  wrapped in cloth on fire" — v2 after the wooden handle didn't read on
-  dark stone): a pale **femur** — twin condyle knobs at the free end, dome
-  highlight down the shaft — with a **mummy-cloth wrap** at the burning
-  end (diagonal bandage bands charring toward the fire), a contact shadow
-  lifting it off the floor, and a soot **scorch on the stone**, all baked
-  into the base texture. Dropped near the deck edge (placement prefers the
-  farthest clear spot from center; bone trails toward the rim, flame licks
-  toward the interior). The **flame is live** — a sheared three-zone
-  teardrop (white-hot core → gold → orange rim) flickering with a two-sine
-  + jitter envelope and lateral sway, casting its own **guttering pool** in
-  the light field (`TORCH_POOL_R_M` 0.55 m, amount rides the flicker).
-  Every 20–50 s it **sputters** — gutters down to a third, flares past
-  full, settles (`torch_sputter` event; the sim logs "the fallen torch
-  gutters…"). State streams `torch` {x, y, ang, len, sway, glow}; the page
-  draws the same three-layer flame. Knobs: `TORCH_*`.
+- **The torch: CUT** (2026-07-23, after five iterations directed live off
+  the projector — wooden handle invisible under the light multiply → bone
+  wrapped in cloth → full-brightness composite → upright icon — Tim's
+  final call: "remove the torch entirely"). The theme keeps its unseen-
+  torch light character: the breathing two-sine flicker and the warm
+  walker pool. Resurrect any version from git history if ever wanted.
 - Presence cue + 60 s timeout, identical to the other themes.
 
 Expansion ideas if it ever wants more: footfall echoes (brief ring where a
@@ -80,7 +76,7 @@ startup prebuild.
 
 ## Test
 
-`sim/tools/lava_test.py` sections 13–14: base built, carved flags placed,
+`sim/tools/lava_test.py` sections 13–15: base built, carved flags placed,
 glint rises on approach, motes drift, warm-floor render check, texture
 export shapes (glow flags), torch on deck + flame burns hot, perf budget;
 scarab lifecycle (erupt → swarm renders mid-flight → drain, all gone
