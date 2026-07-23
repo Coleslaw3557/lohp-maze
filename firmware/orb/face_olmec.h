@@ -11,6 +11,9 @@
 #include <stdint.h>
 #include <string.h>
 #include "face_bitmap.h"
+#include "face_bitmap_rain.h"
+#include "face_bitmap_moon.h"
+#include "face_bitmap_oracle.h"
 
 #ifdef ESP32
 #include <esp32-hal-psram.h>
@@ -24,6 +27,14 @@ namespace olmec {
 
 constexpr int W = 360, H = 360;
 constexpr float SCALE = 165.0f;
+
+enum FaceScene : uint8_t {
+  SCENE_MOSS = 0,
+  SCENE_RAIN,
+  SCENE_MOON,
+  SCENE_ORACLE,
+  SCENE_COUNT
+};
 
 // Dirty rects (inclusive-exclusive). The eyes include their animated lids and
 // brows; the jaw rect includes the open mouth throughout its full travel.
@@ -430,8 +441,25 @@ static inline void shadePixel(int x, int y, float h0, float hx0, float hy0, floa
   b = lerpf(bb, ab * lum, edge);
 }
 
-static inline uint16_t bitmapPixel(int x, int y) {
-  return olmec_bitmap::PALETTE[olmec_bitmap::PIXELS[y * W + x]];
+static inline int clampScene(int scene) {
+  return scene >= SCENE_MOSS && scene < SCENE_COUNT ? scene : SCENE_MOSS;
+}
+
+static inline uint16_t bitmapPixelIndex(int scene, int i) {
+  switch (clampScene(scene)) {
+    case SCENE_RAIN:
+      return olmec_bitmap_rain::PALETTE[olmec_bitmap_rain::PIXELS[i]];
+    case SCENE_MOON:
+      return olmec_bitmap_moon::PALETTE[olmec_bitmap_moon::PIXELS[i]];
+    case SCENE_ORACLE:
+      return olmec_bitmap_oracle::PALETTE[olmec_bitmap_oracle::PIXELS[i]];
+    default:
+      return olmec_bitmap::PALETTE[olmec_bitmap::PIXELS[i]];
+  }
+}
+
+static inline uint16_t bitmapPixel(int scene, int x, int y) {
+  return bitmapPixelIndex(scene, y * W + x);
 }
 
 // Rounded slab cut from the painted neutral portrait. At jaw=0 the tile
@@ -459,10 +487,14 @@ static inline float jawCavityMask(int x, int y) {
   return horiz * vert;
 }
 
-static void renderBase(uint16_t *fb) {
+static void renderBase(uint16_t *fb, int scene = SCENE_MOSS) {
   static_assert(olmec_bitmap::WIDTH == W && olmec_bitmap::HEIGHT == H, "face bitmap dimensions");
+  static_assert(olmec_bitmap_rain::WIDTH == W && olmec_bitmap_rain::HEIGHT == H, "rain bitmap dimensions");
+  static_assert(olmec_bitmap_moon::WIDTH == W && olmec_bitmap_moon::HEIGHT == H, "moon bitmap dimensions");
+  static_assert(olmec_bitmap_oracle::WIDTH == W && olmec_bitmap_oracle::HEIGHT == H,
+                "oracle bitmap dimensions");
   for (int i = 0; i < W * H; i++)
-    fb[i] = olmec_bitmap::PALETTE[olmec_bitmap::PIXELS[i]];
+    fb[i] = bitmapPixelIndex(scene, i);
 
   // The source painting contains the fully awake ember slits. Turn those
   // interiors into unlit recesses so drawEyes owns every glow/blink state.
@@ -520,14 +552,14 @@ static inline float jawGlyph(float tu, float tv) {
   return clampf(crease, 0, 1);
 }
 
-static void renderJawTile(uint16_t *tile) {
+static void renderJawTile(uint16_t *tile, int scene = SCENE_MOSS) {
   for (int ty = 0; ty < JAW_TILE_H; ty++)
     for (int tx = 0; tx < JAW_TILE_W; tx++) {
       if (jawTileMask(tx, ty) < 0.5f) {
         tile[ty * JAW_TILE_W + tx] = 0;
         continue;
       }
-      uint16_t c = bitmapPixel(JAW_TILE_X + tx, JAW_TOP_CLOSED + ty);
+      uint16_t c = bitmapPixel(scene, JAW_TILE_X + tx, JAW_TOP_CLOSED + ty);
       tile[ty * JAW_TILE_W + tx] = c ? c : 1;
     }
 }
