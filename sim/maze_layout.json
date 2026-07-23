@@ -1471,5 +1471,25 @@
     ]
    }
   }
+ },
+ "eye": {
+  "note": "Cuddle orb (sim preview only, no production config): a Waveshare ESP32-S3-Touch-LCD-1.28 round display (chip verified 2026-07-22: ESP32-S3R8, 16MB flash, 8MB PSRAM, native USB-Serial-JTAG, MAC fc:01:2c:d1:e2:3c) on the hex center mast on the upper deck. Renders a watching eye whose pupil tracks whoever the SAME node-box LD2450 the projection reads reports, with first-order lag. skin = hal (2001 red camera lens) or mayan (jade+gold jaguar/serpent deity eye, obsidian vertical slit); the sim's Eye button cycles off/hal/mayan. Real panel is 32.5mm (1.28\"); diameter here is enlarged so the eye reads across the deck. The gestures the real orb sends hit the REST API directly (shake -> /api/run_effect_all_rooms LightningStorm, touch-wheel -> /api/set_theme next_theme, dock -> /api/stop_effect) - see wiring-guides/cuddle-orb-plan.md; they are NOT room-node sensors so they stay out of triggers.json. Delete this key to drop the orb from the sim.",
+  "room": "Cuddle Cross",
+  "level": 1,
+  "skin": "hal",
+  "mount": [ 10.044, 1.26 ],
+  "h": 1.5,
+  "yaw_deg": 0,
+  "diameter": 0.12,
+  "label": "Cuddle orb (Waveshare S3 · sim)",
+  "tracker": {
+   "pos": [ 10.044, -0.15 ],
+   "h": 1.38,
+   "yaw_deg": 0,
+   "fov_deg": 120,
+   "range_m": 6.0,
+   "latency_ms": 150,
+   "clip": { "x": [ 8.724, 11.364 ], "z": [ -0.3, 2.85 ] }
+  }
  }
 }
