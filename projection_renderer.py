@@ -6,7 +6,7 @@ the vc4 EGL stack on the 3B+ refused kmsdrm (2026-07-22) and a memmap'd
 framebuffer is the more playa-robust path anyway.
 
     python projection_renderer.py --source demo             # phantom walkers
-    python projection_renderer.py --theme jungle            # snakes + tiki mask
+    python projection_renderer.py --theme jungle            # snakes in the undergrowth
     python projection_renderer.py --source esphome \
         --node 192.168.253.x [--api-key ...]                # real LD2450
     python projection_renderer.py --windowed                # desktop debug (pygame)
@@ -66,7 +66,7 @@ class DemoTracks:
 
     def _new_goal(self, w, engine):
         # stone-seeking only applies to the lava theme; jungle walkers just
-        # wander (which is what spooks snakes and draws the tiki mask over)
+        # wander (which is what spooks the snakes)
         up = [s for s in getattr(engine, 'stones', []) if s.state == 'up']
         if up and self.rng.random() < 0.6:
             s = self.rng.choice(up)
@@ -317,7 +317,7 @@ def main():
     ap = argparse.ArgumentParser(description='Cuddle floor projection renderer')
     ap.add_argument('--theme', choices=sorted(THEMES), default='lava',
                     help='which floor show starts (lava = stepping stones, '
-                         'jungle = snakes + the tiki mask); switchable live '
+                         'jungle = snakes); switchable live '
                          'via the control port')
     ap.add_argument('--ctl-port', type=int, default=5002,
                     help='HTTP theme control port (GET/POST /theme); 0 disables')

@@ -22,13 +22,14 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   server's REST API; each node's speaker plays effect cues and streamed music, commanded by the
   server over the ESPHome native API (`node_audio_manager.py` + `node_audio_config.json`).
 - **Floor projection** (`projection_engine.py` + `projection_renderer.py`): the Cuddle Cross
-  floor show, two themes on one engine — **lava** (a Mayan stepping-stone crossing with
-  sink/rise mischief and the surfacing Kukulkan) and **jungle** (snakes that flee your
-  feet, fireflies, and the flying tiki mask) — rendered by the same server Pi straight to
+  floor show, three themes on one engine — **lava** (a Mayan stepping-stone crossing with
+  sink/rise mischief and the surfacing Kukulkan), **jungle** (snakes on a leaf-litter
+  floor that flee your feet, fireflies) and **temple** (torch-lit flagstones, carved
+  glyphs that glint gold as you pass) — rendered by the same server Pi straight to
   its HDMI framebuffer and thrown onto the upper deck by a face-down short-throw projector.
   Its own systemd service outside the container; walker input is the room's LD2450 radar
   (demo phantom walkers until it's wired). Plans: `wiring-guides/cuddle-lava-plan.md`,
-  `wiring-guides/cuddle-jungle-plan.md`.
+  `wiring-guides/cuddle-jungle-plan.md`, `wiring-guides/cuddle-temple-plan.md`.
 - **Fallback audio client** (`client/`): the retired Pi-unit stack (units A/B/C are
   decommissioned), kept working as a fallback — one Linux host with a USB sound card per zone
   (`client/config-single-pi.json`) speaking the same WebSocket protocol.
@@ -70,9 +71,10 @@ tools/deploy-rpi.sh                  # target lohp-server.local (mDNS), or pass 
 ```
 
 rsyncs the repo to `/home/dietpi/lohp-server`, installs the `lohp-server` systemd unit,
-builds the compose image, and waits for `http://<pi>:5000/api/health`. The lava projection
-installs once per card with `tools/rpi-projection-setup.sh` (adds the KMS video overlay —
-one reboot — then the `lohp-projection` service paints the HDMI framebuffer directly).
+builds the compose image, and waits for `http://<pi>:5000/api/health`. The floor projection
+installs once per card with `tools/rpi-projection-setup.sh` (configures the legacy display
+stack with a grid-sized framebuffer the GPU scales — one reboot — then the
+`lohp-projection` service paints the framebuffer directly).
 The sim's header **RPI** dot watches the box: green = server answering, amber = booted but
 not deployed, red = unreachable.
 
@@ -111,7 +113,7 @@ Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,
   flashes synced to the fanfare, a white-gold mega flash on the final stinger, and emerald
   twinkles fading out.
 
-## The Cuddle Cross floor show (lava / jungle)
+## The Cuddle Cross floor show (lava / jungle / temple)
 
 The upper-deck crossing is a projection-mapped floor show with two selectable themes.
 
@@ -123,17 +125,20 @@ lava bubbles pop, canopy shadows press in at the deck rim, embers drift, and eve
 or two **Kukulkan** — the feathered serpent — surfaces, scans the room with pulsing amber
 eyes, and slips back under.
 
-**Jungle**: the temple floor reclaimed — sun-dappled undergrowth where jade
-and coral snakes slither across the deck and dart away from your feet, fallen glyph stones
-go mossy and glint as you approach, fireflies blink, a sun-pool follows each walker, and a
-little **flying tiki mask** (Aku Aku homage, procedural like everything else) drifts in
-every minute or so, orbits whoever it finds, spins, and floats off into the canopy.
+**Jungle**: the temple floor reclaimed — a leaf-litter carpet under moving sun-dapple
+where a tzabcan rattlesnake (with a working rattle), a gold eyelash viper, and a coral
+snake slither across the deck and dart away from your feet, fallen glyph stones go mossy
+and glint as you approach, fireflies blink, and a sun-pool follows each walker.
+
+**Temple**: the floor itself, swept and torch-lit — dark mossy flagstones under breathing
+torchlight, carved glyphs that fill with gold as you approach, dust motes drifting through
+the light. The calm one.
 
 Both are presence-cued: the show starts when the radar sees someone and
 fades out 60 s after the deck empties.
 
 One numpy engine (`projection_engine.py`, `FloorShow` base + `THEMES` registry) drives both
-displays: the projector (`projection_renderer.py --theme lava|jungle` → `/dev/fb0`) and the
+displays: the projector (`projection_renderer.py`, live-switchable via `POST :5002/theme/<name>` → `/dev/fb0`) and the
 sim preview (state + field streamed over `WS /sim/projection`; the page renders the
 engine's own precomputed artwork, and the header **Floor** button switches the shared
 theme for every tab). Content specs and tuning knobs:

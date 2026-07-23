@@ -10,9 +10,7 @@ One deck, two selectable shows (THEMES), same skeleton:
   jungle  — the temple floor reclaimed (wiring-guides/cuddle-jungle-plan.md):
             sun-dappled undergrowth, snakes that slither across the deck and
             dart away from feet, fallen glyph stones going mossy, fireflies,
-            a sun-pool that follows each walker, and a little flying tiki mask
-            (an Aku Aku homage, drawn procedurally like everything else) that
-            floats in, orbits whoever it finds, spins, and drifts off.
+            and a sun-pool that follows each walker.
 
 One engine, two displays: the sim streams state + the scalar field to the
 browser (sim/sim_ui.py /sim/projection), production renders fullscreen to the
@@ -95,15 +93,18 @@ _EMBER_RIM = np.array([214, 92, 24], np.float32)  # lava underlight on the head'
 
 # ---- JUNGLE tuning knobs (wiring-guides/cuddle-jungle-plan.md) ----
 SNAKE_SPECS = [
-    {'kind': 'jade', 'len_m': 1.55, 'r_m': 0.062},
-    {'kind': 'jade', 'len_m': 1.30, 'r_m': 0.054},
+    {'kind': 'rattler', 'len_m': 1.55, 'r_m': 0.062},  # tzabcan diamondback
+    {'kind': 'gold', 'len_m': 1.30, 'r_m': 0.054},     # gold eyelash viper
     {'kind': 'coral', 'len_m': 1.05, 'r_m': 0.042},
 ]
 SNAKE_HEAD_X = 2.3           # head length as a multiple of body half-width
+SNAKE_DIAMOND_PER_M = 0.17   # diamond-chain period down the rattler's back
+RATTLE_M = 0.11              # the rattle: last stretch of the rattler's tail...
+RATTLE_RING_M = 0.018        # ...as alternating keratin rings, held wider
+                             # than a normal tail tip (see the profile knots)
 SNAKE_FIELD_STEP = 2         # snake distance field lattice stride (2 = half-res
                              # body raster, 4x cheaper on the Pi; eyes/tongue
                              # stay full-res, edges soften ~1 px)
-SNAKE_JADE_PER_M = 0.16      # diamond-chain period down a jade racer's back
 SNAKE_CORAL_PER_M = 0.22     # coral ring period (red widest, "red touches yellow")
 SNAKE_SEG_M = 0.045          # spine resample spacing (< body radius: solid on curves)
 SNAKE_SPEED = (0.16, 0.30)   # cruise m/s (each snake draws its own)
@@ -125,29 +126,64 @@ FIREFLY_N = 7
 FIREFLY_LIFE_S = (9.0, 22.0)
 GLYPH_N = 3                  # fallen carved stones going mossy
 GLYPH_R_M = 0.15
-TIKI_FIRST_S = (10.0, 18.0)  # first visit after the show cues
-TIKI_GAP_S = (28.0, 65.0)
-TIKI_STAY_S = (11.0, 18.0)
-TIKI_SPIN_GAP_S = (5.0, 9.0)
-TIKI_SPIN_S = 0.9
-TIKI_SPEED = 0.85            # m/s cruise while arriving/leaving
-TIKI_ORBIT_R_M = 0.72        # companion orbit around a walker
-TIKI_ORBIT_W = 0.9           # rad/s around the orbit
-TIKI_HALF_L_M = 0.21         # face half-length chin->forehead (crest extends past)
-TIKI_HALF_W_M = 0.16
-TIKI_ROT_STEPS = 16
 
-# sun-through-canopy ramp: undergrowth dark -> leaf greens -> gold pools
+# jungle LIGHT ramp (multiplies the leaf-litter base): deep canopy shadow
+# with a green cast -> neutral -> warm gold where the sun breaks through
 _JUNGLE_STOPS = [
-    (0.00, (2, 7, 3)),
-    (0.30, (7, 26, 10)),
-    (0.52, (16, 54, 20)),
-    (0.72, (34, 96, 33)),
-    (0.88, (98, 156, 54)),
-    (1.00, (222, 204, 116)),
+    (0.00, (74, 88, 62)),
+    (0.35, (146, 154, 120)),
+    (0.62, (216, 220, 184)),
+    (0.85, (250, 242, 198)),
+    (1.00, (255, 252, 220)),
 ]
-_JADE_A = np.array([46, 122, 62], np.float32)     # jade racer body
-_JADE_B = np.array([26, 72, 40], np.float32)      # ...its dark bands
+LEAF_DENSITY = 0.0245        # leaves per grid px^2 (count scales with grid area)
+
+# temple LIGHT ramp: cool stone shadow -> torch-warm gold
+_TEMPLE_STOPS = [
+    (0.00, (76, 68, 60)),
+    (0.35, (148, 132, 110)),
+    (0.62, (216, 196, 158)),
+    (0.85, (252, 230, 176)),
+    (1.00, (255, 244, 204)),
+]
+MOTE_N = 5                   # drifting dust motes catching the temple light
+CARVED_FLAGS = 3             # flagstones carrying a carved glyph (glint on approach)
+# scarab swarms, straight out of The Mummy: erupt from a crack mouth,
+# skitter across as a mass, circle a walker's feet, drain into another crack
+SCARAB_FIRST_S = (10.0, 16.0)
+SCARAB_GAP_S = (18.0, 45.0)
+SCARAB_N = (24, 36)
+HOLE_R_M = (0.055, 0.085)    # the visible pits the swarms use, baked in the floor
+SCARAB_ERUPT_S = 1.2         # how long the crack pours
+SCARAB_ORBIT_S = (3.5, 6.0)  # how long they circle the feet
+SCARAB_ORBIT_R_M = 0.55
+SCARAB_MAX_S = 25.0          # hard cap on a swarm's life (safety vanish)
+SCARAB_SPEED = (0.45, 0.85)  # dash speed range m/s (they move in bursts)
+SCARAB_L_M = 0.07            # body length
+SCARAB_ROT_STEPS = 16
+_SCARAB_BODY = np.array([22, 17, 11], np.float32)
+_SCARAB_SHEEN = np.array([96, 128, 72], np.float32)  # bronze-green iridescence
+# the fallen torch, Indiana Jones style: a BONE wrapped in cloth, dropped
+# at the deck edge and still burning — bone + wrap + scorch baked into the
+# floor (pale bone reads on dark stone), live flame + guttering light pool
+TORCH_BONE_M = 0.44          # femur length, condyle knobs to the wrap
+TORCH_WRAP_M = 0.15          # cloth-wrapped end that carries the fire
+TORCH_FLAME_M = 0.20         # nominal flame length along the floor
+TORCH_POOL_R_M = 0.55        # warm pool the flame throws
+TORCH_SPUTTER_S = (20.0, 50.0)  # gap between gutters (dip, then flare)
+_BONE = np.array([214, 204, 178], np.float32)
+_BONE_DARK = np.array([150, 138, 112], np.float32)
+_CLOTH = np.array([196, 178, 142], np.float32)
+_CLOTH_CHAR = np.array([52, 38, 28], np.float32)
+_FLAME_CORE = np.array([255, 244, 200], np.float32)
+_FLAME_MID = np.array([255, 190, 70], np.float32)
+_FLAME_OUT = np.array([230, 110, 25], np.float32)
+_RTL_BASE = np.array([172, 142, 92], np.float32)  # tzabcan sandy tan
+_RTL_DARK = np.array([96, 66, 36], np.float32)    # ...diamondback brown
+_RTL_RING_A = np.array([202, 182, 144], np.float32)  # rattle keratin buff
+_RTL_RING_B = np.array([140, 118, 86], np.float32)
+_GOLD_BASE = np.array([218, 172, 54], np.float32)  # eyelash viper gold
+_EYE_DARK = np.array([24, 18, 12], np.float32)     # dark eye for the gold body
 _CORAL_R = np.array([172, 34, 26], np.float32)    # coral snake rings
 _CORAL_Y = np.array([214, 172, 58], np.float32)
 _CORAL_K = np.array([24, 22, 20], np.float32)
@@ -157,19 +193,6 @@ _MOSS_EDGE = np.array([36, 54, 32], np.float32)   # mossy ruin stone
 _MOSS_CORE = np.array([86, 104, 74], np.float32)
 _MOSS_GLINT = np.array([205, 235, 130], np.float32)
 _FLY_CORE = np.array([255, 240, 170], np.float32)
-# the tiki mask (Aku Aku homage — wood, hollow eyes, grin, goatee, feathers)
-_WOOD = np.array([150, 96, 46], np.float32)
-_WOOD_DARK = np.array([84, 50, 24], np.float32)
-_BROW = np.array([52, 30, 14], np.float32)
-_EYE_HOLLOW = np.array([16, 10, 6], np.float32)
-_MOUTH_DARK = np.array([26, 14, 8], np.float32)
-_TOOTH = np.array([236, 228, 204], np.float32)
-_LIP = np.array([158, 44, 28], np.float32)
-_GOATEE = np.array([204, 176, 96], np.float32)
-_TIKI_GLOW = np.array([255, 226, 130], np.float32)
-_FEATHERS = [np.array([232, 176, 44], np.float32),   # center: yellow
-             np.array([198, 44, 34], np.float32),    # inner pair: red
-             np.array([58, 142, 74], np.float32)]    # outer pair: jade
 
 
 def palette_lut(stops=None):
@@ -428,6 +451,7 @@ class FloorShow:
         self._heat_t = -1.0
         self._interior = {}
         self._stamps = {}  # gaussian blob sprites, keyed (r, ring)
+        self._base = None  # static floor texture; None = field->palette direct
 
         self._setup(seed)
 
@@ -659,7 +683,16 @@ class FloorShow:
             return np.zeros((self.gh, self.gw, 3), np.uint8)
         lut = lut if lut is not None else self.lut()
         heat = self._heat_field()
-        rgb = lut[(heat * 255).astype(np.uint8)].astype(np.float32)
+        if self._base is None:
+            # the field IS the picture (lava): straight through the palette
+            rgb = lut[(heat * 255).astype(np.uint8)].astype(np.float32)
+        else:
+            # textured floor: the palette is a LIGHT ramp multiplied over the
+            # static base (sun dapple on leaves, torchlight on stone) — the
+            # sim page mirrors this with a canvas multiply blend
+            light = lut[(heat * 255).astype(np.uint8)].astype(np.float32)
+            rgb = self._base * light
+            rgb *= 1.0 / 255.0
         self._draw(rgb)
         np.clip(rgb, 0.0, 255.0, out=rgb)  # never let float sums wrap in uint8
         rgb *= self._env  # canopy dapple + deck mask, one precomposed pass
@@ -1313,8 +1346,7 @@ class LavaShow(FloorShow):
 class JungleShow(FloorShow):
     """The temple floor the jungle took back: sun-dappled undergrowth, snakes
     that slither across and dart away from feet, fallen glyph stones going
-    mossy, fireflies, a sun-pool over each walker — and a little flying tiki
-    mask (Aku Aku homage) that visits, orbits whoever it finds, and spins."""
+    mossy, fireflies, and a sun-pool over each walker."""
 
     THEME = 'jungle'
     PALETTE_STOPS = _JUNGLE_STOPS
@@ -1385,15 +1417,48 @@ class JungleShow(FloorShow):
 
         self.flies = []
 
-        # the tiki mask at TIKI_ROT_STEPS orientations (same trick as
-        # Kukulkan: analytic in heading-aligned coords, no image rotation;
-        # the sim page gets angle-0 and rotates on canvas)
-        self._tiki_heads = [self._build_tiki_patch(k * math.tau / TIKI_ROT_STEPS)
-                            for k in range(TIKI_ROT_STEPS)]
-        self._tiki = {'mode': 'away', 'next': self._rng.uniform(*TIKI_FIRST_S),
-                      'x': 0.0, 'z': 0.0, 'rot': 0.0, 't0': 0.0, 'dur': 0.0,
-                      't_in': 0.0, 'spin_t': 0.0, 'spin_next': 0.0,
-                      'orb': 0.0, 'exit': None, 'px': None}
+        # the floor itself: a leaf-litter carpet, painted once (Tim's pick
+        # 2026-07-23 from the four-way background comparison); the moving
+        # light field multiplies over it in render()
+        self._base = self._leaf_base(seed + 7)
+
+    def _leaf_base(self, seed):
+        """The jungle floor: ~soil under a carpet of overlapping leaves —
+        greens, olives, rusts — stamped once at init (count scales with grid
+        area so every resolution gets the same density)."""
+        rng = np.random.default_rng(seed)
+        base = np.empty((self.gh, self.gw, 3), np.float32)
+        base[:] = (22, 25, 14)
+        cols = np.array([[30, 58, 24], [44, 84, 30], [70, 88, 32],
+                         [88, 68, 34], [96, 56, 28], [52, 74, 26]], np.float32)
+        scale = self.ppm / 82.3   # leaf size in meters, not pixels
+        for _ in range(int(LEAF_DENSITY * self.gw * self.gh)):
+            cx, cy = rng.uniform(0, self.gw), rng.uniform(0, self.gh)
+            ang = rng.uniform(0, math.tau)
+            length = rng.uniform(4.5, 8.5) * scale
+            width = length * rng.uniform(0.32, 0.50)
+            c = cols[rng.integers(len(cols))] * rng.uniform(0.72, 1.15)
+            pad = int(length) + 2
+            ys, xs = np.mgrid[-pad:pad + 1, -pad:pad + 1].astype(np.float32)
+            ca, sa = math.cos(ang), math.sin(ang)
+            u, v = xs * ca + ys * sa, -xs * sa + ys * ca
+            ell = (u / length) ** 2 + (v / max(width, 1e-3)) ** 2
+            a = np.clip((1 - ell) * 3.0, 0, 1)[..., None]
+            vein = np.clip(1 - np.abs(v) / 0.7, 0, 1) * (np.abs(u) < length * 0.8)
+            col = c * (0.70 + 0.5 * np.clip(1 - ell, 0, 1))[..., None]
+            col = col * (1 - 0.25 * vein[..., None])
+            x0, y0 = int(cx) - pad, int(cy) - pad
+            sx0, sy0 = max(0, -x0), max(0, -y0)
+            x0c, y0c = max(0, x0), max(0, y0)
+            x1 = min(self.gw, x0 + 2 * pad + 1)
+            y1 = min(self.gh, y0 + 2 * pad + 1)
+            if x1 <= x0c or y1 <= y0c:
+                continue
+            aa = a[sy0:sy0 + y1 - y0c, sx0:sx0 + x1 - x0c]
+            cc = col[sy0:sy0 + y1 - y0c, sx0:sx0 + x1 - x0c]
+            region = base[y0c:y1, x0c:x1]
+            region[:] = region * (1 - aa) + cc * aa
+        return base
 
     @staticmethod
     def _mossify(col, seed):
@@ -1410,33 +1475,53 @@ class JungleShow(FloorShow):
 
     def _snake_style(self, spec, n, rng):
         """The snake's whole look, precomputed: a silhouette width profile
-        (spade head → jaw flare → neck pinch → body → tapering tail) as
-        np.interp knots over arc length, the skin pattern (jade: diamond
-        chain down the back; coral: red/yellow/black rings, black snout),
-        slow per-arc brightness variation, and a scale-speckle noise grid.
+        (spade head → jaw flare → neck pinch → body → tail; the rattler's
+        tail ends in a held-wide segmented rattle instead of a point) as
+        np.interp knots over arc length, the skin pattern (rattler: brown
+        diamond chain on sandy tan + buff keratin rings; gold: bright gold
+        with fleck speckle; coral: red/yellow/black rings, black snout),
+        slow per-arc brightness variation, and a scale-speckle table.
         Per-INDEX colors + half-widths (spine samples are SNAKE_SEG_M apart)
         ship to the sim page so both displays draw the same body."""
+        kind = spec['kind']
         w = spec['r_m'] * self.ppm
         seg = SNAKE_SEG_M * self.ppm
         total = (n - 1) * seg
         head = SNAKE_HEAD_X * w
-        xp = np.array([0.0, 0.28 * head, 0.62 * head, 1.05 * head, 1.5 * head,
-                       0.60 * total, 0.78 * total, 0.92 * total, total], np.float32)
-        fp = np.array([0.26, 1.30, 1.38, 0.74, 1.00,
-                       1.00, 0.72, 0.38, 0.10], np.float32)
+        rat = RATTLE_M * self.ppm
+        ring = RATTLE_RING_M * self.ppm
+        if kind == 'rattler':
+            xp = np.array([0.0, 0.28 * head, 0.62 * head, 1.05 * head,
+                           1.5 * head, 0.60 * total, 0.80 * total,
+                           total - rat, total - 0.8 * rat, total], np.float32)
+            fp = np.array([0.26, 1.30, 1.38, 0.74, 1.00,
+                           1.00, 0.60, 0.30, 0.40, 0.30], np.float32)
+        else:
+            xp = np.array([0.0, 0.28 * head, 0.62 * head, 1.05 * head,
+                           1.5 * head, 0.60 * total, 0.78 * total,
+                           0.92 * total, total], np.float32)
+            fp = np.array([0.26, 1.30, 1.38, 0.74, 1.00,
+                           1.00, 0.72, 0.38, 0.10], np.float32)
         arcs = np.arange(n, dtype=np.float32) * seg
         var = (0.90 + 0.20 * rng.random(n)).astype(np.float32)
-        per = (SNAKE_JADE_PER_M if spec['kind'] == 'jade'
+        per = (SNAKE_DIAMOND_PER_M if kind == 'rattler'
                else SNAKE_CORAL_PER_M) * self.ppm
 
         def color_at(a, v):
             """Spine-center color at arc a (page approximation of the 2-D
             pattern: diamonds read as dark bands there)."""
-            if spec['kind'] == 'jade':
+            if kind == 'rattler':
+                if a > total - rat:
+                    return (_RTL_RING_B if int((total - a) / ring) % 2
+                            else _RTL_RING_A)
                 if a < head * 0.9:
-                    return _JADE_A * 0.72
+                    return _RTL_BASE * 0.72
                 fr = abs(((a / per) % 1.0) - 0.5) * 2.0
-                return (_JADE_B if fr < 0.63 else _JADE_A) * v
+                return (_RTL_DARK if fr < 0.63 else _RTL_BASE) * v
+            if kind == 'gold':
+                if a < head * 0.9:
+                    return _GOLD_BASE * 0.85
+                return _GOLD_BASE * v
             if a < head * 1.1:
                 return _CORAL_K
             u = (a / per) % 1.0
@@ -1450,15 +1535,18 @@ class JungleShow(FloorShow):
 
         cols_idx = [color_at(float(a), float(v)) for a, v in zip(arcs, var)]
         w_idx = w * np.interp(arcs, xp, fp)
-        return {'w': w, 'head': head, 'per': per, 'seg': seg,
+        spread = 0.30 if kind == 'gold' else 0.20  # gold flecks harder
+        return {'w': w, 'head': head, 'per': per, 'seg': seg, 'total': total,
+                'rat': rat, 'ring': ring,
+                'eye': _EYE_DARK if kind == 'gold' else _SNAKE_EYE,
                 'xp': xp, 'fp': fp, 'arcs': arcs, 'var': var,
-                'spec1d': (0.90 + 0.20 * rng.random(64)).astype(np.float32),
+                'spec1d': (1.0 - spread / 2
+                           + spread * rng.random(64)).astype(np.float32),
                 'cols_idx': cols_idx, 'w_idx': w_idx.astype(np.float32)}
 
     # ---- simulation ----
     def _step_theme(self, dt):
         self._step_snakes(dt)
-        self._step_tiki(dt)
         self._step_flies(dt)
         self._step_glyph_glints(dt)
 
@@ -1546,119 +1634,6 @@ class JungleShow(FloorShow):
                 px, py = self.to_px(sn.x, sn.z)
                 self._add_blob(self._wake, px, py, 0.07 * self.ppm, WAKE_DEP * dt)
 
-    def _step_tiki(self, dt):
-        tk = self._tiki
-        if tk['mode'] == 'away':
-            if self.fade > 0.5:
-                tk['next'] -= dt
-                if tk['next'] <= 0:
-                    # drift in over a random image edge (the deck mask fades
-                    # the entrance in, like coming through the canopy)
-                    side = self._rng.randrange(4)
-                    if side < 2:
-                        px = -14.0 if side == 0 else self.gw + 14.0
-                        py = self._rng.uniform(0.2, 0.8) * self.gh
-                    else:
-                        px = self._rng.uniform(0.2, 0.8) * self.gw
-                        py = -14.0 if side == 2 else self.gh + 14.0
-                    tk['x'], tk['z'] = self._px_to_world(px, py)
-                    tk['px'] = None
-                    tk['mode'] = 'arrive'
-                    tk['t_in'] = self.t
-                    tk['orb'] = self._rng.random() * math.tau
-                    self._emit({'e': 'tiki_arrive',
-                                'x': round(px, 1), 'y': round(py, 1)})
-            return
-        if self.fade <= 0:  # show died mid-visit: vanish quietly
-            tk['mode'] = 'away'
-            tk['next'] = self._rng.uniform(*TIKI_GAP_S)
-            return
-
-        fresh = self._fresh_tracks()
-        if fresh:
-            w = fresh[0]
-            tk['orb'] += TIKI_ORBIT_W * dt
-            tx = w.x + math.cos(tk['orb']) * TIKI_ORBIT_R_M
-            tz = w.z + math.sin(tk['orb']) * TIKI_ORBIT_R_M
-        else:
-            tx = self._cx + 1.00 * math.sin(0.29 * self.t + 0.7)
-            tz = self._cz + 0.72 * math.sin(0.22 * self.t + 2.1)
-        # never park over the real mast pole
-        dm = math.hypot(tx - self._cx, tz - self._cz)
-        if dm < self._pole_clear:
-            f = (self._pole_clear + 0.05) / max(dm, 1e-6)
-            tx = self._cx + (tx - self._cx) * f
-            tz = self._cz + (tz - self._cz) * f
-
-        if tk['mode'] == 'arrive':
-            d = math.hypot(tx - tk['x'], tz - tk['z'])
-            if d < 0.55:
-                tk['mode'] = 'stay'
-                tk['t0'] = self.t
-                tk['dur'] = self._rng.uniform(*TIKI_STAY_S)
-                tk['spin_next'] = self._rng.uniform(*TIKI_SPIN_GAP_S)
-            else:
-                step = TIKI_SPEED * dt
-                tk['x'] += (tx - tk['x']) / d * step
-                tk['z'] += (tz - tk['z']) / d * step
-        elif tk['mode'] == 'stay':
-            k = 1.0 - math.exp(-dt * 2.2)
-            tk['x'] += (tx - tk['x']) * k
-            tk['z'] += (tz - tk['z']) * k
-            if tk['spin_t'] > 0:
-                tk['spin_t'] -= dt
-            else:
-                tk['spin_next'] -= dt
-                if tk['spin_next'] <= 0:
-                    tk['spin_t'] = TIKI_SPIN_S
-                    tk['spin_next'] = self._rng.uniform(*TIKI_SPIN_GAP_S)
-                    px, py = self.to_px(tk['x'], tk['z'])
-                    self._emit({'e': 'tiki_spin',
-                                'x': round(px, 1), 'y': round(py, 1)})
-            if self.t - tk['t0'] > tk['dur']:
-                px, py = self.to_px(tk['x'], tk['z'])
-                ex = -20.0 if px < self.gw / 2 else self.gw + 20.0
-                tk['exit'] = self._px_to_world(ex, py)
-                tk['mode'] = 'leave'
-                self._emit({'e': 'tiki_leave',
-                            'x': round(px, 1), 'y': round(py, 1)})
-        elif tk['mode'] == 'leave':
-            ex, ez = tk['exit']
-            d = math.hypot(ex - tk['x'], ez - tk['z'])
-            step = TIKI_SPEED * dt
-            if d < step or d < 0.05:
-                tk['mode'] = 'away'
-                tk['next'] = self._rng.uniform(*TIKI_GAP_S)
-            else:
-                tk['x'] += (ex - tk['x']) / d * step
-                tk['z'] += (ez - tk['z']) / d * step
-
-        # facing: forehead + crest lead along the motion (px-frame angle);
-        # a spin overrides with a fast whirl
-        px, py = self.to_px(tk['x'], tk['z'])
-        if tk['spin_t'] > 0:
-            tk['rot'] += 16.0 * dt
-        elif tk['px'] is not None:
-            dx, dy = px - tk['px'][0], py - tk['px'][1]
-            if math.hypot(dx, dy) > 0.06:
-                tk['rot'] += _angdiff(math.atan2(dy, dx), tk['rot']) * min(1.0, 6.0 * dt)
-            else:
-                tk['rot'] += 0.25 * math.sin(self.t * 1.7) * dt
-        tk['px'] = (px, py)
-
-    def _tiki_pose(self):
-        """(px, py, rot, scale, glow) or None while away."""
-        tk = self._tiki
-        if tk['mode'] == 'away':
-            return None
-        px, py = self.to_px(tk['x'], tk['z'])
-        scale = min(1.0, 0.7 + 0.3 * (self.t - tk['t_in']) / 1.2)
-        if tk['mode'] == 'leave':
-            scale = 0.88
-        scale *= 1.0 + 0.05 * math.sin(self.t * 2.8)  # the float-bob
-        glow = 0.55 + 0.45 * math.sin(self.t * 3.3)
-        return px, py, tk['rot'], scale, glow
-
     def _step_flies(self, dt):
         if (self.fade > 0 and len(self.flies) < FIREFLY_N
                 and self._rng.random() < 0.7 * dt * self.fade):
@@ -1715,9 +1690,6 @@ class JungleShow(FloorShow):
         for f in self.flies:
             if f['on']:
                 self._add_blob(h, f['x'], f['y'], 2.2, 0.55)
-        pose = self._tiki_pose()
-        if pose is not None:
-            self._add_blob(h, pose[0], pose[1], 0.26 * self.ppm, 0.14)
 
     def _draw(self, rgb):
         for g in self.glyphs:
@@ -1732,15 +1704,6 @@ class JungleShow(FloorShow):
         for f in self.flies:
             if f['on']:
                 self._dot(rgb, f['x'], f['y'], 1.1, _FLY_CORE)
-        pose = self._tiki_pose()
-        if pose is not None:
-            px, py, rot, scale, glow = pose
-            k = int(round(rot / (math.tau / TIKI_ROT_STEPS))) % TIKI_ROT_STEPS
-            col, alpha, eyes = self._tiki_heads[k]
-            if scale != 1.0:
-                col, alpha, eyes = _scale_patch(col, alpha, eyes, scale)
-            show = col + eyes * glow * (_TIKI_GLOW - col) * 0.8
-            self._composite_patch(rgb, px, py, col, alpha, show)
 
     def _dot(self, rgb, px, py, r, col):
         x0, x1 = max(0, int(px - r) - 1), min(self.gw, int(px + r) + 2)
@@ -1810,14 +1773,27 @@ class JungleShow(FloorShow):
         w_l = st['w'] * np.interp(tarc, st['xp'], st['fp']).astype(np.float32)
         rel = np.clip(dmin / np.maximum(w_l, 1e-3), 0.0, 1.0)
         var = np.interp(tarc, st['arcs'], st['var']).astype(np.float32)
-        if sn.kind == 'jade':
+        if sn.kind == 'rattler':
             fr = np.abs(((tarc / st['per']) % 1.0) - 0.5) * 2.0
             diamond = rel < np.clip(0.95 - fr * 1.5, 0.0, 1.0) * 0.9
-            col = np.where(diamond[..., None], _JADE_B, _JADE_A * var[..., None])
-            # pale lateral stripe, like a racer's flank line (triangle band)
+            col = np.where(diamond[..., None], _RTL_DARK, _RTL_BASE * var[..., None])
+            # pale flank line under the diamonds (triangle band)
             stripe = np.clip(1.0 - np.abs(rel - 0.62) / 0.20, 0.0, 1.0) * 0.22
             col = col * (1.0 + stripe[..., None])
-            col = np.where((tarc < st['head'] * 0.9)[..., None], _JADE_A * 0.72, col)
+            col = np.where((tarc < st['head'] * 0.9)[..., None], _RTL_BASE * 0.72, col)
+            # the rattle: alternating keratin rings; buzzes while fleeing
+            zone = tarc > st['total'] - st['rat']
+            if zone.any():
+                seg_i = ((st['total'] - tarc) / st['ring']).astype(np.int32) % 2
+                rcol = np.where(seg_i[..., None] > 0, _RTL_RING_B, _RTL_RING_A)
+                if sn.flee:
+                    rcol = rcol * (1.05 + 0.45 * math.sin(self.t * 50.0))
+                col = np.where(zone[..., None], rcol, col)
+        elif sn.kind == 'gold':
+            col = _GOLD_BASE * var[..., None]
+            # faint darker dorsal line down the spine
+            col = col * (1.0 - 0.12 * np.clip(1.0 - rel / 0.25, 0.0, 1.0))[..., None]
+            col = np.where((tarc < st['head'] * 0.9)[..., None], _GOLD_BASE * 0.85, col)
         else:
             u = (tarc / st['per']) % 1.0
             col = np.where((u < 0.40)[..., None], _CORAL_R,
@@ -1852,7 +1828,7 @@ class JungleShow(FloorShow):
             off = 0.72 * st['w']
             for sv in (-1, 1):
                 self._dot(rgb, px - ty * sv * off, py + tx * sv * off,
-                          1.15, _SNAKE_EYE)
+                          1.15, st['eye'])
         if sn.tongue_on:
             hx, hy = pts[0]
             p1 = pts[1]
@@ -1877,103 +1853,18 @@ class JungleShow(FloorShow):
                         (bx - ax) / seg, (by - ay) / seg)
         return None
 
-    def _build_tiki_patch(self, ang):
-        """The flying tiki mask, face-up on the floor, forehead + feather
-        crest leading along `ang`. An Aku-Aku-flavored homage, procedural
-        like everything else: oval wooden mask with grain, heavy brow, hollow
-        eyes (glow mask streamed for the pulse), wide toothy grin, straw
-        goatee off the chin, five red/yellow/jade feathers off the crown."""
-        A = TIKI_HALF_L_M * self.ppm
-        B = TIKI_HALF_W_M * self.ppm
-        pad = int(math.ceil(A * 1.85)) + 3  # room for crest + goatee
-        s = 2 * pad + 1
-        ys, xs = np.mgrid[0:s, 0:s].astype(np.float32)
-        dx, dy = xs - pad, ys - pad
-        ca, sa = math.cos(ang), math.sin(ang)
-        u = dx * ca + dy * sa      # +u chin -> forehead
-        v = -dx * sa + dy * ca
-        rng = np.random.default_rng(777)  # same carving at every angle
-
-        face = np.abs(u / A) ** 2.5 + np.abs(v / B) ** 2.5
-        a_face = np.clip((1.0 - face) * 6.0, 0.0, 1.0)
-        grain = 1.0 + 0.09 * np.sin(v * 0.62 + 4.0 * _static_noise(rng, s, s, 5))
-        knots = 0.90 + 0.20 * _static_noise(rng, s, s, max(4, s // 6))
-        shade = 0.62 + 0.38 * np.clip(1.25 - face, 0.0, 1.0)
-        col = _WOOD_DARK + (_WOOD - _WOOD_DARK) * shade[..., None]
-        col = col * (grain * knots)[..., None]
-
-        def blend(mask, c):
-            return col + mask[..., None] * (np.asarray(c, np.float32) - col)
-
-        gate = (a_face > 0.3).astype(np.float32)
-        brow = np.clip((1.0 - np.maximum(np.abs(u - 0.40 * A) / (0.115 * A),
-                                         np.abs(v) / (0.74 * B))) * 3.0, 0.0, 1.0) * gate
-        col = blend(brow * 0.92, _BROW)
-        eye = np.zeros((s, s), np.float32)
-        core = np.zeros((s, s), np.float32)
-        for sv in (-1, 1):
-            de = (((u - 0.13 * A) / (0.155 * A)) ** 2
-                  + ((v - sv * 0.40 * B) / (0.16 * B)) ** 2)
-            eye = np.maximum(eye, np.clip((1.0 - de) * 4.0, 0.0, 1.0))
-            dc = (((u - 0.13 * A) / (0.08 * A)) ** 2
-                  + ((v - sv * 0.40 * B) / (0.085 * B)) ** 2)
-            core = np.maximum(core, np.clip((1.0 - dc) * 3.0, 0.0, 1.0))
-        col = blend(eye, _EYE_HOLLOW)
-        nose = np.clip((1.0 - np.maximum(np.abs(u + 0.03 * A) / (0.14 * A),
-                                         np.abs(v) / (0.075 * B))) * 3.0, 0.0, 1.0)
-        col = col * (1.0 - 0.25 * nose)[..., None]
-        lipm = np.clip((1.0 - np.maximum(np.abs(u + 0.40 * A) / (0.105 * A),
-                                         np.abs(v) / (0.64 * B))) * 3.0, 0.0, 1.0) * gate
-        mouth = np.clip((1.0 - np.maximum(np.abs(u + 0.40 * A) / (0.068 * A),
-                                          np.abs(v) / (0.56 * B))) * 3.0, 0.0, 1.0) * gate
-        col = blend(lipm, _LIP)
-        col = blend(mouth, _MOUTH_DARK)
-        teeth = mouth * (np.sin(v / B * 19.0) > 0.15) * (np.abs(v) < 0.52 * B)
-        col = blend(teeth.astype(np.float32) * 0.95, _TOOTH)
-
-        bt = (-u - 0.78 * A) / (0.60 * A)
-        gw_ = 0.44 * B * (1.0 - 0.8 * bt)
-        a_goat = (np.clip((gw_ - np.abs(v)) / 1.5, 0.0, 1.0)
-                  * np.clip(bt * 8.0, 0.0, 1.0) * np.clip((1.0 - bt) * 8.0, 0.0, 1.0))
-        streak = 0.82 + 0.30 * _static_noise(rng, s, s, max(4, s // 4))
-        col_goat = _GOATEE[None, None, :] * streak[..., None]
-
-        a_crest = np.zeros((s, s), np.float32)
-        col_crest = np.zeros((s, s, 3), np.float32)
-        for k in range(-2, 3):
-            th = k * 0.34
-            fca, fsa = math.cos(th), math.sin(th)
-            cu_, cv_ = 0.18 * A + fca * 0.92 * A, fsa * 0.92 * A
-            p = (u - cu_) * fca + (v - cv_) * fsa
-            q = -(u - cu_) * fsa + (v - cv_) * fca
-            ell = (p / (0.46 * A)) ** 2 + (q / (0.14 * A)) ** 2
-            a_f = np.clip((1.0 - ell) * 4.0, 0.0, 1.0)
-            shaft = np.clip(1.0 - np.abs(q) / 0.9, 0.0, 1.0) * a_f
-            colf = _FEATHERS[abs(k)] * (0.78 + 0.22 * np.clip(1.0 - ell, 0.0, 1.0))[..., None]
-            colf = colf * (1.0 - 0.30 * shaft[..., None])
-            col_crest = np.where(a_f[..., None] > a_crest[..., None], colf, col_crest)
-            a_crest = np.maximum(a_crest, a_f)
-
-        alpha = np.maximum(a_face, np.maximum(a_crest * 0.96, a_goat))
-        out = np.where(a_face[..., None] > 0.35, col,
-                       np.where(a_goat[..., None] > a_crest[..., None] * 0.6,
-                                col_goat, col_crest))
-        return (out.astype(np.float32), alpha[..., None].astype(np.float32),
-                core[..., None].astype(np.float32))
-
     def hello_patches(self):
         """Precomputed jungle artwork for the sim page: the mossy altar, the
-        glyph stones, the tiki mask (angle 0 — the page rotates on canvas),
-        and each snake's segment colors + radii so the page draws the same
-        body the production stamper does."""
+        glyph stones, and each snake's per-index colors + widths so the page
+        draws the same body the production rasterizer does."""
         icol, ialpha = self._island
         glyphs = [{'id': g['gid'], 'x': round(g['px'], 1), 'y': round(g['py'], 1),
                    **self._pack_patch(g['col'], g['alpha'])} for g in self.glyphs]
-        tcol, talpha, _ = self._tiki_heads[0]
-        return {'island': {'x': round(self.mast[0], 1), 'y': round(self.mast[1], 1),
+        ones = np.ones(self._base.shape[:2] + (1,), np.float32)
+        return {'base': self._pack_patch(self._base, ones),
+                'island': {'x': round(self.mast[0], 1), 'y': round(self.mast[1], 1),
                            **self._pack_patch(icol, ialpha)},
                 'glyphs': glyphs,
-                'tiki': self._pack_patch(tcol, talpha),
                 'snakes': [{'id': sn.sid, 'kind': sn.kind,
                             'colors': [[int(c[0]), int(c[1]), int(c[2])]
                                        for c in sn.style['cols_idx']],
@@ -1981,16 +1872,12 @@ class JungleShow(FloorShow):
                            for sn in self.snakes]}
 
     def _state_extra(self):
-        tk = self._tiki_pose()
         return {
             'snakes': [{'id': sn.sid, 'tongue': 1 if sn.tongue_on else 0,
+                        'flee': 1 if sn.flee else 0,
                         'pts': [[round(px, 1), round(py, 1)]
                                 for px, py in (self.to_px(*p) for p in sn.trail)]}
                        for sn in self.snakes],
-            'tiki': tk and {'x': round(tk[0], 1), 'y': round(tk[1], 1),
-                            'rot': round(tk[2], 3), 'scale': round(tk[3], 3),
-                            'glow': round(tk[4], 2),
-                            'spin': 1 if self._tiki['spin_t'] > 0 else 0},
             'flies': [{'x': round(f['x'], 1), 'y': round(f['y'], 1)}
                       for f in self.flies if f['on']],
             'glyphs': [{'id': g['gid'], 'glint': round(g['glint'], 2)}
@@ -1998,4 +1885,563 @@ class JungleShow(FloorShow):
         }
 
 
-THEMES = {'lava': LavaShow, 'jungle': JungleShow}
+class TempleShow(FloorShow):
+    """The temple floor itself, swept and torch-lit: dark weathered
+    flagstones with moss veining the joints, a few flags carrying carved
+    glyphs that glint gold as a walker approaches, dust motes drifting
+    through the light, torch flicker breathing over everything, and a warm
+    light-pool following each walker. The calm show of the three."""
+
+    THEME = 'temple'
+    PALETTE_STOPS = _TEMPLE_STOPS
+    OCTAVES = ((7, 0.024, 100), (17, 0.06, 300), (41, 0.18, 40))
+    OCT_WEIGHTS = (0.50, 0.32, 0.18)
+    FIELD_GAMMA = 1.25
+    DAPPLE = 0.18
+
+    def _setup(self, seed):
+        self._base = self._flag_base(seed + 3)
+
+        # carved flags: glyphs cut INTO the floor texture; each keeps its
+        # carve mask so the gold glint can composite over it on approach
+        pts = self._interior_pts(0.35)
+        self.glyphs = []
+        numerals = (0, 7, 12)  # shell glyph + dots-and-bars
+        for _ in range(240):
+            if len(self.glyphs) >= CARVED_FLAGS:
+                break
+            py, px = pts[self._rng.randrange(len(pts))]
+            px, py = float(px), float(py)
+            if math.hypot(px - self.mast[0], py - self.mast[1]) < self.mast[2] + 0.55 * self.ppm:
+                continue
+            if any(math.hypot(px - g['px'], py - g['py']) < 1.0 * self.ppm
+                   for g in self.glyphs):
+                continue
+            i = len(self.glyphs)
+            r = 0.17 * self.ppm
+            pad = int(math.ceil(r * 1.2)) + 2
+            s = 2 * pad + 1
+            ys, xs = np.mgrid[0:s, 0:s].astype(np.float32)
+            carve = self._numeral_carve(xs - pad, ys - pad, r, numerals[i],
+                                        self._rng.random() * math.tau)
+            self._bake_carve(px, py, carve)
+            wx, wz = self._px_to_world(px, py)
+            self.glyphs.append({'gid': i, 'wx': wx, 'wz': wz, 'px': px, 'py': py,
+                                'carve': carve, 'glint': 0.0})
+        self._glint_gold = np.array([255, 214, 120], np.float32)
+
+        self._island = self._build_island_patch(
+            seed, edge_col=np.array([52, 46, 40], np.float32),
+            core_col=np.array([108, 96, 80], np.float32))
+
+        self.flies = []  # dust motes (streamed under the same state key)
+
+        # crack mouths: fixed spots in the floor the scarabs pour from and
+        # drain into (repeat visitors learn the holes)
+        pts2 = self._interior_pts(0.30)
+        self.mouths = []
+        for _ in range(200):
+            if len(self.mouths) >= 6:
+                break
+            py, px = pts2[self._rng.randrange(len(pts2))]
+            px, py = float(px), float(py)
+            if math.hypot(px - self.mast[0], py - self.mast[1]) < self.mast[2] + 0.45 * self.ppm:
+                continue
+            if any(math.hypot(px - m['px'], py - m['py']) < 0.9 * self.ppm
+                   for m in self.mouths):
+                continue
+            wx, wz = self._px_to_world(px, py)
+            self.mouths.append({'px': px, 'py': py, 'wx': wx, 'wz': wz})
+        self._bake_holes()
+        self._scarab_sprites = [
+            self._build_scarab_sprite(k * math.tau / SCARAB_ROT_STEPS)
+            for k in range(SCARAB_ROT_STEPS)]
+        self._swarm = {'mode': 'idle', 'next': self._rng.uniform(*SCARAB_FIRST_S),
+                       'scarabs': [], 'n': 0, 'spawned': 0, 't0': 0.0,
+                       'mouth': None, 'exit': None, 'wp': 'exit', 'orbit_t': 0.0}
+
+        # the fallen torch: dropped near the deck edge, flame licking toward
+        # the interior. Handle/head/scorch bake into the base; the flame and
+        # its guttering light pool are live.
+        pts3 = self._interior_pts(0.30)
+        best, best_d = None, -1.0
+        alt, alt_d = None, -1.0  # fallback: altar rule only
+        for _ in range(150):
+            py, px = pts3[self._rng.randrange(len(pts3))]
+            px, py = float(px), float(py)
+            wx, wz = self._px_to_world(px, py)
+            d = math.hypot(wx - self._cx, wz - self._cz)
+            if d < 0.8:  # never against the altar
+                continue
+            if d > alt_d:
+                alt, alt_d = (px, py, wx, wz), d
+            if any(math.hypot(px - m['px'], py - m['py']) < 0.35 * self.ppm
+                   for m in self.mouths):
+                continue
+            if any(math.hypot(px - g['px'], py - g['py']) < 0.35 * self.ppm
+                   for g in self.glyphs):
+                continue
+            if d > best_d:  # farthest from center wins = off to the side
+                best, best_d = (px, py, wx, wz), d
+        px, py, wx, wz = best or alt
+        ang = math.atan2(self.mast[1] - py, self.mast[0] - px) \
+            + self._rng.uniform(-0.7, 0.7)  # flame roughly toward the interior
+        self._torch = {'px': px, 'py': py, 'wx': wx, 'wz': wz, 'ang': ang,
+                       'len': TORCH_FLAME_M * self.ppm, 'sway': 0.0,
+                       'glow': 1.0, 'sput_next': self._rng.uniform(*TORCH_SPUTTER_S),
+                       'sput_t': -1.0}
+        self._bake_torch()
+
+    def _flag_base(self, seed):
+        """Dark weathered flagstones, brick-offset with wandering joints,
+        moss in the gaps and creeping onto the stone, long cracks."""
+        rng = np.random.default_rng(seed)
+        gh, gw, ppm = self.gh, self.gw, self.ppm
+        ys, xs = np.mgrid[0:gh, 0:gw].astype(np.float32)
+        cs = 0.55 * ppm
+        jx = xs + (_static_noise(rng, gh, gw, 9) - 0.5) * 0.17 * ppm
+        jy = ys + (_static_noise(rng, gh, gw, 9) - 0.5) * 0.17 * ppm
+        row = np.floor(jy / cs)
+        jx = jx + (row % 2) * cs * 0.5
+        colidx = np.floor(jx / cs)
+        fx, fy = jx / cs - colidx, jy / cs - row
+        edge = np.minimum(np.minimum(fx, 1 - fx), np.minimum(fy, 1 - fy))
+        cellv = np.sin(colidx * 73.13 + row * 41.7) * 0.5 + 0.5
+        stone = 60 + 30 * cellv
+        mottle = 0.85 + 0.30 * _static_noise(rng, gh, gw, 40)
+        base = (stone * mottle)[..., None] * np.array([1.08, 1.0, 0.82], np.float32)
+        jm = np.clip(1 - edge * cs / (0.032 * ppm), 0, 1)[..., None]
+        mossn = np.clip(_static_noise(rng, gh, gw, 7) * 1.9 - 0.35, 0, 1)
+        joint = np.where(mossn[..., None] > 0.35,
+                         np.array([40, 66, 30], np.float32),
+                         np.array([30, 30, 26], np.float32))
+        base = base * (1 - jm) + joint * jm
+        creep = (np.clip(1 - edge * cs / (0.17 * ppm), 0, 1) * mossn)[..., None]
+        base = base * (1 - creep * np.array([0.45, 0.06, 0.50], np.float32))
+        crack = np.clip(1 - np.abs(_static_noise(rng, gh, gw, 6) - 0.5) / 0.03, 0, 1)
+        return (base * (1 - 0.4 * crack)[..., None]).astype(np.float32)
+
+    def _bake_carve(self, px, py, carve):
+        """Chisel a glyph into the base texture (darkened groove + lip)."""
+        s = carve.shape[0]
+        x0 = int(round(px)) - s // 2
+        y0 = int(round(py)) - s // 2
+        sx0, sy0 = max(0, -x0), max(0, -y0)
+        x0c, y0c = max(0, x0), max(0, y0)
+        x1 = min(self.gw, x0 + s)
+        y1 = min(self.gh, y0 + s)
+        if x1 <= x0c or y1 <= y0c:
+            return
+        c = carve[sy0:sy0 + y1 - y0c, sx0:sx0 + x1 - x0c]
+        lip = np.clip(np.roll(carve, 2, axis=0) - carve, 0.0, 1.0)[
+            sy0:sy0 + y1 - y0c, sx0:sx0 + x1 - x0c]
+        region = self._base[y0c:y1, x0c:x1]
+        region *= 1.0 - c[..., None] * (1.0 - _CARVE_DARK)
+        region += lip[..., None] * 16.0
+
+    def _bake_torch(self):
+        """Draw the dropped BONE torch into the base texture: a pale femur —
+        twin condyle knobs at the free end, shaft with a dome highlight —
+        with a mummy-cloth wrap at the burning end (diagonal bandage bands,
+        charring toward the flame), a contact shadow so it lifts off the
+        floor, and a soot scorch on the stone. The flame itself is live."""
+        t = self._torch
+        ca, sa = math.cos(t['ang']), math.sin(t['ang'])
+        bl = TORCH_BONE_M * self.ppm
+        wl = TORCH_WRAP_M * self.ppm
+        pad = int(bl + wl) + 6
+        x0 = max(0, int(t['px']) - pad)
+        x1 = min(self.gw, int(t['px']) + pad + 1)
+        y0 = max(0, int(t['py']) - pad)
+        y1 = min(self.gh, int(t['py']) + pad + 1)
+        ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+        u = (xs - t['px']) * ca + (ys - t['py']) * sa   # +u = flame direction
+        v = -(xs - t['px']) * sa + (ys - t['py']) * ca
+        region = self._base[y0:y1, x0:x1]
+
+        # scorch first, so everything lies on top of it
+        d = np.hypot(u - 0.06 * self.ppm, v)
+        region *= (1.0 - 0.55 * np.exp(-(d / (0.13 * self.ppm)) ** 2))[..., None]
+
+        # silhouette pieces (alphas), assembled then shaded
+        wsh = max(1.8, 0.032 * self.ppm)               # shaft half-width
+        a_shaft = (np.clip((wsh - np.abs(v)) / 1.1, 0.0, 1.0)
+                   * np.clip((-u - wl * 0.35) / 1.5, 0.0, 1.0)
+                   * np.clip((u + bl - 0.05 * self.ppm) / 1.5, 0.0, 1.0))
+        rk = max(2.2, 0.048 * self.ppm)                # condyle knobs
+        a_knob = np.zeros_like(a_shaft)
+        for sv in (-1, 1):
+            dk = np.hypot(u + bl - 0.01 * self.ppm, v - sv * 0.034 * self.ppm)
+            a_knob = np.maximum(a_knob, np.clip((rk - dk) / 1.1, 0.0, 1.0))
+        a_bone = np.maximum(a_shaft, a_knob)
+        wwr = max(2.4, 0.058 * self.ppm)               # cloth wrap half-width
+        a_wrap = (np.clip((wwr - np.abs(v)) / 1.1, 0.0, 1.0)
+                  * np.clip((u + wl * 0.45) / 1.2, 0.0, 1.0)
+                  * np.clip((wl * 0.55 - u) / 1.2, 0.0, 1.0))
+
+        # contact shadow: the silhouette shifted a touch, darkening the stone
+        sil = np.maximum(a_bone, a_wrap)
+        sh = np.roll(np.roll(sil, 2, axis=0), 1, axis=1)
+        region *= (1.0 - 0.40 * sh)[..., None]
+
+        # bone: dome highlight across the shaft, worn shading at the edges
+        dome = np.clip(1.0 - np.abs(v) / (wsh * 1.4), 0.0, 1.0) ** 0.7
+        col_bone = _BONE_DARK + (_BONE - _BONE_DARK) * dome[..., None]
+        col_bone = col_bone * (1.0 + 0.06 * np.sin(u * 1.3))[..., None]
+        region[:] = region * (1 - a_bone[..., None]) + col_bone * a_bone[..., None]
+
+        # cloth: diagonal bandage bands, charring toward the flame end
+        band = 1.0 + 0.24 * np.sin((u - v * 0.9) * (4.2 / max(1.0, 0.02 * self.ppm)))
+        char = np.clip((u + wl * 0.1) / (wl * 0.6), 0.0, 1.0) ** 1.5
+        col_wrap = (_CLOTH * band[..., None]
+                    + char[..., None] * (_CLOTH_CHAR - _CLOTH * band[..., None]))
+        region[:] = region * (1 - a_wrap[..., None]) + col_wrap * a_wrap[..., None]
+
+    def _bake_holes(self):
+        """The pits the scarabs use, chipped into the floor: near-black
+        irregular holes with a bright fractured rim — always visible, so
+        repeat visitors can watch the right spots."""
+        for m in self.mouths:
+            r = self._rng.uniform(*HOLE_R_M) * self.ppm
+            wob = [self._rng.uniform(-1, 1) for _ in range(12)]
+            pad = int(r * 1.8) + 3
+            x0 = max(0, int(m['px']) - pad)
+            x1 = min(self.gw, int(m['px']) + pad + 1)
+            y0 = max(0, int(m['py']) - pad)
+            y1 = min(self.gh, int(m['py']) + pad + 1)
+            ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+            dx, dy = xs - m['px'], ys - m['py']
+            d = np.hypot(dx, dy)
+            th = np.arctan2(dy, dx)
+            idx = (th + math.pi) / math.tau * 12
+            i0 = np.floor(idx).astype(np.int32) % 12
+            f = (idx - np.floor(idx)).astype(np.float32)
+            wt = np.asarray(wob, np.float32)
+            edge = r * (1 + 0.28 * (wt[i0] * (1 - f) + wt[(i0 + 1) % 12] * f))
+            hole = np.clip((edge - d) / 1.1, 0.0, 1.0)[..., None]
+            rim = np.clip((edge + 1.8 - d) / 1.1, 0.0, 1.0)[..., None] - hole
+            region = self._base[y0:y1, x0:x1]
+            region[:] = region * (1 + 0.30 * rim)      # chipped bright lip
+            region[:] = (region * (1 - hole)
+                         + np.array([9, 8, 7], np.float32) * hole)
+
+    def _build_scarab_sprite(self, ang):
+        """One scarab seen from above, pointing along `ang`: a tiny dark
+        oval — split elytra line down the back, bronze-green iridescent
+        sheen toward the head. Precomputed like the monster/rot patches."""
+        L = SCARAB_L_M * self.ppm / 2
+        W = L * 0.62
+        pad = int(math.ceil(L)) + 2
+        s = 2 * pad + 1
+        ys, xs = np.mgrid[0:s, 0:s].astype(np.float32)
+        dx, dy = xs - pad, ys - pad
+        ca, sa = math.cos(ang), math.sin(ang)
+        u = dx * ca + dy * sa
+        v = -dx * sa + dy * ca
+        ell = (u / L) ** 2 + (v / max(W, 1e-3)) ** 2
+        alpha = np.clip((1.0 - ell) * 2.2, 0.0, 1.0)[..., None]
+        shade = 0.75 + 0.45 * np.clip(1.0 - ell, 0.0, 1.0)
+        col = _SCARAB_BODY * shade[..., None]
+        seam = np.clip(1.0 - np.abs(v) / 0.5, 0.0, 1.0) * (u < 0.2 * L)
+        col = col * (1.0 - 0.35 * seam[..., None])
+        sheen = np.exp(-(((u - 0.35 * L) ** 2 + v * v) / max(0.5 * W, 1e-3) ** 2))
+        col = col + sheen[..., None] * (_SCARAB_SHEEN - col) * 0.55
+        return col.astype(np.float32), alpha.astype(np.float32)
+
+    # ---- simulation ----
+    def _step_theme(self, dt):
+        self._step_torch(dt)
+        self._step_motes(dt)
+        self._step_scarabs(dt)
+        self._step_glints(dt)
+
+    def _step_torch(self, dt):
+        """Flame flicker (two-sine + jitter), lateral sway, and the
+        occasional dramatic sputter: gutter down, flare, recover."""
+        t = self._torch
+        env = 1.0
+        if t['sput_t'] >= 0:
+            ph = t['sput_t'] = t['sput_t'] + dt
+            if ph < 0.5:
+                env = 1.0 - 1.3 * ph            # gutter down to ~0.35
+            elif ph < 0.8:
+                env = 0.35 + (ph - 0.5) * 3.0   # flare up through 1.25
+            elif ph < 1.3:
+                env = 1.25 - (ph - 0.8) * 0.5   # settle back
+            else:
+                t['sput_t'] = -1.0
+                t['sput_next'] = self._rng.uniform(*TORCH_SPUTTER_S)
+        elif self.fade > 0.5:
+            t['sput_next'] -= dt
+            if t['sput_next'] <= 0:
+                t['sput_t'] = 0.0
+                self._emit({'e': 'torch_sputter'})
+        flick = (1.0 + 0.16 * math.sin(self.t * 9.1)
+                 + 0.09 * math.sin(self.t * 15.7)
+                 + self._rng.uniform(-0.05, 0.05))
+        t['len'] = TORCH_FLAME_M * self.ppm * flick * env
+        t['sway'] = (0.35 * math.sin(self.t * 7.3)
+                     + 0.22 * math.sin(self.t * 12.1)) * 0.05 * self.ppm
+        t['glow'] = max(0.15, flick * env)
+
+    def _step_scarabs(self, dt):
+        sw = self._swarm
+        if sw['mode'] == 'idle':
+            if self.fade > 0.5 and len(self.mouths) >= 2:
+                sw['next'] -= dt
+                if sw['next'] <= 0:
+                    sw['mouth'] = self._rng.choice(self.mouths)
+                    sw['exit'] = self._rng.choice(
+                        [m for m in self.mouths if m is not sw['mouth']])
+                    sw['n'] = self._rng.randint(*SCARAB_N)
+                    sw['spawned'] = 0
+                    sw['scarabs'] = []
+                    sw['t0'] = self.t
+                    sw['mode'] = 'erupt'
+                    sw['wp'] = 'exit'
+                    self._emit({'e': 'scarab_erupt',
+                                'x': round(sw['mouth']['px'], 1),
+                                'y': round(sw['mouth']['py'], 1)})
+            return
+        if self.fade <= 0:  # show died mid-swarm: vanish quietly
+            sw['mode'] = 'idle'
+            sw['scarabs'] = []
+            sw['next'] = self._rng.uniform(*SCARAB_GAP_S)
+            return
+
+        if sw['mode'] == 'erupt':
+            want = min(sw['n'], int(sw['n'] * (self.t - sw['t0']) / SCARAB_ERUPT_S) + 1)
+            mo = sw['mouth']
+            while sw['spawned'] < want:
+                a = self._rng.random() * math.tau
+                r = self._rng.uniform(0.02, 0.10)
+                sw['scarabs'].append({
+                    'x': mo['wx'] + math.cos(a) * r, 'z': mo['wz'] + math.sin(a) * r,
+                    'ang': a, 'spd': self._rng.uniform(*SCARAB_SPEED),
+                    'ph': self._rng.uniform(0.05, 0.2), 'moving': False,
+                    'oa': self._rng.random() * math.tau,
+                    'orr': self._rng.uniform(0.6, 1.3)})
+                sw['spawned'] += 1
+            if sw['spawned'] >= sw['n']:
+                fresh = self._fresh_tracks()
+                if fresh:
+                    sw['wp'] = 'walker'
+                    sw['orbit_t'] = self._rng.uniform(*SCARAB_ORBIT_S)
+                sw['mode'] = 'travel'
+            return
+
+        # travel: every scarab dashes-and-pauses toward its own slot in the
+        # formation; the formation centers on the walker (circling) or the
+        # exit crack. The Mummy rules: swarm the feet, never touch.
+        fresh = self._fresh_tracks()
+        if sw['wp'] == 'walker':
+            sw['orbit_t'] -= dt
+            if not fresh or sw['orbit_t'] <= 0:
+                sw['wp'] = 'exit'
+        force_drain = self.t - sw['t0'] > SCARAB_MAX_S
+        ex = sw['exit']
+        alive = []
+        for f in sw['scarabs']:
+            if sw['wp'] == 'walker' and fresh:
+                w = fresh[0]
+                oa = f['oa'] + self.t * 2.4
+                tx = w.x + math.cos(oa) * SCARAB_ORBIT_R_M
+                tz = w.z + math.sin(oa) * SCARAB_ORBIT_R_M
+            else:
+                # loose mass in transit, funneling tight as it reaches the
+                # crack (offsets shrink with distance-to-exit → they spiral in)
+                dex = math.hypot(ex['wx'] - f['x'], ex['wz'] - f['z'])
+                spread = 0.22 * f['orr'] * min(1.0, dex / 0.5)
+                tx = ex['wx'] + math.cos(f['oa']) * spread
+                tz = ex['wz'] + math.sin(f['oa']) * spread
+            dxx, dzz = tx - f['x'], tz - f['z']
+            d = math.hypot(dxx, dzz)
+            if sw['wp'] == 'exit' and (d < 0.10 or force_drain):
+                continue  # gone between the stones
+            f['ph'] -= dt
+            if f['ph'] <= 0:  # flip between a dash and a twitchy pause
+                f['moving'] = not f['moving']
+                f['ph'] = (self._rng.uniform(0.15, 0.40) if f['moving']
+                           else self._rng.uniform(0.04, 0.18))
+            bearing = math.atan2(dzz, dxx)
+            f['ang'] += _angdiff(bearing, f['ang']) * min(1.0, 9.0 * dt)
+            if f['moving']:
+                f['ang'] += self._rng.uniform(-1.0, 1.0) * 2.2 * dt
+                step = f['spd'] * dt
+                f['x'] += math.cos(f['ang']) * min(step, d)
+                f['z'] += math.sin(f['ang']) * min(step, d)
+                if not self._on_deck(f['x'], f['z'], thresh=0.3):
+                    f['x'] -= math.cos(f['ang']) * min(step, d)
+                    f['z'] -= math.sin(f['ang']) * min(step, d)
+                    f['ang'] = math.atan2(ex['wz'] - f['z'], ex['wx'] - f['x'])
+            alive.append(f)
+        sw['scarabs'] = alive
+        if not alive:
+            sw['mode'] = 'idle'
+            sw['next'] = self._rng.uniform(*SCARAB_GAP_S)
+            self._emit({'e': 'scarab_drain',
+                        'x': round(ex['px'], 1), 'y': round(ex['py'], 1)})
+
+    def _step_motes(self, dt):
+        if (self.fade > 0 and len(self.flies) < MOTE_N
+                and self._rng.random() < 0.5 * dt * self.fade):
+            py, px = self._mask_pts[self._rng.randrange(len(self._mask_pts))]
+            a = self._rng.random() * math.tau
+            sp = self._rng.uniform(0.015, 0.04) * self.ppm  # slow drift
+            self.flies.append({'x': float(px), 'y': float(py),
+                               'vx': math.cos(a) * sp, 'vy': math.sin(a) * sp,
+                               't0': self.t, 'life': self._rng.uniform(12.0, 28.0),
+                               'on': False, 'sw': self._rng.uniform(0.8, 2.5)})
+        alive = []
+        for f in self.flies:
+            if self.t - f['t0'] >= f['life']:
+                continue
+            turn = self._rng.uniform(-1.0, 1.0) * 1.1 * dt
+            ca, sa = math.cos(turn), math.sin(turn)
+            f['vx'], f['vy'] = f['vx'] * ca - f['vy'] * sa, f['vx'] * sa + f['vy'] * ca
+            f['x'] += f['vx'] * dt
+            f['y'] += f['vy'] * dt
+            xi, yi = int(f['x']), int(f['y'])
+            if not (0 <= xi < self.gw and 0 <= yi < self.gh) or self.mask[yi, xi] < 0.5:
+                sp = math.hypot(f['vx'], f['vy'])
+                d = math.hypot(self.mast[0] - f['x'], self.mast[1] - f['y']) or 1.0
+                f['vx'] = (self.mast[0] - f['x']) / d * sp
+                f['vy'] = (self.mast[1] - f['y']) / d * sp
+            f['sw'] -= dt
+            if f['sw'] <= 0:
+                f['on'] = not f['on']
+                f['sw'] = (self._rng.uniform(1.2, 2.8) if f['on']
+                           else self._rng.uniform(1.5, 4.0))
+            alive.append(f)
+        self.flies = alive
+
+    def _step_glints(self, dt):
+        k = min(1.0, dt * 6.0)
+        fresh = self._fresh_tracks()
+        for g in self.glyphs:
+            if not fresh:
+                g['glint'] += (0.0 - g['glint']) * k
+                continue
+            dmin = min(math.hypot(t.x - g['wx'], t.z - g['wz']) for t in fresh)
+            target = np.clip(1.0 - (dmin - 0.35) / GLINT_R_M, 0.0, 1.0) * 0.7
+            g['glint'] += (float(target) - g['glint']) * k
+
+    # ---- output ----
+    def _field_blobs(self, h):
+        # torchlight breathes over the whole floor
+        h += np.float32(0.035 * (math.sin(self.t * 6.3)
+                                 + 0.6 * math.sin(self.t * 9.7)))
+        for t in self.tracks.values():
+            if self.t - t.last < TRACK_STALE_S:
+                px, py = self.to_px(t.x, t.z)
+                self._add_blob(h, px, py, SUN_R_M * self.ppm, SUN_AMOUNT)
+        for f in self.flies:
+            if f['on']:
+                self._add_blob(h, f['x'], f['y'], 2.0, 0.35)
+        sw = self._swarm
+        if sw['scarabs']:
+            # the swarm carries its own shadow — the light dims under the mass
+            cx = sum(f['x'] for f in sw['scarabs']) / len(sw['scarabs'])
+            cz = sum(f['z'] for f in sw['scarabs']) / len(sw['scarabs'])
+            px, py = self.to_px(cx, cz)
+            self._add_blob(h, px, py, 0.30 * self.ppm, -0.22)
+        if sw['mode'] == 'erupt':
+            self._add_blob(h, sw['mouth']['px'], sw['mouth']['py'],
+                           0.12 * self.ppm, 0.30)  # dust catching the light
+        # the fallen torch owns a guttering pool of light
+        t = self._torch
+        fx = t['px'] + math.cos(t['ang']) * t['len'] * 0.4
+        fy = t['py'] + math.sin(t['ang']) * t['len'] * 0.4
+        self._add_blob(h, fx, fy, TORCH_POOL_R_M * self.ppm, 0.34 * t['glow'])
+        self._add_blob(h, fx, fy, 0.16 * self.ppm, 0.30 * t['glow'])
+
+    def _draw(self, rgb):
+        for g in self.glyphs:
+            if g['glint'] > 0.02:  # the carve fills with gold on approach
+                gold = np.broadcast_to(self._glint_gold,
+                                       g['carve'].shape + (3,))
+                self._composite_patch(rgb, g['px'], g['py'], gold,
+                                      (g['carve'] * (g['glint'] * 0.85))[..., None])
+        self._draw_island(rgb)
+        for f in self._swarm['scarabs']:
+            px, py = self.to_px(f['x'], f['z'])
+            k = int(round(f['ang'] / (math.tau / SCARAB_ROT_STEPS))) % SCARAB_ROT_STEPS
+            col, alpha = self._scarab_sprites[k]
+            self._composite_patch(rgb, px, py, col, alpha)
+        self._draw_flame(rgb)
+        for f in self.flies:
+            if f['on']:
+                self._dot(rgb, f['x'], f['y'], 1.0, _FLY_CORE)
+
+    def _draw_flame(self, rgb):
+        """The live flame licking along the floor from the torch head: a
+        sheared teardrop, three heat zones (outer orange → mid → white-hot
+        core), rebuilt every frame — the region is tiny."""
+        t = self._torch
+        L = max(3.0, t['len'])
+        ca, sa = math.cos(t['ang']), math.sin(t['ang'])
+        cx = t['px'] + ca * L * 0.45
+        cy = t['py'] + sa * L * 0.45
+        pad = int(L * 0.75) + 3
+        x0, x1 = max(0, int(cx) - pad), min(self.gw, int(cx) + pad + 1)
+        y0, y1 = max(0, int(cy) - pad), min(self.gh, int(cy) + pad + 1)
+        if x1 <= x0 or y1 <= y0:
+            return
+        ys, xs = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+        u = (xs - t['px']) * ca + (ys - t['py']) * sa
+        v = -(xs - t['px']) * sa + (ys - t['py']) * ca
+        s = np.clip(u / L, 0.0, 1.0)
+        v = v - t['sway'] * s * s        # tip sways harder than the root
+        w = 0.055 * self.ppm * (1.0 - s) ** 0.65 + 0.4
+        a = (np.clip((w - np.abs(v)) / 1.1, 0.0, 1.0)
+             * np.clip(u / 1.5 + 1.0, 0.0, 1.0)
+             * np.clip((L - u) / 1.5, 0.0, 1.0))
+        if a.max() <= 0:
+            return
+        heat = np.clip(s + np.abs(v) / (w + 0.5) * 0.35, 0.0, 1.0)
+        col = np.where(heat[..., None] < 0.35, _FLAME_CORE,
+                       np.where(heat[..., None] < 0.7, _FLAME_MID, _FLAME_OUT))
+        region = rgb[y0:y1, x0:x1]
+        aa = (a * 0.95)[..., None]
+        region[:] = region * (1 - aa) + col * aa
+
+    _dot = JungleShow._dot  # same tiny stamp helper
+
+    def hello_patches(self):
+        """Temple artwork for the sim page: the floor base (multiplied by
+        the light stream client-side), the altar, and per-glyph gold carve
+        sprites (glow: the page draws them at the streamed glint alpha)."""
+        icol, ialpha = self._island
+        glyphs = []
+        for g in self.glyphs:
+            gold = np.empty(g['carve'].shape + (3,), np.float32)
+            gold[:] = (255, 214, 120)
+            glyphs.append({'id': g['gid'], 'x': round(g['px'], 1),
+                           'y': round(g['py'], 1), 'glow': 1,
+                           **self._pack_patch(gold, g['carve'][..., None] * 0.85)})
+        ones = np.ones(self._base.shape[:2] + (1,), np.float32)
+        return {'base': self._pack_patch(self._base, ones),
+                'island': {'x': round(self.mast[0], 1), 'y': round(self.mast[1], 1),
+                           **self._pack_patch(icol, ialpha)},
+                'glyphs': glyphs}
+
+    def _state_extra(self):
+        return {
+            'flies': [{'x': round(f['x'], 1), 'y': round(f['y'], 1)}
+                      for f in self.flies if f['on']],
+            'glyphs': [{'id': g['gid'], 'glint': round(g['glint'], 2)}
+                       for g in self.glyphs],
+            'scarabs': [[round(px, 1), round(py, 1), round(f['ang'], 2)]
+                        for px, py, f in
+                        ((*self.to_px(f['x'], f['z']), f)
+                         for f in self._swarm['scarabs'])],
+            'torch': {'x': round(self._torch['px'], 1),
+                      'y': round(self._torch['py'], 1),
+                      'ang': round(self._torch['ang'], 3),
+                      'len': round(self._torch['len'], 1),
+                      'sway': round(self._torch['sway'], 2),
+                      'glow': round(self._torch['glow'], 2)},
+        }
+
+
+THEMES = {'lava': LavaShow, 'jungle': JungleShow, 'temple': TempleShow}

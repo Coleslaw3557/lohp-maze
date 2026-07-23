@@ -2,15 +2,16 @@
 
 The second theme for the Cuddle Cross floor projection (same rig, same
 engine skeleton as the lava show — `wiring-guides/cuddle-lava-plan.md`).
-Tim's content call 2026-07-23: **Mayan jungle, snake themed**, plus "a
-little flying tiki mask from Crash Bandicoot". The maze is Mayan-temple
-themed; this is the temple floor the jungle took back.
+Tim's content call 2026-07-23: **Mayan jungle, snake themed**. The maze is
+Mayan-temple themed; this is the temple floor the jungle took back. (The
+Aku-Aku-homage flying tiki mask shipped with v1 and was CUT the same day on
+Tim's call — resurrect from commit 4018bd8 if ever wanted.)
 
-## Themes: one engine, two shows
+## Themes: one engine, three shows (lava / jungle / temple)
 
 `projection_engine.py` now holds a `FloorShow` base (deck geometry + mask,
 drifting noise field, walker tracks, presence/fade, events, patch toolbox)
-and two subclasses: `LavaShow` and `JungleShow`, registry `THEMES`. The
+and subclasses `LavaShow`, `JungleShow`, `TempleShow` (`wiring-guides/cuddle-temple-plan.md`), registry `THEMES`. The
 refactor is provably invisible to the lava show (golden-frame hash of
 render+state+textures identical before/after).
 
@@ -33,16 +34,26 @@ render+state+textures identical before/after).
 
 ## The show
 
-The deck is sun-dappled undergrowth: a slow-drifting green field (same
-octave-noise machinery as the lava heat, jungle palette — undergrowth dark
-through leaf greens to gold), heavier canopy dapple at the deck rim, and a
-**sun-pool that follows each tracked walker** (the canopy opens over you).
+The deck is a **leaf-litter carpet** (Tim's pick 2026-07-23 from the
+four-way background comparison; the flagstone runner-up became the temple
+theme): overlapping leaves in greens, olives and rusts painted once at
+init, with the drifting light field multiplied over it through a
+green-shadow→warm-gold ramp (`_JUNGLE_STOPS` is a LIGHT ramp now — same
+octave machinery as the lava heat). Heavier canopy dapple hugs the deck
+rim, and a **sun-pool follows each tracked walker** (the canopy opens over
+you). Density/size knob: `LEAF_DENSITY`.
 
-- **Snakes** (the heart of it): three procedural snakes — two **jade
-  racers** (green with a diamond chain down the back and a pale flank
-  stripe, 1.3–1.55 m) and one **coral snake** (red/yellow/black rings —
-  red widest, "red touches yellow" — black snout, ~1 m) — slither
-  goal-to-goal across the deck with a weaving, burst-and-glide gait
+- **Snakes** (the heart of it): three procedural snakes, all real regional
+  species, colorway pass 2026-07-23 (Tim liked the coral, wanted the two
+  greens replaced — jade-on-green was camouflage): a **tzabcan
+  rattlesnake** (the Yucatán diamondback, 1.55 m — sandy tan, brown diamond
+  chain, pale flank line, and a segmented buff-keratin **rattle** held
+  wider than a tail point that **buzzes** — flicker shimmer + a rattle log
+  line — when it flees), a **gold eyelash viper** (1.3 m, bright gold with
+  fleck speckle, dark eyes; the high-contrast one), and the **coral snake**
+  (red/yellow/black rings — red widest, "red touches yellow" — black
+  snout, ~1 m). They slither goal-to-goal across the deck with a weaving,
+  burst-and-glide gait
   (heading oscillation + speed pulsing; the spine is a trail the body
   follows). **v2 body render (07-23, Tim: "more realistic")**: not discs —
   a distance field to the spine polyline carrying arc length, so each snake
@@ -57,19 +68,6 @@ through leaf greens to gold), heavier canopy dapple at the deck rim, and a
   speed 0.62 m/s, hysteresis to 1.2 m so it actually escapes, per-snake
   event cooldown 4 s so the log doesn't spam). Placement/self-respect rules
   keep them off the altar and out from underfoot.
-- **The tiki mask** (the set piece — an **Aku Aku homage**, procedural like
-  Kukulkan; an asset search was already ruled out for the lava monster and
-  the same reasoning holds: no image decoder anywhere in the chain, and
-  actual game sprites are Activision's art): an oval wooden mask, grain and
-  knots, heavy brow, **hollow eyes with a pulsing gold glow**, wide toothy
-  grin, straw goatee off the chin, five red/yellow/jade feathers off the
-  crown. Every 30–65 s (first visit ~15 s in) it drifts in over a deck
-  edge, flies to whoever the radar sees and **orbits them** (0.72 m,
-  companion-style) — or wanders a lazy lissajous around the center when the
-  deck is empty — **spins** every 5–9 s (0.9 s whirl + motion rings in the
-  sim), then drifts off into the canopy. Forehead + crest lead along the
-  motion. Same production trick as Kukulkan: 16 precomputed orientations;
-  the sim page gets angle-0 and rotates on canvas.
 - **Fallen glyph stones**: three mossy carved rocks (rock-patch generator
   with moss colors + a moss pass that eats the rims green), dots-and-bars
   carvings — decorative ruins, not the lava chain's wayfinding numerals.
@@ -83,8 +81,8 @@ through leaf greens to gold), heavier canopy dapple at the deck rim, and a
 
 ## Events (sim log + fx rings)
 
-`snake_flee`, `tiki_arrive`, `tiki_spin`, `tiki_leave` — jungle fx rings
-render leaf-gold instead of lava orange.
+`snake_flee` (the rattler's log line rattles) — jungle fx rings render
+leaf-gold instead of lava orange.
 
 ## Perf (Pi-tuned 2026-07-23 — Tim: "it's feeling sluggish")
 
@@ -120,12 +118,11 @@ journal's once-a-minute `fps` heartbeat if it ever feels slow again.
 
 `SNAKE_*` (specs, seg 0.045 m, cruise 0.16–0.30 m/s, flee 0.62 m/s at
 0.75 m w/ 1.6× calm hysteresis, weave 1.3–2.4 rad/s), `TONGUE_*`,
-`WAKE_*`, `SUN_*` (0.42 m pool), `FIREFLY_*`, `GLYPH_*`, `TIKI_*` (visit
-gaps, 11–18 s stay, orbit 0.72 m @ 0.9 rad/s, spin 0.9 s, half-size
-0.21×0.16 m + crest), `_JUNGLE_STOPS` palette.
+`WAKE_*`, `SUN_*` (0.42 m pool), `FIREFLY_*`, `GLYPH_*`, `RATTLE_*`,
+`_JUNGLE_STOPS` palette.
 
 ## Test
 
 `sim/tools/lava_test.py` sections 8–12: snakes placed/slither/stay on
-deck, flee event + escape, tiki arrive→spin→leave + pose stream,
-fireflies, texture export shapes, green-floor render check, perf budget.
+deck, flee event + escape, fireflies spawn and blink, texture export
+shapes, green-floor render check, perf budget.

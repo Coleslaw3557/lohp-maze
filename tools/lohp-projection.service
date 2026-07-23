@@ -1,5 +1,5 @@
 [Unit]
-Description=LOHP Cuddle floor projection (LS625X via HDMI framebuffer; themes lava/jungle, live switch on :5002/theme)
+Description=LOHP Cuddle floor projection (LS625X via HDMI framebuffer; themes lava/jungle/temple, live switch on :5002/theme)
 After=multi-user.target
 
 [Service]

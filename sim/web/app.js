@@ -2014,8 +2014,8 @@ function checkSensorTriggers() {
 // (projection_engine.py, LAVA or JUNGLE theme — the Floor button switches it
 // for every tab). Delete the layout key to remove the whole rig. No
 // production config is involved.
-const FLOOR_THEMES = ['lava', 'jungle'];
-const FLOOR_LABEL = { lava: 'Floor: Lava', jungle: 'Floor: Jungle' };
+const FLOOR_THEMES = ['lava', 'jungle', 'temple'];
+const FLOOR_LABEL = { lava: 'Floor: Lava', jungle: 'Floor: Jungle', temple: 'Floor: Temple' };
 function buildProjection(cfg) {
   const P = cfg.layout.projection;
   if (!P) return;
@@ -2145,7 +2145,7 @@ function buildProjection(cfg) {
     // It computes nothing. `theme` mirrors the server's active show.
     ws: null, grid: null, lut: null, heatCanvas: null, heatImg: null,
     heatStep: 2, theme: null, stones: [], snakes: [], snakeMeta: {}, flies: [],
-    glyphs: [], glyphGlint: {}, tiki: null, tikiImg: null,
+    glyphs: [], glyphGlint: {}, scarabs: [], torch: null,
     tracksPx: [], fx: [], engineFade: 0, lastTrackSend: 0 };
   connectProjection();
 }
@@ -2169,9 +2169,9 @@ function connectProjection() {
       // theme reset: a re-hello (theme switch) must not leak the other
       // show's entities into this one
       pr.theme = m.hello.theme || 'lava';
-      pr.stoneImg = null; pr.monsterImg = null; pr.tikiImg = null;
+      pr.stoneImg = null; pr.monsterImg = null; pr.baseImg = null;
       pr.stones = []; pr.monster = null; pr.snakes = []; pr.snakeMeta = {};
-      pr.flies = []; pr.glyphs = []; pr.glyphGlint = {}; pr.tiki = null;
+      pr.flies = []; pr.glyphs = []; pr.glyphGlint = {};
       pr.fx = [];
       const fb = $('btn-floor');
       if (fb) fb.textContent = FLOOR_LABEL[pr.theme] || `Floor: ${pr.theme}`;
@@ -2191,11 +2191,11 @@ function connectProjection() {
           pr.stoneImg = {};
           for (const t of tex2.stones) pr.stoneImg[t.id] = mk(t);
         }
+        if (tex2.base) pr.baseImg = mk(tex2.base);
         pr.islandImg = mk(tex2.island);
         pr.islandPos = tex2.island;
         if (tex2.monster) pr.monsterImg = mk(tex2.monster);
-        if (tex2.tiki) pr.tikiImg = mk(tex2.tiki);
-        if (tex2.glyphs) pr.glyphs = tex2.glyphs.map(t => ({ id: t.id, x: t.x, y: t.y, img: mk(t) }));
+        if (tex2.glyphs) pr.glyphs = tex2.glyphs.map(t => ({ id: t.id, x: t.x, y: t.y, glow: t.glow || 0, img: mk(t) }));
         if (tex2.snakes) for (const s of tex2.snakes) pr.snakeMeta[s.id] = s;
       }
       pr.ws = ws;
@@ -2208,9 +2208,10 @@ function connectProjection() {
     pr.monster = m.monster || null;
     pr.snakes = m.snakes || [];
     pr.flies = m.flies || [];
-    pr.tiki = m.tiki || null;
     pr.glyphGlint = {};
     for (const g of m.glyphs || []) pr.glyphGlint[g.id] = g.glint;
+    pr.scarabs = m.scarabs || [];
+    pr.torch = m.torch || null;
     if (m.heat && pr.heatCanvas) paintHeat(pr, m.heat);
     for (const e of m.events || []) {
       if (e.x != null) pr.fx.push({ ...e, t0: clock.getElapsedTime() });
@@ -2219,10 +2220,15 @@ function connectProjection() {
       if (e.e === 'monster_swim') log('info', 'projection: something moves beneath the lava…');
       if (e.e === 'monster_breach') log('ok', 'projection: KUKULKAN breaches!');
       if (e.e === 'monster_sink') log('info', 'projection: Kukulkan slips back under');
-      if (e.e === 'snake_flee') log('info', 'projection: a snake darts away from your feet');
-      if (e.e === 'tiki_arrive') log('ok', 'projection: the tiki mask floats in (aku aku!)');
-      if (e.e === 'tiki_spin') log('info', 'projection: the tiki mask SPINS');
-      if (e.e === 'tiki_leave') log('info', 'projection: the tiki mask drifts off into the canopy');
+      if (e.e === 'torch_sputter') log('info', 'projection: the fallen torch gutters…');
+      if (e.e === 'scarab_erupt') log('ok', 'projection: SCARABS pour from the cracks!');
+      if (e.e === 'scarab_drain') log('info', 'projection: the scarabs drain away between the stones');
+      if (e.e === 'snake_flee') {
+        const kind = pr.snakeMeta[e.id] && pr.snakeMeta[e.id].kind;
+        log('info', kind === 'rattler'
+          ? 'projection: the rattlesnake RATTLES away from your feet!'
+          : 'projection: a snake darts away from your feet');
+      }
     }
   };
   ws.onclose = () => { pr.ws = null; setTimeout(connectProjection, 2500); };
@@ -2300,9 +2306,18 @@ function drawProjection(pr, dt, now) {
   ctx.save();
   ctx.clip(pr.deckPath);
   if (pr.heatCanvas && pr.engineFade > 0) {
-    // the engine's lava heat field, palette-mapped in paintHeat, upscaled
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(pr.heatCanvas, 0, 0, cw, ch);
+    if (pr.baseImg) {
+      // textured floor (jungle leaves / temple flags): static base with the
+      // palette-mapped LIGHT field multiplied over it — mirrors the engine
+      ctx.drawImage(pr.baseImg, 0, 0, cw, ch);
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.drawImage(pr.heatCanvas, 0, 0, cw, ch);
+      ctx.globalCompositeOperation = 'source-over';
+    } else {
+      // the field IS the picture (lava), palette-mapped in paintHeat
+      ctx.drawImage(pr.heatCanvas, 0, 0, cw, ch);
+    }
   } else {
     ctx.fillStyle = '#03150b'; // engine offline: dim wash = visible projected area
     ctx.fillRect(0, 0, cw, ch);
@@ -2382,11 +2397,20 @@ function drawProjection(pr, dt, now) {
     }
   }
 
-  // jungle: fallen glyph stones (mossy ruins; carve glints when noticed)
+  // glyphs: jungle = mossy stones drawn always (+ glint ring); temple =
+  // gold carve sprites drawn AT the streamed glint alpha (invisible idle)
   for (const g of pr.glyphs) {
     const w = g.img.width * gs, h = g.img.height * gs;
-    ctx.drawImage(g.img, g.x * gs - w / 2, g.y * gs - h / 2, w, h);
     const gl = pr.glyphGlint[g.id] || 0;
+    if (g.glow) {
+      if (gl > 0.03) {
+        ctx.globalAlpha = gl;
+        ctx.drawImage(g.img, g.x * gs - w / 2, g.y * gs - h / 2, w, h);
+        ctx.globalAlpha = 1;
+      }
+      continue;
+    }
+    ctx.drawImage(g.img, g.x * gs - w / 2, g.y * gs - h / 2, w, h);
     if (gl > 0.05) {
       ctx.globalAlpha = gl * 0.35;
       ctx.strokeStyle = 'rgb(205,235,130)';
@@ -2437,7 +2461,8 @@ function drawProjection(pr, dt, now) {
     const a = Math.atan2(hy - P[1][1], hx - P[1][0]);
     const ca = Math.cos(a), sa = Math.sin(a);
     const hw = meta.w[Math.min(1, meta.w.length - 1)];
-    ctx.fillStyle = 'rgb(250,214,90)';
+    // gold body gets dark eyes; the others amber (mirrors the engine)
+    ctx.fillStyle = meta.kind === 'gold' ? 'rgb(24,18,12)' : 'rgb(250,214,90)';
     for (const sv of [-1, 1]) {
       ctx.beginPath();
       ctx.arc((P[1][0] + nrm[1][0] * sv * hw * 0.72) * gs,
@@ -2457,6 +2482,62 @@ function drawProjection(pr, dt, now) {
         ctx.stroke();
       }
     }
+    if (meta.kind === 'rattler' && sn.flee) {
+      // the rattle buzzes: flickering halo at the tail tip
+      const [tx2, ty2] = P[n - 1];
+      ctx.globalAlpha = 0.25 + 0.25 * Math.sin(now * 50);
+      ctx.strokeStyle = 'rgb(202,182,144)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(tx2 * gs, ty2 * gs, 7, 0, 7); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // temple: the fallen torch's flame (handle + scorch live in the base
+  // texture; the flame animates from engine len/sway/glow)
+  if (pr.torch) {
+    const tk = pr.torch;
+    ctx.save();
+    ctx.translate(tk.x * gs, tk.y * gs);
+    ctx.rotate(tk.ang);
+    const L = tk.len * gs, sway = tk.sway * gs;
+    const layers = [
+      ['rgba(230,110,25,0.85)', 1.0, 0.055],
+      ['rgba(255,190,70,0.9)', 0.72, 0.038],
+      ['rgba(255,244,200,0.95)', 0.42, 0.022],
+    ];
+    for (const [c, f, wf] of layers) {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.ellipse(L * f * 0.5, sway * f * 0.5, L * f * 0.55,
+        Math.max(1.5, wf * pr.ppm), Math.atan2(sway * f, L * f) * 0.5, 0, 7);
+      ctx.fill();
+    }
+    ctx.restore();
+    if (tk.glow > 0.1) {  // faint halo over the pool the field already casts
+      ctx.globalAlpha = 0.08 * tk.glow;
+      ctx.fillStyle = 'rgb(255,200,110)';
+      ctx.beginPath();
+      ctx.arc(tk.x * gs + Math.cos(tk.ang) * tk.len * gs * 0.4,
+        tk.y * gs + Math.sin(tk.ang) * tk.len * gs * 0.4,
+        0.5 * pr.ppm, 0, 7);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // temple: the scarab swarm — tiny dark ovals with a bronze-green sheen,
+  // skittering (positions + headings straight from the engine)
+  for (const [x, y, a] of pr.scarabs) {
+    ctx.save();
+    ctx.translate(x * gs, y * gs);
+    ctx.rotate(a);
+    const L = 0.035 * pr.ppm, W = L * 0.62;  // pr.ppm = canvas px per meter
+    ctx.fillStyle = 'rgb(26,20,13)';
+    ctx.beginPath(); ctx.ellipse(0, 0, L, W, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(96,128,72,0.8)';
+    ctx.beginPath(); ctx.ellipse(L * 0.35, 0, L * 0.3, W * 0.45, 0, 0, 7); ctx.fill();
+    ctx.restore();
   }
 
   // jungle: fireflies (the engine also glows the field under each one)
@@ -2485,42 +2566,13 @@ function drawProjection(pr, dt, now) {
     }
   }
 
-  // jungle: the flying tiki mask, rotated to its heading (image points +x);
-  // hollow eyes get a soft pulse aura, a spin gets motion rings
-  if (pr.tiki && pr.tikiImg) {
-    const tk = pr.tiki;
-    ctx.save();
-    ctx.translate(tk.x * gs, tk.y * gs);
-    ctx.rotate(tk.rot);
-    const w = pr.tikiImg.width * gs * tk.scale, h = pr.tikiImg.height * gs * tk.scale;
-    ctx.drawImage(pr.tikiImg, -w / 2, -h / 2, w, h);
-    ctx.restore();
-    if (tk.glow > 0.1) {
-      ctx.globalAlpha = tk.glow * 0.14;
-      ctx.strokeStyle = 'rgb(255,226,130)';
-      ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(tk.x * gs, tk.y * gs, pr.tikiImg.width * gs * 0.5, 0, 7); ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-    if (tk.spin) {
-      ctx.strokeStyle = 'rgba(255,226,130,0.5)';
-      ctx.lineWidth = 2.5;
-      for (const rr of [0.62, 0.78]) {
-        ctx.beginPath();
-        ctx.arc(tk.x * gs, tk.y * gs, pr.tikiImg.width * gs * rr,
-          now * 9 + rr * 4, now * 9 + rr * 4 + 2.2);
-        ctx.stroke();
-      }
-    }
-  }
-
   // engine events as short-lived rings: bubble pops / snake flees small,
   // sink/rise big, monster + tiki biggest; jungle rings go leaf-gold
   pr.fx = pr.fx.filter(e => now - e.t0 < 0.6);
   for (const e of pr.fx) {
     const a = (now - e.t0) / 0.6;
     const base = e.e === 'pop' ? 6 : e.e === 'snake_flee' ? 9
-      : (e.e.startsWith('monster') || e.e.startsWith('tiki')) ? 24 : 14;
+      : e.e.startsWith('monster') ? 24 : 14;
     const col = pr.theme === 'jungle' ? '205,235,130' : '255,180,60';
     ctx.strokeStyle = `rgba(${col},${0.7 * (1 - a)})`;
     ctx.lineWidth = 2 + 3 * (1 - a);
@@ -2548,8 +2600,9 @@ function drawProjection(pr, dt, now) {
 // authoritative; this canvas port matches its character, not its pixels.
 // Real panel is a 47 mm (1.8") disc; drawn bigger here so the face reads
 // across the deck. Layout `eye` key drives it; the Eye button toggles it.
-// The gestures the real orb sends (tap=next theme, long-press=storm all)
-// hit the REST API directly — see wiring-guides/cuddle-orb-plan.md.
+// The gestures the real orb sends (tap=next theme, swipe=music on/off,
+// long-press=storm all — the orb IS the Cuddle control surface, no wall
+// buttons there) hit the REST API directly — see wiring-guides/cuddle-orb-plan.md.
 const EYE_MODES = ['off', 'olmec'];
 const EYE_LABEL = { off: 'Eye ✕', olmec: 'Eye: Olmec' };
 

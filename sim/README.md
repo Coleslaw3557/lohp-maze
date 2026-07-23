@@ -193,9 +193,9 @@ So: design an effect in the sim → it's already production code → deploy to t
 physical server → identical behavior on real fixtures (once addressing is fixed,
 below).
 
-## Cuddle Cross floor projection — LAVA + JUNGLE themes (live engine, 2026-07-23)
+## Cuddle Cross floor projection — LAVA / JUNGLE / TEMPLE themes (live engine, 2026-07-23)
 
-The floor show is REAL content with a production path, and now has **two
+The floor show is REAL content with a production path, and now has **three
 selectable themes** on one engine skeleton (`projection_engine.py` at the
 repo root: `FloorShow` base + `THEMES` registry):
 
@@ -204,10 +204,14 @@ repo root: `FloorShow` base + `THEMES` registry):
   order, sink/rise mischief, bubbles, canopy dapple, embers, and
   **Kukulkan** surfacing to look around every minute or two.
 - **JUNGLE** (2026-07-23, `wiring-guides/cuddle-jungle-plan.md`): the
-  temple floor the jungle took back — jade + coral **snakes** that slither
-  across and dart away from feet, mossy fallen glyph stones, fireflies, a
-  sun-pool following each walker, and a little **flying tiki mask** (Aku
-  Aku homage) that visits, orbits whoever it finds, and spins.
+  temple floor the jungle took back — a **leaf-litter carpet** under
+  moving sun-dapple where a tzabcan **rattlesnake** (working rattle), a
+  **gold eyelash viper** and a **coral snake** slither and dart away from
+  feet, mossy fallen glyph stones, fireflies, and a sun-pool following
+  each walker.
+- **TEMPLE** (2026-07-23, `wiring-guides/cuddle-temple-plan.md`): the
+  swept, torch-lit floor itself — mossy flagstones, carved glyphs that
+  fill with gold on approach, drifting dust motes. The calm one.
 
 The header **Floor** button cycles the theme — it's server-side shared
 state, so every tab (like the one real deck) switches together and the

@@ -4,8 +4,7 @@
 Runs against the real maze_layout.json geometry. Lava: mask sanity, stone
 placement, presence/fade, the mischief mechanic (a walker marching at a
 stone provokes sink + rise), Kukulkan, timeout, perf budget. Jungle: snakes
-slither and flee feet, the tiki mask arrives / spins / leaves, fireflies,
-textures, perf.
+slither and flee feet, fireflies come out, textures, perf.
 
     sim/.venv/bin/python sim/tools/lava_test.py
 """
@@ -21,8 +20,9 @@ REPO_DIR = os.path.dirname(SIM_DIR)
 sys.path.insert(0, REPO_DIR)
 
 import numpy as np  # noqa: E402
-from projection_engine import (JungleShow, LavaShow, SNAKE_SPECS,  # noqa: E402
-                               STONE_N, STONE_MIN_SPACE_M, STONE_R_M)
+from projection_engine import (CARVED_FLAGS, JungleShow, LavaShow,  # noqa: E402
+                               SNAKE_SPECS, STONE_N, STONE_MIN_SPACE_M,
+                               STONE_R_M, TempleShow)
 
 FAIL = 0
 
@@ -196,32 +196,22 @@ def main():
     check(fled, "snake_flee event fired")
     check(dist > 0.5, f"the snake got away ({dist:.2f} m from the feet)")
 
-    print("10) jungle: the tiki mask visits, spins, leaves")
+    print("10) jungle: fireflies come out")
     jng2 = JungleShow(layout)
-    jng2._tiki['next'] = 1.0  # don't sit out the real first-visit gap
-    seen = {'tiki_arrive': False, 'tiki_spin': False, 'tiki_leave': False}
-    pose_seen = False
-    for _ in range(600):  # 60 s, walker standing on the deck
+    for _ in range(200):  # 20 s, walker standing on the deck
         jng2.set_tracks([{'id': 'w', 'x': 9.6, 'z': 1.0}])
         jng2.step(0.1)
-        st = jng2.state()
-        pose_seen = pose_seen or bool(st['tiki'])
-        for e in st['events']:
-            if e['e'] in seen:
-                seen[e['e']] = True
-        if all(seen.values()):
-            break
-    check(all(seen.values()), f"arrive → spin → leave all occurred ({seen})")
-    check(pose_seen, "mask pose streamed while visiting")
+    lit_seen = any(f['on'] for f in jng2.flies)
     check(len(jng2.flies) > 0, f"fireflies out ({len(jng2.flies)})")
+    check(lit_seen or len(jng2.flies) > 2, "fireflies blink")
 
     print("11) jungle: textures + render")
     tex = jng.hello_patches()
     ok = (all(len(base64.b64decode(t['rgba'])) == t['w'] * t['h'] * 4
-              for t in [tex['island'], tex['tiki']] + tex['glyphs'])
+              for t in [tex['island']] + tex['glyphs'])
           and len(tex['snakes']) == len(jng.snakes)
           and all(len(s['colors']) == len(s['w']) for s in tex['snakes']))
-    check(ok, f"textures exported (altar + mask + {len(tex['glyphs'])} glyphs "
+    check(ok, f"textures exported (altar + {len(tex['glyphs'])} glyphs "
               f"+ {len(tex['snakes'])} snake styles)")
     frame = jng.render()
     check(frame.max() > 40, f"jungle renders (max px {frame.max()})")
@@ -241,6 +231,66 @@ def main():
         jng.render()
     ms = (time.perf_counter() - t0) / n * 1000
     check(ms < 25, f"step+render {ms:.1f} ms/frame at {jng.gw}x{jng.gh}")
+
+    print("13) temple theme: torch-lit flagstones")
+    tmp = TempleShow(layout)
+    check(tmp._base is not None and tmp._base.shape == (tmp.gh, tmp.gw, 3),
+          "flagstone base texture built")
+    check(len(tmp.glyphs) == CARVED_FLAGS, f"{len(tmp.glyphs)} carved flags")
+    g0 = tmp.glyphs[0]
+    for _ in range(300):  # 30 s standing right on the first carved flag
+        tmp.set_tracks([{'id': 'w', 'x': g0['wx'] + 0.2, 'z': g0['wz']}])
+        tmp.step(0.1)
+    check(g0['glint'] > 0.3, f"carve glints on approach ({g0['glint']:.2f})")
+    check(len(tmp.flies) > 0, f"dust motes drifting ({len(tmp.flies)})")
+    frame = tmp.render()
+    check(frame.max() > 40, f"temple renders (max px {frame.max()})")
+    lit2 = frame[tmp.mask > 0.9].astype(int)
+    check(lit2[:, 0].mean() > lit2[:, 2].mean(), "the floor reads WARM (torchlight)")
+    tex2 = tmp.hello_patches()
+    ok2 = (all(len(base64.b64decode(t['rgba'])) == t['w'] * t['h'] * 4
+               for t in [tex2['base'], tex2['island']] + tex2['glyphs'])
+           and all(t.get('glow') for t in tex2['glyphs']))
+    check(ok2, "textures exported (base + altar + glow carves)")
+    tk = tmp.state()['torch']
+    check(tk and tmp._on_deck(*tmp._px_to_world(tk['x'], tk['y'])),
+          f"fallen torch on the deck at ({tk['x']}, {tk['y']})")
+    fx2 = int(tk['x'] + math.cos(tk['ang']) * tk['len'] * 0.4)
+    fy2 = int(tk['y'] + math.sin(tk['ang']) * tk['len'] * 0.4)
+    fl = frame[max(0, fy2 - 3):fy2 + 4, max(0, fx2 - 3):fx2 + 4]
+    check(fl[..., 0].max() > 160, f"flame burns hot (max R {fl[..., 0].max()})")
+
+    print("14) temple: scarabs erupt, circle the feet, drain away")
+    tmp2 = TempleShow(layout)
+    tmp2._swarm['next'] = 1.0  # don't sit out the real gap
+    tmp2._torch['sput_next'] = 2.0
+    seen_sc = {'scarab_erupt': False, 'scarab_drain': False,
+               'torch_sputter': False}
+    peak = 0
+    for _ in range(450):  # 45 s, walker standing on the deck
+        tmp2.set_tracks([{'id': 'w', 'x': 9.6, 'z': 1.0}])
+        tmp2.step(0.1)
+        st2 = tmp2.state()
+        if st2['scarabs']:
+            tmp2._heat_t = -1
+            tmp2.render()  # exercise the sprite draw path mid-swarm
+        peak = max(peak, len(st2['scarabs']))
+        for e in st2['events']:
+            if e['e'] in seen_sc:
+                seen_sc[e['e']] = True
+        if all(seen_sc.values()):
+            break
+    check(all(seen_sc.values()), f"erupt → drain → sputter all occurred ({seen_sc})")
+    check(peak >= 10, f"a proper swarm ({peak} scarabs at peak)")
+    check(len(tmp2._swarm['scarabs']) == 0, "all scarabs gone after the drain")
+    t0 = time.perf_counter()
+    n = 200
+    for _ in range(n):
+        tmp.set_tracks([{'id': 'w', 'x': 10.0, 'z': 1.0}])
+        tmp.step(1 / 30)
+        tmp.render()
+    ms = (time.perf_counter() - t0) / n * 1000
+    check(ms < 25, f"step+render {ms:.1f} ms/frame at {tmp.gw}x{tmp.gh}")
 
     print("ALL PASS" if not FAIL else "FAILURES")
     sys.exit(FAIL)

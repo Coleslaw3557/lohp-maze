@@ -60,11 +60,11 @@ History: no SDL/EGL — the vc4 EGL stack refused kmsdrm on the 3B+
 (2026-07-23) — the firmware scaler is the free GPU on this box. The unit
 unbinds fbcon while running; a `fps …` heartbeat prints to the journal once
 a minute. Runs OUTSIDE docker. Theme switches live: `curl -X POST
-http://lohp-server.local:5002/theme/<lava|jungle>` (the sim Floor button
+http://lohp-server.local:5002/theme/<lava|jungle|temple>` (the sim Floor button
 does this for you). Flip `--source demo` to `--source esphome --node
 <cuddle-node>` in the unit file once the LD2450 is wired (hardware day).
 Content plans: `wiring-guides/cuddle-lava-plan.md`,
-`wiring-guides/cuddle-jungle-plan.md`.
+`wiring-guides/cuddle-jungle-plan.md`, `wiring-guides/cuddle-temple-plan.md`.
 
 ### Reflash note
 

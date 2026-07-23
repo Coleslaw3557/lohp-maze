@@ -5,9 +5,11 @@ optimization and tracker: `sim/maze_layout.json` `projection` key +
 `sim/README.md` "Planned: Cuddle Cross floor projection"). Tim's content call
 2026-07-22: **stepping stones on lava**, supersedes the placeholder snakes.
 
-**2026-07-23: lava is now one of two selectable themes.** The engine grew a
-`FloorShow` base + `THEMES` registry; the JUNGLE theme (snakes + the flying
-tiki mask, `wiring-guides/cuddle-jungle-plan.md`) shares the skeleton. Switch
+**2026-07-23: lava is now one of three selectable themes.** The engine grew a
+`FloorShow` base + `THEMES` registry; the JUNGLE theme (snakes on leaf
+litter, `wiring-guides/cuddle-jungle-plan.md`) and the TEMPLE theme
+(torch-lit flagstones, `wiring-guides/cuddle-temple-plan.md`) share the
+skeleton. Switch
 in the sim with the header **Floor** button (shared across tabs; it also
 forwards to the Pi renderer's live control port :5002 when reachable), in
 production with `curl -X POST http://<pi>:5002/theme/<name>` — `--theme`
