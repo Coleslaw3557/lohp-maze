@@ -70,6 +70,22 @@ EMBER_MAX = 14
 EMBER_RATE_HZ = 1.1
 EMBER_LIFE_S = (2.0, 4.0)
 
+# ---- the monster: Kukulkan shows his head occasionally ----
+MONSTER_GAP_S = (45.0, 100.0)   # quiet time between appearances
+MONSTER_FIRST_S = (16.0, 26.0)  # first appearance after the show cues
+MONSTER_SWIM_S = (4.0, 7.0)     # underlava approach
+MONSTER_RISE_S = 1.1
+MONSTER_HOLD_S = (2.2, 4.2)     # head up, looking around
+MONSTER_SINK_S = 0.9
+MONSTER_HEAD_L_M = 0.30         # head half-length (snout to skull)
+MONSTER_HEAD_W_M = 0.17         # head half-width
+MONSTER_ROT_STEPS = 16          # precomputed head orientations (production)
+_OBSIDIAN = np.array([44, 52, 46], np.float32)
+_JADE = np.array([44, 116, 78], np.float32)
+_EYE_AMBER = np.array([255, 200, 90], np.float32)
+_EYE_CORE = np.array([255, 242, 195], np.float32)
+_EMBER_RIM = np.array([214, 92, 24], np.float32)  # lava underlight on the head's edge
+
 
 def palette_lut():
     lut = np.zeros((256, 3), np.uint8)
@@ -276,6 +292,17 @@ class LavaShow:
                     STONE_R_M * self.ppm, seed + 11 * s.sid, numeral=0, heading=0.0)
         self._island = self._build_island_patch(seed)
 
+        # Kukulkan's head at MONSTER_ROT_STEPS orientations (the geometry is
+        # analytic in heading-aligned coords, so each angle is built directly
+        # — no image rotation). The sim page gets only the angle-0 patch and
+        # rotates on canvas.
+        self._heads = [self._build_head_patch(k * math.tau / MONSTER_ROT_STEPS)
+                       for k in range(MONSTER_ROT_STEPS)]
+        self._monster = {'mode': 'idle',
+                         'next': self._rng.uniform(*MONSTER_FIRST_S),
+                         'x': 0.0, 'y': 0.0, 'rot': 0.0, 't0': 0.0,
+                         'dur': 0.0, 'sx': 0.0, 'sy': 0.0, 'glow': 0.0}
+
         # canopy dapple: soft leaf-shadow blotches hugging the deck rim — the
         # jungle pressing in at the chamber edge. Static, one multiply/frame.
         m = (self.mask > 0.9).astype(np.uint8)
@@ -456,6 +483,7 @@ class LavaShow:
         self._step_bubbles(dt)
         self._step_embers(dt)
         self._step_glints(dt)
+        self._step_monster(dt)
 
     def _step_stones(self):
         for s in self.stones:
@@ -597,6 +625,99 @@ class LavaShow:
             target = np.clip(1.0 - (dmin - 0.35) / GLINT_R_M, 0.0, 1.0) * 0.55
             s.glint += (float(target) - s.glint) * k
 
+    def _monster_spot(self):
+        """Where to breach: on the lit deck, clear of stones and the altar,
+        and — when walkers are tracked — visible but polite (~1.6 m away)."""
+        pts = self._interior_pts(0.42)
+        fresh = [t for t in self.tracks.values() if self.t - t.last < TRACK_STALE_S]
+        best, best_score = None, -1e9
+        for _ in range(60):
+            py, px = pts[self._rng.randrange(len(pts))]
+            px, py = float(px), float(py)
+            wx, wz = self._px_to_world(px, py)
+            if any(s.state != 'down' and math.hypot(wx - s.wx, wz - s.wz) < 0.5
+                   for s in self.stones):
+                continue
+            if math.hypot(px - self.mast[0], py - self.mast[1]) < \
+                    self.mast[2] + (MONSTER_HEAD_L_M + 0.15) * self.ppm:
+                continue
+            if fresh:
+                dmin = min(math.hypot(t.x - wx, t.z - wz) for t in fresh)
+                if dmin < 0.9:
+                    continue
+                score = -abs(dmin - 1.6)
+            else:
+                score = self._rng.random()
+            if score > best_score:
+                best, best_score = (px, py), score
+        return best
+
+    def _step_monster(self, dt):
+        m = self._monster
+        if m['mode'] == 'idle':
+            if self.fade > 0.5:
+                m['next'] -= dt
+                if m['next'] <= 0:
+                    spot = self._monster_spot()
+                    if spot is None:
+                        m['next'] = 5.0
+                        return
+                    m['x'], m['y'] = spot
+                    ang = self._rng.random() * math.tau
+                    dist = self._rng.uniform(1.5, 2.5) * self.ppm
+                    m['sx'] = m['x'] - math.cos(ang) * dist
+                    m['sy'] = m['y'] - math.sin(ang) * dist
+                    m['rot'] = ang
+                    m['mode'] = 'swim'
+                    m['t0'] = self.t
+                    m['dur'] = self._rng.uniform(*MONSTER_SWIM_S)
+                    self._emit({'e': 'monster_swim'})
+            return
+        if self.fade <= 0:  # show died mid-appearance: vanish quietly
+            m['mode'] = 'idle'
+            m['next'] = self._rng.uniform(*MONSTER_GAP_S)
+            return
+        ph = (self.t - m['t0']) / max(m['dur'], 1e-3)
+        if m['mode'] == 'swim':
+            if ph >= 1.0:
+                m['mode'] = 'rise'
+                m['t0'], m['dur'] = self.t, MONSTER_RISE_S
+                self._emit({'e': 'monster_breach',
+                            'x': round(m['x'], 1), 'y': round(m['y'], 1)})
+                self._burst(m['x'], m['y'], 7)
+        elif m['mode'] == 'rise':
+            if ph >= 1.0:
+                m['mode'] = 'hold'
+                m['t0'], m['dur'] = self.t, self._rng.uniform(*MONSTER_HOLD_S)
+        elif m['mode'] == 'hold':
+            m['glow'] = 0.6 + 0.4 * math.sin(self.t * 4.2)
+            if ph >= 1.0:
+                m['mode'] = 'sink'
+                m['t0'], m['dur'] = self.t, MONSTER_SINK_S
+                self._emit({'e': 'monster_sink',
+                            'x': round(m['x'], 1), 'y': round(m['y'], 1)})
+                self._burst(m['x'], m['y'], 5)
+        elif m['mode'] == 'sink' and ph >= 1.0:
+            m['mode'] = 'idle'
+            m['next'] = self._rng.uniform(*MONSTER_GAP_S)
+
+    def _monster_pose(self):
+        """(x, y, rot, scale) for the current mode, or None while hidden."""
+        m = self._monster
+        if m['mode'] in ('idle', 'swim'):
+            return None
+        ph = np.clip((self.t - m['t0']) / max(m['dur'], 1e-3), 0.0, 1.0)
+        if m['mode'] == 'rise':
+            scale = 0.3 + 0.7 * float(ph)
+            rot = m['rot']
+        elif m['mode'] == 'hold':
+            scale = 1.0
+            rot = m['rot'] + 0.44 * math.sin((self.t - m['t0']) / 3.4 * math.tau)
+        else:  # sink
+            scale = 1.0 - 0.75 * float(ph)
+            rot = m['rot']
+        return m['x'], m['y'], rot, scale
+
     # ---- output ----
     def _heat_field(self):
         # memoized on engine time: render() and the sim's heat stream may both
@@ -619,6 +740,21 @@ class LavaShow:
         for e in self.embers:
             env = math.sin(math.pi * (self.t - e['t0']) / e['life'])
             self._add_blob(h, e['x'], e['y'], 1.8, 0.55 * env)
+        m = self._monster
+        if m['mode'] == 'swim':
+            # a dark mass moving under the crust, a faint bow-glow ahead of it
+            ph = np.clip((self.t - m['t0']) / max(m['dur'], 1e-3), 0.0, 1.0)
+            sway = 0.15 * self.ppm * math.sin(ph * math.tau * 1.5)
+            ca, sa = math.cos(m['rot']), math.sin(m['rot'])
+            x = m['sx'] + (m['x'] - m['sx']) * ph - sa * sway
+            y = m['sy'] + (m['y'] - m['sy']) * ph + ca * sway
+            self._add_blob(h, x, y, 0.30 * self.ppm, -0.4)
+            self._add_blob(h, x + ca * 0.35 * self.ppm, y + sa * 0.35 * self.ppm,
+                           0.14 * self.ppm, 0.25)
+        elif m['mode'] in ('rise', 'hold', 'sink'):
+            # displaced lava glows in a ring around the breach
+            self._add_blob(h, m['x'], m['y'],
+                           MONSTER_HEAD_L_M * 1.25 * self.ppm, 0.32, ring=True)
         np.clip(h, 0.0, 1.0, out=h)
         self._heat = h
         return h
@@ -648,6 +784,15 @@ class LavaShow:
         for s in self.stones:
             self._draw_stone(rgb, s)
         self._draw_island(rgb)
+        pose = self._monster_pose()
+        if pose is not None:
+            x, y, rot, scale = pose
+            k = int(round(rot / (math.tau / MONSTER_ROT_STEPS))) % MONSTER_ROT_STEPS
+            col, alpha, eyes = self._heads[k]
+            if scale != 1.0:
+                col, alpha, eyes = _scale_patch(col, alpha, eyes, scale)
+            show = col + eyes * self._monster['glow'] * (_EYE_AMBER - col) * 0.7
+            self._composite_patch(rgb, x, y, col, alpha, show)
         np.clip(rgb, 0.0, 255.0, out=rgb)  # never let float sums wrap in uint8
         rgb *= self._dapple  # canopy shadow falls on lava and stones alike
         rgb *= (self.mask * self.fade)[..., None]
@@ -748,6 +893,59 @@ class LavaShow:
         col *= (1.0 - carve[..., None] * (1.0 - _CARVE_DARK))
         return col, alpha
 
+    def _build_head_patch(self, ang):
+        """Kukulkan viewed from above: obsidian superellipse head pointing
+        along `ang`, jade feather crest fanning off the back, two amber eyes
+        (plus an eye mask so the pulse can be applied at composite time)."""
+        L = MONSTER_HEAD_L_M * self.ppm
+        W = MONSTER_HEAD_W_M * self.ppm
+        pad = int(math.ceil(L * 1.95)) + 3  # room for the swept-back crest
+        s = 2 * pad + 1
+        ys, xs = np.mgrid[0:s, 0:s].astype(np.float32)
+        dx, dy = xs - pad, ys - pad
+        ca, sa = math.cos(ang), math.sin(ang)
+        u = dx * ca + dy * sa
+        v = -dx * sa + dy * ca
+        rng = np.random.default_rng(4242)  # same skin at every angle
+        # tapered snout: the head narrows toward +u, wide at the skull
+        fw = W * (1.0 - 0.35 * np.clip(u / L, 0.0, 1.0))
+        body = np.abs(u / L) ** 2.4 + np.abs(v / np.maximum(fw, 1e-3)) ** 2.4
+        a_head = np.clip((1.0 - body) * 6.0, 0.0, 1.0)
+        scales = 0.66 + 0.60 * _static_noise(rng, s, s, max(4, s // 5))
+        shade = 0.70 + 0.30 * np.clip(1.4 - body * 1.4, 0.0, 1.0)
+        col_head = _OBSIDIAN * (scales * shade)[..., None]
+        ridge = np.clip(1.0 - np.abs(v) / (0.16 * W), 0.0, 1.0) * (u > -0.3 * L)
+        col_head *= (1.0 + 0.22 * ridge)[..., None]
+        # lava underlight: ember rim where the silhouette meets the melt
+        band = np.clip((1.0 - body) * 6.0, 0.0, 1.0) - np.clip((1.0 - body) * 2.2, 0.0, 1.0)
+        col_head = col_head + band[..., None] * (_EMBER_RIM - col_head) * 0.45
+        # crest: seven long feathers swept backward off the skull,
+        # alternating jade shades so they separate
+        a_crest = np.zeros((s, s), np.float32)
+        col_crest = np.zeros((s, s, 3), np.float32)
+        for k in range(-3, 4):
+            cu = -(0.95 + 0.17 * abs(k)) * L
+            cv = k * 0.30 * W
+            lobe = ((u - cu) / (0.55 * W)) ** 2 + ((v - cv) / (0.20 * W)) ** 2
+            a_l = np.clip((1.0 - lobe) * 4.0, 0.0, 1.0)
+            shade_l = 0.70 + 0.30 * ((k + 3) % 2)
+            col_crest = np.where(a_l[..., None] > a_crest[..., None],
+                                 _JADE * shade_l, col_crest)
+            a_crest = np.maximum(a_crest, a_l)
+        # eyes: forward, wide-set, white-hot cores; mask kept for the pulse
+        eye_mask = np.zeros((s, s), np.float32)
+        core_mask = np.zeros((s, s), np.float32)
+        for sv in (-1, 1):
+            de = np.hypot(u - 0.46 * L, v - sv * 0.42 * W)
+            eye_mask = np.maximum(eye_mask, np.clip((0.19 * W - de) / 1.2, 0.0, 1.0))
+            core_mask = np.maximum(core_mask, np.clip((0.09 * W - de) / 1.0, 0.0, 1.0))
+        alpha = np.maximum(a_head, a_crest * 0.92)[..., None]
+        col = np.where(a_head[..., None] > 0.4, col_head, col_crest)
+        col = col + eye_mask[..., None] * (_EYE_AMBER - col) * 0.9
+        col = col + core_mask[..., None] * (_EYE_CORE - col)
+        return (col.astype(np.float32), alpha.astype(np.float32),
+                eye_mask[..., None].astype(np.float32))
+
     def _composite_patch(self, rgb, cx, cy, col, alpha, show=None):
         h, w = alpha.shape[:2]
         x0 = int(round(cx)) - w // 2
@@ -809,7 +1007,9 @@ class LavaShow:
         icol, ialpha = self._island
         island = {'x': round(self.mast[0], 1), 'y': round(self.mast[1], 1),
                   **pack(icol, ialpha)}
-        return {'stones': stones, 'island': island}
+        hcol, halpha, _ = self._heads[0]  # angle 0 = pointing +x; page rotates
+        return {'stones': stones, 'island': island,
+                'monster': pack(hcol, halpha)}
 
     def heat_b64(self, step=2):
         """Downsampled heat field for the sim stream (uint8, base64)."""
@@ -830,6 +1030,11 @@ class LavaShow:
             'tracks': [dict(zip(('x', 'y'),
                                 map(lambda v: round(v, 1), self.to_px(t.x, t.z))))
                        for t in self.tracks.values()],
+            'monster': (lambda p: p and {
+                'x': round(p[0], 1), 'y': round(p[1], 1),
+                'rot': round(p[2], 3), 'scale': round(p[3], 3),
+                'mode': self._monster['mode'],
+                'glow': round(self._monster['glow'], 2)})(self._monster_pose()),
             'events': self.events if drain_events else list(self.events),
         }
         if drain_events:

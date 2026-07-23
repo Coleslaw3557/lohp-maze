@@ -48,6 +48,20 @@ identical rock.
   Production does NOT paint a mast shadow — the pole casts a real one; only
   the sim draws it, as environmental preview.
 
+## The monster (v4): Kukulkan shows his head occasionally
+
+Asset search came up empty (top-down lava-breach sprites don't exist in the
+free-asset world, and pixel-art would clash + need an image decoder), so the
+feathered serpent is procedural like everything else. Every 45–100 s while
+the show is on (first appearance ~20 s in): a dark mass swims under the
+crust with a faint bow-glow, then the head breaches — obsidian scales with a
+spine ridge, ember rim-light where it meets the melt, jade feather crest,
+amber eyes with white-hot cores that pulse while he looks around (±25° scan,
+2–4 s) — then sinks in bubbles. Breach spot is clear of stones/altar and
+~1.6 m from tracked walkers (visible, never underfoot). Head geometry is
+analytic, so production precomputes 16 orientations; the sim gets one patch
+and rotates on canvas. Knobs: MONSTER_* constants.
+
 ## Architecture — one engine, two displays
 
 `projection_engine.py` (repo root, production code): pure numpy simulation +

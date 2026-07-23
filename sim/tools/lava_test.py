@@ -76,8 +76,8 @@ def main():
     tex = eng.hello_patches()
     ok = (len(tex['stones']) == len(eng.stones)
           and all(len(base64.b64decode(t['rgba'])) == t['w'] * t['h'] * 4
-                  for t in tex['stones'] + [tex['island']]))
-    check(ok, f"rock textures exported ({len(tex['stones'])} stones + altar)")
+                  for t in tex['stones'] + [tex['island'], tex['monster']]))
+    check(ok, f"textures exported ({len(tex['stones'])} stones + altar + monster head)")
     heat = base64.b64decode(eng.heat_b64())
     check(len(heat) == (eng.gh // 2) * (eng.gw // 2), "heat stream size")
 
@@ -117,13 +117,40 @@ def main():
     check(bool(sinks) and sinks[0]['id'] == target.sid,
           "the sunk stone is the one being walked at")
 
-    print("5) absence timeout")
+    print("5) Kukulkan shows his head")
+    eng2 = LavaShow(layout)
+    eng2._monster['next'] = 1.0  # don't sit out the real 45–100 s gap
+    seen = {'monster_swim': False, 'monster_breach': False, 'monster_sink': False}
+    pose_seen, breach_xy = False, None
+    for _ in range(400):  # 40 s of sim time, walker standing on the deck
+        eng2.set_tracks([{'id': 'w', 'x': 9.2, 'z': 0.6}])
+        eng2.step(0.1)
+        st = eng2.state()
+        pose_seen = pose_seen or bool(st['monster'])
+        for e in st['events']:
+            if e['e'] in seen:
+                seen[e['e']] = True
+                if e['e'] == 'monster_breach':
+                    breach_xy = (e['x'], e['y'])
+        if all(seen.values()):
+            break
+    check(all(seen.values()), f"swim → breach → sink all occurred ({seen})")
+    check(pose_seen, "head pose streamed while surfaced")
+    if breach_xy:
+        wx, wz = eng2._px_to_world(*breach_xy)
+        dmin = min(math.hypot(wx - s.wx, wz - s.wz)
+                   for s in eng2.stones if s.state != 'down')
+        check(dmin >= 0.5, f"breached clear of the stones ({dmin:.2f} m)")
+        dw = math.hypot(wx - 9.2, wz - 0.6)
+        check(dw >= 0.9, f"breached clear of the walker ({dw:.2f} m)")
+
+    print("6) absence timeout")
     for _ in range(int(eng.timeout_s / 2) + 4):
         eng.step(2.0)
     check(not eng.active and eng.fade == 0.0, "show off after timeout")
     check(int(eng.render().max()) == 0, "renders black when off")
 
-    print("6) perf (dev-box proxy; Pi 3B+ budget is ~4x this)")
+    print("7) perf (dev-box proxy; Pi 3B+ budget is ~4x this)")
     eng.set_tracks([{'id': 'w', 'x': 10.0, 'z': 1.0}])
     for _ in range(20):
         eng.step(0.05)

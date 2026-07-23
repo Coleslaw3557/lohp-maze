@@ -2174,6 +2174,7 @@ function connectProjection() {
         for (const t of m.hello.textures.stones) pr.stoneImg[t.id] = mk(t);
         pr.islandImg = mk(m.hello.textures.island);
         pr.islandPos = m.hello.textures.island;
+        if (m.hello.textures.monster) pr.monsterImg = mk(m.hello.textures.monster);
       }
       pr.ws = ws;
       log('info', `projection: lava engine connected (${pr.grid[0]}×${pr.grid[1]})`);
@@ -2182,11 +2183,15 @@ function connectProjection() {
     pr.engineFade = m.fade || 0;
     pr.stones = m.stones || [];
     pr.tracksPx = m.tracks || [];
+    pr.monster = m.monster || null;
     if (m.heat && pr.heatCanvas) paintHeat(pr, m.heat);
     for (const e of m.events || []) {
-      if (e.e === 'sink' || e.e === 'rise' || e.e === 'pop') pr.fx.push({ ...e, t0: clock.getElapsedTime() });
+      if (e.x != null) pr.fx.push({ ...e, t0: clock.getElapsedTime() });
       if (e.e === 'sink') log('info', `projection: stone ${e.id} sinks underfoot`);
       if (e.e === 'rise') log('info', `projection: stone ${e.id} rises`);
+      if (e.e === 'monster_swim') log('info', 'projection: something moves beneath the lava…');
+      if (e.e === 'monster_breach') log('ok', 'projection: KUKULKAN breaches!');
+      if (e.e === 'monster_sink') log('info', 'projection: Kukulkan slips back under');
     }
   };
   ws.onclose = () => { pr.ws = null; setTimeout(connectProjection, 2500); };
@@ -2346,14 +2351,34 @@ function drawProjection(pr, dt, now) {
     }
   }
 
-  // engine events as short-lived rings: bubble pops small, sink/rise big
+  // Kukulkan, rotated to his heading (image points +x; engine pose drives)
+  if (pr.monster && pr.monsterImg) {
+    const mo = pr.monster;
+    ctx.save();
+    ctx.translate(mo.x * gs, mo.y * gs);
+    ctx.rotate(mo.rot);
+    const w = pr.monsterImg.width * gs * mo.scale, h = pr.monsterImg.height * gs * mo.scale;
+    ctx.drawImage(pr.monsterImg, -w / 2, -h / 2, w, h);
+    ctx.restore();
+    if (mo.glow > 0.1) {
+      ctx.globalAlpha = mo.glow * 0.18;
+      ctx.strokeStyle = 'rgb(255,200,90)';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(mo.x * gs, mo.y * gs, pr.monsterImg.width * gs * 0.62, 0, 7); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // engine events as short-lived rings: bubble pops small, sink/rise big,
+  // monster breach/sink biggest
   pr.fx = pr.fx.filter(e => now - e.t0 < 0.6);
   for (const e of pr.fx) {
     const a = (now - e.t0) / 0.6;
+    const base = e.e === 'pop' ? 6 : e.e.startsWith('monster') ? 24 : 14;
     ctx.strokeStyle = `rgba(255,180,60,${0.7 * (1 - a)})`;
     ctx.lineWidth = 2 + 3 * (1 - a);
     ctx.beginPath();
-    ctx.arc(e.x * gs, e.y * gs, (e.e === 'pop' ? 6 : 14) + 30 * a, 0, 7);
+    ctx.arc(e.x * gs, e.y * gs, base + 30 * a, 0, 7);
     ctx.stroke();
   }
 
