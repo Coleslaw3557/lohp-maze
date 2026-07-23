@@ -42,7 +42,7 @@ constexpr float EYE_AW = 27.0f, EYE_AH = 9.0f;
 // chin and a central inlaid glyph. The open gap exposes teeth drawn by drawJaw.
 constexpr float CAV_U = 0.40f, CAV_V0 = 0.29f, CAV_V1 = 0.80f;
 constexpr int JAW_TILE_W = 136;
-constexpr int JAW_TILE_H = 74;
+constexpr int JAW_TILE_H = 64;
 constexpr int JAW_TILE_X = (W - JAW_TILE_W) / 2;
 constexpr int JAW_TOP_CLOSED = 233;
 constexpr int JAW_TRAVEL = 27;
@@ -687,6 +687,30 @@ static void drawJaw(uint16_t *fb, const uint16_t *base, const uint16_t *tile, co
     }
   }
 
+  // A dark, broad tongue rises into the lower half of the opening. It is
+  // clipped against the moving lower lip, so it peeks in naturally rather
+  // than appearing as a sticker floating in front of the mouth.
+  float mouthOpen = clampf(s.jaw, 0, 1);
+  float tongueReveal = sstep(0.28f, 0.62f, mouthOpen);
+  if (tongueReveal > 0.01f) {
+    float tongueCy = JAW_TOP_CLOSED + 24.0f;
+    for (int y = JAW_TOP_CLOSED + 12; y < JAW_TOP_CLOSED + 34; y++)
+      for (int x = 137; x <= 223; x++) {
+        float tu = (x + 0.5f - 180.0f) / (JAW_TILE_W * 0.5f);
+        float movingLip = slabTop + 1.5f + 6.5f * (1 - fabsf(tu));
+        if (y >= movingLip) continue;
+        float dx = (x - 180.0f) / 43.0f, dy = (y - tongueCy) / 11.0f;
+        float q = dx * dx + dy * dy;
+        float shape = 1 - sstep(0.72f, 1.02f, q);
+        if (shape <= 0) continue;
+        float centerLift = (1 - fabsf(dx)) * (1 - fabsf(dy));
+        blendPixel(fb[y * W + x], 104 + 28 * centerLift, 38 + 14 * centerLift,
+                   42 + 12 * centerLift, tongueReveal * shape * 0.82f);
+        if (fabsf(y - (tongueCy - 2.0f)) < 1.2f)
+          blendPixel(fb[y * W + x], 169, 64, 66, tongueReveal * shape * 0.20f);
+      }
+  }
+
   // Four blunt, uneven temple-idol teeth appear only once the jaw has opened
   // far enough to expose them. Their short height keeps speech from becoming
   // a cartoon mouth.
@@ -709,6 +733,35 @@ static void drawJaw(uint16_t *fb, const uint16_t *base, const uint16_t *tile, co
                      toothReveal * shape * 0.78f);
         }
     }
+  }
+
+  // Tiny patterned blotter tab, physically resting on the tongue. The 11 px
+  // square is about 1.4 mm on the 47 mm display: readable, but still a gag
+  // discovered only when the idol opens wide.
+  float tabReveal = sstep(0.44f, 0.78f, mouthOpen);
+  if (tabReveal > 0.01f) {
+    int tabCx = 180 + (int)(sinf(s.talkPhase * 0.41f) * 0.8f * s.talkGlow);
+    int tabCy = JAW_TOP_CLOSED + 19;
+    for (int dy = -5; dy <= 5; dy++)
+      for (int dx = -5; dx <= 5; dx++) {
+        int x = tabCx + dx, y = tabCy + dy;
+        float tu = (x + 0.5f - 180.0f) / (JAW_TILE_W * 0.5f);
+        float movingLip = slabTop + 1.5f + 6.5f * (1 - fabsf(tu));
+        if (y >= movingLip) continue;
+        int ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
+        bool shadow = ax == 5 || ay == 5;
+        bool paperEdge = ax == 4 || ay == 4;
+        float r = 232, g = 218, b = 171;
+        if (shadow) {
+          r = 49, g = 38, b = 30;
+        } else if (!paperEdge) {
+          if (dx < 0 && dy < 0) r = 218, g = 67, b = 126;
+          else if (dx >= 0 && dy < 0) r = 55, g = 174, b = 184;
+          else if (dx < 0) r = 232, g = 179, b = 48;
+          else r = 111, g = 76, b = 160;
+        }
+        blendPixel(fb[y * W + x], r, g, b, tabReveal);
+      }
   }
 
   int tx0 = JAW_TILE_X + jawShimmy;
