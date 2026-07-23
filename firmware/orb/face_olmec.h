@@ -1,15 +1,16 @@
-// Temple Oracle — a procedural homage to the monumental talking stone head
-// from Legends of the Hidden Temple. A tall gray volcanic-stone mask sits in a
-// red masonry shrine with round ear disks, a studded crown, narrow ember eyes,
-// heavy lips, breathing nostrils, and an expressive sliding lower face.
+// Temple Oracle — a painted Olmec/Maya-inspired animatronic stone guardian.
+// The display-sized face is a palette-indexed RGB565 bitmap; ember eyes,
+// breathing nostrils, and the sliding lower face remain live procedural layers.
 //
-// Pure procedural C++: no assets and no Arduino-only types. renderBase() and
-// renderJawTile() run once at boot; only the declared eye, jaw, and nose dirty
-// rectangles change per frame. The public FaceState contract is unchanged.
+// renderBase() and renderJawTile() expand the flash-resident art once at boot.
+// Only the declared eye, jaw, and nose dirty rectangles change per frame. The
+// public FaceState contract is unchanged, and the procedural material helpers
+// below are retained for menu_olmec.h.
 #pragma once
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
+#include "face_bitmap.h"
 
 #ifdef ESP32
 #include <esp32-hal-psram.h>
@@ -26,24 +27,24 @@ constexpr float SCALE = 165.0f;
 
 // Dirty rects (inclusive-exclusive). The eyes include their animated lids and
 // brows; the jaw rect includes the open mouth throughout its full travel.
-constexpr int EYEL_X0 = 101, EYEL_X1 = 178;
-constexpr int EYER_X0 = 182, EYER_X1 = 259;
-constexpr int EYE_Y0 = 112, EYE_Y1 = 177;
-constexpr int JAW_X0 = 106, JAW_X1 = 254;
-constexpr int JAW_Y0 = 214, JAW_Y1 = 326;
-constexpr int NOSE_X0 = 145, NOSE_X1 = 215;
-constexpr int NOSE_Y0 = 174, NOSE_Y1 = 226;
+constexpr int EYEL_X0 = 96, EYEL_X1 = 174;
+constexpr int EYER_X0 = 186, EYER_X1 = 264;
+constexpr int EYE_Y0 = 119, EYE_Y1 = 179;
+constexpr int JAW_X0 = 102, JAW_X1 = 258;
+constexpr int JAW_Y0 = 211, JAW_Y1 = 336;
+constexpr int NOSE_X0 = 146, NOSE_X1 = 214;
+constexpr int NOSE_Y0 = 178, NOSE_Y1 = 225;
 
-constexpr float EYE_CX = 0.245f, EYE_CY = -0.225f;
-constexpr float EYE_AW = 27.5f, EYE_AH = 8.5f;
+constexpr float EYE_CX = 0.285f, EYE_CY = -0.188f;
+constexpr float EYE_AW = 27.0f, EYE_AH = 9.0f;
 
 // The jaw is still a rigid prerendered tile, but its mask has a rounded simian
 // chin and a central inlaid glyph. The open gap exposes teeth drawn by drawJaw.
-constexpr float CAV_U = 0.37f, CAV_V0 = 0.285f, CAV_V1 = 0.70f;
-constexpr int JAW_TILE_W = 122;
-constexpr int JAW_TILE_H = 66;
+constexpr float CAV_U = 0.40f, CAV_V0 = 0.29f, CAV_V1 = 0.80f;
+constexpr int JAW_TILE_W = 136;
+constexpr int JAW_TILE_H = 74;
 constexpr int JAW_TILE_X = (W - JAW_TILE_W) / 2;
-constexpr int JAW_TOP_CLOSED = 232;
+constexpr int JAW_TOP_CLOSED = 233;
 constexpr int JAW_TRAVEL = 27;
 
 struct FaceState {
@@ -429,35 +430,71 @@ static inline void shadePixel(int x, int y, float h0, float hx0, float hy0, floa
   b = lerpf(bb, ab * lum, edge);
 }
 
+static inline uint16_t bitmapPixel(int x, int y) {
+  return olmec_bitmap::PALETTE[olmec_bitmap::PIXELS[y * W + x]];
+}
+
+// Rounded slab cut from the painted neutral portrait. At jaw=0 the tile
+// reconstructs the source art pixel-for-pixel; opening it reveals the dark
+// cavity prepared underneath.
+static inline float jawTileMask(int tx, int ty) {
+  float tu = (tx + 0.5f - JAW_TILE_W * 0.5f) / (JAW_TILE_W * 0.5f);
+  float tv = (ty + 0.5f) / JAW_TILE_H;
+  float lipTop = 1.5f + 6.5f * (1 - fabsf(tu));
+  float lip = roundedBoxMask(tu, tv - 0.135f, 0.96f, 0.17f, 0.11f, 0.012f);
+  float chin = roundedBoxMask(tu, tv - 0.555f, 0.82f, 0.47f, 0.25f, 0.012f);
+  return fmaxf(lip, chin) * sstep(lipTop - 1.0f, lipTop + 1.0f, ty);
+}
+
+static inline float jawCavityMask(int x, int y) {
+  float tu = (x + 0.5f - 180.0f) / (JAW_TILE_W * 0.5f);
+  float lipTop = 1.5f + 6.5f * (1 - fabsf(tu));
+  float relY = y - JAW_TOP_CLOSED - lipTop;
+  float t = clampf(relY / (JAW_TRAVEL + 6.0f), 0, 1);
+  float endRound = 1 - sinf(t * 3.1415927f);
+  float halfW = 0.90f - 0.08f * t - 0.045f * endRound;
+  float horiz = 1 - sstep(halfW - 0.035f, halfW + 0.015f, fabsf(tu));
+  float vert = sstep(-1.5f, 1.5f, relY) *
+               (1 - sstep(JAW_TRAVEL + 1.0f, JAW_TRAVEL + 6.0f, relY));
+  return horiz * vert;
+}
+
 static void renderBase(uint16_t *fb) {
-  float *hh = (float *)OLMEC_ALLOC((size_t)W * H * sizeof(float));
-  float *rr = (float *)OLMEC_ALLOC((size_t)W * H * sizeof(float));
-  uint64_t *mm = (uint64_t *)OLMEC_ALLOC((size_t)W * H * sizeof(uint64_t));
-  if (!hh || !rr || !mm) {
-    if (hh) free(hh);
-    if (rr) free(rr);
-    if (mm) free(mm);
-    return;
+  static_assert(olmec_bitmap::WIDTH == W && olmec_bitmap::HEIGHT == H, "face bitmap dimensions");
+  for (int i = 0; i < W * H; i++)
+    fb[i] = olmec_bitmap::PALETTE[olmec_bitmap::PIXELS[i]];
+
+  // The source painting contains the fully awake ember slits. Turn those
+  // interiors into unlit recesses so drawEyes owns every glow/blink state.
+  for (int side = -1; side <= 1; side += 2) {
+    float cx = 180 + side * EYE_CX * SCALE;
+    float cy = 180 + EYE_CY * SCALE;
+    for (int y = EYE_Y0; y < EYE_Y1; y++)
+      for (int x = side < 0 ? EYEL_X0 : EYER_X0; x < (side < 0 ? EYEL_X1 : EYER_X1); x++) {
+        float dx = (x - cx) / 30.0f, dy = (y - cy) / 10.2f;
+        float d = dx * dx + dy * dy;
+        if (d >= 1.0f) continue;
+        float r, g, b;
+        unpack565(fb[y * W + x], r, g, b);
+        float ember = clampf((r - fmaxf(g, b) * 1.18f) / 120.0f, 0, 1);
+        float a = clampf((1 - sstep(0.74f, 1.0f, d)) * 0.72f + ember * 0.55f, 0, 0.96f);
+        fb[y * W + x] = pack565(lerpf(r, 13, a), lerpf(g, 6, a), lerpf(b, 4, a));
+      }
   }
-  for (int y = 0; y < H; y++)
-    for (int x = 0; x < W; x++) {
-      Field f = faceField((x - 180) / SCALE, (y - 180) / SCALE);
-      hh[y * W + x] = f.h;
-      rr[y * W + x] = f.rec;
-      mm[y * W + x] = f.mat;
-    }
-  for (int y = 0; y < H; y++)
-    for (int x = 0; x < W; x++) {
-      int i = y * W + x;
-      float hx0 = x + 1 < W ? hh[i + 1] : hh[i];
-      float hy0 = y + 1 < H ? hh[i + W] : hh[i];
+
+  // Hollow only the band that the jaw can uncover. Keeping the painted chin
+  // below it prevents a black rectangular silhouette around the shifted tile.
+  for (int y = JAW_TOP_CLOSED - 3; y < JAW_TOP_CLOSED + JAW_TRAVEL + 15; y++)
+    for (int x = JAW_TILE_X; x < JAW_TILE_X + JAW_TILE_W; x++) {
+      float m = jawCavityMask(x, y);
+      if (m <= 0) continue;
+      float side = fabsf((x + 0.5f - 180.0f) / (JAW_TILE_W * 0.5f));
+      float warm = (1 - side) * (1 - clampf((y - JAW_TOP_CLOSED) / 38.0f, 0, 1));
       float r, g, b;
-      shadePixel(x, y, hh[i], hx0, hy0, rr[i], mm[i], r, g, b);
-      fb[i] = pack565(r, g, b);
+      unpack565(fb[y * W + x], r, g, b);
+      fb[y * W + x] = pack565(lerpf(r, 11 + 10 * warm, m), lerpf(g, 5 + 4 * warm, m),
+                                lerpf(b, 3 + 2 * warm, m));
     }
-  free(hh);
-  free(rr);
-  free(mm);
 }
 
 // ---------- expressive sliding lower face ----------
@@ -484,37 +521,13 @@ static inline float jawGlyph(float tu, float tv) {
 }
 
 static void renderJawTile(uint16_t *tile) {
-  const float e = 2.0f / JAW_TILE_W;
   for (int ty = 0; ty < JAW_TILE_H; ty++)
     for (int tx = 0; tx < JAW_TILE_W; tx++) {
-      float tu = (tx - JAW_TILE_W / 2) / (JAW_TILE_W / 2.0f);
-      float tv = ty / (float)JAW_TILE_H;
-      Field f0 = jawField(tu, tv), fx = jawField(tu + e, tv), fy = jawField(tu, tv + e);
-      float chinQ = (tu / 0.82f) * (tu / 0.82f) + ((tv - 0.53f) / 0.55f) * ((tv - 0.53f) / 0.55f);
-      if (f0.h < 0.13f || (tv > 0.52f && chinQ > 1.0f)) {
+      if (jawTileMask(tx, ty) < 0.5f) {
         tile[ty * JAW_TILE_W + tx] = 0;
         continue;
       }
-      float nx = -(fx.h - f0.h) / e * 0.88f, ny = -(fy.h - f0.h) / e * 0.88f, nz = 1;
-      float il = 1.0f / sqrtf(nx * nx + ny * ny + nz * nz);
-      nx *= il;
-      ny *= il;
-      nz *= il;
-      float d = nx * -0.43f + ny * -0.61f + nz * 0.66f;
-      float lum = 0.24f + 0.88f * (d > 0 ? d : 0);
-      lum *= 0.58f + 0.42f / (1 + 1.2f * f0.rec);
-      int ax = JAW_TILE_X + tx, ay = JAW_TOP_CLOSED + ty;
-      float n = 0.58f * vnoise(ax / 27.0f, ay / 27.0f) + 0.42f * vnoise(ax / 9.0f, ay / 9.0f);
-      float ar = 124 * (0.82f + 0.28f * n), ag = 121 * (0.81f + 0.30f * n), ab = 109 * (0.78f + 0.28f * n);
-      float lip = bell2(tv - 0.105f, 0, 0.09f, 1);
-      ar = lerpf(ar, 91, 0.42f * lip);
-      ag = lerpf(ag, 84, 0.42f * lip);
-      ab = lerpf(ab, 75, 0.42f * lip);
-      float glyph = jawGlyph(tu, tv);
-      ar = lerpf(ar, 64, 0.36f * glyph);
-      ag = lerpf(ag, 61, 0.36f * glyph);
-      ab = lerpf(ab, 55, 0.36f * glyph);
-      uint16_t c = pack565(ar * lum, ag * lum, ab * lum);
+      uint16_t c = bitmapPixel(JAW_TILE_X + tx, JAW_TOP_CLOSED + ty);
       tile[ty * JAW_TILE_W + tx] = c ? c : 1;
     }
 }
@@ -638,33 +651,63 @@ static void drawEyes(uint16_t *fb, const uint16_t *base, const FaceState &s) {
 static void drawJaw(uint16_t *fb, const uint16_t *base, const uint16_t *tile, const FaceState &s) {
   restoreRect(fb, base, JAW_X0, JAW_Y0, JAW_X1, JAW_Y1);
   int slabTop = JAW_TOP_CLOSED + (int)(clampf(s.jaw, 0, 1) * JAW_TRAVEL + 0.5f);
-  int gapBottom = slabTop < JAW_Y1 ? slabTop : JAW_Y1;
   float mood = clampf(s.mood, -1, 1), wild = clampf(s.wild, 0, 1);
   int jawShimmy = (int)(sinf(s.talkPhase * 1.7f) * (0.5f + 1.2f * wild) * s.talkGlow);
 
-  // The upper lip curls by only a few pixels, preserving the monumental read.
+  // Reinforce the source painting's bowed upper lip while mood pulls its
+  // corners up or down by only a few pixels.
   for (int x = 122; x < 238; x++) {
     float ex = fabsf((x - 180) / 58.0f);
-    float lipY = JAW_TOP_CLOSED - 4.0f - 2.8f * fmaxf(mood, 0) * ex + 2.5f * fmaxf(-mood, 0) * ex;
-    for (int y = JAW_Y0; y < JAW_TOP_CLOSED + 3; y++) {
+    float lipY = JAW_TOP_CLOSED - 4.0f + 6.0f * (1 - ex) -
+                 2.8f * fmaxf(mood, 0) * ex + 2.5f * fmaxf(-mood, 0) * ex;
+    for (int y = JAW_Y0; y < JAW_TOP_CLOSED + 9; y++) {
       float d = fabsf(y - lipY);
       float body = clampf(1.0f - fabsf(y - (lipY - 2.6f)) / 4.7f, 0, 1) * (1 - sstep(0.78f, 1.0f, ex));
-      if (body > 0.01f) blendPixel(fb[y * W + x], 128, 123, 111, body * 0.46f);
-      if (d < 2.0f) blendPixel(fb[y * W + x], 43, 36, 31, (1 - d / 2.0f) * 0.82f);
-      if (d >= 2.0f && d < 3.0f && y < lipY) blendPixel(fb[y * W + x], 151, 145, 130, 0.22f);
+      if (body > 0.01f) blendPixel(fb[y * W + x], 121, 105, 84, body * 0.25f);
+      if (d < 1.8f) blendPixel(fb[y * W + x], 31, 23, 18, (1 - d / 1.8f) * 0.88f);
+      if (d >= 1.8f && d < 2.8f && y < lipY) blendPixel(fb[y * W + x], 166, 141, 108, 0.15f);
     }
   }
 
-  for (int y = JAW_TOP_CLOSED - 3; y < gapBottom; y++) {
-    float depth = clampf((float)(y - JAW_TOP_CLOSED + 3) / (gapBottom - JAW_TOP_CLOSED + 3.0f), 0, 1);
-    for (int x = JAW_X0 + 9; x < JAW_X1 - 9; x++) {
-      float u = (x - 180) / SCALE, v = (y - 180) / SCALE;
-      if (cavityMask(u, v) < 0.45f) continue;
+  int cavityBottom = slabTop + 10;
+  if (cavityBottom > JAW_TOP_CLOSED + JAW_TRAVEL + 15)
+    cavityBottom = JAW_TOP_CLOSED + JAW_TRAVEL + 15;
+  for (int y = JAW_TOP_CLOSED - 1; y < cavityBottom; y++) {
+    for (int x = JAW_TILE_X; x < JAW_TILE_X + JAW_TILE_W; x++) {
+      float tu = (x + 0.5f - 180.0f) / (JAW_TILE_W * 0.5f);
+      float movingLip = slabTop + 1.5f + 6.5f * (1 - fabsf(tu));
+      float cav = jawCavityMask(x, y);
+      if (cav < 0.02f || y >= movingLip) continue;
+      float depth = clampf((y - (JAW_TOP_CLOSED + 1.5f)) / (JAW_TRAVEL + 8.0f), 0, 1);
       uint16_t &px = fb[y * W + x];
       float flicker = 0.88f + 0.12f * sinf(x * 0.31f + y * 0.17f);
-      float ember = s.talkGlow * flicker * (0.20f + 0.80f * depth);
+      float ember = s.talkGlow * flicker * (0.18f + 0.82f * depth) * cav;
       blendPixel(px, 185, 35, 12, 0.46f * ember);
       blendPixel(px, 255, 91, 25, 0.22f * ember * depth);
+    }
+  }
+
+  // Four blunt, uneven temple-idol teeth appear only once the jaw has opened
+  // far enough to expose them. Their short height keeps speech from becoming
+  // a cartoon mouth.
+  float toothReveal = sstep(0.18f, 0.62f, clampf(s.jaw, 0, 1));
+  if (toothReveal > 0.01f) {
+    static const int toothCx[4] = {153, 171, 189, 207};
+    static const int toothH[4] = {9, 11, 10, 8};
+    for (int n = 0; n < 4; n++) {
+      for (int y = JAW_TOP_CLOSED + 5; y < JAW_TOP_CLOSED + 5 + toothH[n]; y++)
+        for (int x = toothCx[n] - 8; x <= toothCx[n] + 8; x++) {
+          float tu = (x + 0.5f - 180.0f) / (JAW_TILE_W * 0.5f);
+          float movingLip = slabTop + 1.5f + 6.5f * (1 - fabsf(tu));
+          if (y >= movingLip) continue;
+          float dx = fabsf((x - toothCx[n]) / 8.5f);
+          float dy = (y - (JAW_TOP_CLOSED + 5)) / (float)toothH[n];
+          float shape = (1 - sstep(0.78f, 1.02f, dx)) * (1 - sstep(0.80f, 1.02f, dy));
+          if (shape <= 0) continue;
+          float edge = sstep(0.62f, 0.96f, dx) + sstep(0.64f, 0.96f, dy);
+          blendPixel(fb[y * W + x], 171 - 36 * edge, 147 - 34 * edge, 105 - 24 * edge,
+                     toothReveal * shape * 0.78f);
+        }
     }
   }
 
@@ -678,16 +721,17 @@ static void drawJaw(uint16_t *fb, const uint16_t *base, const uint16_t *tile, co
       if (src[tx]) dst[tx] = src[tx];
   }
 
-  // A separate lower-lip highlight keeps the closed mouth from reading as a
-  // mechanical rectangle while remaining attached to the rigid jaw tile.
+  // A restrained lower-lip lift follows the painted lip rather than replacing
+  // it with a procedural slab.
   for (int x = 124 + jawShimmy; x < 236 + jawShimmy; x++) {
     float ex = fabsf((x - (180 + jawShimmy)) / 56.0f);
-    float lowerY = slabTop + 5.5f - 1.4f * fmaxf(mood, 0) * ex + 1.2f * fmaxf(-mood, 0) * ex;
-    for (int y = slabTop; y < slabTop + 13 && y < JAW_Y1; y++) {
-      float body = clampf(1.0f - fabsf(y - lowerY) / 5.0f, 0, 1) * (1 - sstep(0.78f, 1.0f, ex));
-      if (body > 0.01f) blendPixel(fb[y * W + x], 137, 131, 118, body * 0.48f);
+    float lowerY = slabTop + 9.5f + 3.5f * (1 - ex) -
+                   1.4f * fmaxf(mood, 0) * ex + 1.2f * fmaxf(-mood, 0) * ex;
+    for (int y = slabTop + 4; y < slabTop + 19 && y < JAW_Y1; y++) {
+      float body = clampf(1.0f - fabsf(y - lowerY) / 5.5f, 0, 1) * (1 - sstep(0.78f, 1.0f, ex));
+      if (body > 0.01f) blendPixel(fb[y * W + x], 145, 124, 96, body * 0.18f);
       if (fabsf((float)(x - (180 + jawShimmy))) < 1.2f && y < lowerY + 1.0f)
-        blendPixel(fb[y * W + x], 56, 50, 44, body * 0.48f);
+        blendPixel(fb[y * W + x], 47, 38, 30, body * 0.30f);
     }
   }
 }
@@ -703,7 +747,7 @@ static void nostrilBreath(uint16_t *fb, const uint16_t *base, float breath) {
     float v = (y - 180) / SCALE;
     for (int x = NOSE_X0; x < NOSE_X1; x++) {
       float u = (x - 180) / SCALE;
-      float n = bell2(u - 0.095f, v - 0.205f, sx, sy) + bell2(u + 0.095f, v - 0.205f, sx, sy);
+      float n = bell2(u - 0.095f, v - 0.155f, sx, sy) + bell2(u + 0.095f, v - 0.155f, sx, sy);
       uint16_t &px = fb[y * W + x];
       if (n > 0.01f) {
         float dr, dg, db;
@@ -711,8 +755,8 @@ static void nostrilBreath(uint16_t *fb, const uint16_t *base, float breath) {
         float k = 1 - (0.18f + 0.22f * breath) * clampf(n, 0, 1);
         px = pack565(dr * k, dg * k, db * k);
       }
-      float vapor = breath * (bell2(u - 0.095f, v - 0.235f, 0.072f, 0.038f) +
-                               bell2(u + 0.095f, v - 0.235f, 0.072f, 0.038f)) * (1 - clampf(n, 0, 1));
+      float vapor = breath * (bell2(u - 0.095f, v - 0.185f, 0.072f, 0.038f) +
+                               bell2(u + 0.095f, v - 0.185f, 0.072f, 0.038f)) * (1 - clampf(n, 0, 1));
       if (vapor > 0.02f) blendPixel(px, 175, 137, 91, 0.08f * vapor);
     }
   }
