@@ -164,6 +164,32 @@ bool movedFar = false;    // finger crossed swipe distance since press
 bool longFired = false;
 bool otaReady = false;
 
+int faceScene = olmec::SCENE_MOSS;
+uint32_t nextSceneAt = 0;
+
+static const char *const FACE_SCENE_NAMES[olmec::SCENE_COUNT] = {
+    "moss", "rain", "moon", "oracle",
+};
+
+// Full-scene changes are rare and happen while the eyes are fully closed.
+// Rebuild both the pristine base and its matching jaw tile, then repaint one
+// complete frame.
+static void switchFaceScene(int nextScene, const olmec::FaceState &s) {
+  if (!havePanel || !baseLayer || !jawTile) return;
+  faceScene = olmec::clampScene(nextScene);
+  olmec::renderBase(baseLayer, faceScene);
+  olmec::renderJawTile(jawTile, faceScene);
+  uint16_t *fb = gfx->getFramebuffer();
+  memcpy(fb, baseLayer, (size_t)LCD_W * LCD_H * 2);
+  olmec::drawEyes(fb, baseLayer, s);
+  olmec::drawJaw(fb, baseLayer, jawTile, s);
+  olmec::nostrilBreath(fb, baseLayer, 0.5f);
+  gfx->flush();
+  lastJawDrawn = lastTalkGlowDrawn = lastBreathDrawn = -1;
+  lastMoodJawDrawn = lastWildJawDrawn = 9;
+  Serial.printf("[orb] face scene -> %s\n", FACE_SCENE_NAMES[faceScene]);
+}
+
 void setup() {
   Serial.begin(115200);
   delay(300);
@@ -218,8 +244,8 @@ void setup() {
   if (!baseLayer || !jawTile) Serial.println("[orb] FATAL: no PSRAM for face layers");
   if (havePanel && baseLayer && jawTile) {
     uint32_t t0 = millis();
-    olmec::renderBase(gfx->getFramebuffer()); // carve the head
-    olmec::renderJawTile(jawTile);
+    olmec::renderBase(gfx->getFramebuffer(), faceScene);
+    olmec::renderJawTile(jawTile, faceScene);
     memcpy(baseLayer, gfx->getFramebuffer(), LCD_W * LCD_H * 2);
     // first frame: eyes open, jaw closed
     olmec::FaceState s;
@@ -228,6 +254,7 @@ void setup() {
     gfx->flush();
     Serial.printf("[orb] olmec carved in %lums, heap=%u psram=%u\n",
                   (unsigned long)(millis() - t0), ESP.getFreeHeap(), ESP.getFreePsram());
+    nextSceneAt = millis() + 75000;
   }
 
   WiFi.mode(WIFI_STA);
@@ -413,6 +440,10 @@ void loop() {
     s.blink = blinkValue;
     s.wild = wildS;
     s.talkPhase = t * 13.2f;
+    if ((int32_t)(now - nextSceneAt) >= 0 && blinkValue > 0.86f && talkGlow < 0.08f) {
+      switchFaceScene((faceScene + 1) % olmec::SCENE_COUNT, s);
+      nextSceneAt = now + 75000 + (now % 35000); // 75–110 s, never a metronome
+    }
     uint16_t *fb = gfx->getFramebuffer();
     bool jawChanged = fabsf(jawPos - lastJawDrawn) > 0.02f ||
                       fabsf(talkGlow - lastTalkGlowDrawn) > 0.05f ||
