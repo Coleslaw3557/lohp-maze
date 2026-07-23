@@ -54,10 +54,12 @@ pin 2→LED− (always lit, no GPIO — per the games plan).
 ## The DMX jack — every box
 
 **XLR3 female panel jack** (D-size footprint — the enclosure cuts the
-Ø24 barrel hole ONLY; no pre-cut screw holes. The jack is its own jig:
+Ø24 barrel hole ONLY, confirmed against the received part's Ø23.55
+insert 2026-07-23; no pre-cut screw holes. The jack is its own jig:
 two short wood screws through its flange holes — jacks ship WITHOUT
-screws), wired to the MAX485 at the bench: solder the three cups,
-heat-shrink, done once per box.
+screws), wired to the MAX485 at the bench: solder pigtails to the three
+cups, heat-shrink, pins 2/3 land under the module's A/B screw terminal —
+done once per box.
 
 | XLR pin | Carries |
 |---|---|

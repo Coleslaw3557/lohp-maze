@@ -82,6 +82,19 @@ kits, 5V LED + microswitch). Button LEDs wire straight to the node's 5V rail
   data pin (D1; a spare HiLetgo 74AHCT125 from the sign build shifts the
   data line — shifter lives IN THE BOX fed 5V, so DB9-A pin 4 carries
   5V-level data down the cable). + radar UART + I2S + DMX = 9/11.
+- **Shifter chip received 2026-07-23** — the SN74AHCT125N 10-pack is the
+  bare PDIP-14 (~21 × 10 mm over the legs), no breakout board. Mount =
+  **dead-bug**: glue the chip on its back, legs up, on the open floor
+  behind the DB9 PCB zone (VHB or CA/epoxy — not hot glue, boxes bake on
+  playa). Legs-up MIRRORS the pinout: with the notch pointing away, pin 1
+  becomes the far-RIGHT leg — paint-mark pin 1 BEFORE gluing. Wire gate 1
+  only: pin 14 = 5V, pin 7 = GND, pin 1 (1OE̅) = GND, pin 2 (1A) ← XIAO
+  D1 (GPIO2), pin 3 (1Y) → 33–100Ω right at the leg → the DB9 breakout's
+  pin-4 screw. Ground every unused input and enable (pins 4, 5, 9, 10,
+  12, 13 — one bus wire back to pin 7); outputs 6/8/11 stay unconnected.
+  0.1µF ceramic across pins 14–7 at the legs; zip-tie the loom to the
+  floor — dead-bug joints fail by wire-tug, not by glue. (The sign's own
+  chip stays socketed per `camp-sign-wiring-guide.md`.)
 - **Lamps come from Tim's strip stash — any 5V addressable (WS2812B/SK6812
   class), NOT 12V WS2811 sign stock** (DB9-A pins 1/2 supply 5V). Set
   `truck_chipset`/`truck_rgb_order` in the flash substitutions to match the
@@ -110,7 +123,7 @@ tab + a tab per room). Summary:
 | XIAO ESP32-C3 | 4 | Moop pucks — from the existing spare pool ($0 if spares hold) |
 | 18650 cells + holders | 4 | pucks; XIAO battery pads do the charging |
 | Small puck cases | 4 | 3D-print or off-the-shelf |
-| WS2812 pixels (5) + resistor-ladder Rs | 1 set | NFM truck; 74AHCT125 from sign spares |
+| WS2812 pixels (5) + resistor-ladder Rs | 1 set | NFM truck; 74AHCT125 from sign spares (10-pack received 07-23) |
 
 ## Bench & sim
 

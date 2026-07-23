@@ -28,9 +28,11 @@
 //     Populated in the 7 wired rooms; the other 8 blank the open window
 //     (tape/cover) against dust — one universal cut file for every room.
 //   left wall: DMX OUT (CUT in every box) — XLR3 FEMALE panel jack on the
-//     Neutrik D-size footprint; MAX485 inside -> its solder cups (a one-
-//     time bench solder: 1=GND 2=Data- 3=Data+) -> a standard DMX cable
-//     to the room's fixtures (wiring-guides/dmx-over-wifi.md). Replaced
+//     Neutrik D-size footprint (Ø24 — caliper gate resolved 07-23, insert
+//     measured 23.55); MAX485 inside — cup pigtails soldered once at the
+//     bench (1=GND 2=Data- 3=Data+) land in its A/B screw terminal -> a
+//     standard DMX cable to the fixtures (wiring-guides/dmx-over-wifi.md).
+//     The module's floor footprint is etched behind the barrel. Replaced
 //     the one-day DB9 "port B" + DB9->XLR adapter 2026-07-22 — a DMX
 //     port should be a DMX port. Wall-mounted because plugs insert
 //     horizontally — the 34mm interior can't take a vertical connector.
@@ -102,6 +104,15 @@ xiao_cy = (D - 2*t)/2 - 18;     //  end, +2 past the PCB -> that END butts the
                                 //  board up on the bench
 ld2410_w = 22.14; ld2410_h = 16;   // radar, sensor side faces the window
 ld2450_w = 44.12; ld2450_h = 15.4; // Cuddle's second radar
+rs485_l = 49.22; rs485_w = 14.05;  // MAX485 breakout — the room's DMX
+                                   //  driver. RECEIVED batch 2026-07-23 =
+                                   //  the screw-terminal variant: A/B under
+                                   //  a 2P screw terminal ON TOP at one
+                                   //  end; both 4P headers (DI DE RE RO /
+                                   //  VCC B A GND) come factory-soldered
+                                   //  PINS DOWN, so there is no flat belly
+                                   //  to VHB until the bench pulls or
+                                   //  flush-clips them (dmx-over-wifi.md)
 
 // ---- features ----------------------------------------------------------
 win_w = cuddle ? 68 : 56;         // aperture (68 fits 2450+2410C side by side)
@@ -152,31 +163,26 @@ db9_zone = [34, 31.75];              // floor keep-out at port A: along wall
                                      //  D-sub barrel excluded (it lives in
                                      //  the wall). The old 52 was oversized
                                      //  headroom for a re-cased part
-xlr_hole = 22.0;                     // XLR jack barrel hole, sized to the
-                                     //  PART not the D-standard cutout
-                                     //  (Tim 07-22: 24 was too big).
-                                     //  Looked up: male XLR body ~Ø19-19.5
-                                     //  (EIZZ listing: 19); the female
-                                     //  nose just wraps it -> ~Ø21 on
-                                     //  economy jacks (Devinal's 31x26x21).
-                                     //  Ø22 = nose + slop, flange covers.
-                                     //  CAVEAT: a TRUE Neutrik D female
-                                     //  needs >Ø23.6 (their rear-mount
-                                     //  drawing, ST-NC3FD-LX) — caliper on
-                                     //  arrival is a HARD GATE: if the
-                                     //  Devinal nose measures like a real
-                                     //  D front, put this back to 24.
+xlr_hole = 24.0;                     // XLR jack barrel hole. CALIPER GATE
+                                     //  RESOLVED 2026-07-23: the received
+                                     //  Devinal's circular insert measures
+                                     //  Ø23.55 — true-D class (Neutrik's
+                                     //  rear-mount drawing wants >Ø23.6),
+                                     //  not the ~Ø21 economy nose the 07-22
+                                     //  guess assumed; it would not pass
+                                     //  the old Ø22 at all. Ø24 = the
+                                     //  D-standard cutout, 0.45 diametral
+                                     //  clearance before kerf; the flange
+                                     //  (31x26, rests on the OUTSIDE face)
+                                     //  still covers with >=1mm bearing on
+                                     //  its narrow axis.
                                      //  Jacks = Devinal (amzn B07S6J8WVD),
-                                     //  flange 31x26x21 per reseller specs,
-                                     //  ships with NO screws — Tim drives
+                                     //  ship with NO screws — Tim drives
                                      //  short wood screws through the
-                                     //  flange's own holes (a 19x24-diag
-                                     //  pattern on genuine Neutrik; the
-                                     //  jack is its own jig, so the clone's
+                                     //  flange's own holes (the jack is
+                                     //  its own jig, so the clone's hole
                                      //  diagonal doesn't matter). NO cut
                                      //  fastener holes, per the house rule.
-                                     //  CALIPER-VERIFY barrel Ø on arrival
-                                     //  before cutting 15
 xlr_cx = 56;                         // same wall spot the one-day "port B"
 xlr_cz = 19;                         //  had; raised so barrel + flange clear
                                      //  the floor mortise below and the lid
@@ -347,8 +353,19 @@ module floor_etch() {                            // component-side marks
                                                  //  barrel meets AUX
   translate([W - 2*t - xiao_l/2, xiao_cy]) oline(xiao_l, xiao_w);  // XIAO
   translate([W - 2*t - xiao_l/2, xiao_cy]) label("ESP32", 3);      //  (VHB),
-}                                                //  USB END to the wall, the
+                                                 //  USB END to the wall, the
                                                  //  port out the cut slot
+  // MAX485 (every room — the DMX driver): long axis INTO the box, on the
+  // jack's centerline but starting at x=21 — clear of the XLR rear barrel,
+  // which reaches ~19mm in at z 7-31. Screw-terminal END toward the jack
+  // (the A/B label marks it) so the pigtails from the cups stay short; the
+  // signal wires (VCC GND DI DE+RE) leave the far end toward the XIAO.
+  // Received modules carry pins-DOWN headers: pull or flush-clip them at
+  // the bench, then VHB flat here — dmx-over-wifi.md has the full recipe
+  translate([21 + rs485_l/2, xlr_cx - t]) oline(rs485_l, rs485_w);
+  translate([21 + rs485_l/2, xlr_cx - t]) label("RS485", 2.8);
+  translate([16, xlr_cx - t]) label("A/B", 2.2);
+}
 
 module panel_lid() difference() {
   square([lid_w, lid_d]);

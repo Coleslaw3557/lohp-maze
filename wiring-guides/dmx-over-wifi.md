@@ -142,14 +142,32 @@ room ever needs it.
 
 ## In the box — wiring (bench-soldered once; nothing solders in the field)
 
-New parts per box: one **MAX485 module** (classic 8-pin blue breakout, DE/RE
-broken out) VHB'd to the floor near the jack — clear of its rear barrel,
-which reaches ~19 mm into the box — and the **XLR3 female panel jack**
-(D-size footprint, e.g. Devinal amzn B07S6J8WVD) sat in the wall cut and
-held by 2 short wood screws through its own flange holes (no pre-cut
-screw holes; jacks ship with none). Solder the jack's three cups to the
-MAX485 leads at the bench — easier before mounting — and heat-shrink
-each cup.
+New parts per box — **both received 2026-07-23**: one **MAX485 module**
+(the batch is the **screw-terminal variant**, 49.22 × 14.05 mm: A/B
+duplicated on a 2-pos screw-down terminal ON TOP at one end; the two
+4-pin headers — DI/DE/RE/RO at the terminal end, VCC/B/A/GND at the far
+end — come **factory-soldered pins DOWN**) and the **XLR3 female panel
+jack** (Devinal amzn B07S6J8WVD; its circular insert calipered **Ø23.55**,
+which resolved the enclosure's hole gate to Ø24 — `../enclosure/README.md`)
+sat in the wall cut, flange on the outside face, held by 2 short wood
+screws through its own flange holes (no pre-cut screw holes; jacks ship
+with none).
+
+**Mounting the pins-down module** (the down-facing headers mean it can't
+VHB flat as-shipped — bench rework, once per box):
+
+1. Pull both 4-pin headers with wick, or **clip the pins flush** — either
+   leaves a belly flat enough to VHB. Keep the bench unit + the 2 spares
+   un-clipped: intact pins take Dupont jumpers for scope/bench work.
+2. Solder short pigtails to the jack's three cups (heat-shrink each) —
+   easier before the jack mounts.
+3. VHB the module at the **RS485 footprint etched on the floor** — long
+   axis into the box behind the jack's rear barrel (~19 mm reach), the
+   screw-terminal end toward the jack at the etched A/B mark.
+4. Cup pigtails 3 and 2 land **under the A/B screws** — the one
+   field-serviceable joint in the DMX path. Cup 1's pigtail joins node
+   GND. VCC, GND, DI and the DE+RE tie solder into the vacated header
+   holes and route off the far end toward the XIAO.
 
 > Rev 2026-07-22: this replaced one day of "port B" — a second DB9 plus a
 > DB9→XLR screw-terminal adapter. The no-solder rule that justified it is
@@ -164,8 +182,8 @@ each cup.
 | DI | XIAO DMX TX pad (D5 / D7 / D0 per the table — 3.3 V logic into a 5 V-fed MAX485 is in spec, V_IH = 2.0 V) |
 | DE + RE | **jumpered together to VCC** — permanently transmitting; deterministic at 250 kbaud where auto-flow modules get marginal (the HiLetgo auto-flow stock stays for the sign's RX fallback, where auto-direction is moot) |
 | RO | **leave unconnected** (5 V logic — never wire it to the S3) |
-| A | **XLR pin 3** (Data+) |
-| B | **XLR pin 2** (Data−) |
+| A | **XLR pin 3** (Data+) — the cup's pigtail under the screw terminal |
+| B | **XLR pin 2** (Data−) — the cup's pigtail under the screw terminal |
 
 Power: the always-on driver into a single 120Ω termination adds ~30 mA @5 V —
 noise next to the ~200 mA audio budget.
@@ -221,8 +239,8 @@ order:
 
 | Item | Qty | Note |
 |---|---|---|
-| MAX485 TTL→RS485 module (DE/RE broken out) | 17 | 15 rooms + 2 spares; DE/RE tied high, TX-only |
-| XLR3 **female** panel jack, D-size (Devinal 4-pack, amzn B07S6J8WVD, $8.99) | 20 | 5 packs: 15 boxes + 5 spares; solder cups, wired at the bench |
+| MAX485 TTL→RS485 module (DE/RE broken out) | 17 | **RECEIVED 07-23** — screw-terminal variant, 49.22 × 14.05, headers pins-down (see the mounting recipe above); 15 rooms + 2 spares; DE/RE tied high, TX-only |
+| XLR3 **female** panel jack, D-size (Devinal 4-pack, amzn B07S6J8WVD, $8.99) | 20 | **RECEIVED 07-23** — insert Ø23.55 → enclosure hole resolved to Ø24; 5 packs: 15 boxes + 5 spares; solder cups, wired at the bench |
 | Short wood screws (#4-ish, 6–10mm) | ~34 | 2 per jack through its flange holes — **from stash**; jacks ship with no screws |
 | XLR3 M-F cable, 6 ft | 17 | box → first fixture, used WHOLE; 2 spares double as fixture hops |
 | DMX 120Ω XLR terminator plug | 17 | one per room chain + spares |

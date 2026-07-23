@@ -26,6 +26,7 @@ velcro 20mm one-wrap.
 | XIAO ESP32-S3 (21.46 × 17.78, USB-C on the short END +2mm) | VHB to the floor, USB end butted to the right wall (long axis into the box) so the port noses into the cut USB slot; footprint centered on the front floor-mortise tab — the tab seams at the joint line the board up |
 | PCM5102A DAC (31.93 × 17.23, jack on a LONG edge +2.44mm) | screwed to the floor wherever it lands; the long jack edge butted to the right wall (board reaches only 17.23 into the box) so its **own barrel fills the AUX hole** — no separate panel jack; barrel-in-hole is the datum, the footprint assumes the jack centered on that edge |
 | LD2410C (22.14 × 16) / VL53L1X / Cuddle's 2450 + 2410C | **VHB'd to the acrylic window panel's inner face** at the footprint etched on the panel, sensor side out the wall aperture — the acrylic is the mounting plate (tape at the board edges, clear of the antennas; radar reads through the acrylic, ToF boards sit over their cut 16×16 hole) |
+| MAX485 module (49.22 × 14.05 — the received 07-23 batch is the screw-terminal variant: A/B under a 2-pos screw terminal ON TOP at one end, both 4-pin headers factory-soldered PINS DOWN) | headers pulled (wick) or flush-clipped at the bench — there's no flat belly until they're gone — then VHB'd at the etched **RS485 floor footprint** behind the XLR's rear barrel, screw-terminal end toward the jack (the etched A/B mark); the jack's pin-2/pin-3 cup pigtails land under the A/B screws, the four signal leads (VCC, GND, DI, DE+RE tie) solder into the vacated holes and leave the far end toward the XIAO |
 
 ## IO — every port opening CUT in every box, labels on the score layer
 
@@ -39,7 +40,7 @@ labels, board footprints and the DB9 floor zone:**
 
 | Where | What | Carries |
 |---|---|---|
-| left wall (**CUT**) | **DMX** — Ø22 XLR barrel hole, sized to the part not the D-standard (male XLR bodies run ~Ø19–19.5; the female nose just wraps that — ~Ø21 on economy jacks like the Devinal's 31×26×21). **Barrel only — no pre-cut screw holes**: the jack is its own jig, two short wood screws through its flange holes (jacks ship with no screws). **Caliper gate**: a genuine Neutrik D female needs a >Ø23.6 rear-mount cutout per their drawing — if the Devinal nose measures like a real D front, put `xlr_hole` back to 24 and re-export | **the room's DMX out**: MAX485 inside → XLR3 female jack (1 = GND, 2 = Data−, 3 = Data+, cups soldered once at the bench) → one standard DMX cable → the room's fixtures |
+| left wall (**CUT**) | **DMX** — Ø24 XLR barrel hole. **Caliper gate RESOLVED 2026-07-23**: the received Devinal's circular insert measures **Ø23.55** — true-D class (Neutrik's rear-mount drawing wants >Ø23.6), so the earlier Ø22 part-sized guess would never have fit; Ø24 is the D-standard cutout, 0.45 clearance before kerf, and the 31×26 flange resting on the **outside** face covers it. **Barrel only — no pre-cut screw holes**: the jack is its own jig, two short wood screws through its flange holes (jacks ship with no screws) | **the room's DMX out**: MAX485 inside → XLR3 female jack (1 = GND, 2 = Data−, 3 = Data+; cup pigtails soldered once at the bench, pins 2/3 landing under the module's A/B screws) → one standard DMX cable → the room's fixtures |
 | left wall (**CUT**) | **DB9 A** — 20.3 × 11.7 window (a loose frame — the floor screws locate the PCB; screwlock holes: sit the PCB in its floor zone, mark where the posts touch, drill those 2× Ø6 — the posts pass through and cable thumbscrews grab them outside) | the field IO: one premade M-F cable to the room's button pod. Universal pinout **1 = 5V, 2 = GND, 3–9 = signals 1–7** on every box, used or not. The breakout runs as a bare PCB (1¼" long) screwed to the FLOOR in its etched zone (case off); the wall just frames the face — see `../wiring-guides/db9-field-wiring.md` |
 | right wall (**CUT**) | USB-C slot 10 × 4 | XIAO power — the XIAO's own port noses into the slot, PCB flush on the wall |
 | right wall (**CUT**) | AUX hole Ø7 (frames the jack's ~Ø6.75 barrel; the plug's Ø3.5 shank goes inside the barrel, its molded boot stops on the wall face) | the DAC's own 3.5mm jack → Pebble |
@@ -81,7 +82,9 @@ red = ETCH**. In XCS: import the SVG, select the red objects → processing
 - floor: DB9 PCB zone (34 × 31.75 — the port-A breakout screws down here
   in wired rooms), DAC footprint (jack edge on the wall), ESP32 footprint
   — the XIAO (USB end on the wall, long axis into the box, centered on
-  the front floor-mortise tab)
+  the front floor-mortise tab), RS485 footprint (49.22 × 14.05, every
+  room — long axis into the box behind the XLR's rear barrel, the A/B
+  mark flagging the screw-terminal end toward the jack)
 - left wall: the DB9 + DMX labels (both openings below them are cuts)
 - front (interior face): window-panel outline + SENSOR label (the sensor
   footprints are etched on the acrylic panel itself — that's what the
@@ -128,11 +131,17 @@ python3 export.py    # re-export all SVGs after editing the .scad
    assembled.
 2. Glue everything EXCEPT the lid (wood glue for ply joints).
 3. Mount the XLR jack in its cut opening (every room — it's the DMX out):
-   solder its three cups to the MAX485 leads at the bench BEFORE mounting,
-   sit it in the barrel hole latch-up, and drive 2 short wood screws
-   through its own flange holes (no pre-cut holes — the flange is the
-   jig). Then VHB the module to the floor beside it, clear of the jack's
-   rear barrel — it reaches ~19mm in.
+   solder short pigtails to its three cups at the bench BEFORE mounting
+   (heat-shrink each), sit it in the Ø24 barrel hole latch-up, and drive
+   2 short wood screws through its own flange holes (no pre-cut holes —
+   the flange is the jig; it rests on the outside face). Bench-prep the
+   MAX485 too: the received modules have pins-DOWN headers, so pull them
+   (wick) or clip them flush, then VHB the module at its etched RS485
+   footprint — screw-terminal end toward the jack, per the A/B floor
+   mark, clear of the rear barrel's ~19mm reach. Pin-2/pin-3 pigtails go
+   under the A/B screws (pin 1's joins node GND); VCC, GND, DI and the
+   DE+RE tie solder into the vacated header holes and route off the far
+   end toward the XIAO — full recipe in `../wiring-guides/dmx-over-wifi.md`.
    Wired rooms populate the pre-cut DB9 A window: sit the bare breakout
    PCB (case off) on the floor with its face through the window, mark
    where the two screwlock posts touch the wall, drill those Ø6 (posts
