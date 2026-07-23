@@ -134,6 +134,20 @@ static inline float earMask(float u, float v) {
                     bell2(u + 0.735f, v + 0.02f, 0.215f, 0.225f),
                 0, 1);
 }
+static inline float earCoreMask(float u, float v) {
+  return clampf(bell2(u - 0.735f, v + 0.02f, 0.105f, 0.118f) +
+                    bell2(u + 0.735f, v + 0.02f, 0.105f, 0.118f),
+                0, 1);
+}
+static inline float collarMaterialMask(float u, float v) {
+  float slab = boxMask(u, v, -0.54f, 0.54f, 0.72f, 0.92f, 0.025f);
+  float beads = 0;
+  for (int i = 0; i < 7; i++) {
+    float cx = -0.42f + 0.14f * i;
+    beads += bell2(u - cx, v - 0.78f, 0.065f, 0.055f);
+  }
+  return clampf(slab + beads, 0, 1);
+}
 static inline float portalMask(float u, float v) {
   float r = sqrtf(u * u + v * v);
   float left = boxMask(u, v, -1.04f, -0.54f, -0.69f, 0.83f, 0.035f);
@@ -177,15 +191,28 @@ static inline float crackMask(float u, float v) {
   return clampf(c1 + c2, 0, 1);
 }
 
+// Cache eight 0..1 material masks at byte precision. The temporary buffer is
+// freed after boot; this avoids recomputing every procedural mask in both the
+// geometry and shading passes while retaining soft silhouette edges.
+static inline uint64_t qmask8(float x) { return (uint64_t)(clampf(x, 0, 1) * 255.0f + 0.5f); }
+static inline uint64_t packMaterials(float stone, float shrine, float earCore, float collar,
+                                     float patina, float gold, float cavity, float crack) {
+  return qmask8(stone) | (qmask8(shrine) << 8) | (qmask8(earCore) << 16) | (qmask8(collar) << 24) |
+         (qmask8(patina) << 32) | (qmask8(gold) << 40) | (qmask8(cavity) << 48) | (qmask8(crack) << 56);
+}
+static inline float unpackMask8(uint64_t word, int shift) { return ((word >> shift) & 255u) * (1.0f / 255.0f); }
+
 // ---------- sculpted head height field ----------
 struct Field {
   float h = 0, rec = 0;
+  uint64_t mat = 0;
 };
 
 static Field faceField(float u, float v) {
   Field f;
   float au = fabsf(u);
   float fm = faceMask(u, v), cm = crownMask(u, v), em = earMask(u, v), pm = portalMask(u, v);
+  float gd = goldMask(u, v);
 
   // Red temple masonry behind the mask, broken into uneven blocks.
   f.h += 0.105f * pm;
@@ -208,10 +235,14 @@ static Field faceField(float u, float v) {
   // Crown: slab band, gold studs, and four pierced scroll-like lobes.
   f.h += 0.18f * cm;
   f.h += 0.055f * boxMask(u, v, -0.68f, 0.68f, -0.69f, -0.49f, 0.018f);
-  f.h += 0.07f * goldMask(u, v);
+  f.h += 0.07f * gd;
   for (int side = -1; side <= 1; side += 2) {
-    f.h -= 0.075f * bell2(u - side * 0.43f, v + 0.82f, 0.070f, 0.060f);
-    f.rec += 0.45f * bell2(u - side * 0.43f, v + 0.82f, 0.070f, 0.060f);
+    float du = u - side * 0.43f, dv = v + 0.82f;
+    float sr = sqrtf(du * du + dv * dv);
+    f.h -= 0.075f * bell2(du, dv, 0.070f, 0.060f);
+    f.rec += 0.45f * bell2(du, dv, 0.070f, 0.060f);
+    float scrollRidge = sstep(0.060f, 0.078f, sr) * (1 - sstep(0.105f, 0.125f, sr));
+    f.h += 0.038f * scrollRidge;
   }
 
   // Narrow eye sockets under straight brow shelves.
@@ -242,6 +273,11 @@ static Field faceField(float u, float v) {
   f.h += 0.135f * (bell2(u - 0.145f, v - 0.255f, 0.18f, 0.060f) +
                     bell2(u + 0.145f, v - 0.255f, 0.18f, 0.060f));
   f.h -= 0.018f * bell2(u, v - 0.275f, 0.035f, 0.06f);
+  for (int side = -1; side <= 1; side += 2) {
+    float fold = bell2(u - side * 0.365f, v - 0.315f, 0.030f, 0.115f);
+    f.h -= 0.023f * fold;
+    f.rec += 0.34f * fold;
+  }
 
   // Mouth cavity and carved rails for the sliding chin.
   float cav = cavityMask(u, v);
@@ -280,13 +316,16 @@ static Field faceField(float u, float v) {
 
   // Keep field edges crisp against the dark chamber.
   float all = clampf(fm + cm + em + pm, 0, 1);
+  float earCore = earCoreMask(u, v), collarMat = collarMaterialMask(u, v);
+  float shrine = pm * (1 - 0.94f * fm) * (1 - 0.92f * earCore) * (1 - 0.90f * collarMat);
+  f.mat = packMaterials(all, shrine, earCore, collarMat, turquoiseMask(u, v), gd, cav, crack);
   f.h *= all;
   f.rec *= all;
   return f;
 }
 
 // ---------- weathered gray volcanic-stone shading ----------
-static inline void shadePixel(int x, int y, float h0, float hx0, float hy0, float rec,
+static inline void shadePixel(int x, int y, float h0, float hx0, float hy0, float rec, uint64_t mat,
                               float &r, float &g, float &b) {
   float u = (x - 180) / SCALE, v = (y - 180) / SCALE;
   float e = 1.0f / SCALE;
@@ -307,7 +346,7 @@ static inline void shadePixel(int x, int y, float h0, float hx0, float hy0, floa
   lum += 0.13f * sp;
   lum *= 0.52f + 0.48f / (1.0f + 1.25f * rec);
 
-  float mask = stoneMask(u, v);
+  float mask = unpackMask8(mat, 0);
   float rad = sqrtf(u * u + v * v);
   // The chamber behind the idol is not flat black: faint warm stone and dust
   // motes help the round portal edge remain visible at 47 mm.
@@ -336,30 +375,41 @@ static inline void shadePixel(int x, int y, float h0, float hx0, float hy0, floa
   ag *= 0.81f + 0.30f * mineral;
   ab *= 0.78f + 0.28f * mineral;
 
-  // The shrine columns are red masonry; recesses gather brown-black patina.
-  float pm = portalMask(u, v);
-  ar = lerpf(ar, 132, 0.82f * pm);
-  ag = lerpf(ag, 70, 0.82f * pm);
-  ab = lerpf(ab, 49, 0.82f * pm);
+  // The shrine columns are irregular red masonry. Central collar stones and
+  // ear plugs remain pale even where their geometry overlaps the brick mask.
+  float shrine = unpackMask8(mat, 8);
+  float earCore = unpackMask8(mat, 16), collarMat = unpackMask8(mat, 24);
+  int brickRow = (int)floorf((v + 0.69f) / 0.29f);
+  int brickSide = u < 0 ? -1 : 1;
+  float brickVar = hashf(brickSide * 17 + brickRow * 5, brickRow * 13 + 9) - 0.5f;
+  ar = lerpf(ar, 132 + 28 * brickVar, 0.86f * shrine);
+  ag = lerpf(ag, 70 + 18 * brickVar, 0.86f * shrine);
+  ab = lerpf(ab, 49 + 12 * brickVar, 0.86f * shrine);
+  ar = lerpf(ar, 151, 0.78f * earCore);
+  ag = lerpf(ag, 145, 0.78f * earCore);
+  ab = lerpf(ab, 127, 0.78f * earCore);
+  ar = lerpf(ar, 137, 0.72f * collarMat);
+  ag = lerpf(ag, 132, 0.72f * collarMat);
+  ab = lerpf(ab, 116, 0.72f * collarMat);
   float dusk = clampf(0.34f * rec, 0, 0.70f);
   ar = lerpf(ar, 38, dusk);
   ag = lerpf(ag, 31, dusk);
   ab = lerpf(ab, 25, dusk);
 
-  float tq = turquoiseMask(u, v);
+  float tq = unpackMask8(mat, 32);
   ar = lerpf(ar, 70, 0.46f * tq);
   ag = lerpf(ag, 91, 0.46f * tq);
   ab = lerpf(ab, 80, 0.46f * tq);
-  float gd = goldMask(u, v);
+  float gd = unpackMask8(mat, 40);
   ar = lerpf(ar, 210, 0.88f * gd);
   ag = lerpf(ag, 163, 0.88f * gd);
   ab = lerpf(ab, 86, 0.88f * gd);
 
-  float cav = cavityMask(u, v);
+  float cav = unpackMask8(mat, 48);
   ar = lerpf(ar, 17, cav);
   ag = lerpf(ag, 8, cav);
   ab = lerpf(ab, 5, cav);
-  float crack = crackMask(u, v);
+  float crack = unpackMask8(mat, 56);
   ar *= 1 - 0.48f * crack;
   ag *= 1 - 0.48f * crack;
   ab *= 1 - 0.45f * crack;
@@ -382,9 +432,11 @@ static inline void shadePixel(int x, int y, float h0, float hx0, float hy0, floa
 static void renderBase(uint16_t *fb) {
   float *hh = (float *)OLMEC_ALLOC((size_t)W * H * sizeof(float));
   float *rr = (float *)OLMEC_ALLOC((size_t)W * H * sizeof(float));
-  if (!hh || !rr) {
+  uint64_t *mm = (uint64_t *)OLMEC_ALLOC((size_t)W * H * sizeof(uint64_t));
+  if (!hh || !rr || !mm) {
     if (hh) free(hh);
     if (rr) free(rr);
+    if (mm) free(mm);
     return;
   }
   for (int y = 0; y < H; y++)
@@ -392,6 +444,7 @@ static void renderBase(uint16_t *fb) {
       Field f = faceField((x - 180) / SCALE, (y - 180) / SCALE);
       hh[y * W + x] = f.h;
       rr[y * W + x] = f.rec;
+      mm[y * W + x] = f.mat;
     }
   for (int y = 0; y < H; y++)
     for (int x = 0; x < W; x++) {
@@ -399,11 +452,12 @@ static void renderBase(uint16_t *fb) {
       float hx0 = x + 1 < W ? hh[i + 1] : hh[i];
       float hy0 = y + 1 < H ? hh[i + W] : hh[i];
       float r, g, b;
-      shadePixel(x, y, hh[i], hx0, hy0, rr[i], r, g, b);
+      shadePixel(x, y, hh[i], hx0, hy0, rr[i], mm[i], r, g, b);
       fb[i] = pack565(r, g, b);
     }
   free(hh);
   free(rr);
+  free(mm);
 }
 
 // ---------- expressive sliding lower face ----------
@@ -436,7 +490,8 @@ static void renderJawTile(uint16_t *tile) {
       float tu = (tx - JAW_TILE_W / 2) / (JAW_TILE_W / 2.0f);
       float tv = ty / (float)JAW_TILE_H;
       Field f0 = jawField(tu, tv), fx = jawField(tu + e, tv), fy = jawField(tu, tv + e);
-      if (f0.h < 0.13f) {
+      float chinQ = (tu / 0.82f) * (tu / 0.82f) + ((tv - 0.53f) / 0.55f) * ((tv - 0.53f) / 0.55f);
+      if (f0.h < 0.13f || (tv > 0.52f && chinQ > 1.0f)) {
         tile[ty * JAW_TILE_W + tx] = 0;
         continue;
       }

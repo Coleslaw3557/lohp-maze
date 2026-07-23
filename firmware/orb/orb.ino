@@ -16,8 +16,10 @@
 // "notices you" drop when someone appears, and it holds open through each
 // gesture POST (he's mid-sentence while the blocking HTTP call runs).
 //
-// Gestures (no IMU / no dock detect on this hardware — see plan doc):
-//   tap        -> POST /api/set_theme {"next_theme": true}
+// Gestures (no IMU / no dock detect on this hardware — see plan doc). The orb
+// is the whole Cuddle control surface — these replace wall buttons there:
+//   tap        -> POST /api/set_theme {"next_theme": true}   (next lighting theme)
+//   swipe      -> POST /api/toggle_music {}                  (music on/off)
 //   long-press -> POST /api/run_effect_all_rooms {"effect_name":"LightningStorm"}
 
 #include <Arduino_GFX_Library.h>
@@ -157,6 +159,8 @@ float wasAwake = 0;
 TouchState touch;
 bool wasDown = false;
 uint32_t downAt = 0, lastGestureAt = 0;
+int downX = 0, downY = 0; // where the press started
+bool movedFar = false;    // finger crossed swipe distance since press
 bool longFired = false;
 bool otaReady = false;
 
@@ -271,20 +275,36 @@ void loop() {
   bool spoke = false;
   if (touch.down && !wasDown) {
     downAt = now;
+    downX = touch.x;
+    downY = touch.y;
+    movedFar = false;
     longFired = false;
   }
-  if (touch.down && !longFired && now - downAt >= 1200 && cooled) {
+  if (touch.down) {
+    int dx = touch.x - downX, dy = touch.y - downY;
+    if (dx * dx + dy * dy >= 60 * 60) movedFar = true; // ~1/6 of the panel
+  }
+  // movedFar gates the long-press: a swipe that ends in a rest must stay a
+  // swipe, not ripen into the storm
+  if (touch.down && !longFired && !movedFar && now - downAt >= 1200 && cooled) {
     longFired = true;
     lastGestureAt = now;
     Serial.println("[orb] gesture: LONG-PRESS -> storm all rooms");
     speakingCall("/api/run_effect_all_rooms", "{\"effect_name\":\"LightningStorm\"}");
     spoke = true;
   }
-  if (!touch.down && wasDown && !longFired && now - downAt < 600 && cooled) {
-    lastGestureAt = now;
-    Serial.println("[orb] gesture: TAP -> next theme");
-    speakingCall("/api/set_theme", "{\"next_theme\":true}");
-    spoke = true;
+  if (!touch.down && wasDown && !longFired && cooled) {
+    if (movedFar) { // any direction, any speed — the most forgiving playa gesture
+      lastGestureAt = now;
+      Serial.println("[orb] gesture: SWIPE -> toggle music");
+      speakingCall("/api/toggle_music", "{}");
+      spoke = true;
+    } else if (now - downAt < 600) {
+      lastGestureAt = now;
+      Serial.println("[orb] gesture: TAP -> next theme");
+      speakingCall("/api/set_theme", "{\"next_theme\":true}");
+      spoke = true;
+    }
   }
   wasDown = touch.down;
   if (spoke) { // finish the sentence after the call returns
