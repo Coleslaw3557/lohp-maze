@@ -41,6 +41,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #060609; col
   border-radius: 9px; background: #3a3d55; color: #999; }
 .dot.ok { background: #12351f; color: #55e08a; }
 .dot.err { background: #3d1420; color: #ff7285; }
+.dot.warn { background: #3a2f10; color: #ffc94d; }
 
 .row { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
 .row select { flex: 1; min-width: 0; }

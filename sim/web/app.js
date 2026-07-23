@@ -40,6 +40,7 @@ const S = {
   piezoAttempts: 0,
   projection: null,        // planned Cuddle floor-projection rig (layout `projection` key)
   sign: null,              // Camp Sign live-DMX letter zones (layout `camp_sign` key)
+  eye: null,               // Cuddle orb — Waveshare ESP32-S3 round display (layout `eye` key)
   mode: 'street',
   keys: {},
   pos: new THREE.Vector3(11.7, EYE, 4.5),
@@ -68,7 +69,7 @@ function log(kind, msg) {
   while (box.children.length > 100) box.lastChild.remove();
 }
 function escapeHtml(s) { return String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); }
-function setDot(which, ok) { $(`dot-${which}`).className = 'dot ' + (ok === null ? '' : ok ? 'ok' : 'err'); }
+function setDot(which, ok) { $(`dot-${which}`).className = 'dot ' + (ok === null ? '' : ok === 'warn' ? 'warn' : ok ? 'ok' : 'err'); }
 let toastTimer = null;
 function toast(msg) {
   const el = $('toast');
@@ -97,6 +98,26 @@ async function post(path, data, source) {
     log('err', `${path} failed: ${e.message}`);
     return false;
   }
+}
+
+// Production server Pi watchdog — the sim backend probes the real box
+// (sim_ui.py /sim/rpi_status, host from RPI_HOST) and the RPI header dot
+// mirrors it: green = server answering, amber = box up but server not
+// running (booted, not yet deployed), red = unreachable.
+let rpiLastState = null;
+async function pollRpiStatus() {
+  try {
+    const st = await fetch(`${SIM}/sim/rpi_status`).then(r => r.json());
+    if (st.state === 'disabled') { setDot('rpi', null); $('dot-rpi').title = 'RPi probe disabled (RPI_HOST=)'; return; }
+    const label = { server_up: 'server UP', host_up: 'host up, server not running', down: 'unreachable' }[st.state] || st.state;
+    setDot('rpi', st.state === 'server_up' ? true : st.state === 'host_up' ? 'warn' : false);
+    $('dot-rpi').title = `RPi ${st.host}: ${label}${st.latency_ms != null ? ` — ${st.latency_ms} ms` : ''}`;
+    if (st.state !== rpiLastState) {
+      log(st.state === 'server_up' ? 'ok' : st.state === 'host_up' ? 'info' : 'err', `RPi ${st.host}: ${label}`);
+      rpiLastState = st.state;
+    }
+  } catch (e) { setDot('rpi', null); }
+  setTimeout(pollRpiStatus, 5000);
 }
 
 // ---------------------------------------------------------------- three setup
@@ -2111,22 +2132,82 @@ function buildProjection(cfg) {
   });
   deckPath.closePath();
 
-  const snakes = [];
-  for (let i = 0; i < 6; i++) {
-    const x = Math.random() * cw, y = Math.random() * chp;
-    snakes.push({ pts: Array.from({ length: 16 }, () => ({ x, y })),
-      h: Math.random() * Math.PI * 2, sp: (46 + Math.random() * 30), wig: Math.random() * 9 });
-  }
-
   S.projection = { cfg: P, canvas, ctx: canvas.getContext('2d'), tex, plane,
-    cw, ch: chp, ppm, toPx, mast, winPx, deckPath, snakes, active: false, fade: 0,
-    lastPresence: -1e9, smooth: null, accum: 0 };
+    cw, ch: chp, ppm, toPx, mast, winPx, deckPath, active: false, fade: 0,
+    lastPresence: -1e9, smooth: null, accum: 0,
+    // LAVA engine link (projection_engine.py stepped by sim_ui, streamed over
+    // /sim/projection): the page renders engine STATE — heat field, stones,
+    // events — and sends back the lagged radar position. It computes nothing.
+    ws: null, grid: null, lut: null, heatCanvas: null, heatImg: null,
+    heatStep: 2, stones: [], tracksPx: [], fx: [], engineFade: 0, lastTrackSend: 0 };
+  connectProjection();
+}
+
+function connectProjection() {
+  const pr = S.projection;
+  if (!pr) return;
+  const ws = new WebSocket(`ws://${HOST}:${location.port || 5001}/sim/projection`);
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.error) { log('err', `projection: ${m.error}`); return; }
+    if (m.hello) {
+      pr.grid = m.hello.grid;
+      pr.lut = m.hello.palette;
+      pr.heatStep = m.hello.heat_step || 2;
+      const hc = document.createElement('canvas');
+      hc.width = Math.floor(pr.grid[0] / pr.heatStep);
+      hc.height = Math.floor(pr.grid[1] / pr.heatStep);
+      pr.heatCanvas = hc;
+      pr.heatImg = hc.getContext('2d').createImageData(hc.width, hc.height);
+      if (m.hello.textures) {
+        // the engine's precomputed rock artwork — the page draws the SAME
+        // pixels production projects (numeral glyphs, cracks, the altar)
+        const mk = (t) => {
+          const c = document.createElement('canvas');
+          c.width = t.w; c.height = t.h;
+          const bytes = Uint8Array.from(atob(t.rgba), ch => ch.charCodeAt(0));
+          c.getContext('2d').putImageData(
+            new ImageData(new Uint8ClampedArray(bytes.buffer), t.w, t.h), 0, 0);
+          return c;
+        };
+        pr.stoneImg = {};
+        for (const t of m.hello.textures.stones) pr.stoneImg[t.id] = mk(t);
+        pr.islandImg = mk(m.hello.textures.island);
+        pr.islandPos = m.hello.textures.island;
+      }
+      pr.ws = ws;
+      log('info', `projection: lava engine connected (${pr.grid[0]}×${pr.grid[1]})`);
+      return;
+    }
+    pr.engineFade = m.fade || 0;
+    pr.stones = m.stones || [];
+    pr.tracksPx = m.tracks || [];
+    if (m.heat && pr.heatCanvas) paintHeat(pr, m.heat);
+    for (const e of m.events || []) {
+      if (e.e === 'sink' || e.e === 'rise' || e.e === 'pop') pr.fx.push({ ...e, t0: clock.getElapsedTime() });
+      if (e.e === 'sink') log('info', `projection: stone ${e.id} sinks underfoot`);
+      if (e.e === 'rise') log('info', `projection: stone ${e.id} rises`);
+    }
+  };
+  ws.onclose = () => { pr.ws = null; setTimeout(connectProjection, 2500); };
+  ws.onerror = () => ws.close();
+}
+
+function paintHeat(pr, b64) {
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const d = pr.heatImg.data;
+  for (let i = 0; i < bytes.length; i++) {
+    const c = pr.lut[bytes[i]] || [0, 0, 0];
+    d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255;
+  }
+  pr.heatCanvas.getContext('2d').putImageData(pr.heatImg, 0, 0);
 }
 
 function projectionCue(source) {
   const pr = S.projection;
   if (!pr) return;
   pr.lastPresence = clock.getElapsedTime();
+  if (pr.ws && pr.ws.readyState === 1) pr.ws.send(JSON.stringify({ cue: source }));
   if (!pr.active) {
     pr.active = true;
     log('info', `projection: floor show ON (${source})`);
@@ -2158,7 +2239,15 @@ function updateProjection(dt) {
     }
   }
 
+  // feed the engine the lagged radar position at ~10 Hz (null = unseen);
+  // while the engine is connected its fade is the truth — the show is shared
+  // state across every viewer, like the real deck
+  if (pr.ws && pr.ws.readyState === 1 && now - pr.lastTrackSend > 0.1) {
+    pr.lastTrackSend = now;
+    pr.ws.send(JSON.stringify({ track: pr.smooth ? [pr.smooth.x, pr.smooth.z] : null }));
+  }
   pr.fade = Math.max(0, Math.min(1, pr.fade + (pr.active ? dt : -dt) * 1.5));
+  if (pr.ws && pr.ws.readyState === 1) pr.fade = pr.engineFade;
   pr.plane.material.opacity = 0.95 * pr.fade;
   if (pr.fade <= 0) return;
   pr.accum += dt;
@@ -2174,8 +2263,14 @@ function drawProjection(pr, dt, now) {
   // black (masked), so the wash reads deck-shaped, not rectangular
   ctx.save();
   ctx.clip(pr.deckPath);
-  ctx.fillStyle = '#03150b'; // dim green wash = the visible projected area
-  ctx.fillRect(0, 0, cw, ch);
+  if (pr.heatCanvas && pr.engineFade > 0) {
+    // the engine's lava heat field, palette-mapped in paintHeat, upscaled
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(pr.heatCanvas, 0, 0, cw, ch);
+  } else {
+    ctx.fillStyle = '#03150b'; // engine offline: dim wash = visible projected area
+    ctx.fillRect(0, 0, cw, ch);
+  }
 
   // mast island + its real shadow: cast away from the projection window,
   // spreading like the penumbra of a pole taller than the light source
@@ -2191,10 +2286,17 @@ function drawProjection(pr, dt, now) {
   ctx.lineTo(mast.x + ux * L + vx * far, mast.y + uy * L + vy * far);
   ctx.lineTo(mast.x + ux * L - vx * far, mast.y + uy * L - vy * far);
   ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#0d3320';
-  ctx.beginPath(); ctx.arc(mast.x, mast.y, mast.r + 10, 0, 7); ctx.fill();
-  ctx.strokeStyle = '#2c7a4c'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.arc(mast.x, mast.y, mast.r + 10, 0, 7); ctx.stroke();
+  const gs = cw / (pr.grid ? pr.grid[0] : cw);
+  if (pr.islandImg) {
+    // the carved sun-stone altar around the mast base, from the engine
+    const iw = pr.islandImg.width * gs, ih = pr.islandImg.height * gs;
+    ctx.drawImage(pr.islandImg, pr.islandPos.x * gs - iw / 2, pr.islandPos.y * gs - ih / 2, iw, ih);
+  } else {
+    ctx.fillStyle = '#0d3320';
+    ctx.beginPath(); ctx.arc(mast.x, mast.y, mast.r + 10, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#2c7a4c'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(mast.x, mast.y, mast.r + 10, 0, 7); ctx.stroke();
+  }
 
   // tracked walker: pulsing ring at the (lagged) radar position
   let tgt = null;
@@ -2209,50 +2311,258 @@ function drawProjection(pr, dt, now) {
     }
   }
 
-  // snakes: wander, keep off the island and edges, flee the tracked walker
-  const FLEE = 1.15 * ppm; // flee radius ≈ 1.15 m in image pixels
-  for (const s of pr.snakes) {
-    const head = s.pts[0];
-    let steer = Math.sin(now * 1.7 + s.wig * 3) * 1.4 * dt; // idle wiggle
-    let boost = 1;
-    const av = (px, py, rad, gain) => {
-      const dx = head.x - px, dy = head.y - py, d = Math.hypot(dx, dy);
-      if (d < rad && d > 1) {
-        const want = Math.atan2(dy, dx);
-        let diff = ((want - s.h + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-        steer += diff * gain * (1 - d / rad) * dt;
-        return 1 - d / rad;
+  // stepping stones from the engine (grid px → canvas px). Visual rules
+  // mirror projection_engine._draw_stone: sinking shrinks + heats, rising
+  // grows + cools, phase < 0 = the suspense beat before a riser surfaces.
+  for (const s of pr.stones) {
+    if (s.state === 'down' || s.phase < 0) continue;
+    let scale = 1, heat = 0;  // grey rock; hot only mid-transition (engine rules)
+    if (s.state === 'sinking') { scale = 1 - 0.55 * s.phase; heat = s.phase; }
+    else if (s.state === 'rising') { scale = 0.45 + 0.55 * s.phase; heat = (1 - s.phase) * 0.8; }
+    const r = s.r * gs * scale;
+    const img = pr.stoneImg && pr.stoneImg[s.id];
+    if (img) {
+      const w = img.width * gs * scale, h = img.height * gs * scale;
+      ctx.drawImage(img, s.x * gs - w / 2, s.y * gs - h / 2, w, h);
+      if (heat > 0.02) {          // melting: whole rock heats over
+        ctx.globalAlpha = Math.min(1, heat);
+        ctx.fillStyle = 'rgb(255,120,20)';
+        ctx.beginPath(); ctx.arc(s.x * gs, s.y * gs, r, 0, 7); ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (s.glint > 0.05) { // glyph notices an approaching walker
+        ctx.globalAlpha = s.glint * 0.35;
+        ctx.strokeStyle = 'rgb(255,196,96)';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(s.x * gs, s.y * gs, r * 0.55, 0, 7); ctx.stroke();
+        ctx.globalAlpha = 1;
       }
-      return 0;
-    };
-    if (tgt) boost += 1.4 * av(tgt.x, tgt.y, FLEE, 9);       // flee the human
-    av(mast.x, mast.y, mast.r + 46, 7);                      // island is solid
-    // stay on the deck: if the point ahead leaves the mask, turn toward center
-    const ahead = 52;
-    if (!ctx.isPointInPath(pr.deckPath, head.x + Math.cos(s.h) * ahead,
-      head.y + Math.sin(s.h) * ahead)) {
-      const want = Math.atan2(ch / 2 - head.y, cw / 2 - head.x);
-      const diff = ((want - s.h + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      steer += diff * 5 * dt;
+    } else {  // texture not arrived yet: plain grey stand-in
+      const mix = (a, b) => (a + (b - a) * heat) | 0;
+      ctx.fillStyle = `rgb(${mix(128, 255)},${mix(128, 120)},${mix(132, 20)})`;
+      ctx.beginPath(); ctx.arc(s.x * gs, s.y * gs, r, 0, 7); ctx.fill();
+      ctx.strokeStyle = heat > 0.05 ? `rgba(255,140,30,${0.3 + 0.6 * heat})` : 'rgba(58,58,64,0.9)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(s.x * gs, s.y * gs, r, 0, 7); ctx.stroke();
     }
-    s.h += Math.max(-3.2 * dt, Math.min(3.2 * dt, steer)) * (1 + (boost - 1) * 0.4);
-    const v = s.sp * boost * dt;
-    const nx = Math.max(4, Math.min(cw - 4, head.x + Math.cos(s.h) * v));
-    const ny = Math.max(4, Math.min(ch - 4, head.y + Math.sin(s.h) * v));
-    s.pts.unshift({ x: nx, y: ny });
-    s.pts.pop();
+  }
 
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#2fe968'; ctx.lineWidth = 7;
+  // engine events as short-lived rings: bubble pops small, sink/rise big
+  pr.fx = pr.fx.filter(e => now - e.t0 < 0.6);
+  for (const e of pr.fx) {
+    const a = (now - e.t0) / 0.6;
+    ctx.strokeStyle = `rgba(255,180,60,${0.7 * (1 - a)})`;
+    ctx.lineWidth = 2 + 3 * (1 - a);
     ctx.beginPath();
-    ctx.moveTo(s.pts[0].x, s.pts[0].y);
-    for (const p of s.pts) ctx.lineTo(p.x, p.y);
+    ctx.arc(e.x * gs, e.y * gs, (e.e === 'pop' ? 6 : 14) + 30 * a, 0, 7);
     ctx.stroke();
-    ctx.fillStyle = '#b9ffcf';
-    ctx.beginPath(); ctx.arc(nx, ny, 4.5, 0, 7); ctx.fill();
+  }
+
+  // every walker the engine is tracking (other tabs included — shared show)
+  for (const t of pr.tracksPx) {
+    ctx.strokeStyle = 'rgba(255,220,150,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(t.x * gs, t.y * gs, 18, 0, 7); ctx.stroke();
   }
   ctx.restore(); // end deck mask
   pr.tex.needsUpdate = true;
+}
+
+// ------------------------------------------------- Cuddle orb (sim preview)
+// The Waveshare ESP32-S3-Touch-LCD-1.28 round display, mounted on the Cuddle
+// Cross center mast: a watching eye whose pupil tracks whoever the room's
+// LD2450 reports (the SAME node-box radar the floor projection reads), with a
+// first-order lag so the gaze previews how the hardware will feel. Two skins:
+//   hal   - the 2001 red camera lens (sci-fi easter egg in a Mayan jungle)
+//   mayan - jade-and-gold jaguar/serpent deity eye with an obsidian slit
+// Real panel is a 32.5 mm (1.28") disc; drawn bigger here so the eye reads
+// across the deck. Layout `eye` key drives it; the Eye button cycles skins.
+// The gestures the real orb sends (shake=storm all, touch-wheel=next theme,
+// dock=calm) hit the REST API directly — see wiring-guides/cuddle-orb-plan.md.
+const EYE_MODES = ['off', 'hal', 'mayan'];
+const EYE_LABEL = { off: 'Eye ✕', hal: 'Eye: HAL', mayan: 'Eye: Mayan' };
+
+function buildEye(cfg) {
+  const E = cfg.layout.eye;
+  if (!E) return;
+  const LH = S.levelHeight, D = E.diameter || 0.12;   // real panel Ø 0.0325
+  const g = new THREE.Group();
+  g.position.set(E.mount[0], (E.level || 0) * LH + (E.h || 1.5), E.mount[1]);
+  g.rotation.y = (E.yaw_deg || 0) * Math.PI / 180;    // 0 = faces the street
+
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(D / 2 + 0.006, D / 2 + 0.006, 0.022, 40),
+    new THREE.MeshStandardMaterial({ color: 0x17191c, roughness: 0.5, metalness: 0.2 }));
+  body.rotation.x = Math.PI / 2;                       // round face -> local +z
+  g.add(body);
+  const bezel = new THREE.Mesh(new THREE.RingGeometry(D / 2 - 0.001, D / 2 + 0.006, 40),
+    new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: 0.4, metalness: 0.6,
+      side: THREE.DoubleSide }));
+  bezel.position.z = 0.0115;
+  g.add(bezel);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 240;                 // native GC9A01 pixels
+  const tex = new THREE.CanvasTexture(canvas);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(D / 2, 48),
+    new THREE.MeshBasicMaterial({ map: tex }));       // unlit: it's a screen
+  disc.position.z = 0.012;
+  g.add(disc);
+  const lbl = makeLabel(E.label || 'Cuddle orb (Waveshare S3 · sim)', 0.16);
+  lbl.position.y = D / 2 + 0.06;
+  g.add(lbl);
+  grp(E.level || 0).add(g);
+
+  let saved = null; try { saved = localStorage.getItem('lohp-sim-eye'); } catch (e) { /**/ }
+  S.eye = { cfg: E, group: g, canvas, ctx: canvas.getContext('2d'), tex,
+    pupil: { x: 0, y: 0 }, dil: 0.5, smooth: null, awake: 0, lastSeen: -1e9,
+    blinkT: 2.5, blink: 0, accum: 0, drift: Math.random() * 6.28 };
+  setEyeSkin(EYE_MODES.includes(saved) ? saved : (E.skin || 'hal'));
+}
+
+function setEyeSkin(mode) {
+  S.eyeSkin = mode;
+  if (S.eye) S.eye.group.visible = mode !== 'off';
+  $('btn-eye').textContent = EYE_LABEL[mode] || 'Eye ✕';
+  try { localStorage.setItem('lohp-sim-eye', mode); } catch (e) { /* private mode */ }
+}
+
+function updateEye(dt) {
+  const ey = S.eye;
+  if (!ey || S.eyeSkin === 'off') return;
+  const E = ey.cfg, T = E.tracker, now = clock.getElapsedTime();
+
+  // what the LD2450 sees: the walker, on this deck, inside the node-box wedge
+  const seen = T && S.level === (E.level || 0) && zoneContains({ x: T.pos[0], z: T.pos[1],
+    yaw: T.yaw_deg || 0, fov: T.fov_deg || 120, range: T.range_m || 6,
+    clip: T.clip || null }, S.pos.x, S.pos.z);
+
+  let gx, gy, near = 0;
+  if (seen) {
+    ey.lastSeen = now;
+    const k = 1 - Math.exp(-dt / ((T.latency_ms || 150) / 1000));
+    if (!ey.smooth) ey.smooth = { x: S.pos.x, z: S.pos.z };
+    ey.smooth.x += (S.pos.x - ey.smooth.x) * k;
+    ey.smooth.z += (S.pos.z - ey.smooth.z) * k;
+    // target in the orb's frame: local +z = facing, +x = the orb's right
+    const yaw = (E.yaw_deg || 0) * Math.PI / 180;
+    const dx = ey.smooth.x - E.mount[0], dz = ey.smooth.z - E.mount[1];
+    const fwd = dx * Math.sin(yaw) + dz * Math.cos(yaw);
+    const rgt = dx * Math.cos(yaw) - dz * Math.sin(yaw);
+    const horiz = Math.hypot(dx, dz) || 0.01;
+    // +rgt (person on the orb's right) reads as the viewer's left, which the
+    // disc mirrors back — so screen-x follows rgt (flip if gaze reads reversed)
+    gx = Math.max(-1, Math.min(1, Math.sin(Math.atan2(rgt, Math.max(fwd, 0.05))) * 1.3));
+    // the orb rides above chest height and looks down at people on the deck
+    const orbY = (E.level || 0) * S.levelHeight + (E.h || 1.5);
+    gy = Math.max(-0.4, Math.min(1,
+      Math.atan2(orbY - ((E.level || 0) * S.levelHeight + 1.0), horiz) / 0.9));
+    near = Math.max(0, Math.min(1, 1 - horiz / (T.range_m || 6)));
+  } else {
+    ey.smooth = null;                                 // idle drift, ease to center
+    ey.drift += dt * 0.5;
+    gx = Math.sin(ey.drift) * 0.32;
+    gy = Math.sin(ey.drift * 0.7 + 1.3) * 0.2;
+  }
+
+  const ease = 1 - Math.exp(-dt / 0.12);
+  ey.pupil.x += (gx - ey.pupil.x) * ease;
+  ey.pupil.y += (gy - ey.pupil.y) * ease;
+  ey.awake += ((now - ey.lastSeen < 4 ? 1 : 0) - ey.awake) * (1 - Math.exp(-dt / 0.4));
+  ey.dil += ((0.35 + 0.5 * near) - ey.dil) * ease;    // pupil size 0..1
+
+  ey.blinkT -= dt;                                     // blink cadence
+  if (ey.blinkT <= 0 && ey.blink === 0) ey.blink = 0.001;
+  if (ey.blink > 0) {
+    ey.blink += dt / 0.16;                             // ~160 ms close+open
+    if (ey.blink >= 2) { ey.blink = 0; ey.blinkT = 2.5 + Math.random() * 4.5; }
+  }
+
+  ey.accum += dt;
+  if (ey.accum < 0.033) return;                        // ~30 fps content
+  drawEye(ey, now);
+  ey.accum = 0;
+}
+
+function drawEye(ey, now) {
+  const ctx = ey.ctx, R = 120, cx = 120, cy = 120;
+  const px = cx + ey.pupil.x * 32, py = cy + ey.pupil.y * 26;
+  const blink = ey.blink > 1 ? 2 - ey.blink : ey.blink; // 0 -> 1 -> 0
+  ctx.clearRect(0, 0, 240, 240);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip(); // round panel
+  if (S.eyeSkin === 'mayan') drawMayanEye(ctx, ey, cx, cy, R, px, py, blink, now);
+  else drawHalEye(ctx, ey, cx, cy, R, px, py, blink, now);
+  ctx.restore();
+  ey.tex.needsUpdate = true;
+}
+
+function drawHalEye(ctx, ey, cx, cy, R, px, py, blink, now) {
+  ctx.fillStyle = '#050505'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#5b4a1c'; ctx.lineWidth = 10;
+  ctx.beginPath(); ctx.arc(cx, cy, R - 8, 0, 7); ctx.stroke();
+  ctx.strokeStyle = '#caa53a'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(cx, cy, R - 20, 0, 7); ctx.stroke();
+  const lens = ctx.createRadialGradient(cx, cy, 4, cx, cy, R - 24);
+  lens.addColorStop(0, '#7a0000'); lens.addColorStop(0.5, '#3d0000'); lens.addColorStop(1, '#0a0000');
+  ctx.fillStyle = lens; ctx.beginPath(); ctx.arc(cx, cy, R - 24, 0, 7); ctx.fill();
+  const pr = (13 + ey.dil * 15) * (1 - 0.8 * blink);   // hot pupil radius
+  const hr = pr * 3.4 * (1 + 0.12 * Math.sin(now * 4) * ey.awake);
+  const halo = ctx.createRadialGradient(px, py, 0, px, py, hr);
+  halo.addColorStop(0, `rgba(255,150,90,${0.5 + 0.25 * ey.awake})`);
+  halo.addColorStop(1, 'rgba(255,60,0,0)');
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(px, py, hr, 0, 7); ctx.fill();
+  const core = ctx.createRadialGradient(px - pr * 0.3, py - pr * 0.3, 1, px, py, pr);
+  core.addColorStop(0, '#fff6e0'); core.addColorStop(0.5, '#ffd27a'); core.addColorStop(1, '#c14a00');
+  ctx.fillStyle = core; ctx.beginPath(); ctx.arc(px, py, pr, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath(); ctx.arc(px - pr * 0.34, py - pr * 0.34, pr * 0.2, 0, 7); ctx.fill();
+  if (blink > 0.01) {                                  // no lids -> flicker
+    ctx.fillStyle = `rgba(0,0,0,${0.55 * blink})`;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+  }
+}
+
+function drawMayanEye(ctx, ey, cx, cy, R, px, py, blink, now) {
+  ctx.fillStyle = '#0b0a06'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+  const ring = ctx.createRadialGradient(cx, cy, R - 24, cx, cy, R); // gold sun-stone rim
+  ring.addColorStop(0, '#7a5a1e'); ring.addColorStop(0.5, '#e6b34e'); ring.addColorStop(1, '#8a6a24');
+  ctx.strokeStyle = ring; ctx.lineWidth = 22;
+  ctx.beginPath(); ctx.arc(cx, cy, R - 11, 0, 7); ctx.stroke();
+  ctx.fillStyle = '#4a3410';                           // glyph ticks around the rim
+  for (let i = 0; i < 24; i++) {
+    const a = i / 24 * 6.283;
+    ctx.save(); ctx.translate(cx + Math.cos(a) * (R - 11), cy + Math.sin(a) * (R - 11));
+    ctx.rotate(a); ctx.fillRect(-2.5, -5, 5, 10); ctx.restore();
+  }
+  const jade = ctx.createRadialGradient(cx - 12, cy - 12, 6, cx, cy, R - 24); // carved jade sclera
+  jade.addColorStop(0, '#3fae86'); jade.addColorStop(0.7, '#1c7f63'); jade.addColorStop(1, '#0d4a3a');
+  ctx.fillStyle = jade; ctx.beginPath(); ctx.arc(cx, cy, R - 24, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(9,60,46,0.5)'; ctx.lineWidth = 2;
+  for (let r = 30; r < R - 24; r += 14) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke(); }
+  const ir = 42;                                        // amber jaguar iris, follows gaze
+  ctx.fillStyle = '#080604'; ctx.beginPath(); ctx.arc(px, py, ir + 5, 0, 7); ctx.fill();
+  const iris = ctx.createRadialGradient(px, py, 4, px, py, ir);
+  iris.addColorStop(0, `rgba(240,190,90,${0.55 + 0.45 * ey.awake})`);
+  iris.addColorStop(0.6, '#b9781f'); iris.addColorStop(1, '#5c3a10');
+  ctx.fillStyle = iris; ctx.beginPath(); ctx.arc(px, py, ir, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(90,50,12,0.55)'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 20; i++) {
+    const a = i / 20 * 6.283;
+    ctx.beginPath();
+    ctx.moveTo(px + Math.cos(a) * 8, py + Math.sin(a) * 8);
+    ctx.lineTo(px + Math.cos(a) * ir, py + Math.sin(a) * ir); ctx.stroke();
+  }
+  const sh = ir * (1.02 - 0.12 * blink);               // obsidian vertical slit
+  const sw = Math.max(1.5, ir * 0.4 * (1 - 0.5 * ey.dil) * (1 - 0.9 * blink));
+  ctx.fillStyle = '#040404'; ctx.beginPath(); ctx.ellipse(px, py, sw, sh, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(220,255,240,0.85)';            // teal catchlight
+  ctx.beginPath(); ctx.arc(px - sw * 0.3 - 3, py - sh * 0.35, 3, 0, 7); ctx.fill();
+  if (blink > 0.01) {                                  // jade eyelids close in
+    const lid = blink * (R - 24);
+    ctx.fillStyle = '#12563f';
+    ctx.fillRect(cx - R, cy - (R - 24), 2 * R, lid);
+    ctx.fillRect(cx - R, cy + (R - 24) - lid, 2 * R, lid);
+  }
 }
 
 // ---------------------------------------------------------------- audio unit
@@ -2541,6 +2851,7 @@ function setupControls(cfg) {
   $('btn-towers').onclick = () => setTowersVisible(!(towersGroup && towersGroup.visible));
   $('btn-sign').onclick = () => setSignVisible(!(signGroup && signGroup.visible));
   $('btn-steel').onclick = () => setSteelMode(STEEL_MODES[(STEEL_MODES.indexOf(steelMode) + 1) % STEEL_MODES.length]);
+  $('btn-eye').onclick = () => setEyeSkin(EYE_MODES[(EYE_MODES.indexOf(S.eyeSkin) + 1) % EYE_MODES.length]);
   $('btn-respawn').onclick = () => {
     const sp = cfg.layout.spawn;
     S.pos.set(sp.pos[0], EYE, sp.pos[1]);
@@ -2693,6 +3004,7 @@ async function boot() {
   buildFixtures(cfg);
   buildSensors(cfg);
   buildProjection(cfg);
+  buildEye(cfg);
   buildCampSign(cfg);
   buildAvatar();
 
@@ -2724,6 +3036,7 @@ async function boot() {
   setupControls(cfg);
   await wireUi(cfg);
   connectDmx();
+  pollRpiStatus();
   setMode('street');
 
   $('enter-btn').onclick = () => {
@@ -2749,6 +3062,7 @@ function animate() {
   if (S.mode === 'first') updateMovement(dt);
   checkSensorTriggers();
   updateProjection(dt);
+  updateEye(dt);
   updateFixtures(t);
   updateFixtureGrid(t);
   updateCampSign(t);

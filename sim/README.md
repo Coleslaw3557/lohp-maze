@@ -193,7 +193,19 @@ So: design an effect in the sim → it's already production code → deploy to t
 physical server → identical behavior on real fixtures (once addressing is fixed,
 below).
 
-## Planned: Cuddle Cross floor projection (sim preview, 2026-07-18)
+## Cuddle Cross floor projection — LAVA (live engine, 2026-07-22)
+
+The floor show is now REAL content with a production path: **stepping stones
+on lava** (`projection_engine.py` at the repo root, plan in
+`wiring-guides/cuddle-lava-plan.md`). The sim steps the engine in-process and
+streams state over `WS /sim/projection` (heat field + stones + events at
+~15 fps); the page renders that state and sends back the lagged radar
+position — the placeholder snakes are gone. On the real deck the SAME engine
+runs fullscreen on the server Pi's HDMI to the LS625X
+(`projection_renderer.py`, systemd `lohp-projection.service`, demo phantom
+walkers until the LD2450 lands). Rig geometry below is unchanged.
+
+## Rig geometry: Cuddle Cross floor projection (sim preview, 2026-07-18)
 
 The `projection` key in `maze_layout.json` renders the **planned** cuddle-pit
 rig: a used ViewSonic LS625X (laser-phosphor DLP — no bulb, sealed optical
@@ -318,12 +330,20 @@ this same machine (UDP 6454 clash). Production now uses the same ArtDMX packets
 `run_server.py` stubs that path (`virtual_artnet.py`) so the sim never unicasts
 at real room-node hostnames — SIM_ARTNET is the only Art-Net the sim emits.
 
+The header also carries an `RPI` dot watching the production server Pi: the sim
+backend probes `RPI_HOST` (default `lohp-server.local`, the DietPi image's mDNS
+name; set `RPI_HOST=<ip>` if mDNS doesn't resolve, empty to disable) and shows
+green = `/api/health` answering, amber = box on the network but server not
+running (booted, not yet deployed), red = unreachable. Same data as JSON at
+`/sim/rpi_status`. Deploy to the Pi with `tools/deploy-rpi.sh` (pi-notes.md).
+
 ## Test tools (they light up the maze for everyone connected!)
 
 ```bash
 sim/.venv/bin/python sim/tools/smoke_test.py     # headless end-to-end: frames, trigger→DMX, theme, audio protocol
 sim/.venv/bin/python sim/tools/walkthrough.py    # scripted visitor walks the two-story route; fires each room's doorway trigger (4 rooms have none and are skipped); all fired triggers must 200
 sim/.venv/bin/python sim/tools/concurrency_test.py  # simultaneous-trigger storms, stop/supersede semantics
+sim/.venv/bin/python sim/tools/lava_test.py         # headless lava engine: mask/stones geometry, mischief sink+rise, timeout, perf budget
 sim/.venv/bin/python sim/tools/photobooth_test.py   # Photo Bomb countdown/flash/photo + Monkey fanfare timelines
 sim/.venv/bin/python sim/tools/ws_registry_test.py  # two same-IP audio clients coexist, both get room audio, exact disconnect
 sim/.venv/bin/python sim/tools/gate_game_test.py    # Gate two-bank game vs the REAL node firmware (start it first: sim/esphome/run_node.sh gate -d)

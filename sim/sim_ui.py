@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 import time
 
 from quart import Quart, jsonify, send_from_directory, websocket
@@ -31,6 +32,48 @@ SIM_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(SIM_DIR)
 WEB_DIR = os.path.join(SIM_DIR, 'web')
 PORT = int(os.environ.get('SIM_UI_PORT', '5001'))
+# Production server Pi watched by the header RPI dot (/sim/rpi_status).
+# Default is the DietPi image's mDNS name; set RPI_HOST=<ip> once the real
+# address is known, or RPI_HOST= (empty) to disable the probe.
+RPI_HOST = os.environ.get('RPI_HOST', 'lohp-server.local')
+RPI_API_PORT = 5000
+
+# LAVA floor-projection engine (projection_engine.py at the repo root):
+# stepped in this process, streamed to the page over /sim/projection.
+# Defensive import — without numpy the sim still runs, minus the lava feed.
+if REPO_DIR not in sys.path:
+    sys.path.append(REPO_DIR)
+try:
+    from projection_engine import LavaShow, palette_lut
+except Exception as e:  # noqa: BLE001 — any import failure just disables the feed
+    LavaShow, palette_lut = None, None
+    logging.getLogger(__name__).warning(f"lava engine unavailable: {e}")
+
+_lava = None
+
+
+def _get_lava():
+    global _lava
+    if _lava is None and LavaShow is not None:
+        try:
+            layout = _load_json(os.path.join(SIM_DIR, 'maze_layout.json'))
+            if layout.get('projection'):
+                _lava = LavaShow(layout)
+        except Exception:
+            logger.exception("lava engine init failed")
+    return _lava
+
+
+async def _lava_loop():
+    lava = _get_lava()
+    if lava is None:
+        return
+    prev = time.monotonic()
+    while True:
+        await asyncio.sleep(1 / 20)
+        now = time.monotonic()
+        lava.step(min(now - prev, 0.25))
+        prev = now
 
 app = Quart(__name__, static_folder=WEB_DIR, static_url_path='')
 # dev server: make browsers revalidate statics on refresh (304s are cheap on a
@@ -72,6 +115,7 @@ async def sim_config():
     triggers, piezo_settings = _extract_triggers()
     return jsonify({
         'ports': {'api': 5000, 'audio_ws': 8765},
+        'rpi': {'host': RPI_HOST, 'api_port': RPI_API_PORT},
         'channels_per_fixture': 8,
         'num_channels': len(sim_state.latest_frame),
         'light_models': light_config['light_models'],
@@ -97,6 +141,77 @@ async def sim_health():
     })
 
 
+@app.route('/sim/rpi_status')
+async def rpi_status():
+    """Probe the production server Pi. Three states so the sim can show
+    booted-but-not-deployed (host_up) separately from absent (down):
+    server_up = /api/health answered 200, host_up = TCP refused (box on the
+    network, nothing bound on :5000), down = timeout / no such host."""
+    if not RPI_HOST:
+        return jsonify({'state': 'disabled', 'host': ''})
+    t0 = time.monotonic()
+    try:
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(RPI_HOST, RPI_API_PORT), timeout=1.5)
+    except ConnectionRefusedError:
+        return jsonify({'state': 'host_up', 'host': RPI_HOST})
+    except (OSError, asyncio.TimeoutError):
+        return jsonify({'state': 'down', 'host': RPI_HOST})
+    try:
+        writer.write(f'GET /api/health HTTP/1.0\r\nHost: {RPI_HOST}\r\n\r\n'.encode())
+        await writer.drain()
+        status_line = await asyncio.wait_for(reader.readline(), timeout=1.5)
+        parts = status_line.split()
+        up = len(parts) >= 2 and parts[1] == b'200'
+    except (OSError, asyncio.TimeoutError):
+        up = False
+    finally:
+        writer.close()
+    return jsonify({'state': 'server_up' if up else 'host_up',
+                    'host': RPI_HOST,
+                    'latency_ms': round((time.monotonic() - t0) * 1000)})
+
+
+@app.websocket('/sim/projection')
+async def projection_feed():
+    """LAVA engine stream: hello (grid + palette), then state at ~15 fps with
+    the heat field base64'd. Receives {'track': [x, z] | null} (world meters,
+    already radar-lagged by the page) and {'cue': name} back. Several tabs
+    share one engine — the show is shared state, like the real deck."""
+    lava = _get_lava()
+    if lava is None:
+        await websocket.send(json.dumps({'error': 'lava engine unavailable'}))
+        return
+    conn = f"sim-{id(asyncio.current_task()) & 0xffff:x}"
+    await websocket.send(json.dumps({'hello': {
+        'grid': [lava.gw, lava.gh],
+        'palette': palette_lut().tolist(),
+        'heat_step': 2,
+        'textures': lava.hello_patches(),
+    }}))
+
+    async def _rx():
+        while True:
+            msg = json.loads(await websocket.receive())
+            tr = msg.get('track')
+            if tr:
+                lava.set_tracks([{'id': conn, 'x': float(tr[0]), 'z': float(tr[1])}])
+            if msg.get('cue'):
+                lava.cue(str(msg['cue'])[:48])
+
+    rx = asyncio.ensure_future(_rx())
+    seen = lava.event_total
+    try:
+        while True:
+            st = lava.state(drain_events=False)
+            st['events'], seen = lava.fresh_events(seen)
+            st['heat'] = lava.heat_b64() if lava.fade > 0 else None
+            await websocket.send(json.dumps(st))
+            await asyncio.sleep(1 / 15)
+    finally:
+        rx.cancel()
+
+
 @app.websocket('/sim/dmx')
 async def dmx_feed():
     last_sent = -1
@@ -120,6 +235,7 @@ def run():
     cfg.accesslog = None
     cfg.errorlog = '-'
     never = asyncio.Event()
+    loop.create_task(_lava_loop())
     logger.info(f"Sim UI starting on http://0.0.0.0:{PORT}")
     try:
         loop.run_until_complete(serve(app, cfg, shutdown_trigger=never.wait))

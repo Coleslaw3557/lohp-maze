@@ -1,0 +1,7 @@
+# /opt/lohp-projection-venv on the server Pi (tools/rpi-projection-setup.sh).
+# numpy comes from APT (venv is --system-site-packages); the renderer writes
+# /dev/fb0 directly, so there is no SDL/pygame/EGL on the Pi at all.
+# pip only adds:
+# aioesphomeapi — for --source esphome once the LD2450 lands (hardware day);
+# installed now so the flip is a service-file edit, not an install.
+aioesphomeapi==45.6.2
