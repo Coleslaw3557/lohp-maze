@@ -454,6 +454,12 @@ async def serve_photobomb_photo(filename):
     return await send_from_directory(camera_manager.photos_dir, filename)
 
 
+@app.route('/api/health')
+async def health():
+    """Liveness for deploy scripts and the sim's RPI status dot."""
+    return jsonify({"status": "ok", "service": "lohp-server"})
+
+
 @app.route('/api/audio/<path:filename>')
 async def serve_audio(filename):
     base_dir = os.path.dirname(__file__)

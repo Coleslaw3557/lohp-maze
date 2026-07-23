@@ -4,3 +4,10 @@ wiring-guides/
 tools/
 *.md
 rooms.png
+photos/
+sim/
+enclosure/
+cad-items/
+__pycache__/
+**/__pycache__
+*.pyc
