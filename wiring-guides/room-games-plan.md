@@ -84,9 +84,10 @@ kits, 5V LED + microswitch). Button LEDs wire straight to the node's 5V rail
   5V-level data down the cable). + radar UART + I2S + DMX = 9/11.
 - **Shifter chip received 2026-07-23** — the SN74AHCT125N 10-pack is the
   bare PDIP-14 (~21 × 10 mm over the legs), no breakout board. Mount =
-  **dead-bug**: glue the chip on its back, legs up, on the open floor
-  behind the DB9 PCB zone (VHB or CA/epoxy — not hot glue, boxes bake on
-  playa). Legs-up MIRRORS the pinout: with the notch pointing away, pin 1
+  **dead-bug**: glue the chip on its back, legs up, at the **etched AHCT
+  zone** (back-center of the universal floor since the 07-24 layout pass;
+  the other 14 rooms leave it empty) — VHB or CA/epoxy, not hot glue,
+  boxes bake on playa. Legs-up MIRRORS the pinout: with the notch pointing away, pin 1
   becomes the far-RIGHT leg — paint-mark pin 1 BEFORE gluing. Wire gate 1
   only: pin 14 = 5V, pin 7 = GND, pin 1 (1OE̅) = GND, pin 2 (1A) ← XIAO
   D1 (GPIO2), pin 3 (1Y) → 33–100Ω right at the leg → the DB9 breakout's

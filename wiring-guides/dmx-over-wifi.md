@@ -144,9 +144,10 @@ room ever needs it.
 
 New parts per box — **both received 2026-07-23**: one **MAX485 module**
 (the batch is the **screw-terminal variant**, 49.22 × 14.05 mm: A/B
-duplicated on a 2-pos screw-down terminal ON TOP at one end; the two
-4-pin headers — DI/DE/RE/RO at the terminal end, VCC/B/A/GND at the far
-end — come **factory-soldered pins DOWN**) and the **XLR3 female panel
+duplicated on a 2-pos screw-down terminal ON TOP; the two 4-pin headers —
+**VCC/B/A/GND under the terminal, RO/RE/DE/DI at the far end** (07-24
+photo correction: the terminal duplicates the A/B pins beside it) — come
+**factory-soldered pins DOWN**) and the **XLR3 female panel
 jack** (Devinal amzn B07S6J8WVD; its circular insert calipered **Ø23.55**,
 which resolved the enclosure's hole gate to Ø24 — `../enclosure/README.md`)
 sat in the wall cut, flange on the outside face, held by 2 short wood
@@ -161,13 +162,15 @@ VHB flat as-shipped — bench rework, once per box):
    un-clipped: intact pins take Dupont jumpers for scope/bench work.
 2. Solder short pigtails to the jack's three cups (heat-shrink each) —
    easier before the jack mounts.
-3. VHB the module at the **RS485 footprint etched on the floor** — long
-   axis into the box behind the jack's rear barrel (~19 mm reach), the
-   screw-terminal end toward the jack at the etched A/B mark.
+3. VHB the module at the **RS485 footprint etched on the floor** — the
+   lane sits 2 mm behind the DB9 floor zone (07-24 dry-fit rearrange),
+   long axis into the box, terminal end at the etched A/B mark, 7 mm
+   back from the jack's ~19 mm rear reach so the pigtails bend clear.
 4. Cup pigtails 3 and 2 land **under the A/B screws** — the one
    field-serviceable joint in the DMX path. Cup 1's pigtail joins node
-   GND. VCC, GND, DI and the DE+RE tie solder into the vacated header
-   holes and route off the far end toward the XIAO.
+   GND. 5V + GND solder into the vacated terminal-end holes and dress
+   back along the wall; DI + the DE/RE tie leave the far end toward the
+   XIAO.
 
 > Rev 2026-07-22: this replaced one day of "port B" — a second DB9 plus a
 > DB9→XLR screw-terminal adapter. The no-solder rule that justified it is

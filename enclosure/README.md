@@ -2,19 +2,19 @@
 
 `node-enclosure.scad` generates the single enclosure used by all 15 room
 nodes as **laser-cut panels for the xTool**: six finger-jointed pieces that
-glue together, plus the acrylic sensor-window panel. Stock is **6 mm ply**
-(Tim's call 2026-07-23; `t = 6.0` **confirmed on the sheet 2026-07-24** —
-a true 6, unlike the earlier "3 mm" sheet that measured 2.9).
-Outer 110 × 78 × 50 mm, interior 98 × 66 × 34 — as small as reasonable
+glue together, plus the acrylic sensor-window panel. Stock is **3 mm ply**
+(re-decided 2026-07-24, ending a one-day 6 mm detour; `t = 2.9` = the
+sheet's 07-21 caliper — re-caliper any new batch). Outer
+110 × 78 × 43.8 mm, interior 104.2 × 72.2 × 34 — as small as reasonable
 around the node build. Every derived position tracks `t`
-(`db9_cx`/`db9_cz`/`xlr_cz`/`dac_cy` are t-relative formulas since the
-6 mm switch), so re-exporting IS the thickness update. The lid is a
-**sliding tray**: it slides in and out **over the SHORT front wall** (that
-wall tops out at the channel bottom, t + 34 = 40 — the 07-22 rev3 fix: a
-full-height wall with an entry mouth can never pass the lid's tongues,
-which are wider than any mouth that leaves the wall in one piece), riding
-through-slot channels in the side walls — no fasteners, finger-pull notch
-at the front edge.
+(`db9_cx`/`db9_cz`/`xlr_cz`/`dac_cy` are t-relative formulas — the 6 mm
+episode's lasting gift), so re-exporting IS the thickness update. The lid
+is a **sliding tray**: it slides in and out **over the SHORT front wall**
+(that wall tops out at the channel bottom, t + 34 = 36.9 — the 07-22 rev3
+fix: a full-height wall with an entry mouth can never pass the lid's
+tongues, which are wider than any mouth that leaves the wall in one
+piece), riding through-slot channels in the side walls — no fasteners,
+finger-pull notch at the front edge.
 
 Board footprints were measured with calipers on the real parts (2026-07-21;
 the DB9 breakout PCB re-measured 2026-07-22 at 1¼" = 31.75 long, D-sub
@@ -22,16 +22,19 @@ barrel excluded). Since the 07-22 rev every port opening is pre-CUT, which
 promotes two height estimates into cuts — caliper the real stack before
 burning a sheet: AUX hole height (`jack_z` = 6; Ø7 vs the ~Ø6.75 jack
 barrel leaves little slack) and USB slot height (`usb_z` = 3.7, assumes
-~1mm VHB). The DAC's jack position along its long edge is assumed centered
-(`dac_cy` is the hole datum — caliper the real offset). Acrylic 3 nominal,
-velcro 20mm one-wrap.
+~1mm VHB). The DAC's jack sits on its long edge but **~10 mm off the
+board center** (07-24 dry-fit — the centered assumption put the cut hole
+"about 10mm too far"): the AUX hole now cuts at `dac_cy + dac_jack_off`
+and the board mounts **jack-end toward the back**; caliper the exact
+offset before the next burn. Acrylic 3 nominal, velcro 20mm one-wrap.
 
 | Inside | Mounted how |
 |---|---|
 | XIAO ESP32-S3 (21.46 × 17.78, USB-C on the short END +2mm) | VHB to the floor, USB end butted to the right wall (long axis into the box) so the port noses into the cut USB slot; footprint centered on the front floor-mortise tab — the tab seams at the joint line the board up |
-| PCM5102A DAC (31.93 × 17.23, jack on a LONG edge +2.44mm) | screwed to the floor wherever it lands; the long jack edge butted to the right wall (board reaches only 17.23 into the box) so its **own barrel fills the AUX hole** — no separate panel jack; barrel-in-hole is the datum, the footprint assumes the jack centered on that edge |
+| PCM5102A DAC (31.93 × 17.23, jack on a LONG edge +2.44mm, barrel ~10mm off board center) | screwed to the floor wherever it lands; the long jack edge butted to the right wall (board reaches only 17.23 into the box) so its **own barrel fills the AUX hole** — no separate panel jack; barrel-in-hole is the datum, hole cut at `dac_cy + dac_jack_off` (10), board mounted **jack-end toward the back** |
 | LD2410C (22.14 × 16) / VL53L1X / Cuddle's 2450 + 2410C | **VHB'd to the acrylic window panel's inner face** at the footprint etched on the panel, sensor side out the wall aperture — the acrylic is the mounting plate (tape at the board edges, clear of the antennas; radar reads through the acrylic, ToF boards sit over their cut 16×16 hole) |
-| MAX485 module (49.22 × 14.05 — the received 07-23 batch is the screw-terminal variant: A/B under a 2-pos screw terminal ON TOP at one end, both 4-pin headers factory-soldered PINS DOWN) | headers pulled (wick) or flush-clipped at the bench — there's no flat belly until they're gone — then VHB'd at the etched **RS485 floor footprint** behind the XLR's rear barrel, screw-terminal end toward the jack (the etched A/B mark); the jack's pin-2/pin-3 cup pigtails land under the A/B screws, the four signal leads (VCC, GND, DI, DE+RE tie) solder into the vacated holes and leave the far end toward the XIAO |
+| MAX485 module (49.22 × 14.05 — the received 07-23 batch is the screw-terminal variant: A/B under a 2-pos screw terminal ON TOP above the VCC/B/A/GND header end, RO/RE/DE/DI at the far end, both headers factory-soldered PINS DOWN) | headers pulled (wick) or flush-clipped at the bench — there's no flat belly until they're gone — then VHB'd at the etched **RS485 floor footprint**: the lane sits 2mm behind the DB9 zone, terminal end at the A/B mark, 7mm back from the jack's ~19mm rear reach (07-24 dry-fit rearrange); the jack's pin-2/pin-3 cup pigtails land under the A/B screws, 5V/GND solder into the terminal-end holes and dress back along the wall, DI + the DE/RE tie leave the far end toward the XIAO |
+| 74AHCT125 (NFM only; bare PDIP-14, ~21 × 10 over the legs) | **dead-bug at the etched AHCT zone** (back-center of the floor): glued on its back legs-up, wired per `../wiring-guides/room-games-plan.md`; the other 14 rooms leave the zone empty |
 
 ## IO — every port opening CUT in every box, labels on the score layer
 
@@ -51,29 +54,9 @@ labels, board footprints and the DB9 floor zone:**
 | right wall (**CUT**) | AUX hole Ø7 (frames the jack's ~Ø6.75 barrel; the plug's Ø3.5 shank goes inside the barrel, its molded boot stops on the wall face) | the DAC's own 3.5mm jack → Pebble |
 
 (The DMX cut was a second DB9 "port B" + a DB9→XLR adapter for exactly one
-day — replaced 2026-07-22. A DMX port is a DMX port.)
-
-## 6 mm walls — port-reach counterbores (bench drills, not cut-file work)
-
-The 2026-07-23 switch from ~3 mm to 6 mm stock buries three connectors
-deeper in the wall. Each gets a shallow counterbore on the **outside**
-face at assembly (mark through the opening, forstner/spade to depth,
-leave ~2.5–3 mm of ply standing):
-
-- **DB9 screwlocks:** the posts protrude 6.3 mm past the shell face —
-  through 6 mm ply they'd surface only ~0.3 mm, no thread for the cable
-  thumbscrews. Counterbore the two bench-drilled Ø6 post holes to ~Ø10,
-  ~3 mm deep, and the posts present ~3 mm as before.
-- **USB-C slot:** the XIAO's port sticks 2 mm past the PCB, so it now
-  ends ~4 mm below the outer face — most USB-C plugs won't reach.
-  Counterbore ~12 × 8, ~3 mm deep around the slot. Check the actual
-  power cable's overmold first; a long-shell cable may not need it.
-- **AUX:** the DAC barrel ends ~3.6 mm below the outer face — marginal
-  reach for a standard 3.5 mm plug. Counterbore Ø10, ~3 mm deep; test
-  with the real cable before carving the wall.
-
-The XLR needs nothing: its 21 mm body passes 6 mm ply with room to spare
-and the flange still screws to the outside face.
+day — replaced 2026-07-22. A DMX port is a DMX port. The 6 mm stock detour
+of 07-23 — and the port-reach counterbores it required — died 2026-07-24
+with the return to 3 mm: posts, USB-C and AUX all reach normally again.)
 
 Box side of the DB9 = screw-terminal breakout bolted through the wall by
 its jackscrews; pod side = the matching breakout; cable = **straight-
@@ -107,11 +90,13 @@ red = ETCH**. In XCS: import the SVG, select the red objects → processing
 **score** (or engrave), black → cut. The red marks are:
 
 - floor: DB9 PCB zone (34 × 31.75 — the port-A breakout screws down here
-  in wired rooms), DAC footprint (jack edge on the wall), ESP32 footprint
-  — the XIAO (USB end on the wall, long axis into the box, centered on
-  the front floor-mortise tab), RS485 footprint (49.22 × 14.05, every
-  room — long axis into the box behind the XLR's rear barrel, the A/B
-  mark flagging the screw-terminal end toward the jack)
+  in wired rooms), DAC footprint (jack edge on the wall, jack-end back),
+  ESP32 footprint — the XIAO (USB end on the wall, long axis into the
+  box, centered on the front floor-mortise tab), RS485 footprint
+  (49.22 × 14.05, every room — lane 2mm behind the DB9 zone, long axis
+  into the box, the A/B mark flagging the screw-terminal end toward the
+  jack, 7mm back from its rear reach), AHCT zone (21 × 10, back-center —
+  NFM's dead-bug shifter; empty in the other 14 rooms)
 - left wall: the DB9 + DMX labels (both openings below them are cuts)
 - front (interior face): window-panel outline + SENSOR label (the sensor
   footprints are etched on the acrylic panel itself — that's what the
@@ -132,7 +117,7 @@ corner screws leave <1mm acrylic web and it cracks.
 
 - `node-enclosure.scad` — the design; every dimension is a named parameter
 - `node-enclosure.svg` — the PLY job: six wall panels nested on one
-  ~225 × 190 mm bed, black = cut + red = etch (6 mm ply)
+  ~231 × 178 mm bed, black = cut + red = etch (3 mm ply)
 - `window-acrylic.svg` — the ACRYLIC job: the sensor-window panel alone
 - `node-enclosure-cuddle.svg` / `window-acrylic-cuddle.svg` — Cuddle's
   wide-aperture one-off (14 rooms cut standard, 1 cuts these)
@@ -164,11 +149,13 @@ python3 export.py    # re-export all SVGs after editing the .scad
    the flange is the jig; it rests on the outside face). Bench-prep the
    MAX485 too: the received modules have pins-DOWN headers, so pull them
    (wick) or clip them flush, then VHB the module at its etched RS485
-   footprint — screw-terminal end toward the jack, per the A/B floor
-   mark, clear of the rear barrel's ~19mm reach. Pin-2/pin-3 pigtails go
-   under the A/B screws (pin 1's joins node GND); VCC, GND, DI and the
-   DE+RE tie solder into the vacated header holes and route off the far
+   footprint — terminal end at the A/B floor mark, 7mm back from the
+   jack's rear reach. Pin-2/pin-3 pigtails go under the A/B screws
+   (pin 1's joins node GND); 5V/GND solder into the terminal-end header
+   holes and dress back along the wall, DI + the DE/RE tie leave the far
    end toward the XIAO — full recipe in `../wiring-guides/dmx-over-wifi.md`.
+   NFM additionally dead-bugs its 74AHCT125 at the etched AHCT zone
+   (`../wiring-guides/room-games-plan.md`).
    Wired rooms populate the pre-cut DB9 A window: sit the bare breakout
    PCB (case off) on the floor with its face through the window, mark
    where the two screwlock posts touch the wall, drill those Ø6 (posts

@@ -1,7 +1,7 @@
 // LoHP maze — universal room-node enclosure, LASER-CUT edition
 // ============================================================
-// ONE design for all 15 room nodes, cut on the xTool from 6mm ply (walls
-// — Tim's stock call 2026-07-23; t below is the caliper-gated real value)
+// ONE design for all 15 room nodes, cut on the xTool from 3mm ply (walls;
+// t below is the caliper-gated real value — 2.9 measured)
 // + 3mm acrylic (window panel). Six finger-jointed panels GLUE together
 // (floor mortises through the wall bottoms, corner fingers interlock);
 // the LID is the service hatch — it SLIDES in and out OVER the SHORT
@@ -57,11 +57,13 @@ part = "3d";     // front|back|left|right|floor|lid|window|sheet|3d
 cuddle = false;  // true = Cuddle's wide-aperture one-off (2450 + 2410C)
 
 // ---- stock -------------------------------------------------------------
-t  = 6.0;        // ply thickness — 6mm stock per Tim 2026-07-23,
-                 //  CONFIRMED a true 6.0 on the sheet 2026-07-24 (unlike
-                 //  the "3mm" sheet that measured 2.9). Everything below
-                 //  derives from t — db9_cx/db9_cz/xlr_cz/dac_cy went
-                 //  t-relative with the 6mm switch
+t  = 2.9;        // ply thickness — back to 3mm stock (Tim 2026-07-24,
+                 //  ending the one-day 6mm detour; the 07-24 dry-fit kit
+                 //  was cut from this stock): 2.9 = the 07-21 caliper of
+                 //  the "3mm" sheet. Re-caliper any NEW batch before
+                 //  burning. Everything below derives from t —
+                 //  db9_cx/db9_cz/xlr_cz/dac_cy stay t-relative (keep
+                 //  them so; the 6mm episode proved why)
 acrylic_t = 3;   // window stock, nominal (preview + screw length only)
 kerf_note = "cut outlines are exact; add kerf offset in xTool XCS";
 
@@ -87,20 +89,23 @@ cap_bridge = 3;          // side channel stops this short of the back wall
                          //  lid back tongues relieved cap_bridge+0.2
 
 // ---- measured boards (calipers on the real parts, 2026-07-21) ----------
-dac_l = 31.93;  dac_w = 17.23;  // PCM5102A; 3.5mm jack on a LONG edge (Tim
-dac_cy = (D - 2*t)/2 + 15;      //  07-22 — the short-edge note was wrong),
-                                //  cy t-relative since the 6mm switch (a
-                                //  fixed 51 ran the board into the back
-                                //  wall's inner face at t=6; =48 now, ~51
-                                //  at the old 2.9),
-                                //  barrel +2.44 past the PCB -> the LONG
-                                //  edge butts the right wall, board reaches
-                                //  only 17.23 into the box, barrel fills
-                                //  the AUX hole at dac_cy. Jack offset
-                                //  along that edge unmeasured -> footprint
-                                //  assumes centered; the cut hole is the
-                                //  datum (barrel-in-hole locates the board,
-                                //  screw down where it lands).
+dac_l = 31.93;  dac_w = 17.23;  // PCM5102A; 3.5mm jack on a LONG edge
+dac_cy = (D - 2*t)/2 + 15;      //  (confirmed at the 07-24 dry-fit) —
+dac_jack_off = 10;              //  but NOT centered on it: the barrel
+                                //  sits ~10mm off the board center toward
+                                //  one end (Tim 07-24: the cut hole was
+                                //  "about 10mm too far"; the old footprint
+                                //  assumed centered). The AUX hole cuts at
+                                //  dac_cy + dac_jack_off — MOUNT THE BOARD
+                                //  JACK-END TOWARD THE BACK to match, and
+                                //  CALIPER the exact offset before the
+                                //  next burn. Footprint etch stays at
+                                //  dac_cy (board center); the cut hole is
+                                //  the datum (barrel-in-hole locates the
+                                //  board, screw down where it lands).
+                                //  Barrel +2.44 past the PCB -> the LONG
+                                //  edge butts the right wall, board
+                                //  reaches only 17.23 into the box.
 xiao_l = 21.46; xiao_w = 17.78; // XIAO ESP32-S3; USB-C on the SHORT (17.78)
 xiao_cy = (D - 2*t)/2 - 18;     //  end, +2 past the PCB -> that END butts the
                                 //  right wall, long axis into the box, port
@@ -115,13 +120,17 @@ ld2410_w = 22.14; ld2410_h = 16;   // radar, sensor side faces the window
 ld2450_w = 44.12; ld2450_h = 15.4; // Cuddle's second radar
 rs485_l = 49.22; rs485_w = 14.05;  // MAX485 breakout — the room's DMX
                                    //  driver. RECEIVED batch 2026-07-23 =
-                                   //  the screw-terminal variant: A/B under
-                                   //  a 2P screw terminal ON TOP at one
-                                   //  end; both 4P headers (DI DE RE RO /
-                                   //  VCC B A GND) come factory-soldered
-                                   //  PINS DOWN, so there is no flat belly
-                                   //  to VHB until the bench pulls or
-                                   //  flush-clips them (dmx-over-wifi.md)
+                                   //  the screw-terminal variant: the A/B
+                                   //  screw terminal sits ON TOP above the
+                                   //  VCC/B/A/GND header end (07-24 photo
+                                   //  fix — the first verbal note had the
+                                   //  ends flipped); RO/RE/DE/DI at the
+                                   //  far end. Both 4P headers come
+                                   //  factory-soldered PINS DOWN — no flat
+                                   //  belly to VHB until the bench pulls
+                                   //  or flush-clips them (dmx-over-wifi.md)
+ahct_l = 21; ahct_w = 10;          // 74AHCT125, bare PDIP-14 over the legs
+                                   //  (Tim 07-23) — NFM's dead-bug shifter
 
 // ---- features ----------------------------------------------------------
 win_w = cuddle ? 68 : 56;         // aperture (68 fits 2450+2410C side by side)
@@ -203,6 +212,17 @@ xlr_cz = t + 16;                     //  had; t-relative so the Ø24 hole
                                      //  mortise notch below it (a fixed 19
                                      //  left a 1mm ligament at t=6) and
                                      //  clears the lid channel above
+// 07-24 dry-fit rearrange (Tim, from the photo): the MAX485 lane moves
+// FORWARD off the jack's centerline — 2mm behind the DB9 floor zone —
+// and its terminal end backs off to 7mm behind the jack's ~19mm rear
+// reach, so the cup pigtails bend clear of the cups. Flat mounting holds
+// (no on-its-side needed). The freed back-center gets the AHCT zone.
+rs485_x0 = 26;                       // terminal-end x (from the left wall)
+rs485_cy = db9_cx - t + db9_zone[0]/2 + 2 + rs485_w/2;  // = 44 at t=2.9
+ahct_cx = 44.5; ahct_cy = 62;        // 74AHCT125 dead-bug zone (NFM only),
+                                     //  back-center: 6mm behind the RS485
+                                     //  lane, 5mm off the back wall, far
+                                     //  from the DAC
 strap_w = 5; strap_h = 24;   // velcro-strap slots (back wall, vertical: a
                              //  20mm one-wrap passes horizontally around a
                              //  scaffold leg and through both)
@@ -347,12 +367,12 @@ module panel_right() difference() {              // x runs front->back
   // floor-mortise notch — the USB slot leaves only a ~1.7mm ply bridge
   // (AUX ~2.5 at Ø7) until the floor tab glues in behind — handle gently
   translate([t + xiao_cy, t + usb_z]) square([usb_w, usb_h], center = true);
-  translate([t + dac_cy, t + jack_z]) circle(d = jack_hole);
+  translate([t + dac_cy + dac_jack_off, t + jack_z]) circle(d = jack_hole);
 }
 module right_etch() {                            // x runs front->back
   translate([t + xiao_cy, t + 9]) label("USB", 2.8);   // holes = CUT layer;
-  translate([t + dac_cy, t + 13]) label("AUX", 2.8);   //  labels score only
-}
+  translate([t + dac_cy + dac_jack_off, t + 13]) label("AUX", 2.8);
+}                                                //  labels score only
 
 module panel_floor() difference() {
   union() {
@@ -383,16 +403,22 @@ module floor_etch() {                            // component-side marks
   translate([W - 2*t - xiao_l/2, xiao_cy]) label("ESP32", 3);      //  (VHB),
                                                  //  USB END to the wall, the
                                                  //  port out the cut slot
-  // MAX485 (every room — the DMX driver): long axis INTO the box, on the
-  // jack's centerline but starting at x=21 — clear of the XLR rear barrel,
-  // which reaches ~19mm in at z 7-31. Screw-terminal END toward the jack
-  // (the A/B label marks it) so the pigtails from the cups stay short; the
-  // signal wires (VCC GND DI DE+RE) leave the far end toward the XIAO.
-  // Received modules carry pins-DOWN headers: pull or flush-clip them at
-  // the bench, then VHB flat here — dmx-over-wifi.md has the full recipe
-  translate([21 + rs485_l/2, xlr_cx - t]) oline(rs485_l, rs485_w);
-  translate([21 + rs485_l/2, xlr_cx - t]) label("RS485", 2.8);
-  translate([16, xlr_cx - t]) label("A/B", 2.2);
+  // MAX485 (every room — the DMX driver): long axis INTO the box, lane
+  // 2mm behind the DB9 zone, terminal END toward the jack at rs485_x0
+  // (the A/B label marks it) — 7mm clear of the XLR's ~19mm rear reach so
+  // the cup pigtails bend without fouling the cups (07-24 dry-fit).
+  // Photo-corrected ends: VCC/B/A/GND header AT the terminal end (5V/GND
+  // dress back along the wall), RO/RE/DE/DI at the far end (DI + the
+  // DE/RE tie head toward the XIAO). Pins-DOWN headers: pull or
+  // flush-clip at the bench, then VHB flat here — dmx-over-wifi.md
+  translate([rs485_x0 + rs485_l/2, rs485_cy]) oline(rs485_l, rs485_w);
+  translate([rs485_x0 + rs485_l/2, rs485_cy]) label("RS485", 2.8);
+  translate([rs485_x0 - 6, rs485_cy]) label("A/B", 2.2);
+  // 74AHCT125 (NFM only — the truck-lamp data shifter): dead-bug legs-up
+  // in this zone, recipe in wiring-guides/room-games-plan.md; the other
+  // 14 rooms leave it empty
+  translate([ahct_cx, ahct_cy]) oline(ahct_l, ahct_w);
+  translate([ahct_cx, ahct_cy]) label("AHCT", 2.5);
 }
 
 module panel_lid() difference() {
