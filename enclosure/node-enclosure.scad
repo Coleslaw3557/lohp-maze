@@ -4,11 +4,18 @@
 // t below is the caliper-gated real value — 2.9 measured)
 // + 3mm acrylic (window panel). Six finger-jointed panels GLUE together
 // (floor mortises through the wall bottoms, corner fingers interlock);
-// the LID is the service hatch — it SLIDES in and out OVER the SHORT
-// front wall (wall top = channel bottom; 07-22 rev3 — the old full-height
-// wall + entry mouth could never pass the lid's tongues), riding side
-// tongues in through-slot channels (no fasteners; finger-pull notch at
-// the front edge).
+// the LID is the service hatch — a DROP-IN TRAY (07-24 rev4; the rev3
+// sliding tray wedged on the real kit and is gone): it drops straight
+// down, edge tabs landing in TOP notches on all four full-height walls,
+// finger notch at the front edge to lift it, velcro dabs against wind.
+// No fasteners.
+// ETCH SIDES (07-24, Tim's kit came out wrong): one sheet burns every
+// mark on the face-up side, and the chiral side walls FORCE where that
+// face ends up — as-drawn, the left wall's etch landed INSIDE. The flat
+// outputs now PRE-MIRROR the left wall (labels re-drawn un-mirrored) so
+// DMX/DB9 land OUTSIDE like the right wall's USB/AUX. Symmetric panels
+// are placed by the assembler: floor etch UP, front etch IN (the window
+// outline), back etch OUT. Burn the sheet as imported — etch face up.
 //
 // Holds the standard node build: XIAO ESP32-S3 + PCM5102A DAC + the room's
 // ranging sensor(s) against the window (LD2410C, VL53L1X, Cuddle's
@@ -72,21 +79,24 @@ W  = 110;        // width  (front/back length)
 D  = 78;         // depth  (left/right length)
 inner_h = 34;    // interior height (floor top -> lid underside)
 
-// ---- sliding lid -------------------------------------------------------
-slide_w = t + 0.4;       // channel width (lid thickness + play)
-slide_z = t + inner_h;   // channel bottom
-cap_h   = 3.6;           // rail above the channel
-Hw = slide_z + slide_w + cap_h;  // SIDE/BACK wall height = outer height
-                         //  (43.8 at t=2.9). The FRONT wall is SHORT —
-                         //  its top edge sits at slide_z and the lid
-                         //  slides in over it (rev3)
-lid_w   = W - 2*t + 4.4; // side tongues ride 2.2mm into each side channel
-lid_d   = D - t;         // front edge flush outside; back edge stops
-                         //  against the back wall's inner face
-lid_notch = 14;          // finger pull, front edge
-cap_bridge = 3;          // side channel stops this short of the back wall
-                         //  so the cap rail stays attached to the panel;
-                         //  lid back tongues relieved cap_bridge+0.2
+// ---- drop-in lid (rev4 2026-07-24) -------------------------------------
+// The rev3 sliding tray is DEAD — it wedged on the real 07-24 kit.
+// Post-mortem: 0.4mm channel clearance vs diode-kerf taper + 3mm-ply
+// bow; a 108.6-wide lid guided by 2.2mm tongues racks and wedges under
+// any off-center pull; and the cap rail above each through-slot channel
+// was a 72mm stick anchored by one 3mm bridge — the first wedged lid
+// pries it. rev4: every wall runs full height, the lid is a floor-twin
+// that drops STRAIGHT DOWN, its edge tabs landing in matching top
+// notches on all four walls. Nothing threads, nothing racks, nothing
+// cantilevers. Velcro dabs (strap stash) on the front tab shelves hold
+// it against wind; the finger notch lifts it out.
+Hw = 2*t + inner_h;      // wall height = outer height (39.8 at t=2.9);
+                         //  the lid sits IN the walls, top face flush,
+                         //  underside at Hw-t = inner_h above the floor
+lid_notch = 14;          // finger pull, front edge center
+lid_front_cs = [-32, 32];  // front-edge lid tabs skip the center so the
+                           //  finger notch owns it; the back edge keeps
+                           //  all of long_cs, the sides keep short_cs
 
 // ---- measured boards (calipers on the real parts, 2026-07-21) ----------
 dac_l = 31.93;  dac_w = 17.23;  // PCM5102A; 3.5mm jack on a LONG edge
@@ -211,7 +221,8 @@ xlr_cz = t + 16;                     //  had; t-relative so the Ø24 hole
                                      //  keeps ~4mm of ply above the floor
                                      //  mortise notch below it (a fixed 19
                                      //  left a 1mm ligament at t=6) and
-                                     //  clears the lid channel above
+                                     //  sits well below the wall-top lid
+                                     //  notches
 // 07-24 dry-fit rearrange (Tim, from the photo): the MAX485 lane moves
 // FORWARD off the jack's centerline — 2mm behind the DB9 floor zone —
 // and its terminal end backs off to 7mm behind the jack's ~19mm rear
@@ -229,12 +240,9 @@ strap_w = 5; strap_h = 24;   // velcro-strap slots (back wall, vertical: a
 // ---- joinery -----------------------------------------------------------
 nseg = 5;                    // corner finger segments over Hw
 seg  = Hw / nseg;            // front/back own segments 0,2,4 at the corners
-stub = slide_z - 4*seg;      // front wall's finger above the seg-3 notch =
-                             //  (18-3t)/5: 1.86 at t=2.9, 0 exactly at
-                             //  t=6. A sub-mm sliver can't survive the
-                             //  laser, so both walls drop it when <=1 —
-                             //  the seg 0-3 alternation still locks the
-                             //  corner
+                             //  (the rev3 stub-finger special case died
+                             //  with the sliding lid — all four joints
+                             //  are plain 5-seg alternation again)
 ftab_w = 20;                 // floor mortise tab width
 long_cs  = [-32, 0, 32];     // tab centers on the W edges (about midline)
 short_cs = [-18, 18];        // tab centers on the D edges
@@ -248,6 +256,10 @@ eps = 0.01;
 // ---- joinery helpers (2D) ---------------------------------------------
 module bottom_notches(len, centers)          // cut floor tabs into a wall
   for (c = centers) translate([len/2 + c - ftab_w/2, -eps])
+    square([ftab_w, t + eps]);
+
+module top_notches(len, centers)             // the lid's tabs land here
+  for (c = centers) translate([len/2 + c - ftab_w/2, Hw - t])
     square([ftab_w, t + eps]);
 
 module corner_notches(len)                   // notch a panel's vertical edges
@@ -268,25 +280,16 @@ module label(txt, size = 3.2)
 
 // ---- panels (2D) -------------------------------------------------------
 module panel_front() difference() {
-  // SHORT wall — top edge AT the channel bottom, the lid slides in over it
-  // (rev3, replacing the full-height wall + entry mouth). Why: the lid's
-  // tongues make it 108.6 wide, but a mouth can only ever span 104.2
-  // before the top strip severs — and the wall's seg-4 corner fingers sit
-  // exactly at channel height, so anything wider than the mouth can NEVER
-  // cross the wall plane. The lid could not be inserted at all (Tim
-  // caught it 07-22; 3D previews don't collision-check a sliding part —
-  // walk the insertion kinematics). Short wall = the classic laser-cut
-  // sliding-lid form. Above the seg-3 notch a stub finger (height = the
-  // shared `stub` param, 1.86 at t=2.9) remains at each end, filling the
-  // side wall's stub notch just below the channel — unless stub <= 1:
-  // sub-mm fingers char off, so both walls drop it (at t=6 it is 0).
-  square([W, slide_z]);
-  corner_notches(W);                   // segs 1,3 — both below slide_z
-  if (stub > 0.05 && stub <= 1)        // clear the unusable sliver so the
-    for (x = [0, W - t])               //  side wall's solid edge can butt
-      translate([x - eps, 4*seg - eps])
-        square([t + 2*eps, stub + 2*eps]);
+  // full height again (rev4): the drop-in lid needs no channel and no
+  // short wall, so the rev3 mouth/stub gymnastics are gone. (Kept lesson:
+  // walk the insertion kinematics of any moving part — 3D previews don't
+  // collision-check them. The drop-in lid's kinematics are one straight
+  // vertical translation, which cannot bind.)
+  square([W, Hw]);
+  corner_notches(W);                   // segs 1,3
   bottom_notches(W, long_cs);
+  top_notches(W, lid_front_cs);        // lid tabs; center stays solid — the
+                                       //  finger notch dips over it
   translate([W/2 - win_w/2, win_cz - win_h/2]) square([win_w, win_h]); // aperture
 }
 
@@ -300,41 +303,26 @@ module front_etch() {                        // interior face marks
 }
 
 module panel_back() difference() {
-  square([W, Hw]);                               // SOLID at lid height — the
-  corner_notches(W);                             //  lid STOPS against this
-  bottom_notches(W, long_cs);                    //  wall's inner face (a
-  for (c = [-27, 27])                            //  through-slot here would
-    translate([W/2 + c - strap_w/2, (34 - strap_h)/2 + t])  // be open to the
-      square([strap_w, strap_h]);                //  outside when closed)
+  square([W, Hw]);
+  corner_notches(W);
+  bottom_notches(W, long_cs);
+  top_notches(W, long_cs);                       // lid tabs, all three
+  for (c = [-27, 27])                            // velcro strap slots
+    translate([W/2 + c - strap_w/2, (34 - strap_h)/2 + t])
+      square([strap_w, strap_h]);
 }
 
 module back_etch()
   translate([W/2, 19]) label("VELCRO", 2.8);     // strap between the slots
 
-module panel_side() {          // common left/right: full-D
-  difference() {
-    square([D, Hw]);
-    // back edge: full segs 0,2,4 — the back wall keeps full height
-    for (s = [0, 2, 4])
-      translate([D - t - eps, s * seg]) square([t + 2*eps, seg]);
-    // front edge: segs 0,2 + only a STUB of seg 4 below the channel (the
-    // front wall is short, rev3). The channel slot below cuts the
-    // 36.9-40.2 band open to the front edge for the tongues; ABOVE it the
-    // cap rail now runs clear to the front edge (this also closes the old
-    // top-front corner void the full seg-4 notch used to leave)
-    for (s = [0, 2])
-      translate([-eps, s * seg]) square([t + 2*eps, seg]);
-    if (stub > 1)
-      translate([-eps, 4 * seg]) square([t + 2*eps, stub + eps]);
+module panel_side() {          // common left/right: full-D, full height —
+  difference() {               //  rev4 deleted the channel, the cap rail
+    square([D, Hw]);           //  and the stub special case; both vertical
+    // front + back edges: plain 5-seg joints, front/back walls own 0,2,4
+    for (s = [0, 2, 4], x = [0, D - t])
+      translate([x - eps, s * seg]) square([t + 2*eps, seg]);
     bottom_notches(D, short_cs);
-    // lid channel: open at the front edge (x=0, where the lid enters),
-    // STOPS cap_bridge short of the back wall's inner face. That bridge
-    // is what keeps the cap rail above the channel attached — the seg-4
-    // corner notches sever the channel band at both ends, so a full-
-    // length slot turns the rail into a loose stick (Tim caught it on
-    // the 2D sheet 2026-07-22; the 3D preview renders islands in place).
-    // The lid's back tongue corners are relieved to match.
-    translate([-eps, slide_z]) square([D - t - cap_bridge + eps, slide_w]);
+    top_notches(D, short_cs);  // lid tabs
   }
 }
 
@@ -351,9 +339,19 @@ module panel_left() difference() {               // x runs front->back
   translate([db9_cx, db9_cz]) square([db9_cut_w, db9_cut_h], center = true);
 }
 
-module left_etch() {                             // x runs front->back
-  translate([db9_cx, db9_cz + 12]) label("DB9", 3);   // the window = CUT now;
-  translate([xlr_cx, xlr_cz + 14]) label("DMX", 2.8); //  labels score only
+// FLAT outputs pre-mirror the left wall (07-24 label-side fix): the two
+// side walls are chiral twins cut from one same-side-up sheet, so one of
+// them must show its etch face inward once assembled — and as-drawn that
+// was the LEFT wall, hiding DMX/DB9 inside the box. Mirroring the cut
+// flips its etch face to the EXTERIOR; the labels are then re-drawn
+// UN-mirrored at mirrored positions so the text reads correctly outside.
+// (assembly() keeps the un-mirrored panel_left: the physical mirrored
+// part, flipped over during glue-up, lands exactly there.)
+module panel_left_cut() translate([D, 0]) mirror([1, 0]) panel_left();
+
+module left_etch_cut() {                         // x runs BACK->front
+  translate([D - db9_cx, db9_cz + 12]) label("DB9", 3);   // windows = CUT;
+  translate([D - xlr_cx, xlr_cz + 14]) label("DMX", 2.8); //  labels score
   // no screwlock marks: sit the breakout PCB in its floor zone, let the
   // posts touch the wall, mark the contact points, drill those Ø6 — the
   // real part beats the nominal 24.99 spacing (measured 24.26-ish)
@@ -422,18 +420,20 @@ module floor_etch() {                            // component-side marks
 }
 
 module panel_lid() difference() {
-  square([lid_w, lid_d]);
-  // no front corner notches since rev3 — with the short front wall there
-  // is no mouth to squeeze through, and the full-width front corners plug
-  // the top-front corner columns against dust
-  // back corner relief: the side channels stop cap_bridge short of the
-  // back wall — clear the tongues past that, so the lid's center span
-  // still seats against the back wall's inner face
-  for (x = [-eps, lid_w - 2.4])
-    translate([x, lid_d - cap_bridge - 0.2])
-      square([2.4 + eps, cap_bridge + 0.2 + eps]);
-  translate([lid_w/2, 0]) circle(d = lid_notch); // finger pull
-}
+  union() {                                      // a floor-twin: drops in
+    square([W - 2*t, D - 2*t]);                  //  from above, tabs on all
+    for (c = lid_front_cs)                       //  four edges landing in
+      translate([(W - 2*t)/2 + c - ftab_w/2, -t]) square([ftab_w, t + eps]);
+    for (c = long_cs)                            //  the walls' top notches
+      translate([(W - 2*t)/2 + c - ftab_w/2, D - 2*t - eps]) square([ftab_w, t + eps]);
+    for (c = short_cs) {
+      translate([-t, (D - 2*t)/2 + c - ftab_w/2]) square([t + eps, ftab_w]);
+      translate([W - 2*t - eps, (D - 2*t)/2 + c - ftab_w/2]) square([t + eps, ftab_w]);
+    }
+  }
+  translate([(W - 2*t)/2, 0]) circle(d = lid_notch); // finger pull — dips
+}                                                //  over the front wall's
+                                                 //  solid top-edge center
 
 module panel_window() difference() {             // cut this one in acrylic
   translate([-panel_w/2, -panel_h/2]) square([panel_w, panel_h]);
@@ -464,16 +464,16 @@ module sheet() {
   panel_front();
   translate([0, Hw + 6])       panel_back();
   translate([t, 2*Hw + 12 + t]) panel_floor();
-  translate([W + 12, 0])   panel_left();
+  translate([W + 12, 0])   panel_left_cut();
   translate([W + 12, Hw + 6]) panel_right();
-  translate([W + 12, 2*Hw + 12]) panel_lid();
+  translate([W + 12 + t, 2*Hw + 12 + t]) panel_lid();
 }
 
 module sheet_etch() {
   front_etch();
   translate([0, Hw + 6])       back_etch();
   translate([t, 2*Hw + 12 + t]) floor_etch();
-  translate([W + 12, 0])   left_etch();
+  translate([W + 12, 0])   left_etch_cut();
   translate([W + 12, Hw + 6]) right_etch();
 }
 
@@ -483,8 +483,8 @@ module assembly() {
   color("Peru")      translate([0, D, 0]) rotate([90, 0, 0]) linear_extrude(t) panel_back();
   color("Sienna")    rotate([90, 0, 90]) linear_extrude(t) panel_left();
   color("Sienna")    translate([W - t, 0, 0]) rotate([90, 0, 90]) linear_extrude(t) panel_right();
-  color("Tan", 0.85)                              // lid shown half-slid-out
-    translate([(W - lid_w)/2, -22, slide_z]) linear_extrude(t) panel_lid();
+  color("Tan", 0.85)                              // lid hovering above its
+    translate([t, t, Hw - t + 14]) linear_extrude(t) panel_lid();  // seat
   color("LightBlue", 0.6)
     translate([W/2, t + 4 + eps, win_cz]) rotate([90, 0, 0]) linear_extrude(acrylic_t) panel_window();
 }
@@ -492,7 +492,7 @@ module assembly() {
 // ---- part selection ----------------------------------------------------
 if (part == "front")  panel_front();
 else if (part == "back")   panel_back();
-else if (part == "left")   panel_left();
+else if (part == "left")   panel_left_cut();
 else if (part == "right")  panel_right();
 else if (part == "floor")  panel_floor();
 else if (part == "lid")    panel_lid();
@@ -500,7 +500,7 @@ else if (part == "window") panel_window();
 else if (part == "sheet")  sheet();
 else if (part == "front_etch")  front_etch();
 else if (part == "back_etch")   back_etch();
-else if (part == "left_etch")   left_etch();
+else if (part == "left_etch")   left_etch_cut();
 else if (part == "right_etch")  right_etch();
 else if (part == "floor_etch")  floor_etch();
 else if (part == "window_etch") window_etch();

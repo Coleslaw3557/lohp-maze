@@ -3,7 +3,7 @@
 > **Box construction superseded 2026-07-20**: the shop-built 17×22×10 cm
 > wooden box is replaced by the LASER-CUT universal enclosure in
 > `../enclosure/` (one OpenSCAD design → xTool SVGs; finger-jointed glued
-> panels, screw-off lid; GX panel connectors for all IO; swappable acrylic
+> panels, drop-in tab lid; XLR/DB9/USB/AUX wall ports; swappable acrylic
 > sensor-window panel). Everything else in this plan — mounting positions,
 > boresight yaw/tilt angles, the mock-bay tuning protocol — still applies
 > unchanged.
@@ -30,8 +30,9 @@ Constraints this plan is built around (decided 2026-07-17):
   terminals for the wired extras. Buttons and piezo knock pads are the one
   physical exception: they sense the surface a visitor touches, so the
   disc/switch stays at the interaction point and 2-wires back to the box
-  (arcade buttons → GPIO, piezo discs → ADC front-ends; Cuddle's box also
-  terminates the hex 4-button station on the back faces beside it).
+  (arcade buttons → GPIO, piezo discs → ADC front-ends; Cuddle's old
+  4-button rail is gone as of 2026-07-23 — the orb is that room's control
+  surface).
 - **Mounts on scaffold frames only** — legs, headers/top rails, doorway tubes.
   Never on the 7'×4' scissor cross braces (flexy, in the way, and they get
   removed/re-pinned during assembly).

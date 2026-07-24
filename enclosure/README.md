@@ -5,16 +5,19 @@ nodes as **laser-cut panels for the xTool**: six finger-jointed pieces that
 glue together, plus the acrylic sensor-window panel. Stock is **3 mm ply**
 (re-decided 2026-07-24, ending a one-day 6 mm detour; `t = 2.9` = the
 sheet's 07-21 caliper — re-caliper any new batch). Outer
-110 × 78 × 43.8 mm, interior 104.2 × 72.2 × 34 — as small as reasonable
+110 × 78 × 39.8 mm, interior 104.2 × 72.2 × 34 — as small as reasonable
 around the node build. Every derived position tracks `t`
 (`db9_cx`/`db9_cz`/`xlr_cz`/`dac_cy` are t-relative formulas — the 6 mm
 episode's lasting gift), so re-exporting IS the thickness update. The lid
-is a **sliding tray**: it slides in and out **over the SHORT front wall**
-(that wall tops out at the channel bottom, t + 34 = 36.9 — the 07-22 rev3
-fix: a full-height wall with an entry mouth can never pass the lid's
-tongues, which are wider than any mouth that leaves the wall in one
-piece), riding through-slot channels in the side walls — no fasteners,
-finger-pull notch at the front edge.
+is a **drop-in tray** (07-24 rev4 — the rev3 sliding tray wedged on the
+real kit: 0.4 mm channel clearance vs kerf taper and ply bow, a
+108.6-wide lid guided by 2.2 mm tongues that racks under any off-center
+pull, and a cap rail hanging off one 3 mm bridge; all deleted): every
+wall runs full height, the lid is a floor-twin that drops straight down
+with its edge tabs landing in **top notches on all four walls** — one
+vertical translation, nothing to thread or rack. Finger notch at the
+front edge lifts it out; two velcro dabs on the front tab shelves (strap
+stash) hold it against playa wind. No fasteners.
 
 Board footprints were measured with calipers on the real parts (2026-07-21;
 the DB9 breakout PCB re-measured 2026-07-22 at 1¼" = 31.75 long, D-sub
@@ -39,8 +42,8 @@ offset before the next burn. Acrylic 3 nominal, velcro 20mm one-wrap.
 ## IO — every port opening CUT in every box, labels on the score layer
 
 **Since the 07-22 rev ALL port openings are cut in the kit: the sensor
-window aperture, the two back strap slots, the lid's slide channels
-(joinery, filled by the lid itself), the XLR DMX barrel hole
+window aperture, the two back strap slots, the wall-top lid notches
+(joinery, filled by the lid's tabs), the XLR DMX barrel hole
 (`../wiring-guides/dmx-over-wifi.md` — every room is its own DMX source),
 the DB9 A window, the USB-C slot and the AUX hole. Nothing port-shaped is
 left to open on the bench; the red/etch layer (score in XCS) is only
@@ -87,7 +90,23 @@ on the midline** (corner screws would leave <1mm acrylic web → cracks).
 
 Each SVG carries two colours in one coordinate frame — **black = CUT,
 red = ETCH**. In XCS: import the SVG, select the red objects → processing
-**score** (or engrave), black → cut. The red marks are:
+**score** (or engrave), black → cut. **Burn the sheet exactly as
+imported (no mirroring), etch face up.**
+
+**Which face the etch lands on (07-24 — Tim's kit came out wrong):** one
+sheet burns every mark on its face-up side, and the two chiral side
+walls FORCE where that face ends up in the assembled box. As-drawn, the
+left wall's DMX/DB9 labels landed INSIDE — so the flat outputs now ship
+the **left wall pre-mirrored** (label text re-drawn un-mirrored), putting
+its etch OUTSIDE like the right wall's USB/AUX. The symmetric panels are
+the assembler's choice — orient them at glue-up:
+
+- **floor**: etch (footprints) faces UP into the box
+- **front**: etch (window outline + SENSOR) faces IN
+- **back**: etch (VELCRO) faces OUT
+- **left / right**: labels face OUT — already forced by the cut geometry
+
+The red marks are:
 
 - floor: DB9 PCB zone (34 × 31.75 — the port-A breakout screws down here
   in wired rooms), DAC footprint (jack edge on the wall, jack-end back),
@@ -117,7 +136,7 @@ corner screws leave <1mm acrylic web and it cracks.
 
 - `node-enclosure.scad` — the design; every dimension is a named parameter
 - `node-enclosure.svg` — the PLY job: six wall panels nested on one
-  ~231 × 178 mm bed, black = cut + red = etch (3 mm ply)
+  ~232 × 170 mm bed, black = cut + red = etch (3 mm ply)
 - `window-acrylic.svg` — the ACRYLIC job: the sensor-window panel alone
 - `node-enclosure-cuddle.svg` / `window-acrylic-cuddle.svg` — Cuddle's
   wide-aperture one-off (14 rooms cut standard, 1 cuts these)
@@ -170,11 +189,12 @@ python3 export.py    # re-export all SVGs after editing the .scad
    its outline (2mm pilots for the M2s, on the midline near the panel
    ends — never the corners). Wire per `../wiring-guides/db9-field-wiring.md`
    + `../wiring-guides/dmx-over-wifi.md`.
-4. Lid = the service hatch: slide it in over the short front wall's top
-   edge (the tongues enter the side channels' open front ends) until the
-   back edge seats against the back wall; finger notch on the exposed
-   front edge pulls it out. No glue, no fasteners (a dab of velcro or one
-   bench screw through the front cap stops dust-rattle if needed).
+4. Lid = the service hatch: drop it straight in — the edge tabs land in
+   the walls' top notches, top face flush with the wall tops. Stick a
+   velcro dab (hook on the notch shelf, loop under the tab) on the two
+   front tab shelves against wind and dust-rattle; the finger notch at
+   the front edge dips over the front wall's solid top center — reach in
+   and lift. No glue, no fasteners.
 5. Mount: thread a velcro strap through the two vertical back slots and
    wrap it around the scaffold leg at the planned clamp point.
 
