@@ -3,8 +3,8 @@
 `node-enclosure.scad` generates the single enclosure used by all 15 room
 nodes as **laser-cut panels for the xTool**: six finger-jointed pieces that
 glue together, plus the acrylic sensor-window panel. Stock is **6 mm ply**
-(Tim's call 2026-07-23; `t = 6.0` is NOMINAL — caliper the actual sheet,
-set `t`, re-export before burning: the earlier "3 mm" sheet measured 2.9).
+(Tim's call 2026-07-23; `t = 6.0` **confirmed on the sheet 2026-07-24** —
+a true 6, unlike the earlier "3 mm" sheet that measured 2.9).
 Outer 110 × 78 × 50 mm, interior 98 × 66 × 34 — as small as reasonable
 around the node build. Every derived position tracks `t`
 (`db9_cx`/`db9_cz`/`xlr_cz`/`dac_cy` are t-relative formulas since the

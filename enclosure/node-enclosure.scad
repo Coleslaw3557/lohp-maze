@@ -57,12 +57,11 @@ part = "3d";     // front|back|left|right|floor|lid|window|sheet|3d
 cuddle = false;  // true = Cuddle's wide-aperture one-off (2450 + 2410C)
 
 // ---- stock -------------------------------------------------------------
-t  = 6.0;        // ply thickness — 6mm stock per Tim 2026-07-23. NOMINAL
-                 //  until the sheet is calipered (the 07-21 "3mm" sheet
-                 //  measured 2.9 — expect 6mm stock to run thin too):
-                 //  set the measured value + re-export before burning.
-                 //  Everything below derives from t — db9_cx/db9_cz/
-                 //  xlr_cz/dac_cy went t-relative with this switch
+t  = 6.0;        // ply thickness — 6mm stock per Tim 2026-07-23,
+                 //  CONFIRMED a true 6.0 on the sheet 2026-07-24 (unlike
+                 //  the "3mm" sheet that measured 2.9). Everything below
+                 //  derives from t — db9_cx/db9_cz/xlr_cz/dac_cy went
+                 //  t-relative with the 6mm switch
 acrylic_t = 3;   // window stock, nominal (preview + screw length only)
 kerf_note = "cut outlines are exact; add kerf offset in xTool XCS";
 
