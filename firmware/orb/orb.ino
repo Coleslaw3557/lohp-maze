@@ -16,11 +16,17 @@
 // "notices you" drop when someone appears, and it holds open through each
 // gesture POST (he's mid-sentence while the blocking HTTP call runs).
 //
-// Gestures (no IMU / no dock detect on this hardware — see plan doc). The orb
-// is the whole Cuddle control surface — these replace wall buttons there:
-//   tap        -> POST /api/set_theme {"next_theme": true}   (next lighting theme)
-//   swipe      -> POST /api/toggle_music {}                  (music on/off)
-//   long-press -> POST /api/run_effect_all_rooms {"effect_name":"LightningStorm"}
+// Touch (no IMU / no dock detect on this hardware — see plan doc): the orb is
+// the whole Cuddle control surface. Any touch on the idle face opens a carved
+// stone action menu (menu_olmec.h) in place of the old blind-gesture
+// vocabulary. Wedges (gold glyphs, clockwise from the top):
+//   LIGHTS  sun         -> POST /api/set_theme {"next_theme": true}
+//   MUSIC   pan pipes   -> POST /api/toggle_music {}
+//   STORM   bolt        -> POST /api/run_effect_all_rooms LightningStorm
+//                          (hold the wedge 1 s to charge — no accidental storms)
+//   FLOOR   serpent coil-> POST /api/next_floor_theme {} (lava/jungle/temple)
+//   CALM    closed eye  -> POST /api/stop_effect {}      (disarm everything)
+// Hub pyramid tap or 8 s idle closes it. The jaw speaks through each POST.
 
 #include <Arduino_GFX_Library.h>
 #include <ArduinoOTA.h>
@@ -32,6 +38,7 @@
 
 #include "board.h"
 #include "face_olmec.h"
+#include "menu_olmec.h"
 #include "secrets.h"
 
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
@@ -91,15 +98,21 @@ static bool touchPoll(TouchState &t) {
 }
 
 // ---------- dirty-rect blit ----------
-// contiguous scratch for the largest rect (jaw: 136x90)
+// strip scratch: rects taller than it allows (menu wedges) go out in chunks
 static uint16_t blitScratch[(olmec::JAW_X1 - olmec::JAW_X0) * (olmec::JAW_Y1 - olmec::JAW_Y0)];
 
 static void blitRect(int x0, int y0, int x1, int y1) {
-  int w = x1 - x0, h = y1 - y0;
+  int w = x1 - x0;
+  if (w <= 0 || y1 <= y0) return;
+  int maxRows = (int)(sizeof(blitScratch) / sizeof(blitScratch[0]) / w);
+  if (maxRows < 1) return;
   uint16_t *fb = gfx->getFramebuffer();
-  for (int y = 0; y < h; y++)
-    memcpy(blitScratch + y * w, fb + (y0 + y) * LCD_W + x0, (size_t)w * 2);
-  panel->draw16bitRGBBitmap(x0, y0, blitScratch, w, h);
+  for (int ys = y0; ys < y1; ys += maxRows) {
+    int h = ys + maxRows < y1 ? maxRows : y1 - ys;
+    for (int y = 0; y < h; y++)
+      memcpy(blitScratch + y * w, fb + (ys + y) * LCD_W + x0, (size_t)w * 2);
+    panel->draw16bitRGBBitmap(x0, ys, blitScratch, w, h);
+  }
 }
 
 static void blitEyes() {
@@ -122,24 +135,6 @@ static int postJson(const char *path, const char *body) {
   return code;
 }
 
-// Drop the jaw open with a glowing void, blit, run the blocking call: the
-// stone head is mid-sentence for the freeze instead of visibly hanging.
-static void speakingCall(const char *path, const char *body) {
-  olmec::FaceState s;
-  s.jaw = 1.0f;
-  s.talkGlow = 1.0f;
-  s.glow = 1.0f;
-  s.mood = 0.55f;
-  s.wild = 0.90f;
-  s.talkPhase = millis() * 0.0132f;
-  uint16_t *fb = gfx->getFramebuffer();
-  olmec::drawEyes(fb, baseLayer, s);
-  olmec::drawJaw(fb, baseLayer, jawTile, s);
-  blitEyes();
-  blitRect(olmec::JAW_X0, olmec::JAW_Y0, olmec::JAW_X1, olmec::JAW_Y1);
-  postJson(path, body);
-}
-
 // ---------- state ----------
 uint32_t lastFrame = 0, bootMs = 0, lastBeat = 0;
 uint32_t frames = 0, frameMsAcc = 0;
@@ -158,12 +153,16 @@ float lastBreathDrawn = -1;
 float wasAwake = 0;
 TouchState touch;
 bool wasDown = false;
-uint32_t downAt = 0, lastGestureAt = 0;
-int downX = 0, downY = 0; // where the press started
-bool movedFar = false;    // finger crossed swipe distance since press
-bool longFired = false;
+uint32_t lastDownMs = 0; // last raw finger report, for the release debounce
+uint32_t lastGestureAt = 0;
+uint16_t *menuLayer = nullptr; // carved action menu, PSRAM (menu_olmec.h)
+bool menuOpen = false;
+bool menuOpenerDown = false;   // the press that opened the menu must lift first
+int pressWedge = -2;           // wedge under the live press (-1 hub, -2 none)
+uint32_t chargeAt = 0;         // press start, for hold-to-fire wedges
+uint32_t menuTouchAt = 0;      // last touch while the menu is up (idle timeout)
+float chargeDrawn = -1;        // last charge glow painted (skip tiny deltas)
 bool otaReady = false;
-
 int faceScene = olmec::SCENE_MOSS;
 uint32_t nextSceneAt = 0;
 
@@ -173,7 +172,7 @@ static const char *const FACE_SCENE_NAMES[olmec::SCENE_COUNT] = {
 
 // Full-scene changes are rare and happen while the eyes are fully closed.
 // Rebuild both the pristine base and its matching jaw tile, then repaint one
-// complete frame.
+// complete frame. The menu is a separate PSRAM layer and remains untouched.
 static void switchFaceScene(int nextScene, const olmec::FaceState &s) {
   if (!havePanel || !baseLayer || !jawTile) return;
   faceScene = olmec::clampScene(nextScene);
@@ -188,6 +187,65 @@ static void switchFaceScene(int nextScene, const olmec::FaceState &s) {
   lastJawDrawn = lastTalkGlowDrawn = lastBreathDrawn = -1;
   lastMoodJawDrawn = lastWildJawDrawn = 9;
   Serial.printf("[orb] face scene -> %s\n", FACE_SCENE_NAMES[faceScene]);
+}
+
+// ---------- the carved action menu ----------
+// Wedge order matches the glyphs carved in menu_olmec.h (clockwise from top).
+struct MenuAction {
+  const char *label;
+  const char *path;
+  const char *body;
+  uint16_t holdMs; // 0 = fire on release; else hold this long (the storm)
+};
+static const MenuAction MENU_ACTIONS[olmec::MENU_WEDGES] = {
+    {"LIGHTS -> next theme", "/api/set_theme", "{\"next_theme\":true}", 0},
+    {"MUSIC -> toggle", "/api/toggle_music", "{}", 0},
+    {"STORM -> all rooms", "/api/run_effect_all_rooms", "{\"effect_name\":\"LightningStorm\"}", 1000},
+    {"FLOOR -> next theme", "/api/next_floor_theme", "{}", 0},
+    {"CALM -> stop effects", "/api/stop_effect", "{}", 0},
+};
+
+static void blitWedge(int w) {
+  int x0, y0, x1, y1;
+  olmec::menuWedgeRect(w, x0, y0, x1, y1);
+  blitRect(x0, y0, x1, y1);
+}
+
+static void menuShow() {
+  memcpy(gfx->getFramebuffer(), menuLayer, (size_t)LCD_W * LCD_H * 2);
+  gfx->flush();
+}
+
+// Restore the idol. openJaw = coming back mid-sentence, ahead of an action
+// POST (the stone head talks through the blocking call instead of hanging).
+static void menuClose(bool openJaw) {
+  uint16_t *fb = gfx->getFramebuffer();
+  memcpy(fb, baseLayer, (size_t)LCD_W * LCD_H * 2);
+  olmec::FaceState s;
+  if (openJaw) {
+    s.jaw = 1.0f;
+    s.talkGlow = 1.0f;
+    s.glow = 1.0f;
+    s.mood = 0.55f;
+    s.wild = 0.90f;
+    s.talkPhase = millis() * 0.0132f;
+  }
+  olmec::drawEyes(fb, baseLayer, s);
+  olmec::drawJaw(fb, baseLayer, jawTile, s);
+  gfx->flush();
+  lastJawDrawn = lastTalkGlowDrawn = lastBreathDrawn = -1; // full repaint next face frame
+  menuOpen = false;
+  pressWedge = -2;
+}
+
+static void menuFire(int wedge) {
+  const MenuAction &a = MENU_ACTIONS[wedge];
+  Serial.printf("[orb] menu: %s\n", a.label);
+  olmec::menuWedgeGlow(gfx->getFramebuffer(), menuLayer, wedge, 1.0f);
+  blitWedge(wedge);
+  delay(90); // let the lit wedge register before the face returns
+  menuClose(true);
+  postJson(a.path, a.body);
 }
 
 void setup() {
@@ -241,7 +299,9 @@ void setup() {
 
   baseLayer = (uint16_t *)ps_malloc(LCD_W * LCD_H * 2);
   jawTile = (uint16_t *)ps_malloc(olmec::JAW_TILE_W * olmec::JAW_TILE_H * 2);
+  menuLayer = (uint16_t *)ps_malloc(LCD_W * LCD_H * 2);
   if (!baseLayer || !jawTile) Serial.println("[orb] FATAL: no PSRAM for face layers");
+  if (!menuLayer) Serial.println("[orb] no PSRAM for the menu layer — touch menu disabled");
   if (havePanel && baseLayer && jawTile) {
     uint32_t t0 = millis();
     olmec::renderBase(gfx->getFramebuffer(), faceScene);
@@ -254,6 +314,11 @@ void setup() {
     gfx->flush();
     Serial.printf("[orb] olmec carved in %lums, heap=%u psram=%u\n",
                   (unsigned long)(millis() - t0), ESP.getFreeHeap(), ESP.getFreePsram());
+    if (menuLayer) { // the face is already up; the idol just sits while this carves
+      uint32_t tm = millis();
+      olmec::renderMenu(menuLayer);
+      Serial.printf("[orb] menu carved in %lums\n", (unsigned long)(millis() - tm));
+    }
     nextSceneAt = millis() + 75000;
   }
 
@@ -298,42 +363,81 @@ void loop() {
     cstWrite(0xFE, 0x01);
     Serial.println("[orb] cst816 awake, auto-sleep disabled");
   }
+  // The CST816 goes quiet in spurts while a finger rests dead still, so a raw
+  // "no finger" mid-hold is usually a report gap, not a lift (the old 3 s
+  // floor hold fired storms this way: gaps read as releases). Latch down
+  // through short gaps; a release is 220 ms of true silence. Anything that
+  // fires WHILE held (the storm charge) still demands a raw report at the
+  // moment of firing, so an early lift can never ride the latch into a fire.
+  if (touch.down) lastDownMs = now;
+  bool down = touch.down || now - lastDownMs < 220;
+
   bool cooled = now - lastGestureAt > 1000;
   bool spoke = false;
-  if (touch.down && !wasDown) {
-    downAt = now;
-    downX = touch.x;
-    downY = touch.y;
-    movedFar = false;
-    longFired = false;
-  }
-  if (touch.down) {
-    int dx = touch.x - downX, dy = touch.y - downY;
-    if (dx * dx + dy * dy >= 60 * 60) movedFar = true; // ~1/6 of the panel
-  }
-  // movedFar gates the long-press: a swipe that ends in a rest must stay a
-  // swipe, not ripen into the storm
-  if (touch.down && !longFired && !movedFar && now - downAt >= 1200 && cooled) {
-    longFired = true;
-    lastGestureAt = now;
-    Serial.println("[orb] gesture: LONG-PRESS -> storm all rooms");
-    speakingCall("/api/run_effect_all_rooms", "{\"effect_name\":\"LightningStorm\"}");
-    spoke = true;
-  }
-  if (!touch.down && wasDown && !longFired && cooled) {
-    if (movedFar) { // any direction, any speed — the most forgiving playa gesture
-      lastGestureAt = now;
-      Serial.println("[orb] gesture: SWIPE -> toggle music");
-      speakingCall("/api/toggle_music", "{}");
-      spoke = true;
-    } else if (now - downAt < 600) {
-      lastGestureAt = now;
-      Serial.println("[orb] gesture: TAP -> next theme");
-      speakingCall("/api/set_theme", "{\"next_theme\":true}");
-      spoke = true;
+  if (!menuOpen) {
+    if (down && !wasDown && cooled && menuLayer) {
+      Serial.println("[orb] menu: open");
+      menuOpen = true;
+      menuOpenerDown = true;
+      pressWedge = -2;
+      menuTouchAt = now;
+      menuShow();
+    }
+  } else {
+    if (down) menuTouchAt = now;
+    if (menuOpenerDown) {
+      if (!down) menuOpenerDown = false; // opening press must lift first
+    } else {
+      if (down && !wasDown) { // a fresh press selects
+        pressWedge = olmec::menuHit(touch.x, touch.y);
+        chargeAt = now;
+        chargeDrawn = -1;
+        if (pressWedge >= 0 && !MENU_ACTIONS[pressWedge].holdMs) {
+          olmec::menuWedgeGlow(gfx->getFramebuffer(), menuLayer, pressWedge, 0.55f);
+          blitWedge(pressWedge);
+        }
+      } else if (down && pressWedge >= 0) {
+        if (olmec::menuHit(touch.x, touch.y) != pressWedge) { // slid off: cancel
+          olmec::menuWedgeGlow(gfx->getFramebuffer(), menuLayer, pressWedge, 0);
+          blitWedge(pressWedge);
+          pressWedge = -2;
+        } else if (MENU_ACTIONS[pressWedge].holdMs) { // charging (the storm)
+          float p = (float)(now - chargeAt) / MENU_ACTIONS[pressWedge].holdMs;
+          if (p >= 1.0f && touch.down) { // raw report required to fire
+            int w = pressWedge;
+            pressWedge = -2;
+            lastGestureAt = now;
+            menuFire(w);
+            spoke = true;
+          } else if (p < 1.0f && p - chargeDrawn > 0.05f) {
+            chargeDrawn = p;
+            olmec::menuWedgeGlow(gfx->getFramebuffer(), menuLayer, pressWedge, 0.20f + 0.80f * p);
+            blitWedge(pressWedge);
+          }
+        }
+      } else if (!down && wasDown) { // release (grace expired)
+        if (pressWedge == -1) {
+          Serial.println("[orb] menu: close (hub)");
+          menuClose(false);
+        } else if (pressWedge >= 0 && !MENU_ACTIONS[pressWedge].holdMs) {
+          int w = pressWedge;
+          pressWedge = -2;
+          lastGestureAt = now;
+          menuFire(w);
+          spoke = true;
+        } else if (pressWedge >= 0) { // storm let go before the charge filled
+          olmec::menuWedgeGlow(gfx->getFramebuffer(), menuLayer, pressWedge, 0);
+          blitWedge(pressWedge);
+        }
+        pressWedge = -2;
+      }
+      if (menuOpen && !down && now - menuTouchAt > 8000) {
+        Serial.println("[orb] menu: close (timeout)");
+        menuClose(false);
+      }
     }
   }
-  wasDown = touch.down;
+  wasDown = down;
   if (spoke) { // finish the sentence after the call returns
     jawPos = 1.0f;
     talkLen = 1.5f;
@@ -428,7 +532,7 @@ void loop() {
 
   float breath = 0.5f + 0.5f * sinf(t * 6.2832f / 5.2f);
 
-  if (havePanel && baseLayer && jawTile) {
+  if (havePanel && baseLayer && jawTile && !menuOpen) {
     olmec::FaceState s;
     s.gx = gxS;
     s.gy = gyS;

@@ -1,16 +1,42 @@
 // Host-side render of face_olmec.h — writes raw RGB888.
-// Usage: preview_face out.rgb [gx gy dil glow jaw talkGlow breath mood blink wild talkPhase]
+// Usage: preview_face out.rgb [gx gy dil glow jaw talkGlow breath mood blink wild talkPhase scene]
+//        preview_face --menu out.rgb [wedge amt]   (the touch menu; wedge -1..4,
+//                                                   amt = press/charge glow)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
 #include "../face_olmec.h"
+#include "../menu_olmec.h"
+
+static void writeRgb(const char *path, const uint16_t *fb) {
+  FILE *f = fopen(path, "wb");
+  for (int i = 0; i < olmec::W * olmec::H; i++) {
+    uint16_t c = fb[i];
+    unsigned char px[3] = {(unsigned char)(((c >> 11) & 0x1F) << 3), (unsigned char)(((c >> 5) & 0x3F) << 2),
+                           (unsigned char)((c & 0x1F) << 3)};
+    fwrite(px, 1, 3, f);
+  }
+  fclose(f);
+}
 
 int main(int argc, char **argv) {
   static uint16_t base[olmec::W * olmec::H], fb[olmec::W * olmec::H];
   static uint16_t jawTile[olmec::JAW_TILE_W * olmec::JAW_TILE_H];
-  olmec::renderBase(base);
-  olmec::renderJawTile(jawTile);
+  if (argc > 2 && strcmp(argv[1], "--menu") == 0) {
+    olmec::renderMenu(base);
+    memcpy(fb, base, sizeof(fb));
+    if (argc > 3) {
+      int wedge = atoi(argv[3]);
+      float amt = argc > 4 ? atof(argv[4]) : 0.6f;
+      if (wedge >= 0 && wedge < olmec::MENU_WEDGES) olmec::menuWedgeGlow(fb, base, wedge, amt);
+    }
+    writeRgb(argv[2], fb);
+    return 0;
+  }
+  int scene = argc > 13 ? atoi(argv[13]) : olmec::SCENE_MOSS;
+  olmec::renderBase(base, scene);
+  olmec::renderJawTile(jawTile, scene);
   memcpy(fb, base, sizeof(fb));
   olmec::FaceState s;
   float breath = 0.5f;
@@ -28,13 +54,6 @@ int main(int argc, char **argv) {
   olmec::drawEyes(fb, base, s);
   olmec::drawJaw(fb, base, jawTile, s);
   olmec::nostrilBreath(fb, base, breath);
-  FILE *f = fopen(argv[1], "wb");
-  for (int i = 0; i < olmec::W * olmec::H; i++) {
-    uint16_t c = fb[i];
-    unsigned char px[3] = {(unsigned char)(((c >> 11) & 0x1F) << 3), (unsigned char)(((c >> 5) & 0x3F) << 2),
-                           (unsigned char)((c & 0x1F) << 3)};
-    fwrite(px, 1, 3, f);
-  }
-  fclose(f);
+  writeRgb(argv[1], fb);
   return 0;
 }
