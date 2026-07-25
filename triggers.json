@@ -58,50 +58,6 @@
       }
     },
     {
-      "name": "Button 1",
-      "type": "adc",
-      "room": null,
-      "action": {
-        "data": {
-          "next_theme": true
-        },
-        "method": "POST",
-        "path": "/api/set_theme"
-      }
-    },
-    {
-      "name": "Button 2",
-      "type": "adc",
-      "room": null,
-      "action": {
-        "data": {
-          "effect_name": "Lightning"
-        },
-        "method": "POST",
-        "path": "/api/run_effect_all_rooms"
-      }
-    },
-    {
-      "name": "Button 3",
-      "type": "adc",
-      "room": null,
-      "action": {
-        "data": {},
-        "method": "POST",
-        "path": "/api/start_music"
-      }
-    },
-    {
-      "name": "Button 4",
-      "type": "adc",
-      "room": null,
-      "action": {
-        "data": {},
-        "method": "POST",
-        "path": "/api/stop_music"
-      }
-    },
-    {
       "name": "Photo Bomb Shutter Button",
       "type": "button",
       "room": "Photo Bomb Room",

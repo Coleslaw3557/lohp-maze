@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: the floor of a dense tropical jungle covered in lush low undergrowth - a continuous carpet of overlapping broad leaves seen from above: big split monstera leaves, wide banana leaves and feathery fern fronds in many shades of deep and bright green, with small pockets of dark shadowed ground showing between them. Scattered among the leaves, a few large red and orange tropical flowers stand out. Waves of wind roll across the undergrowth continuously: every two or three seconds a broad gust sweeps the frame and whole patches of leaves ripple, tilt and sway together, fronds bending hard and springing back, the wave visibly traveling from one edge of the frame to the other; between gusts every leaf keeps trembling and swaying. Now and then a leaf or a bright petal tears loose, tumbles fast across the top of the undergrowth and drops out of sight between the leaves. Flat, even, shadowless ambient light that never changes. The undergrowth fills the entire frame and continues beyond every edge - no border, no clearing, no path, no sky. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no parallax. Leaves are visibly moving everywhere in the frame at every moment; continuous energetic motion from the first frame to the last. No animals, no insects, no birds, no people, no text, no watermark.",
+  "size": "960x720",
+  "duration": 15,
+  "seed": 20260840,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "G1LgvYvJQnLGfAxTQnEn",
+  "polling_url": "https://openrouter.ai/api/v1/videos/G1LgvYvJQnLGfAxTQnEn",
+  "status": "pending"
+ },
+ "final": {
+  "id": "G1LgvYvJQnLGfAxTQnEn",
+  "generation_id": "gen-vid-1784937362-7xNP7bJcO7qGOwQgV4PB",
+  "polling_url": "https://openrouter.ai/api/v1/videos/G1LgvYvJQnLGfAxTQnEn",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/G1LgvYvJQnLGfAxTQnEn/content?index=0"
+  ],
+  "usage": {
+   "cost": 2.24532,
+   "is_byok": false
+  }
+ }
+}

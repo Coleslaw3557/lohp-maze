@@ -14,6 +14,7 @@ rsync -az --delete --info=stats1 -e "ssh ${SSH_OPTS[*]}" \
     --exclude .git --exclude __pycache__ --exclude '*.pyc' \
     --exclude sim/.venv --exclude sim/sim.log --exclude sim/sim.pid \
     --filter 'protect /photos/***' --exclude /photos \
+    --filter 'protect /.floor_theme' --filter 'protect /.projector-manual' \
     ./ "root@$HOST:$DEST/"
 
 ssh "${SSH_OPTS[@]}" "root@$HOST" "bash $DEST/tools/rpi-setup.sh"

@@ -22,14 +22,18 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   server's REST API; each node's speaker plays effect cues and streamed music, commanded by the
   server over the ESPHome native API (`node_audio_manager.py` + `node_audio_config.json`).
 - **Floor projection** (`projection_engine.py` + `projection_renderer.py`): the Cuddle Cross
-  floor show, three themes on one engine — **lava** (a Mayan stepping-stone crossing with
-  sink/rise mischief and the surfacing Kukulkan), **jungle** (snakes on a leaf-litter
-  floor that flee your feet, fireflies) and **temple** (torch-lit flagstones, scarab
-  swarms, a skittish resident spider) — rendered by the same server Pi straight to
-  its HDMI framebuffer and thrown onto the upper deck by a face-down short-throw projector.
+  floor show, five themes on one engine — **lava** (a Mayan stepping-stone crossing with
+  sink/rise mischief and the surfacing Kukulkan), **jungle** (small venomous snakes on an
+  open mossy floor that flee your feet, fireflies), **temple** (torch-lit flagstones, scarab
+  swarms, a skittish resident spider), **water** (the stepping stones over a river, with a
+  crocodile) and **chamber** (the room's backdrop canvas continued onto the floor: trap-door
+  slabs that grind open underfoot and a gripping quicksand pool) — rendered by the same
+  server Pi straight to its HDMI framebuffer and thrown onto the upper deck by a face-down
+  short-throw projector.
   Its own systemd service outside the container; walker input is the room's LD2450 radar
   (demo phantom walkers until it's wired). Plans: `wiring-guides/cuddle-lava-plan.md`,
-  `wiring-guides/cuddle-jungle-plan.md`, `wiring-guides/cuddle-temple-plan.md`.
+  `wiring-guides/cuddle-jungle-plan.md`, `wiring-guides/cuddle-temple-plan.md`,
+  `wiring-guides/cuddle-water-plan.md`, `wiring-guides/cuddle-chamber-plan.md`.
 - **Fallback audio client** (`client/`): the retired Pi-unit stack (units A/B/C are
   decommissioned), kept working as a fallback — one Linux host with a USB sound card per zone
   (`client/config-single-pi.json`) speaking the same WebSocket protocol.
@@ -113,9 +117,9 @@ Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,
   flashes synced to the fanfare, a white-gold mega flash on the final stinger, and emerald
   twinkles fading out.
 
-## The Cuddle Cross floor show (lava / jungle / temple)
+## The Cuddle Cross floor show (lava / jungle / temple / water / chamber)
 
-The upper-deck crossing is a projection-mapped floor show with two selectable themes.
+The upper-deck crossing is a projection-mapped floor show with five selectable themes.
 
 **Lava**: molten lava with a chain of five carved grey
 stepping stones — Mayan numerals in walking order, one dot at the east door through one bar
@@ -125,17 +129,28 @@ lava bubbles pop, canopy shadows press in at the deck rim, embers drift, and eve
 or two **Kukulkan** — the feathered serpent — surfaces, scans the room with pulsing amber
 eyes, and slips back under.
 
-**Jungle**: the temple floor reclaimed — a leaf-litter carpet under moving sun-dapple
-where a tzabcan rattlesnake (with a working rattle), a gold eyelash viper, and a coral
-snake slither across the deck and dart away from your feet, fallen glyph stones go mossy
-and glint as you approach, fireflies blink, and a sun-pool follows each walker.
+**Jungle** (2026-07-25 rework): the temple floor reclaimed — an open mossy clearing
+(humus, flush stones, roots, scattered leaves) under moving sun-dapple where three small
+venomous snakes — a tzabcan rattlesnake (with a working rattle), a copper-banded Yucatán
+cantil, and a coral snake — slither across the deck and dart away from your feet, fallen
+glyph stones go mossy and glint as you approach, fireflies blink, and a sun-pool follows
+each walker.
 
 **Temple**: the floor itself, swept and torch-lit — dark mossy flagstones under breathing
 torchlight, carved glyphs that fill with gold as you approach, scarab swarms (The Mummy)
 that pour from pits in the floor and circle your feet, and a big slow spider that
 scurries when you get close. The calm one.
 
-Both are presence-cued: the show starts when the radar sees someone and
+**Water**: the lava crossing reskinned as a jungle ford — the same stepping-stone
+choreography over running water, with a crocodile gliding beneath.
+
+**Chamber**: the room's printed backdrop continued onto the floor — sun-bleached mossy
+flags under a wandering skylight shaft (dust motes, spiraling leaves), relief carves that
+glint gold, two trap-door slabs that shudder and grind open if you linger (or SLAM open if
+you run across — amber eyes blink up from the pit), and a quicksand pool that liquefies
+and grips your feet until you step out.
+
+All are presence-cued: the show starts when the radar sees someone and
 fades out 60 s after the deck empties.
 
 One numpy engine (`projection_engine.py`, `FloorShow` base + `THEMES` registry) drives both
@@ -143,8 +158,9 @@ displays: the projector (`projection_renderer.py`, live-switchable via `POST :50
 sim preview (state + field streamed over `WS /sim/projection`; the page renders the
 engine's own precomputed artwork, and the header **Floor** button switches the shared
 theme for every tab). Content specs and tuning knobs:
-[wiring-guides/cuddle-lava-plan.md](wiring-guides/cuddle-lava-plan.md) and
-[wiring-guides/cuddle-jungle-plan.md](wiring-guides/cuddle-jungle-plan.md).
+[wiring-guides/cuddle-lava-plan.md](wiring-guides/cuddle-lava-plan.md),
+[wiring-guides/cuddle-jungle-plan.md](wiring-guides/cuddle-jungle-plan.md) and
+[wiring-guides/cuddle-chamber-plan.md](wiring-guides/cuddle-chamber-plan.md).
 The **Cuddle orb** — a round-display watching eye mounted under the rear sensor box,
 sharing the same radar — is specced in
 [wiring-guides/cuddle-orb-plan.md](wiring-guides/cuddle-orb-plan.md).

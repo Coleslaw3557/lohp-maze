@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: open jungle floor of dark packed earth, patches of deep green moss, and a few thick surface roots crossing the ground, exactly as in the reference frame. Scattered fallen leaves lie on the bare earth - large individual tropical leaves, some deep green, some dry rust-brown, each clearly separate, most of the dark soil visible between them. A strong gusty wind works the floor the whole time: every two or three seconds a broad gust sweeps across the frame and sends dozens of leaves sliding, flipping and cartwheeling together in the same direction, some skating a third of the way across the frame before they tumble to rest; between gusts many leaves keep twitching, lifting at one edge and skating short distances; fine dust and tiny debris race across the earth with each gust. Now and then a fresh leaf tumbles in from one edge of the frame and settles, and another slides out of frame. The moss, roots and earth themselves never move. Flat, even, shadowless ambient light that never changes. The ground fills the entire frame and continues beyond every edge - no border, no clearing edge. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no parallax. Leaves are visibly moving somewhere in the frame at every moment; continuous motion from the first frame to the last. No animals, no insects, no people, no text, no watermark.",
+  "size": "960x720",
+  "duration": 15,
+  "seed": 20260741,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "VjrFISl0sQCP8nZCbHcF",
+  "polling_url": "https://openrouter.ai/api/v1/videos/VjrFISl0sQCP8nZCbHcF",
+  "status": "pending"
+ },
+ "final": {
+  "id": "VjrFISl0sQCP8nZCbHcF",
+  "generation_id": "gen-vid-1784929132-LGsx1UzPzsudFgfYAQvI",
+  "polling_url": "https://openrouter.ai/api/v1/videos/VjrFISl0sQCP8nZCbHcF",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/VjrFISl0sQCP8nZCbHcF/content?index=0"
+  ],
+  "usage": {
+   "cost": 2.24532,
+   "is_byok": false
+  }
+ }
+}

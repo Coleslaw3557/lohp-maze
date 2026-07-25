@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: the floor of a dense tropical jungle covered in lush low undergrowth - a continuous carpet of overlapping broad leaves seen from above: big split monstera leaves, wide banana leaves and feathery fern fronds in many shades of deep and bright green, with small pockets of dark shadowed ground showing between them. Scattered among the leaves, a few large red and orange tropical flowers stand out. Waves of wind roll across the undergrowth continuously: broad gusts sweep the frame and whole patches of leaves ripple, tilt and sway together, fronds bending hard and springing back; between gusts every leaf keeps trembling and swaying. Midway, one violent gust drives a visible parting wave across the whole frame: a traveling line where the leaves are pressed flat and pushed apart, briefly exposing the dark ground beneath, the gap closing behind the wave as the leaves spring back. Once, a large dry palm frond tumbles end over end across the top of the undergrowth, knocking leaves as it passes, and slides away off the edge of the frame. Now and then a leaf or a bright petal tears loose and tumbles across the canopy of leaves. Flat, even, shadowless ambient light that never changes. The undergrowth fills the entire frame and continues beyond every edge - no border, no clearing, no path, no sky. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no parallax. Leaves are visibly moving everywhere in the frame at every moment; continuous energetic motion from the first frame to the last. No animals, no insects, no birds, no people, no text, no watermark.",
+  "size": "960x720",
+  "duration": 15,
+  "seed": 20260845,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "A9jYuo8HoF9zAZ4ay3MC",
+  "polling_url": "https://openrouter.ai/api/v1/videos/A9jYuo8HoF9zAZ4ay3MC",
+  "status": "pending"
+ },
+ "final": {
+  "id": "A9jYuo8HoF9zAZ4ay3MC",
+  "generation_id": "gen-vid-1784937997-gJtE75CiG9wKiO6kQuwg",
+  "polling_url": "https://openrouter.ai/api/v1/videos/A9jYuo8HoF9zAZ4ay3MC",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/A9jYuo8HoF9zAZ4ay3MC/content?index=0"
+  ],
+  "usage": {
+   "cost": 2.24532,
+   "is_byok": false
+  }
+ }
+}

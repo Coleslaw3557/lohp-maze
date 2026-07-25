@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: the mossy stone floor of an ancient sunken Mayan temple chamber - large weathered sun-bleached limestone flagstones, tightly fitted, their surfaces mottled grey and beige, with thick deep-green moss filling every joint and spreading in soft irregular sheets across many of the stones. Two or three flagstones carry shallow carved geometric step-fret reliefs, worn almost smooth. A few thin vines with small leaves creep across the stones from between the joints, and small tufts of grass and tiny ferns grow from the cracks. Gentle continuous micro-motion: the vine leaves, grass tufts and fern fronds tremble and sway in a faint draft, every few seconds a single dry brown leaf tumbles in from one edge, skitters across the stone and settles in a joint or slides out of frame, and fine pale dust drifts in thin wisps across the slabs. The flagstones, moss and carvings themselves never move. Flat, even, shadowless ambient light that never changes - no sun patches, no moving shadows. The floor fills the entire frame and continues beyond every edge - no walls, no border, no sky. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no parallax. Calm, loop-friendly motion, but something is visibly moving somewhere in the frame at every moment. No animals, no insects, no people, no text, no watermark.",
+  "size": "960x720",
+  "duration": 15,
+  "seed": 20260729,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "LoG1Y2rZdcZ9pXJggM2N",
+  "polling_url": "https://openrouter.ai/api/v1/videos/LoG1Y2rZdcZ9pXJggM2N",
+  "status": "pending"
+ },
+ "final": {
+  "id": "LoG1Y2rZdcZ9pXJggM2N",
+  "generation_id": "gen-vid-1784943013-wxLf9jlPWBhGa5D6U2tn",
+  "polling_url": "https://openrouter.ai/api/v1/videos/LoG1Y2rZdcZ9pXJggM2N",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/LoG1Y2rZdcZ9pXJggM2N/content?index=0"
+  ],
+  "usage": {
+   "cost": 2.24532,
+   "is_byok": false
+  }
+ }
+}

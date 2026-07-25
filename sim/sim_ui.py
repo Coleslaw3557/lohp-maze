@@ -55,6 +55,17 @@ except Exception as e:  # noqa: BLE001 — any import failure just disables the 
     THEMES = None
     logging.getLogger(__name__).warning(f"floor engine unavailable: {e}")
 
+_VIDBASE_DIR = os.path.join(REPO_DIR, 'experiments', 'video-base')
+
+
+def _base_loop_url(theme):
+    """URL of the experimental AI base loop for a theme, or None without one."""
+    if isinstance(theme, str) and theme.isalpha() and os.path.exists(
+            os.path.join(_VIDBASE_DIR, f'base_loop_{theme}.mp4')):
+        return f'/sim/base_loop/{theme}'
+    return None
+
+
 _shows = {}
 _THEME_FILE = os.path.join(SIM_DIR, '.floor_theme')
 _floor_theme = 'lava'
@@ -258,6 +269,17 @@ async def cad_item(filename):
     return await send_from_directory(os.path.join(REPO_DIR, 'cad-items'), filename)
 
 
+@app.route('/sim/base_loop/<theme>')
+async def sim_base_loop(theme):
+    """AI-video base-loop experiment (experiments/video-base): a browser-ready
+    loop per theme; /sim/projection hellos advertise it when present and the
+    page multiply-blends the light field over the looping video instead of
+    the static base texture (btn-vidbase toggles back for A/B)."""
+    if not _base_loop_url(theme):
+        return jsonify({'error': f'no base loop for {theme}'}), 404
+    return await send_from_directory(_VIDBASE_DIR, f'base_loop_{theme}.mp4')
+
+
 @app.route('/sim/health')
 async def sim_health():
     return jsonify({
@@ -313,6 +335,11 @@ async def projection_feed():
             'palette': s.palette_list(),
             'heat_step': 2,
             'textures': s.hello_patches(),
+            'base_loop': _base_loop_url(s.THEME),
+            'video_palette': (s.video_palette_list()
+                              if _base_loop_url(s.THEME) else None),
+            'video_owns': (list(getattr(s, 'VIDEO_OWNS', ()) or ())
+                           if _base_loop_url(s.THEME) else []),
         }})
 
     show = _get_show()

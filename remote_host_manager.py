@@ -128,16 +128,20 @@ class RemoteHostManager:
 
     async def start_background_music(self):
         async with self.music_lock:
-            await self._cancel_music_rotation()
-            music_file = self.get_random_music_file()
-            if not music_file:
-                logger.error("No music files available for background music")
-                return False
-            success = await self.send_audio_command(None, 'start_background_music',
-                                                    {"music_file": music_file})
-            if success:
-                self.background_music_task = asyncio.create_task(self._rotate_background_music())
-            return success
+            return await self._start_background_music_locked()
+
+    async def _start_background_music_locked(self):
+        """Caller must hold music_lock."""
+        await self._cancel_music_rotation()
+        music_file = self.get_random_music_file()
+        if not music_file:
+            logger.error("No music files available for background music")
+            return False
+        success = await self.send_audio_command(None, 'start_background_music',
+                                                {"music_file": music_file})
+        if success:
+            self.background_music_task = asyncio.create_task(self._rotate_background_music())
+        return success
 
     async def _rotate_background_music(self):
         while True:
@@ -164,3 +168,14 @@ class RemoteHostManager:
         async with self.music_lock:
             await self._cancel_music_rotation()
             return await self.send_audio_command(None, 'stop_background_music', {})
+
+    async def toggle_background_music(self):
+        """One-gesture start/stop (the orb's swipe). The playing test and the
+        resulting start/stop happen under one lock hold so a racing web-UI
+        start/stop can't make the toggle double-fire. Returns (success, now_playing)."""
+        async with self.music_lock:
+            if self.background_music_task is not None:
+                await self._cancel_music_rotation()
+                return await self.send_audio_command(None, 'stop_background_music', {}), False
+            success = await self._start_background_music_locked()
+            return success, success

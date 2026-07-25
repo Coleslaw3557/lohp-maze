@@ -11,7 +11,9 @@ once, and checks the invariants that used to break:
      interrupt claim, no unbalanced theme pause)
   3. all-rooms effect racing single-room triggers: all succeed, server recovers
   4. explicit stop during an effect ends with audio_stop as the last command
-  5. concurrent start_music hammering leaves the server healthy
+  5. concurrent start_music hammering leaves the server healthy, and
+     toggle_music (the orb's swipe gesture) tracks playing state across both
+     the toggle and the plain start/stop routes
 
 Run with the sim running: sim/.venv/bin/python sim/tools/concurrency_test.py [host]
 """
@@ -185,6 +187,24 @@ async def main():
     check('music commands arrived in order (starts then one stop)',
           starts == 5 and stops == 1 and unit.messages[-1][0] == 'stop_background_music',
           f'({starts} starts, {stops} stops)')
+
+    print("5b) toggle_music (the orb's swipe) tracks state across both routes")
+    unit.messages.clear()
+    status, body = post('/api/toggle_music', {})
+    check('toggle from idle starts music',
+          status == 200 and 'started' in body.get('message', ''), body.get('message', ''))
+    status, body = post('/api/toggle_music', {})
+    check('toggle again stops it',
+          status == 200 and 'stopped' in body.get('message', ''), body.get('message', ''))
+    status, _ = post('/api/start_music', {})
+    status, body = post('/api/toggle_music', {})
+    check('toggle sees state set by plain start_music',
+          status == 200 and 'stopped' in body.get('message', ''), body.get('message', ''))
+    await asyncio.sleep(0.3)
+    kinds = [t for t, _ in unit.messages]
+    check('unit heard start,stop,start,stop',
+          kinds == ['start_background_music', 'stop_background_music',
+                    'start_background_music', 'stop_background_music'], f'({kinds})')
 
     print("6) no stuck frame after an effect that ends on a bright hold (no theme)")
     post('/api/set_theme', {'theme_name': 'notheme'})

@@ -113,9 +113,9 @@ positions in world meters; output is an RGB frame plus a JSON-able state dict.
    synthetic walker provokes sink+rise, perf budget (step+render must hold
    30 fps on a Pi 3B+ — verify ≥120 fps on the dev box as proxy).
 2. Sim integration: engine stream + page renderer replace the snakes.
-3. Pi: `tools/rpi-projection-setup.sh` (KMS overlay check — DietPi ships with
-   the vc4 overlay off; enabling needs one reboot — venv, unit), deploy, demo
-   mode on the real projector.
+3. Pi: `tools/rpi-projection-setup.sh` (since 2026-07-23 this configures the
+   LEGACY display stack: grid-sized firmware framebuffer + GPU scaler — one
+   reboot — then venv + unit), deploy, demo mode on the real projector.
 4. Hardware day: LD2450 into the cuddle node (ESPHome `ld2450` component),
    flip the service to `--source esphome`, tune stone count/cooldowns on the
    real deck.

@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Three snakes photographed from directly overhead on a completely solid, flat, uniform pure green chroma-key background, arranged as three perfectly straight, horizontal, parallel bodies - one in the top third, one in the middle third, one in the bottom third of the frame - with wide clear green gaps between them. They never touch, never cross, never curve into each other. Top: a Yucatan neotropical rattlesnake, pale sandy-grey with a bold chain of dark chocolate diamonds edged in cream running down its back and a segmented buff keratin rattle at the tail. Middle: a Mexican cantil viper, deep copper red-brown with wide dark chocolate crossbands and thin pale cream band edges. Bottom: a coral snake with bold alternating bright red, yellow and glossy black rings, the red bands widest, with a black snout. All heads toward the right edge, tails toward the left. Bright, even, flat light, no shadows on the green. Completely static. Locked camera. Nothing else in the frame. No text, no watermark.",
+  "size": "960x720",
+  "duration": 4,
+  "seed": 20260726,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "5UANZ8o1m29mau3L3tKD",
+  "polling_url": "https://openrouter.ai/api/v1/videos/5UANZ8o1m29mau3L3tKD",
+  "status": "pending"
+ },
+ "final": {
+  "id": "5UANZ8o1m29mau3L3tKD",
+  "generation_id": "gen-vid-1784941181-pwJEKoEGJkqUU8Ry73Pb",
+  "polling_url": "https://openrouter.ai/api/v1/videos/5UANZ8o1m29mau3L3tKD",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/5UANZ8o1m29mau3L3tKD/content?index=0"
+  ],
+  "usage": {
+   "cost": 0.598752,
+   "is_byok": false
+  }
+ }
+}

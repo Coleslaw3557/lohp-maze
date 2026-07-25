@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: a lake of molten lava with dark immovable basalt stepping stones exactly where the reference frame places them. Bright orange-yellow molten rock covers MOST of the floor - wide open melt everywhere, more melt than crust in every part of the frame - and it RUSHES: a fast, unmistakable current racing from the upper left of the frame toward the lower right. Only scattered small dark islands and thin broken ridges of cooled crust float on the melt; they drift with the current, spin slowly, crack open in glowing seams and melt away while new ones form. Incandescent streaks, glowing clots and small dark rafts race down the open melt, each crossing the entire frame within a few seconds; the bright surface visibly streams, churns and surges at all times, never still. The dark rounded boulders and the carved circular stone are FIXED stepping stones that never move and never sink: the racing current parts hard at each boulder's upstream edge and whips back together behind it, glow sloshing and splashing at every rim. Large lava bubbles swell and burst constantly with bright flares and showers of sparks; bright pulses of incandescence race across the lake, lighting it end to end as they pass. Once or twice a huge dark serpent - obsidian-black scaled skull seen from above with a jade-green feather crest - surfaces in the open melt away from the boulders, swims fast across a long stretch with a visible wake of parting melt, and dives back under. Brilliant oranges and yellows dominate the frame against sparse near-black crust. The lava lake fills the entire frame and continues beyond every edge - no border, no shoreline. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no parallax. Fast, continuous, energetic motion everywhere in the frame from the first frame to the last. No people, no text, no watermark.",
+  "size": "960x720",
+  "duration": 15,
+  "seed": 20260771,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "CVf0MSimZNekOVOzcBLd",
+  "polling_url": "https://openrouter.ai/api/v1/videos/CVf0MSimZNekOVOzcBLd",
+  "status": "pending"
+ },
+ "final": {
+  "id": "CVf0MSimZNekOVOzcBLd",
+  "generation_id": "gen-vid-1784934990-cvU7usRAleHLX4W3uClw",
+  "polling_url": "https://openrouter.ai/api/v1/videos/CVf0MSimZNekOVOzcBLd",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/CVf0MSimZNekOVOzcBLd/content?index=0"
+  ],
+  "usage": {
+   "cost": 2.24532,
+   "is_byok": false
+  }
+ }
+}

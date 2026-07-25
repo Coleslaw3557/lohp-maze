@@ -39,6 +39,7 @@ const S = {
   interactables: [],       // meshes with .userData.{sensor|ladder}
   piezoAttempts: 0,
   projection: null,        // planned Cuddle floor-projection rig (layout `projection` key)
+  vidBase: true,           // experiment: AI base loop instead of the static base (btn-vidbase)
   sign: null,              // Camp Sign live-DMX letter zones (layout `camp_sign` key)
   eye: null,               // Cuddle orb — Waveshare ESP32-S3 round display (layout `eye` key)
   mode: 'street',
@@ -1761,8 +1762,7 @@ function buildSensors(cfg) {
       grp(level).add(zg);
       sensor.meshes.push(wedge, bore);
     } else if (geo.kind === 'button' && geo.pos) {
-      const colors = { 'Button 1': 0x3d7bff, 'Button 2': 0xffc93d, 'Button 3': 0x3dff70, 'Button 4': 0xff4d4d };
-      const bcol = geo.color ? parseInt(geo.color, 16) : (colors[trig.name] || 0xcccccc);
+      const bcol = geo.color ? parseInt(geo.color, 16) : 0xcccccc;
       const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.05, 24),
         new THREE.MeshStandardMaterial({ color: bcol, roughness: 0.4, emissive: bcol, emissiveIntensity: 0.25 }));
       btn.rotation.x = Math.PI / 2;
@@ -2014,8 +2014,8 @@ function checkSensorTriggers() {
 // (projection_engine.py, LAVA or JUNGLE theme — the Floor button switches it
 // for every tab). Delete the layout key to remove the whole rig. No
 // production config is involved.
-const FLOOR_THEMES = ['lava', 'jungle', 'temple'];
-const FLOOR_LABEL = { lava: 'Floor: Lava', jungle: 'Floor: Jungle', temple: 'Floor: Temple' };
+const FLOOR_THEMES = ['lava', 'jungle', 'temple', 'water', 'chamber'];
+const FLOOR_LABEL = { lava: 'Floor: Lava', jungle: 'Floor: Jungle', temple: 'Floor: Temple', water: 'Floor: Water', chamber: 'Floor: Chamber' };
 function buildProjection(cfg) {
   const P = cfg.layout.projection;
   if (!P) return;
@@ -2153,6 +2153,7 @@ function buildProjection(cfg) {
 function connectProjection() {
   const pr = S.projection;
   if (!pr) return;
+  window.simDebug = { pr, S };  // bench console access to live projection state
   const ws = new WebSocket(`ws://${HOST}:${location.port || 5001}/sim/projection`);
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
@@ -2160,6 +2161,8 @@ function connectProjection() {
     if (m.hello) {
       pr.grid = m.hello.grid;
       pr.lut = m.hello.palette;
+      pr.vidLut = m.hello.video_palette || null;
+      pr.videoOwns = m.hello.video_owns || [];
       pr.heatStep = m.hello.heat_step || 2;
       const hc = document.createElement('canvas');
       hc.width = Math.floor(pr.grid[0] / pr.heatStep);
@@ -2169,13 +2172,34 @@ function connectProjection() {
       // theme reset: a re-hello (theme switch) must not leak the other
       // show's entities into this one
       pr.theme = m.hello.theme || 'lava';
-      pr.stoneImg = null; pr.monsterImg = null; pr.baseImg = null;
-      pr.spiderImgs = null;
+      pr.stoneImg = null; pr.monsterImg = null; pr.monsterHi = null; pr.baseImg = null;
+      pr.spiderImgs = null; pr.spiderHi = null;
       pr.stones = []; pr.monster = null; pr.snakes = []; pr.snakeMeta = {};
       pr.flies = []; pr.glyphs = []; pr.glyphGlint = {};
+      pr.traps = []; pr.trapMeta = {}; pr.sand = null; pr.sandMeta = null;
+      pr.leaves = []; pr.motes = [];
       pr.fx = [];
       const fb = $('btn-floor');
       if (fb) fb.textContent = FLOOR_LABEL[pr.theme] || `Floor: ${pr.theme}`;
+      // experiment: AI-generated base loop, served from experiments/video-base
+      // when one exists for this theme; plays hidden, drawn instead of baseImg
+      const bl = m.hello.base_loop || null;
+      if (bl && (!pr.baseVid || pr.baseVid.dataset.src !== bl)) {
+        const v = document.createElement('video');
+        v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
+        v.src = bl; v.dataset.src = bl;
+        // adopt only once frames exist — the old theme's video keeps the
+        // floor textured through the switch instead of a light-only flash
+        v.addEventListener('loadeddata', () => { pr.baseVid = v; }, { once: true });
+        v.play().catch(() => {});
+        if (!pr.baseVid) pr.baseVid = v;
+      }
+      if (!bl) pr.baseVid = null;
+      const vb = $('btn-vidbase');
+      if (vb) {
+        vb.hidden = !bl;
+        vb.textContent = S.vidBase ? 'Base: Video' : 'Base: Static';
+      }
       if (m.hello.textures) {
         // the engine's precomputed artwork — the page draws the SAME pixels
         // production projects (numeral glyphs, cracks, the altar, the mask)
@@ -2192,13 +2216,31 @@ function connectProjection() {
           pr.stoneImg = {};
           for (const t of tex2.stones) pr.stoneImg[t.id] = mk(t);
         }
+        pr.stonesHi = null;
+        if (tex2.stones_hi) {
+          pr.stonesHi = { gridW: tex2.stones_hi.grid_w, imgs: {} };
+          for (const t of tex2.stones_hi.frames) pr.stonesHi.imgs[t.id] = mk(t);
+        }
         if (tex2.base) pr.baseImg = mk(tex2.base);
         if (tex2.spider) pr.spiderImgs = tex2.spider.map(mk);
+        pr.spiderHi = tex2.spider_hi
+          ? { imgs: tex2.spider_hi.frames.map(mk), gridW: tex2.spider_hi.grid_w }
+          : null;
         pr.islandImg = mk(tex2.island);
         pr.islandPos = tex2.island;
         if (tex2.monster) pr.monsterImg = mk(tex2.monster);
-        if (tex2.glyphs) pr.glyphs = tex2.glyphs.map(t => ({ id: t.id, x: t.x, y: t.y, glow: t.glow || 0, img: mk(t) }));
+        pr.monsterHi = tex2.monster_hi
+          ? { img: mk(tex2.monster_hi.frame), gridW: tex2.monster_hi.grid_w }
+          : null;
+        if (tex2.glyphs) pr.glyphs = tex2.glyphs.map(t => ({ id: t.id, x: t.x, y: t.y, glow: t.glow || 0, gw: t.gw || 0, img: mk(t) }));
         if (tex2.snakes) for (const s of tex2.snakes) pr.snakeMeta[s.id] = s;
+        // chamber: per-trap slab/pit sprites + the quicksand pool's dry patch
+        if (tex2.traps) for (const t of tex2.traps) {
+          pr.trapMeta[t.id] = { x: t.x, y: t.y, dir: t.dir, slide: t.slide,
+            slab: mk(t.slab), pit: mk(t.pit) };
+        }
+        if (tex2.sand) pr.sandMeta = { x: tex2.sand.x, y: tex2.sand.y, r: tex2.sand.r,
+          x0: tex2.sand.x0, y0: tex2.sand.y0, img: mk(tex2.sand.patch) };
       }
       pr.ws = ws;
       log('info', `projection: floor engine connected — ${pr.theme.toUpperCase()} (${pr.grid[0]}×${pr.grid[1]})`);
@@ -2214,15 +2256,29 @@ function connectProjection() {
     for (const g of m.glyphs || []) pr.glyphGlint[g.id] = g.glint;
     pr.scarabs = m.scarabs || [];
     pr.spider = m.spider || null;
+    pr.web = m.web || null;
+    pr.traps = m.traps || [];
+    pr.sand = m.sand || null;
+    pr.leaves = m.leaves || [];
+    pr.motes = m.motes || [];
     if (m.heat && pr.heatCanvas) paintHeat(pr, m.heat);
     for (const e of m.events || []) {
-      if (e.x != null) pr.fx.push({ ...e, t0: clock.getElapsedTime() });
+      // events the video loop portrays itself (baked serpent, baked bursts)
+      // neither ring nor narrate while that loop is what's showing
+      const owned = pr.vidActive && pr.videoOwns
+        && ((e.e === 'pop' && pr.videoOwns.includes('pops'))
+            || (e.e.startsWith('monster_') && pr.videoOwns.includes('monster')));
+      if (e.x != null && !owned) pr.fx.push({ ...e, t0: clock.getElapsedTime() });
+      if (owned) continue;
       if (e.e === 'sink') log('info', `projection: stone ${e.id} sinks underfoot`);
       if (e.e === 'rise') log('info', `projection: stone ${e.id} rises`);
-      if (e.e === 'monster_swim') log('info', 'projection: something moves beneath the lava…');
-      if (e.e === 'monster_breach') log('ok', 'projection: KUKULKAN breaches!');
-      if (e.e === 'monster_sink') log('info', 'projection: Kukulkan slips back under');
+      if (e.e === 'monster_swim') log('info', pr.theme === 'water' ? 'projection: something big glides beneath the water…' : 'projection: something moves beneath the lava…');
+      if (e.e === 'monster_breach') log('ok', pr.theme === 'water' ? 'projection: the CROCODILE breaches!' : 'projection: KUKULKAN breaches!');
+      if (e.e === 'monster_sink') log('info', pr.theme === 'water' ? 'projection: it slides back under the current' : 'projection: Kukulkan slips back under');
       if (e.e === 'spider_scurry') log('ok', 'projection: the spider SCURRIES away!');
+      if (e.e === 'spider_catch') log('ok', 'projection: the spider SNATCHES a scarab!');
+      if (e.e === 'spider_web') log('info', 'projection: the spider spins a web…');
+      if (e.e === 'spider_web_gone') log('info', 'projection: the spider takes down its web');
       if (e.e === 'scarab_erupt') log('ok', 'projection: SCARABS pour from the cracks!');
       if (e.e === 'scarab_drain') log('info', 'projection: the scarabs drain away between the stones');
       if (e.e === 'snake_flee') {
@@ -2231,6 +2287,12 @@ function connectProjection() {
           ? 'projection: the rattlesnake RATTLES away from your feet!'
           : 'projection: a snake darts away from your feet');
       }
+      if (e.e === 'trap_tremble') log('info', 'projection: the slab underfoot SHUDDERS…');
+      if (e.e === 'trap_open') log('ok', e.slam ? 'projection: the trap door SLAMS open under your feet!' : 'projection: the TRAP DOOR grinds open!');
+      if (e.e === 'trap_eyes') log('ok', 'projection: eyes open in the dark below…');
+      if (e.e === 'trap_shut') log('info', 'projection: the slab grinds shut');
+      if (e.e === 'sand_grip') log('ok', 'projection: the floor turns to QUICKSAND underfoot…');
+      if (e.e === 'sand_release') log('info', 'projection: the quicksand lets go and settles still');
     }
   };
   ws.onclose = () => { pr.ws = null; setTimeout(connectProjection, 2500); };
@@ -2240,8 +2302,11 @@ function connectProjection() {
 function paintHeat(pr, b64) {
   const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   const d = pr.heatImg.data;
+  // over a video base the field is a LIGHT ramp, not the picture — lava and
+  // water swap in a near-neutral LUT so the footage keeps its own color
+  const lut = (pr.vidActive && pr.vidLut) ? pr.vidLut : pr.lut;
   for (let i = 0; i < bytes.length; i++) {
-    const c = pr.lut[bytes[i]] || [0, 0, 0];
+    const c = lut[bytes[i]] || [0, 0, 0];
     d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255;
   }
   pr.heatCanvas.getContext('2d').putImageData(pr.heatImg, 0, 0);
@@ -2309,10 +2374,15 @@ function drawProjection(pr, dt, now) {
   ctx.clip(pr.deckPath);
   if (pr.heatCanvas && pr.engineFade > 0) {
     ctx.imageSmoothingEnabled = true;
-    if (pr.baseImg) {
-      // textured floor (jungle leaves / temple flags): static base with the
-      // palette-mapped LIGHT field multiplied over it — mirrors the engine
-      ctx.drawImage(pr.baseImg, 0, 0, cw, ch);
+    const vsrc = (S.vidBase && pr.baseVid && pr.baseVid.readyState >= 2)
+      ? pr.baseVid : null;
+    pr.vidActive = !!vsrc;
+    if (pr.baseImg || vsrc) {
+      // textured floor (jungle leaves / temple flags): the base with the
+      // palette-mapped LIGHT field multiplied over it — mirrors the engine.
+      // Base = the AI loop video when toggled on (falls back to the static
+      // texture until the video has data), else the production static base.
+      ctx.drawImage(vsrc || pr.baseImg, 0, 0, cw, ch);
       ctx.globalCompositeOperation = 'multiply';
       ctx.drawImage(pr.heatCanvas, 0, 0, cw, ch);
       ctx.globalCompositeOperation = 'source-over';
@@ -2367,24 +2437,59 @@ function drawProjection(pr, dt, now) {
   // stepping stones from the engine (grid px → canvas px). Visual rules
   // mirror projection_engine._draw_stone: sinking shrinks + heats, rising
   // grows + cools, phase < 0 = the suspense beat before a riser surfaces.
+  const stonesOwned = pr.vidActive && pr.videoOwns && pr.videoOwns.includes('stones');
   for (const s of pr.stones) {
-    if (s.state === 'down' || s.phase < 0) continue;
+    if (s.state === 'down' || s.phase < 0) {
+      if (stonesOwned && s.state === 'down') {
+        // the loop's baked understudy boulder sits in the footage under this
+        // spot, and the multiply light can never brighten it into melt —
+        // paint the molten pool over it live
+        const rr = s.r * gs * 1.28;
+        const flick = 0.8 + 0.2 * Math.sin(now * 7 + s.id * 2.1);
+        const pool = ctx.createRadialGradient(s.x * gs, s.y * gs, rr * 0.15,
+          s.x * gs, s.y * gs, rr);
+        if (pr.theme === 'water') {  // closed water swirls over the spot
+          pool.addColorStop(0, `rgba(196,232,228,${0.95 * flick})`);
+          pool.addColorStop(0.6, `rgba(110,172,170,${0.85 * flick})`);
+          pool.addColorStop(1, 'rgba(20,60,66,0)');
+        } else {                     // melt floods the vacated gap
+          pool.addColorStop(0, `rgba(255,196,70,${0.95 * flick})`);
+          pool.addColorStop(0.55, `rgba(255,122,22,${0.88 * flick})`);
+          pool.addColorStop(1, 'rgba(150,36,8,0)');
+        }
+        ctx.fillStyle = pool;
+        ctx.beginPath(); ctx.arc(s.x * gs, s.y * gs, rr, 0, 7); ctx.fill();
+      }
+      continue;
+    }
     let scale = 1, heat = 0;  // grey rock; hot only mid-transition (engine rules)
     if (s.state === 'sinking') { scale = 1 - 0.55 * s.phase; heat = s.phase; }
     else if (s.state === 'rising') { scale = 0.45 + 0.55 * s.phase; heat = (1 - s.phase) * 0.8; }
     const r = s.r * gs * scale;
-    const img = pr.stoneImg && pr.stoneImg[s.id];
+    // soft contact shadow grounds the stone on the floor footage
+    const sr = r * 1.3;
+    const sh = ctx.createRadialGradient(s.x * gs, s.y * gs + r * 0.14, r * 0.35,
+      s.x * gs, s.y * gs + r * 0.14, sr);
+    sh.addColorStop(0, 'rgba(0,0,0,0.40)');
+    sh.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sh;
+    ctx.beginPath(); ctx.arc(s.x * gs, s.y * gs + r * 0.14, sr, 0, 7); ctx.fill();
+    const hi = pr.stonesHi && pr.stonesHi.imgs[s.id];
+    const img = hi || (pr.stoneImg && pr.stoneImg[s.id]);
     if (img) {
-      const w = img.width * gs * scale, h = img.height * gs * scale;
+      // hi = generated skin at source res (sized by the engine's grid_w);
+      // else the grid-res patch sized by its own pixel box
+      const w = hi ? pr.stonesHi.gridW * gs * scale : img.width * gs * scale;
+      const h = hi ? w : img.height * gs * scale;
       ctx.drawImage(img, s.x * gs - w / 2, s.y * gs - h / 2, w, h);
-      if (heat > 0.02) {          // melting: whole rock heats over
+      if (heat > 0.02) {          // melting / splashing: whole rock heats over
         ctx.globalAlpha = Math.min(1, heat);
-        ctx.fillStyle = 'rgb(255,120,20)';
+        ctx.fillStyle = pr.theme === 'water' ? 'rgb(196,232,228)' : 'rgb(255,120,20)';
         ctx.beginPath(); ctx.arc(s.x * gs, s.y * gs, r, 0, 7); ctx.fill();
         ctx.globalAlpha = 1;
-      } else if (s.glint > 0.05) { // glyph notices an approaching walker
+      } else if (s.glint > 0.05) { // stone notices an approaching walker
         ctx.globalAlpha = s.glint * 0.35;
-        ctx.strokeStyle = 'rgb(255,196,96)';
+        ctx.strokeStyle = pr.theme === 'water' ? 'rgb(190,235,230)' : 'rgb(255,196,96)';
         ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(s.x * gs, s.y * gs, r * 0.55, 0, 7); ctx.stroke();
         ctx.globalAlpha = 1;
@@ -2402,10 +2507,13 @@ function drawProjection(pr, dt, now) {
   // glyphs: jungle = mossy stones drawn always (+ glint ring); temple =
   // gold carve sprites drawn AT the streamed glint alpha (invisible idle)
   for (const g of pr.glyphs) {
-    const w = g.img.width * gs, h = g.img.height * gs;
+    const w = (g.gw || g.img.width) * gs, h = (g.gw || g.img.height) * gs;
     const gl = pr.glyphGlint[g.id] || 0;
     if (g.glow) {
-      if (gl > 0.03) {
+      // carve glints register onto the STATIC base's carved flagstones —
+      // over a video base those stones don't exist and the gold reads as
+      // floating ring artifacts, so they stay off while the video is up
+      if (!pr.vidActive && gl > 0.03) {
         ctx.globalAlpha = gl;
         ctx.drawImage(g.img, g.x * gs - w / 2, g.y * gs - h / 2, w, h);
         ctx.globalAlpha = 1;
@@ -2420,6 +2528,103 @@ function drawProjection(pr, dt, now) {
       ctx.beginPath(); ctx.arc(g.x * gs, g.y * gs, g.img.width * gs * 0.34, 0, 7); ctx.stroke();
       ctx.globalAlpha = 1;
     }
+  }
+
+  // chamber: the quicksand pool — dry patch always (it lives OVER the base
+  // and the video, like the trap slabs), then the live grip show on top
+  if (pr.sandMeta) {
+    const sm = pr.sandMeta;
+    ctx.drawImage(sm.img, sm.x0 * gs, sm.y0 * gs, sm.img.width * gs, sm.img.height * gs);
+    const sd = pr.sand;
+    if (sd && sd.act > 0.02) {
+      const scx = sm.x * gs, scy = sm.y * gs, R = sm.r * gs, act = sd.act;
+      ctx.fillStyle = `rgba(112,90,60,${0.5 * act})`;
+      ctx.beginPath(); ctx.arc(scx, scy, R, 0, 7); ctx.fill();
+      for (let k = 0; k < 3; k++) {  // contracting rings: the surface pulls inward
+        const f = (now * 0.30 + k / 3) % 1;
+        ctx.strokeStyle = `rgba(81,65,43,${0.30 * act * Math.min(1, f * 3)})`;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(scx, scy, Math.max(2, (1 - f) * R), 0, 7); ctx.stroke();
+      }
+      ctx.strokeStyle = `rgba(67,54,36,${0.35 * act})`;  // slow spiral streaks
+      ctx.lineWidth = 3;
+      for (let k = 0; k < 3; k++) {
+        const a0 = -sd.sw * 0.87 + k * 2.094;
+        ctx.beginPath(); ctx.arc(scx, scy, R * 0.55, a0, a0 + 0.9); ctx.stroke();
+      }
+      if (sd.grip) {  // the sink mark under the feet, a tide ring around it
+        const gx = sd.grip[0] * gs, gy = sd.grip[1] * gs;
+        const rr = (0.09 + 0.07 * act) * pr.ppm;
+        ctx.fillStyle = 'rgba(64,52,36,0.75)';
+        ctx.beginPath(); ctx.arc(gx, gy, rr, 0, 7); ctx.fill();
+        ctx.strokeStyle = `rgba(206,188,148,${0.35 * act})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(gx, gy, rr + 2.5, 0, 7); ctx.stroke();
+      }
+      for (const [bx, by, age] of sd.bubs || []) {
+        const bf = age / 0.9;
+        ctx.strokeStyle = `rgba(84,68,45,${0.5 * (1 - bf)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(bx * gs, by * gs, (0.02 + 0.05 * bf) * pr.ppm, 0, 7); ctx.stroke();
+      }
+    }
+  }
+
+  // chamber: trap doors — pit + blinking eyes under a sliding slab; the
+  // slab draws at rest too (it carries the seam + ring pull art)
+  for (const t of pr.traps) {
+    const tm = pr.trapMeta[t.id];
+    if (!tm) continue;
+    const tw = tm.slab.width * gs, th = tm.slab.height * gs;
+    const tcx = tm.x * gs, tcy = tm.y * gs;
+    if (t.ph > 0.02) {
+      ctx.globalAlpha = Math.min(1, t.ph * 1.4);
+      ctx.drawImage(tm.pit, tcx - tw / 2, tcy - th / 2, tw, th);
+      ctx.globalAlpha = 1;
+      if (t.eyes > 0.02) {
+        const blink = Math.sin(now * 4.4 + t.id * 2.3) > 0.96 ? 0.1 : 1;
+        const ea = t.eyes * blink;
+        const off = 0.055 * pr.ppm;
+        for (const sv of [-1, 1]) {
+          const ex = tcx + tm.dir[1] * sv * off - tm.dir[0] * 1.5 * gs;
+          const ey = tcy + tm.dir[0] * sv * off - tm.dir[1] * 1.5 * gs;
+          ctx.fillStyle = `rgba(255,200,90,${0.9 * ea})`;
+          ctx.beginPath(); ctx.arc(ex, ey, Math.max(1.6, 0.014 * pr.ppm), 0, 7); ctx.fill();
+          ctx.fillStyle = `rgba(255,246,204,${0.9 * ea})`;
+          ctx.beginPath(); ctx.arc(ex, ey, Math.max(0.8, 0.006 * pr.ppm), 0, 7); ctx.fill();
+        }
+      }
+    }
+    const jit = (t.st === 'shut' && t.arm > 0) ? Math.sin(now * 42) * 1.2 * t.arm : 0;
+    const slide = tm.slide * t.ph + jit;
+    const am = t.ph < 0.7 ? 1 : Math.max(0, 1 - (t.ph - 0.7) / 0.3);
+    if (am > 0) {
+      ctx.globalAlpha = am;
+      ctx.drawImage(tm.slab, (tm.x + tm.dir[0] * slide) * gs - tw / 2,
+        (tm.y + tm.dir[1] * slide) * gs - th / 2, tw, th);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // chamber: leaves spiraling down the sun-shaft + drifting dust motes
+  for (const [lx, ly, rot, lk, la] of pr.leaves) {
+    if (la <= 0.02) continue;
+    ctx.save();
+    ctx.translate(lx * gs, ly * gs);
+    ctx.rotate(rot);
+    const LL = 0.085 * pr.ppm;
+    ctx.globalAlpha = la;
+    ctx.fillStyle = lk ? 'rgb(124,74,30)' : 'rgb(96,88,34)';
+    ctx.beginPath(); ctx.ellipse(0, 0, LL, LL * 0.42, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-LL * 0.8, 0); ctx.lineTo(LL * 0.8, 0); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  for (const [mx, my, ma] of pr.motes) {
+    ctx.fillStyle = `rgba(255,250,214,${0.7 * ma})`;
+    ctx.beginPath(); ctx.arc(mx * gs, my * gs, 1.6, 0, 7); ctx.fill();
   }
 
   // jungle: snakes — a smooth tapered body built from the engine spine: one
@@ -2463,8 +2668,7 @@ function drawProjection(pr, dt, now) {
     const a = Math.atan2(hy - P[1][1], hx - P[1][0]);
     const ca = Math.cos(a), sa = Math.sin(a);
     const hw = meta.w[Math.min(1, meta.w.length - 1)];
-    // gold body gets dark eyes; the others amber (mirrors the engine)
-    ctx.fillStyle = meta.kind === 'gold' ? 'rgb(24,18,12)' : 'rgb(250,214,90)';
+    ctx.fillStyle = 'rgb(250,214,90)'; // amber eyes on all three (mirrors the engine)
     for (const sv of [-1, 1]) {
       ctx.beginPath();
       ctx.arc((P[1][0] + nrm[1][0] * sv * hw * 0.72) * gs,
@@ -2495,15 +2699,45 @@ function drawProjection(pr, dt, now) {
     }
   }
 
-  // temple: the resident spider (rotate to heading, gait frame from state)
-  if (pr.spider && pr.spiderImgs) {
+  // temple: the spider's web — nine spokes + a light spiral, alpha rides
+  // the build/teardown progress streamed from the engine
+  if (pr.web) {
+    const wb = pr.web;
+    ctx.save();
+    ctx.translate(wb.x * gs, wb.y * gs);
+    ctx.rotate(wb.rot);
+    ctx.strokeStyle = `rgba(205,210,215,${0.38 * wb.p})`;
+    ctx.lineWidth = 1;
+    const R = wb.r * gs;
+    for (let k = 0; k < 9; k++) {
+      const a = k * Math.PI * 2 / 9;
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R); ctx.stroke();
+    }
+    for (let k = 1; k <= 4; k++) {
+      ctx.beginPath(); ctx.arc(0, 0, R * (0.16 + 0.84 * k / 4) - R * 0.08, 0, 7);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // temple: the resident spider (rotate to heading, gait frame from state).
+  // The video-keyed skin's source frames (spiderHi) draw at full res —
+  // rotate + DOWNscale beats upscaling the grid-res sprite.
+  if (pr.spider && (pr.spiderHi || pr.spiderImgs)) {
     const spd = pr.spider;
-    const img = pr.spiderImgs[Math.min(spd.gait, pr.spiderImgs.length - 1)];
     ctx.save();
     ctx.translate(spd.x * gs, spd.y * gs);
     ctx.rotate(spd.ang);
-    const w = img.width * gs, h = img.height * gs;
-    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    if (pr.spiderHi) {
+      const im = pr.spiderHi.imgs[Math.min(spd.gait, pr.spiderHi.imgs.length - 1)];
+      const w = pr.spiderHi.gridW * gs;
+      ctx.drawImage(im, -w / 2, -w / 2, w, w);
+    } else {
+      const img = pr.spiderImgs[Math.min(spd.gait, pr.spiderImgs.length - 1)];
+      const w = img.width * gs, h = img.height * gs;
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    }
     ctx.restore();
   }
 
@@ -2530,19 +2764,27 @@ function drawProjection(pr, dt, now) {
   }
 
   // Kukulkan, rotated to his heading (image points +x; engine pose drives)
-  if (pr.monster && pr.monsterImg) {
+  if (pr.monster && (pr.monsterHi || pr.monsterImg)
+      && !(pr.vidActive && pr.videoOwns && pr.videoOwns.includes('monster'))) {
     const mo = pr.monster;
     ctx.save();
     ctx.translate(mo.x * gs, mo.y * gs);
     ctx.rotate(mo.rot);
-    const w = pr.monsterImg.width * gs * mo.scale, h = pr.monsterImg.height * gs * mo.scale;
-    ctx.drawImage(pr.monsterImg, -w / 2, -h / 2, w, h);
+    if (pr.monsterHi) {
+      // skin frame at source res: rotate + downscale, sized by the engine
+      const w = pr.monsterHi.gridW * gs * mo.scale;
+      ctx.drawImage(pr.monsterHi.img, -w / 2, -w / 2, w, w);
+    } else {
+      const w = pr.monsterImg.width * gs * mo.scale, h = pr.monsterImg.height * gs * mo.scale;
+      ctx.drawImage(pr.monsterImg, -w / 2, -h / 2, w, h);
+    }
     ctx.restore();
     if (mo.glow > 0.1) {
+      const gr = (pr.monsterHi ? pr.monsterHi.gridW * 0.5 : pr.monsterImg.width * 0.62);
       ctx.globalAlpha = mo.glow * 0.18;
       ctx.strokeStyle = 'rgb(255,200,90)';
       ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(mo.x * gs, mo.y * gs, pr.monsterImg.width * gs * 0.62, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(mo.x * gs, mo.y * gs, gr * gs, 0, 7); ctx.stroke();
       ctx.globalAlpha = 1;
     }
   }
@@ -2553,8 +2795,11 @@ function drawProjection(pr, dt, now) {
   for (const e of pr.fx) {
     const a = (now - e.t0) / 0.6;
     const base = e.e === 'pop' ? 6 : e.e === 'snake_flee' ? 9
-      : e.e.startsWith('monster') ? 24 : 14;
-    const col = pr.theme === 'jungle' ? '205,235,130' : '255,180,60';
+      : e.e === 'trap_open' ? 20 : e.e === 'sand_bubble' ? 5
+        : e.e.startsWith('monster') ? 24 : 14;
+    const col = pr.theme === 'jungle' ? '205,235,130'
+      : pr.theme === 'chamber' ? '226,232,164'
+        : pr.theme === 'water' ? '210,240,236' : '255,180,60';
     ctx.strokeStyle = `rgba(${col},${0.7 * (1 - a)})`;
     ctx.lineWidth = 2 + 3 * (1 - a);
     ctx.beginPath();
@@ -3124,6 +3369,13 @@ function setupControls(cfg) {
     const next = FLOOR_THEMES[(FLOOR_THEMES.indexOf(pr.theme) + 1) % FLOOR_THEMES.length];
     pr.ws.send(JSON.stringify({ theme: next }));
     log('info', `projection: floor theme → ${next.toUpperCase()}`);
+  };
+  $('btn-vidbase').onclick = () => {
+    S.vidBase = !S.vidBase;
+    $('btn-vidbase').textContent = S.vidBase ? 'Base: Video' : 'Base: Static';
+    const v = S.projection && S.projection.baseVid;
+    if (S.vidBase && v) v.play().catch(() => {});
+    log('info', `projection: base layer → ${S.vidBase ? 'AI VIDEO loop' : 'static texture'}`);
   };
   $('btn-respawn').onclick = () => {
     const sp = cfg.layout.spawn;

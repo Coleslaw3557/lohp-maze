@@ -257,3 +257,6 @@ class EffectsManager:
 
     async def stop_music(self):
         return await self.remote_host_manager.stop_background_music()
+
+    async def toggle_music(self):
+        return await self.remote_host_manager.toggle_background_music()

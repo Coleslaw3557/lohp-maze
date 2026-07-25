@@ -4,7 +4,10 @@
 Runs against the real maze_layout.json geometry. Lava: mask sanity, stone
 placement, presence/fade, the mischief mechanic (a walker marching at a
 stone provokes sink + rise), Kukulkan, timeout, perf budget. Jungle: snakes
-slither and flee feet, fireflies come out, textures, perf.
+slither and flee feet, fireflies come out, textures, perf. Temple: flags +
+carved glints, scarab swarm lifecycle, the spider (scurry, eating, web
+up/down), and mast-pole clearance for every mover. Chamber: trap doors arm,
+open, grow eyes and grind shut; quicksand grips and releases; textures.
 
     sim/.venv/bin/python sim/tools/lava_test.py
 """
@@ -20,9 +23,10 @@ REPO_DIR = os.path.dirname(SIM_DIR)
 sys.path.insert(0, REPO_DIR)
 
 import numpy as np  # noqa: E402
-from projection_engine import (CARVED_FLAGS, JungleShow, LavaShow,  # noqa: E402
-                               SNAKE_SPECS, STONE_N, STONE_MIN_SPACE_M,
-                               STONE_R_M, TempleShow)
+from projection_engine import (CARVED_FLAGS, ChamberShow, JungleShow,  # noqa: E402
+                               LavaShow, SNAKE_SPECS, STONE_N,
+                               STONE_MIN_SPACE_M, STONE_R_M, TempleShow,
+                               TRAP_N, QSAND_R_M)
 
 FAIL = 0
 
@@ -294,6 +298,36 @@ def main():
     flee_d = math.hypot(sp['x'] - xs2, sp['z'] - zs2)
     check(scurried, "spider_scurry event fired")
     check(flee_d > 0.7, f"it got away ({flee_d:.2f} m)")
+
+    print("16) temple: nothing crosses the mast pole; spider eats + weaves")
+    tmp4 = TempleShow(layout)
+    tmp4._swarm['next'] = 1.0
+    tmp4._web_next = 1.0
+    clear = tmp4._mast_clear - 0.02
+    worst_m, caught, web_seen, gone_seen = 1e9, False, False, False
+    for i in range(900):  # 90 s, walker parked near the altar to pull swarms
+        tmp4.set_tracks([{'id': 'w', 'x': tmp4._cx + 0.9, 'z': tmp4._cz + 0.4}])
+        tmp4.step(0.1)
+        for f in tmp4._swarm['scarabs']:
+            worst_m = min(worst_m, math.hypot(f['x'] - tmp4._cx, f['z'] - tmp4._cz))
+        spd2 = tmp4._spider
+        worst_m = min(worst_m, math.hypot(spd2['x'] - tmp4._cx, spd2['z'] - tmp4._cz))
+        # a scarab wanders into reach: help one along to prove the lunge
+        if i == 300 and tmp4._swarm['scarabs']:
+            f = tmp4._swarm['scarabs'][0]
+            f['x'], f['z'] = spd2['x'] + 0.2, spd2['z']
+        for e in tmp4.state()['events']:
+            caught = caught or e['e'] == 'spider_catch'
+            web_seen = web_seen or e['e'] == 'spider_web'
+            gone_seen = gone_seen or e['e'] == 'spider_web_gone'
+        if web_seen and tmp4._web is not None and tmp4._web['phase'] == 'up':
+            tmp4._web['age'] = 1e9  # fast-forward to teardown
+        if caught and web_seen and gone_seen and i > 400:
+            break
+    check(worst_m >= clear, f"everything stays off the pole (min {worst_m:.2f} m, "
+                            f"clearance {tmp4._mast_clear:.2f})")
+    check(caught, "spider lunged and ate a scarab")
+    check(web_seen and gone_seen, f"web spun and torn down (web={web_seen}, gone={gone_seen})")
     check(peak >= 10, f"a proper swarm ({peak} scarabs at peak)")
     check(len(tmp2._swarm['scarabs']) == 0, "all scarabs gone after the drain")
     t0 = time.perf_counter()
@@ -304,6 +338,74 @@ def main():
         tmp.render()
     ms = (time.perf_counter() - t0) / n * 1000
     check(ms < 25, f"step+render {ms:.1f} ms/frame at {tmp.gw}x{tmp.gh}")
+
+    print("17) chamber: trap doors arm, open, grow eyes, grind shut")
+    cham = ChamberShow(layout)
+    check(len(cham.traps) == TRAP_N and cham.sand is not None
+          and len(cham.glyphs) == 2,
+          f"{len(cham.traps)} traps + quicksand + {len(cham.glyphs)} carves placed")
+    on_deck = all(cham._on_deck(t['wx'], t['wz']) for t in cham.traps)
+    check(on_deck, "every trap slab on the lit deck")
+    tr = cham.traps[0]
+    evs = []
+    for _ in range(80):  # stand on the slab: tremble -> open -> eyes
+        cham.set_tracks([{'id': 'w', 'x': tr['wx'], 'z': tr['wz']}])
+        cham.step(0.05)
+        evs += [e['e'] for e in cham.state()['events']]
+    check('trap_tremble' in evs and 'trap_open' in evs,
+          f"lingering feet arm the slab ({[e for e in evs if e.startswith('trap')]})")
+    check(tr['st'] == 'open' and tr['ph'] == 1.0, "the pit is fully open")
+    for _ in range(40):
+        cham.set_tracks([{'id': 'w', 'x': tr['wx'], 'z': tr['wz']}])
+        cham.step(0.05)
+        evs += [e['e'] for e in cham.state()['events']]
+    check('trap_eyes' in evs and tr['eyes'] > 0.5, "eyes blink open in the dark")
+    for _ in range(140):  # walk away: quiet -> grind shut
+        cham.set_tracks([{'id': 'w', 'x': tr['wx'] + 1.6, 'z': tr['wz'] + 0.5}])
+        cham.step(0.05)
+        evs += [e['e'] for e in cham.state()['events']]
+    check('trap_shut' in evs and tr['st'] == 'shut' and tr['ph'] == 0.0,
+          "the slab grinds shut once the feet are clear")
+
+    print("18) chamber: quicksand grips lingering feet, lets go after")
+    s = cham.sand
+    evs = []
+    for _ in range(100):
+        cham.set_tracks([{'id': 'w', 'x': s['wx'], 'z': s['wz']}])
+        cham.step(0.05)
+        evs += [e['e'] for e in cham.state()['events']]
+    check('sand_grip' in evs and s['act'] > 0.8,
+          f"the sand takes hold (act {s['act']:.2f})")
+    check(s['grip'] is not None, "the sink mark tracks the feet")
+    frame = cham.render()
+    gx, gy = int(s['grip'][0]), int(s['grip'][1])
+    med = np.median(frame[gy - 1:gy + 2, gx - 1:gx + 2].reshape(-1, 3), axis=0)
+    check(med[0] < 110, f"the feet read SUNK (dark sink mark, median R {med[0]:.0f})")
+    for _ in range(100):
+        cham.set_tracks([{'id': 'w', 'x': s['wx'] + 1.5, 'z': s['wz']}])
+        cham.step(0.05)
+        evs += [e['e'] for e in cham.state()['events']]
+    check('sand_release' in evs and s['act'] < 0.1,
+          f"the pool settles once the feet leave (act {s['act']:.2f})")
+
+    print("19) chamber: textures, render, perf")
+    tex = cham.hello_patches()
+    check('base' in tex and len(tex['traps']) == TRAP_N and 'sand' in tex
+          and all('slab' in t and 'pit' in t for t in tex['traps']),
+          "textures exported (base + traps + sand + carves)")
+    st = cham.state(drain_events=False)
+    check(len(st['traps']) == TRAP_N and st['sand'] is not None
+          and 'motes' in st, "state streams traps + sand + motes")
+    check(frame.max() > 60, f"chamber renders (max px {frame.max()})")
+    t0 = time.perf_counter()
+    n = 200
+    for _ in range(n):
+        cham.set_tracks([{'id': 'w', 'x': s['wx'], 'z': s['wz']}])
+        cham.step(1 / 30)
+        cham.render()
+    ms = (time.perf_counter() - t0) / n * 1000
+    check(ms < 25, f"step+render {ms:.1f} ms/frame at {cham.gw}x{cham.gh} "
+                   f"(quicksand active)")
 
     print("ALL PASS" if not FAIL else "FAILURES")
     sys.exit(FAIL)

@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Four separate small ancient jungle relics viewed from directly overhead, arranged two by two with wide clear gaps between them, on a completely solid, flat, uniform pure green chroma-key background: four weathered gray stone tablets, each a compact rounded slab with bright green moss along its edges and in a few grooves. Each tablet's upward face is deeply carved with a COMPLETELY DIFFERENT bold ancient pattern - no two tablets alike: the top-left tablet carved with one large thick spiral; the top-right tablet carved with three concentric rings around a center dot; the bottom-left tablet carved with a stepped pyramid seen from above, squares within squares; the bottom-right tablet carved with a stylized sun, a circle with thick rays radiating outward. The grooves are darkened with age. Each tablet is one compact connected object, fully separate from the others, none touching. Bright, even, flat lighting with no shadows cast on the green. Completely static, nothing moves. Absolutely locked camera. Nothing else in the frame. No text, no watermark.",
+  "size": "960x720",
+  "duration": 5,
+  "seed": 20260851,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "jxG5EFobAbqvguYLUGMB",
+  "polling_url": "https://openrouter.ai/api/v1/videos/jxG5EFobAbqvguYLUGMB",
+  "status": "pending"
+ },
+ "final": {
+  "id": "jxG5EFobAbqvguYLUGMB",
+  "generation_id": "gen-vid-1784937632-5R4spndvDrjsrKMyqsQ2",
+  "polling_url": "https://openrouter.ai/api/v1/videos/jxG5EFobAbqvguYLUGMB",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/jxG5EFobAbqvguYLUGMB/content?index=0"
+  ],
+  "usage": {
+   "cost": 0.74844,
+   "is_byok": false
+  }
+ }
+}

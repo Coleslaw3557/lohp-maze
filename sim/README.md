@@ -193,9 +193,9 @@ So: design an effect in the sim → it's already production code → deploy to t
 physical server → identical behavior on real fixtures (once addressing is fixed,
 below).
 
-## Cuddle Cross floor projection — LAVA / JUNGLE / TEMPLE themes (live engine, 2026-07-23)
+## Cuddle Cross floor projection — LAVA / JUNGLE / TEMPLE / WATER / CHAMBER (live engine, 2026-07-25)
 
-The floor show is REAL content with a production path, and now has **three
+The floor show is REAL content with a production path, and now has **five
 selectable themes** on one engine skeleton (`projection_engine.py` at the
 repo root: `FloorShow` base + `THEMES` registry):
 
@@ -203,16 +203,29 @@ repo root: `FloorShow` base + `THEMES` registry):
   chain of carved stepping stones on lava — Mayan numerals in walking
   order, sink/rise mischief, bubbles, canopy dapple, embers, and
   **Kukulkan** surfacing to look around every minute or two.
-- **JUNGLE** (2026-07-23, `wiring-guides/cuddle-jungle-plan.md`): the
-  temple floor the jungle took back — a **leaf-litter carpet** under
-  moving sun-dapple where a tzabcan **rattlesnake** (working rattle), a
-  **gold eyelash viper** and a **coral snake** slither and dart away from
+- **JUNGLE** (2026-07-23, reworked 2026-07-25,
+  `wiring-guides/cuddle-jungle-plan.md`): the temple floor the jungle took
+  back — an **open mossy clearing floor** (humus, flush stones, roots,
+  scattered leaves) under moving sun-dapple where three small venomous
+  snakes — a tzabcan **rattlesnake** (working rattle), a copper-banded
+  **Yucatán cantil** and a **coral snake** — slither and dart away from
   feet, mossy fallen glyph stones, fireflies, and a sun-pool following
   each walker.
 - **TEMPLE** (2026-07-23, `wiring-guides/cuddle-temple-plan.md`): the
   swept, torch-lit floor itself — mossy flagstones, carved glyphs that
   fill with gold on approach, Mummy-style scarab swarms pouring between
-  pits in the floor, and a big slow spider that scurries from feet.
+  pits in the floor, and a big slow spider that scurries from feet, eats
+  the odd scarab, and spins (then tears down) a small orb web.
+- **WATER** (2026-07-24, `wiring-guides/cuddle-water-plan.md`): the lava
+  choreography reskinned as a jungle ford — stepping stones over running
+  water, and the thing beneath is a **crocodile**.
+- **CHAMBER** (2026-07-25, `wiring-guides/cuddle-chamber-plan.md`): the
+  room's printed backdrop canvas continued onto the deck — sun-bleached
+  mossy flags under a wandering skylight shaft (dust motes, spiraling
+  leaves), gold-glinting relief carves, plus **two trap-door slabs** that
+  grind open under lingering feet (SLAM open under running ones, amber
+  eyes blinking in the pit) and a **quicksand pool** that grips whoever
+  stands in it.
 
 The header **Floor** button cycles the theme — it's server-side shared
 state, so every tab (like the one real deck) switches together and the
@@ -225,7 +238,7 @@ the active engine in-process and streams state over `WS /sim/projection`
 using the engine's own precomputed artwork shipped in the hello, and sends
 back the lagged radar position. On the real deck the SAME engine runs on
 the server Pi, painted straight to the HDMI framebuffer
-(`projection_renderer.py --theme lava|jungle`, systemd
+(`projection_renderer.py --theme <name>`, systemd
 `lohp-projection.service`, demo phantom walkers until the LD2450 lands).
 Rig geometry below is unchanged.
 

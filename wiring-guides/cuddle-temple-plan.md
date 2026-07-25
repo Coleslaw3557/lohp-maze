@@ -28,10 +28,27 @@ breathing across the whole floor.
   0.42 m legspan, chevroned abdomen, eight two-segment legs on an
   alternating-tetrapod gait that only cycles while it walks), patrolling
   VERY slowly (0.06 m/s with long pauses). Feet inside 0.9 m send it
-  **scurrying** (0.85 m/s) to the far side (`spider_scurry` event, page
-  log "the spider SCURRIES away!"). 16 rotations × 4 gait frames
-  precomputed; the page gets the angle-0 gait set and rotates. It casts a
-  small shadow in the light field and avoids the altar + torch.
+  **scurrying** (0.85 m/s) to the far side (`spider_scurry` event) — fear
+  trumps everything. 16 rotations × 4 gait frames precomputed; the page
+  gets the angle-0 gait set and rotates. It casts a small shadow in the
+  light field. And it has a life:
+  - **It hunts**: a scarab straying inside 0.30 m triggers a fast lunge
+    (1.4 m/s); the scarab is eaten (`spider_catch`, "the spider SNATCHES
+    a scarab!"), then it sits munching for a few seconds. One meal per
+    ~25 s, and never when a swarm is nearly spent.
+  - **It weaves**: every 50–120 s it walks to a clear spot and spins a
+    small orb web over ~9 s (nine spokes + a four-turn spiral, pale
+    translucent silk; the spider circles the site as it fills in —
+    `spider_web` event). The web stands 1–2 minutes, then the spider
+    returns and takes it down over ~4 s (`spider_web_gone`). A scare
+    mid-spin abandons a partial web; a scare before any silk cancels the
+    plan. The page draws the web from streamed {x, y, r, rot, p}.
+- **The mast pole is REAL** (2026-07-23 sweep): `FloorShow._around_mast`
+  pushes any mover that would enter the pole's clearance ring (~0.19 m)
+  radially out, so everything skims around it — applied to scarabs, the
+  spider, and the jungle fireflies (which previously aimed AT the mast
+  when bouncing off the deck edge). Snakes already steered around it.
+  Test section 16 asserts nothing ever crosses the ring.
 - **The altar**: the carved sun-stone around the mast base, warm stone
   colors.
 - **SCARABS** (2026-07-23, Tim: "think of the movie The Mummy"): every
@@ -76,8 +93,9 @@ startup prebuild.
 
 ## Test
 
-`sim/tools/lava_test.py` sections 13–15: base built, carved flags placed,
-glint rises on approach, motes drift, warm-floor render check, texture
-export shapes (glow flags), torch on deck + flame burns hot, perf budget;
-scarab lifecycle (erupt → swarm renders mid-flight → drain, all gone
-after) + a forced sputter.
+`sim/tools/lava_test.py` sections 13–16: base built, carved flags placed,
+glint rises on approach, warm-floor render check, texture export shapes
+(glow flags), perf budget; scarab lifecycle (erupt → swarm renders
+mid-flight → drain, all gone after); spider slow-crawl + scurry-from-feet;
+and under 90 s of load: nothing ever crosses the mast clearance ring, the
+spider lunges and eats a scarab, and a web is spun and torn down.

@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: the stone floor of an ancient jungle temple. Large weathered cobblestones and flagstones, uneven and cracked, each stone big and clearly readable, moss darkening the seams between stones, exactly as in the reference frame. Off-center, toward the lower right, a burning wooden torch lies dropped on the stones, exactly where the reference frame places it; the torch stays where it fell and never slides. Its flame burns hard and restlessly, whipping sideways, flaring bright and shrinking back, and the wide pool of warm torchlight PULSES with every flare - long soft shadows off the stones' edges visibly swing and breathe across the floor as the flame moves. Midway, a strong wind surge hits: the flame ROARS sideways to twice its size, a stream of embers and sparks tears across the flagstones, the pool of torchlight flares far across the floor with shadows swinging wide, and loose dry leaves bolt across the frame all at once; then the surge fades and the flame settles back to its restless gutter. Embers spray from the flame every second or two and skitter fast and glowing across the stone before winking out; a thick roll of smoke crawls low across the width of the floor, coiling and tearing in the wind. The rest of the floor sits in dim, even ambient light that the moving torchlight visibly plays into. The stone floor fills the entire frame and continues beyond every edge - no border, no curb, no wall, no edging: nothing but floor. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no tilt, no parallax, no depth of field. Flame, shadow, embers, smoke or leaves are visibly moving at every moment; continuous motion from the first frame to the last. No people, no animals, no text, no watermark.",
+  "size": "960x720",
+  "duration": 15,
+  "seed": 20260801,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "5kcrSAmbIH10luAPsrXE",
+  "polling_url": "https://openrouter.ai/api/v1/videos/5kcrSAmbIH10luAPsrXE",
+  "status": "pending"
+ },
+ "final": {
+  "id": "5kcrSAmbIH10luAPsrXE",
+  "generation_id": "gen-vid-1784936003-ERiwHV7F0ewz6sEI1RAg",
+  "polling_url": "https://openrouter.ai/api/v1/videos/5kcrSAmbIH10luAPsrXE",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/5kcrSAmbIH10luAPsrXE/content?index=0"
+  ],
+  "usage": {
+   "cost": 2.24532,
+   "is_byok": false
+  }
+ }
+}

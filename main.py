@@ -5,6 +5,8 @@ import json
 import logging
 import asyncio
 import traceback
+import urllib.error
+import urllib.request
 import websockets
 from quart import Quart, request, jsonify, Response, send_from_directory, send_file
 from quart_cors import cors
@@ -369,6 +371,55 @@ async def stop_music():
         return jsonify({"status": "error", "message": "Failed to stop background music"}), 500
     except Exception as e:
         logger.error(f"Error stopping background music: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# Cuddle floor-projection theme control (projection_renderer.py ThemeControl):
+# same-host on playa (the one Pi renders the projection); the sim serves the
+# identical protocol on the bench.
+FLOOR_CTL_URL = os.environ.get('FLOOR_CTL_URL', 'http://127.0.0.1:5002')
+
+
+@app.route('/api/next_floor_theme', methods=['POST'])
+async def next_floor_theme():
+    """Relay to the floor projector's theme control (the orb's very-long-press).
+    Body {"theme": "lava"} picks a specific theme; empty body cycles to next."""
+    try:
+        data = await request.get_json(silent=True) or {}
+        pick = data.get('theme') or 'next'
+
+        def _post():
+            req = urllib.request.Request(f'{FLOOR_CTL_URL}/theme/{pick}',
+                                         data=b'', method='POST')
+            with urllib.request.urlopen(req, timeout=2) as r:
+                return r.status, json.loads(r.read())
+
+        status, body = await asyncio.to_thread(_post)
+        return jsonify({"status": "success", "theme": body.get('theme'),
+                        "message": f"Floor theme -> {body.get('theme')}"})
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode(errors='replace')
+        logger.error(f"Floor theme control refused {pick!r}: {e.code} {detail}")
+        return jsonify({"status": "error", "message": f"Floor control refused: {detail}"}), 502
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        logger.error(f"Floor theme control unreachable at {FLOOR_CTL_URL}: {e}")
+        return jsonify({"status": "error",
+                        "message": "Floor projection renderer unreachable"}), 502
+    except Exception as e:
+        logger.error(f"Error switching floor theme: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/toggle_music', methods=['POST'])
+async def toggle_music():
+    try:
+        success, playing = await effects_manager.toggle_music()
+        if success:
+            return jsonify({"status": "success",
+                            "message": f"Background music {'started' if playing else 'stopped'}"})
+        return jsonify({"status": "error", "message": "Failed to toggle background music"}), 500
+    except Exception as e:
+        logger.error(f"Error toggling background music: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

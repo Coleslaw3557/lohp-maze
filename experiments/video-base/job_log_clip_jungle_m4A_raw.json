@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: the mossy floor of an ancient jungle clearing - dark rich earth almost fully carpeted in deep green moss, with several large weathered grey-green stones sunk flush into the moss, two thick gnarled tree roots crossing the ground, and scattered individual fallen tropical leaves in olive and rust-brown resting on the moss, each leaf large and clearly separate. Small ferns and grass tufts sprout from the root bark and between the stones. Gentle continuous micro-motion: the fern fronds and grass tufts sway and tremble in a faint breeze, and every few seconds one fallen leaf stirs, slides a little or flips over and settles. Occasionally a fresh leaf drifts down from above, seesawing gently, and lands on the moss. The moss, earth, stones and roots themselves never move. Flat, even, shadowless ambient light that never changes - no sun patches, no moving shadows. The ground fills the entire frame and continues beyond every edge - no border, no clearing edge, no sky. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no parallax. Calm, loop-friendly motion, but something is visibly moving somewhere in the frame at every moment. No animals, no insects, no people, no text, no watermark.",
+  "size": "960x720",
+  "duration": 15,
+  "seed": 20260725,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "Rucy6U5hcVrLCxRkxhUE",
+  "polling_url": "https://openrouter.ai/api/v1/videos/Rucy6U5hcVrLCxRkxhUE",
+  "status": "pending"
+ },
+ "final": {
+  "id": "Rucy6U5hcVrLCxRkxhUE",
+  "generation_id": "gen-vid-1784941180-ZWs5iMxU3oGJt3BVSfsa",
+  "polling_url": "https://openrouter.ai/api/v1/videos/Rucy6U5hcVrLCxRkxhUE",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/Rucy6U5hcVrLCxRkxhUE/content?index=0"
+  ],
+  "usage": {
+   "cost": 2.24532,
+   "is_byok": false
+  }
+ }
+}

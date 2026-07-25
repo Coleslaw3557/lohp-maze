@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: open jungle floor of dark packed earth, patches of deep green moss, and a few thick surface roots crossing the ground, exactly as in the reference frame. Scattered fallen leaves lie on the bare earth - large individual tropical leaves, some deep green, some dry rust-brown, each clearly separate, most of the dark soil visible between them. A strong gusty wind works the floor the whole time: leaves keep sliding, flipping and cartwheeling in bursts, and fine dust races across the earth with every gust. Midway, one long heavy gust holds for several seconds: the whole field of leaves migrates together toward one side of the frame, leaves streaming, tumbling and piling in drifts against the roots - then a counter-gust scatters the drifts back across the floor in a burst of tumbling leaves. Once, a dry seed pod bounces and rolls diagonally across the whole frame, knocking leaves aside as it goes, and rolls out of view. Between events, single leaves keep twitching, lifting at one edge and skating short distances. The moss, roots and earth themselves never move. Flat, even, shadowless ambient light that never changes. The ground fills the entire frame and continues beyond every edge - no border, no clearing edge. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no parallax. Leaves are visibly moving somewhere in the frame at every moment; continuous motion from the first frame to the last. No animals, no insects, no people, no text, no watermark.",
+  "size": "960x720",
+  "duration": 15,
+  "seed": 20260831,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "yvSV5QOr5fWoFO4jcdgb",
+  "polling_url": "https://openrouter.ai/api/v1/videos/yvSV5QOr5fWoFO4jcdgb",
+  "status": "pending"
+ },
+ "final": {
+  "id": "yvSV5QOr5fWoFO4jcdgb",
+  "generation_id": "gen-vid-1784936359-6ESqVu07svb9J8seMMHr",
+  "polling_url": "https://openrouter.ai/api/v1/videos/yvSV5QOr5fWoFO4jcdgb",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/yvSV5QOr5fWoFO4jcdgb/content?index=0"
+  ],
+  "usage": {
+   "cost": 2.24532,
+   "is_byok": false
+  }
+ }
+}

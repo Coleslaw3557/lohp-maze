@@ -833,63 +833,6 @@
     ]
    }
   },
-  "Button 1": {
-   "kind": "button",
-   "pos": [
-    11.34,
-    3.58,
-    0.52
-   ],
-   "label": "Next Theme",
-   "note": "the 4-button station stacked on a vertical rail \u2014 the hex's east back-corner leg by the Porto entry \u2014 top to bottom B1..B4 at 1.65/1.35/1.05/0.75 m above the deck, labels beside the buttons; all four 2-wire to screw terminals in the Cuddle Cross node box on the back corner",
-   "label_off": [
-    -0.72,
-    0.0,
-    0.06
-   ]
-  },
-  "Button 2": {
-   "kind": "button",
-   "pos": [
-    11.34,
-    3.28,
-    0.52
-   ],
-   "label": "Storm All Rooms",
-   "label_off": [
-    -0.72,
-    0.0,
-    0.06
-   ]
-  },
-  "Button 3": {
-   "kind": "button",
-   "pos": [
-    11.34,
-    2.98,
-    0.52
-   ],
-   "label": "Music On",
-   "label_off": [
-    -0.72,
-    0.0,
-    0.06
-   ]
-  },
-  "Button 4": {
-   "kind": "button",
-   "pos": [
-    11.34,
-    2.68,
-    0.52
-   ],
-   "label": "Music Off",
-   "label_off": [
-    -0.72,
-    0.0,
-    0.06
-   ]
-  },
   "Porto Room Piezo 1": {
    "kind": "knock",
    "pos": [
@@ -1421,7 +1364,7 @@
   }
  ],
  "projection": {
-  "note": "PLANNED Cuddle Cross floor-projection rig (sim preview only, no production config behind it): used ViewSonic LS625X (laser-phosphor DLP, 20k-hr solid-state source, SEALED optical engine + waveform dust filter - the playa-relevant feature; XGA 4:3, 3200 lm, TR 0.49:1, lens offset 118%, native focus 60-300in; ~$395 used on eBay 2026-07) mounted FACE-DOWN = NOSE-DOWN (0.22 m chassis depth hangs vertically; body top 3.82 kisses the 3.83 roof slab, so the window rides at ~1.53 m - the biggest image the roof allows: 3.112 m wide x 2.334 m along-throw) on a STUB ARM just INSIDE the hexagon's NE corner (paired legs at (11.364, 2.022); lens plumb 10 cm inboard of the vertex, body rear face ~1.5 cm off the leg cluster, arm_deg 60 out to the legs - the legs sit BEHIND the aperture so no scaffold steel touches a single ray), throwing SW down the long diagonal (yaw -120). 2026-07-18 MAX-COVERAGE revision - Tim's call: coverage math wins over the rear-leg placement preference. The geometry: with height roof-capped the image rect is fixed, so coverage is pure plumb+yaw placement; the 118% offset pins the near image edge 0.42 m from the lens plumb, and the far edge reaches only 2.754 m - short of the 3.048 m corner-to-corner diagonal - so some dark deck is unavoidable and the corner throw minimizes it. KEY OBSTRUCTION PHYSICS (caught by Tim): the ideal unobstructed plumb is ~6 cm OUTSIDE the vertex (92.7%, image dead-centered), but from there the paired corner legs stand 6 cm in front of the lens and every ray crosses them at 1.30-1.49 m height - one 43 mm tube at that range shadows a +-20 deg wedge through the FULL image depth, so any outboard aperture is optically dead; inboard-of-the-legs is the real optimum: 91.2% of the 6.03 m2 deck. All six corners tie; NE chosen because the S corner is blocked (canvas + node box in the near field), SE has the button rail in the beam, SW rides the canvas end seam, and N hangs over the front lean-out corner. Unlit: the near corner wedge under the body (~0.52 m deep - the body hangs over the deck's darkest dead corner, bottom at 1.53 m) and the ~0.19 m SW far tip; the east-arch jamb clips only rays that land off-deck (masked). Fallbacks: rolling the body to yaw -63 at the OLD rear-leg clamp gets 89.8% with zero new hardware (the due-west throw was 75.8%; legs/arch clear there too); a roof-top doghouse over a beam porthole reaches 100% but means roof surgery. Offset tolerance now cuts both ways: 118%+-5% spans 88.2-92.6% (low-offset units win), so slot the arm bracket +-8 cm radially and set the final plumb on-site; every 25 mm of lost mount height costs ~0.4pt. MASKED to the deck outline as always (off-deck pixels black); mast base in-image (content island; its shadow wedge now falls SW toward the back-west corner, clear of the button station). Supersedes the rear-leg placement, the Casio XJ-ST145 pick (kept as budget fallback) and the earlier 595Wi scheme. LD2450/LD2410C node box unchanged at the back corner. Render Pi 3B outputs 1024x768. Playa care: ply shroud with open downward aperture, filter cloth over the intake, daily brush-out, power off by day. An LD2450 position radar joins the LD2410C inside the node box (UART1 on the XIAO C3) and streams up to 3 target positions to the projection Pi 3B at the rack; the sim reacts to the walker through the tracker's real coverage wedge with ~150 ms sensor+render latency. Show starts on the room's entry trigger (or tracked presence) and times out like the planned cue daemon. Delete this key to remove the whole rig from the sim.",
+  "note": "PLANNED Cuddle Cross floor-projection rig (sim preview only, no production config behind it): used ViewSonic LS625X (laser-phosphor DLP, 20k-hr solid-state source, SEALED optical engine + waveform dust filter - the playa-relevant feature; XGA 4:3, 3200 lm, TR 0.49:1, lens offset 118%, native focus 60-300in; ~$395 used on eBay 2026-07) mounted FACE-DOWN = NOSE-DOWN (0.22 m chassis depth hangs vertically; body top 3.82 kisses the 3.83 roof slab, so the window rides at ~1.53 m - the biggest image the roof allows: 3.112 m wide x 2.334 m along-throw) on a STUB ARM just INSIDE the hexagon's NE corner (paired legs at (11.364, 2.022); lens plumb 10 cm inboard of the vertex, body rear face ~1.5 cm off the leg cluster, arm_deg 60 out to the legs - the legs sit BEHIND the aperture so no scaffold steel touches a single ray), throwing SW down the long diagonal (yaw -120). 2026-07-18 MAX-COVERAGE revision - Tim's call: coverage math wins over the rear-leg placement preference. The geometry: with height roof-capped the image rect is fixed, so coverage is pure plumb+yaw placement; the 118% offset pins the near image edge 0.42 m from the lens plumb, and the far edge reaches only 2.754 m - short of the 3.048 m corner-to-corner diagonal - so some dark deck is unavoidable and the corner throw minimizes it. KEY OBSTRUCTION PHYSICS (caught by Tim): the ideal unobstructed plumb is ~6 cm OUTSIDE the vertex (92.7%, image dead-centered), but from there the paired corner legs stand 6 cm in front of the lens and every ray crosses them at 1.30-1.49 m height - one 43 mm tube at that range shadows a +-20 deg wedge through the FULL image depth, so any outboard aperture is optically dead; inboard-of-the-legs is the real optimum: 91.2% of the 6.03 m2 deck. All six corners tie; NE chosen because the S corner is blocked (canvas + node box in the near field), SE had the button rail in the beam (rail removed 2026-07-23 - the orb is the Cuddle control surface), SW rides the canvas end seam, and N hangs over the front lean-out corner. Unlit: the near corner wedge under the body (~0.52 m deep - the body hangs over the deck's darkest dead corner, bottom at 1.53 m) and the ~0.19 m SW far tip; the east-arch jamb clips only rays that land off-deck (masked). Fallbacks: rolling the body to yaw -63 at the OLD rear-leg clamp gets 89.8% with zero new hardware (the due-west throw was 75.8%; legs/arch clear there too); a roof-top doghouse over a beam porthole reaches 100% but means roof surgery. Offset tolerance now cuts both ways: 118%+-5% spans 88.2-92.6% (low-offset units win), so slot the arm bracket +-8 cm radially and set the final plumb on-site; every 25 mm of lost mount height costs ~0.4pt. MASKED to the deck outline as always (off-deck pixels black); mast base in-image (content island; its shadow wedge now falls SW toward the back-west corner, clear of the old button-station corner). Supersedes the rear-leg placement, the Casio XJ-ST145 pick (kept as budget fallback) and the earlier 595Wi scheme. LD2450/LD2410C node box unchanged at the back corner. Render Pi 3B outputs 1024x768. Playa care: ply shroud with open downward aperture, filter cloth over the intake, daily brush-out, power off by day. An LD2450 position radar joins the LD2410C inside the node box (UART1 on the XIAO C3) and streams up to 3 target positions to the projection Pi 3B at the rack; the sim reacts to the walker through the tracker's real coverage wedge with ~150 ms sensor+render latency. Show starts on the room's entry trigger (or tracked presence) and times out like the planned cue daemon. Delete this key to remove the whole rig from the sim.",
   "room": "Cuddle Cross",
   "level": 1,
   "cue": "Cuddle Cross LT",
@@ -1476,7 +1419,7 @@
   "note": "Cuddle orb (sim preview only, no production config): a Waveshare ESP32-S3-Touch-LCD-1.28 round display (chip verified 2026-07-22: ESP32-S3R8, 16MB flash, 8MB PSRAM, native USB-Serial-JTAG, MAC fc:01:2c:d1:e2:3c) at the REAR of the room, tucked directly UNDER the back-corner sensor/node box (Tim 2026-07-23; supersedes both the mast idea - display inside the 3.5in pole - and the high-on-canvas spot). Same plumb as the LD2450 it reads. Renders a watching eye whose pupil tracks whoever the SAME node-box LD2450 the projection reads reports, with first-order lag. skin = hal (2001 red camera lens) or mayan (jade+gold jaguar/serpent deity eye, obsidian vertical slit); the sim's Eye button cycles off/hal/mayan. Real panel is 32.5mm (1.28\"); diameter here is enlarged so the eye reads across the deck. The gestures the real orb sends hit the REST API directly (shake -> /api/run_effect_all_rooms LightningStorm, touch-wheel -> /api/set_theme next_theme, dock -> /api/stop_effect) - see wiring-guides/cuddle-orb-plan.md; they are NOT room-node sensors so they stay out of triggers.json. Delete this key to drop the orb from the sim.",
   "room": "Cuddle Cross",
   "level": 1,
-  "skin": "hal",
+  "skin": "olmec",
   "mount": [ 10.044, -0.15 ],
   "h": 1.2,
   "yaw_deg": 0,

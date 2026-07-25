@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: a vast lake of molten lava. Glowing orange-yellow molten rock covers almost the entire surface - a bright, churning, incandescent melt lake; only scattered small dark islands and thin broken ridges of cooled black crust float on it, covering at most a quarter of the surface, with wide open melt everywhere between them. The melt flows steadily in one direction, carrying incandescent streaks and small dark rafts of crust along; large bubbles swell and burst with bright flares. Deep oranges and brilliant yellows dominate the frame against sparse near-black crust. The lava lake fills the entire frame and continues beyond every edge - no border, no shoreline, no cooled margin. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no parallax. No people, no text, no watermark.",
+  "size": "960x720",
+  "duration": 5,
+  "seed": 20260760,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "T3OqplxL0iS7JGPXglkC",
+  "polling_url": "https://openrouter.ai/api/v1/videos/T3OqplxL0iS7JGPXglkC",
+  "status": "pending"
+ },
+ "final": {
+  "id": "T3OqplxL0iS7JGPXglkC",
+  "generation_id": "gen-vid-1784934438-jchNrRZwn9LKcSDJ6LtI",
+  "polling_url": "https://openrouter.ai/api/v1/videos/T3OqplxL0iS7JGPXglkC",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/T3OqplxL0iS7JGPXglkC/content?index=0"
+  ],
+  "usage": {
+   "cost": 0.74844,
+   "is_byok": false
+  }
+ }
+}

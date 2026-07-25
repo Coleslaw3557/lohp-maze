@@ -34,25 +34,32 @@ render+state+textures identical before/after).
 
 ## The show
 
-The deck is a **leaf-litter carpet** (Tim's pick 2026-07-23 from the
-four-way background comparison; the flagstone runner-up became the temple
-theme): overlapping leaves in greens, olives and rusts painted once at
-init, with the drifting light field multiplied over it through a
-green-shadow→warm-gold ramp (`_JUNGLE_STOPS` is a LIGHT ramp now — same
-octave machinery as the lava heat). Heavier canopy dapple hugs the deck
-rim, and a **sun-pool follows each tracked walker** (the canopy opens over
-you). Density/size knob: `LEAF_DENSITY`.
+The deck is an **open mossy clearing floor** (2026-07-25 rework — Tim's
+call: the wall-to-wall carpet looks, both the painted leaf-litter and the
+lush AI video, read as a plant WALL, not a floor, and camouflaged the
+snakes): dark humus mostly swallowed by patchy moss, a few weathered
+stones sunk flush, two rooty runs wandering across, and scattered single
+fallen leaves as accents. The drifting light field multiplies over it
+through a green-shadow→warm-gold ramp (`_JUNGLE_STOPS` is a LIGHT ramp —
+same octave machinery as the lava heat). Heavier canopy dapple hugs the
+deck rim, and a **sun-pool follows each tracked walker** (the canopy opens
+over you). Leaf-accent knob: `LEAF_DENSITY` (now sparse). The AI video
+base (`base_loop_jungle_192.npy`, 28.9 s bridge loop, motion 0.71/255)
+matches: mossy ground, flush stones, roots, ferns, drifting leaves.
 
-- **Snakes** (the heart of it): three procedural snakes, all real regional
-  species, colorway pass 2026-07-23 (Tim liked the coral, wanted the two
-  greens replaced — jade-on-green was camouflage): a **tzabcan
-  rattlesnake** (the Yucatán diamondback, 1.55 m — sandy tan, brown diamond
-  chain, pale flank line, and a segmented buff-keratin **rattle** held
-  wider than a tail point that **buzzes** — flicker shimmer + a rattle log
-  line — when it flees), a **gold eyelash viper** (1.3 m, bright gold with
-  fleck speckle, dark eyes; the high-contrast one), and the **coral snake**
-  (red/yellow/black rings — red widest, "red touches yellow" — black
-  snout, ~1 m). They slither goal-to-goal across the deck with a weaving,
+- **Snakes** (the heart of it): three procedural snakes, all real venomous
+  regional species — **2026-07-25 pass (Tim): smaller bodies, new skins**
+  (supersedes the 07-23 colorways; strips resampled from a fresh AI plate,
+  `clip_snakes3.mp4` → `snake_strips.npz`): a **tzabcan rattlesnake** (the
+  Yucatán diamondback, now 1.05 m — sandy grey-tan, cream-edged chocolate
+  diamond chain, pale flank line, and a segmented buff-keratin **rattle**
+  held wider than a tail point that **buzzes** — flicker shimmer + a
+  rattle log line — when it flees), a **Yucatán cantil** (Agkistrodon
+  russeolus, 0.85 m — copper red-brown with cream-edged chocolate
+  crossbands pinching at the flanks; replaces the flat-gold eyelash
+  viper), and the **coral snake** (red/yellow/black rings — red widest,
+  "red touches yellow" — black snout, 0.68 m). All amber-eyed. They
+  slither goal-to-goal across the deck with a weaving,
   burst-and-glide gait
   (heading oscillation + speed pulsing; the spine is a trail the body
   follows). **v2 body render (07-23, Tim: "more realistic")**: not discs —
@@ -68,11 +75,14 @@ you). Density/size knob: `LEAF_DENSITY`.
   speed 0.62 m/s, hysteresis to 1.2 m so it actually escapes, per-snake
   event cooldown 4 s so the log doesn't spam). Placement/self-respect rules
   keep them off the altar and out from underfoot.
-- **Fallen glyph stones**: three mossy carved rocks (rock-patch generator
-  with moss colors + a moss pass that eats the rims green), dots-and-bars
-  carvings — decorative ruins, not the lava chain's wayfinding numerals.
-  Approach one and its carve glints leaf-gold (same glint logic as the
-  stones).
+- **Fallen glyph stones**: three mossy carved ruin stones drawn from the
+  generated skin pack (`experiments/video-base/stone_skin_jungle.npz` —
+  four carved TABLETS: spiral / concentric rings / stepped pyramid /
+  radiant sun; the skull variants were cut 07-24 and the monkey-head
+  variants 07-25, both archived beside the pack), procedural mossified
+  rock as the fallback. No counting marks — decorative ruins, not the lava
+  chain's wayfinding numerals. Approach one and it glints leaf-gold (same
+  glint logic as the stones).
 - **Fireflies**: up to seven, blinking on/off, wandering the lit deck —
   each glows in the field (gold through the palette) with a bright core dot.
 - **The altar**: the same carved sun-stone around the mast base, mossier
@@ -116,10 +126,10 @@ journal's once-a-minute `fps` heartbeat if it ever feels slow again.
 
 ## Tuning knobs (constants in projection_engine.py)
 
-`SNAKE_*` (specs, seg 0.045 m, cruise 0.16–0.30 m/s, flee 0.62 m/s at
-0.75 m w/ 1.6× calm hysteresis, weave 1.3–2.4 rad/s), `TONGUE_*`,
-`WAKE_*`, `SUN_*` (0.42 m pool), `FIREFLY_*`, `GLYPH_*`, `RATTLE_*`,
-`_JUNGLE_STOPS` palette.
+`SNAKE_*` (specs, seg 0.032 m, cruise 0.13–0.24 m/s, flee 0.55 m/s at
+0.75 m w/ 1.6× calm hysteresis, weave 1.3–2.4 rad/s at 0.55–1.0 Hz),
+`TONGUE_*`, `WAKE_*`, `SUN_*` (0.42 m pool), `FIREFLY_*`, `GLYPH_*`,
+`RATTLE_*` (0.085 m), `SNAKE_CANTIL_PER_M`, `_JUNGLE_STOPS` palette.
 
 ## Test
 

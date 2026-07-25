@@ -1,0 +1,37 @@
+{
+ "payload_sans_images": {
+  "model": "bytedance/seedance-2.0",
+  "prompt": "Viewed from directly overhead, straight down: a shallow, clear jungle stream flowing fast and steadily from the top of the frame toward the bottom over a bed of dark smooth river pebbles, with smooth gray stepping stones rising just above the surface, exactly as in the reference frame. The stepping stones and the larger boulder are FIXED and never move: the brisk current piles a clear bow ripple against each stone's upstream edge and drags a long shivering wake behind it, with lines of white foam streaming past their sides. Trains of surface ripples race down the whole frame without pause, each crest crossing the frame in two or three seconds; broad bright bands of light caustics sweep and wobble quickly across the pebble bed everywhere; leaves, twigs and clusters of foam bubbles keep shooting through with the current from the top edge out the bottom edge, one every second or two. The water is the same uniform depth everywhere - no shallows, no deep pools. Cool greens and blue-greens, the pebble bed visible through the water everywhere. The water fills the entire frame and continues beyond every edge - no bank, no shore. Even, soft ambient light with no lighting changes. Absolutely locked static camera, perfectly perpendicular top-down view: no zoom, no pan, no rotation, no parallax. The surface is visibly moving everywhere in the frame at every moment; continuous flowing motion from the first frame to the last. No people, no fish, no animals, no text, no watermark.",
+  "size": "960x720",
+  "duration": 15,
+  "seed": 20260730,
+  "generate_audio": false,
+  "provider": {
+   "options": {
+    "bytedance": {
+     "parameters": {
+      "watermark": false
+     }
+    }
+   }
+  }
+ },
+ "submit": {
+  "id": "dHcgdHTIkXxLPeoVLKcg",
+  "polling_url": "https://openrouter.ai/api/v1/videos/dHcgdHTIkXxLPeoVLKcg",
+  "status": "pending"
+ },
+ "final": {
+  "id": "dHcgdHTIkXxLPeoVLKcg",
+  "generation_id": "gen-vid-1784928826-xLsOyBBN0WE5qjF9Umj4",
+  "polling_url": "https://openrouter.ai/api/v1/videos/dHcgdHTIkXxLPeoVLKcg",
+  "status": "completed",
+  "unsigned_urls": [
+   "https://openrouter.ai/api/v1/videos/dHcgdHTIkXxLPeoVLKcg/content?index=0"
+  ],
+  "usage": {
+   "cost": 2.24532,
+   "is_byok": false
+  }
+ }
+}

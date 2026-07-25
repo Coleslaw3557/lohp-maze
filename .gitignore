@@ -15,4 +15,18 @@ sim/esphome/audio/cues-*.yaml
 # orb firmware credentials + build output
 firmware/orb/secrets.h
 firmware/orb/build/
+firmware/orb/tools/preview_face
 .floor_theme
+# AI video-base experiment: generated media stays local (~1 GB, regenerable
+# from the tracked scripts + prompts + job logs — see its README). Tracked:
+# scripts, prompts, job logs, skin npz packs, eyeball sheets, loop-seam
+# anchors, and the browser-served base_loop_<theme>.mp4 assets.
+experiments/video-base/*.npy
+experiments/video-base/clip_*.mp4
+experiments/video-base/*_archive*
+experiments/video-base/*_preview.mp4
+experiments/video-base/eval_*.mp4
+experiments/video-base/bare_*.mp4
+experiments/video-base/*.png
+!experiments/video-base/*_sheet.png
+!experiments/video-base/anchor_*.png

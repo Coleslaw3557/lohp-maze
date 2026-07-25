@@ -268,12 +268,12 @@ Consolidations checked against every sensor in the maze; what stays and why:
   motion tracker that loses perfectly still targets, and Cuddle's entire
   effect hook is *sustained still presence* via the LD2410C's still-energy
   gates. Not consolidatable.
-- **Hex 4-button station → optional 1-pin resistor ladder.** Cuddle's box is
-  exactly full (11/11 pins) — and since the 2026-07-20 game layer, Gate's is
-  too (6 game pads + radar + I2S, `room-games-plan.md`). If it ever needs a pin back, the
-  four buttons collapse onto one ADC pin with a resistor ladder (frees 3
-  GPIOs); costs a tiny resistor board + threshold logic, slightly less robust
-  with dusty contacts. Keep 4 digital pins for now; this is the relief valve.
+- **Hex 4-button station: REMOVED (2026-07-23).** The Cuddle orb took over
+  all four functions (tap = next theme, long-press = storm, swipe = music
+  on/off — `cuddle-orb-plan.md`), so the button rail and its four planned
+  pins are gone. Cuddle's box drops from 11/11 pins to 7/11 — the old
+  resistor-ladder relief valve is moot there. (Gate's box remains the full
+  one: 6 game pads + radar + I2S, `room-games-plan.md`.)
 - **Porto keeps 3 separate piezo ADC pins** — pad identity is free there (no
   button, no I2C) and helps debugging.
 - **Photo Bomb camera stays on the server Pi.** The XIAO S3-Sense camera is a
