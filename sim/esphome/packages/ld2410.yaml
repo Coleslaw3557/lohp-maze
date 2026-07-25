@@ -1,0 +1,41 @@
+# LD2410C presence radar -> the room's tripwire (packages/tripwire.yaml).
+# HARDWARE-FLASH package (like dmx_out.yaml): real S3 builds only — the host
+# platform has no UART; sim rooms keep firing trips via the API `trip` action.
+#
+#   packages:
+#     radar: !include ../packages/ld2410.yaml   # alongside tripwire.yaml
+#
+# Wiring (room-node-wiring-guide.md): radar Tx -> D7/GPIO44 (node RX),
+# radar Rx <- D6/GPIO43 (node TX), VCC <- 5V rail, OUT unconnected.
+# Hi-Link manual: UART 256000 8N1. dmx_out.yaml owns UART2 and the logger
+# owns USB-JTAG, so this auto-assigns UART0/1 — no explicit uart_num needed.
+#
+# A moving target appearing = the doorway trip: pulse the shared tripwire
+# template instead of firing the effect directly, so debounce, the 5s
+# cooldown, first-event handling and the harness `trip` action all stay in
+# one place. has_still_target is deliberately unused for triggering — a
+# radar can hold a still-lock on furniture.
+uart:
+  id: radar_uart
+  tx_pin: GPIO43
+  rx_pin: GPIO44
+  baud_rate: 256000
+
+ld2410:
+  uart_id: radar_uart
+
+binary_sensor:
+  - platform: ld2410
+    has_target:
+      name: "${room} radar presence"
+    has_moving_target:
+      name: "${room} radar moving"
+      on_press:
+        then:
+          - binary_sensor.template.publish:
+              id: tripwire
+              state: ON
+          - delay: 250ms
+          - binary_sensor.template.publish:
+              id: tripwire
+              state: OFF

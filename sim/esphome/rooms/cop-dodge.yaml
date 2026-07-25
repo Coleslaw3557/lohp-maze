@@ -1,18 +1,58 @@
 # Cop Dodge sensor node — trigger map from triggers.json
+# FIRST REAL ROOM BOX (2026-07-25): flashed per the FLASH ADDS recipe below +
+# packages/ld2410.yaml (radar -> tripwire). To run this room in the sim again:
+# platform back to sim_host.yaml, drop radar/dmx/external_components/wifi.
 substitutions:
   node_name: lohp-node-cop-dodge
   room: "Cop Dodge"
   effect: "PoliceLights"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
+  server_host: "192.168.253.184"   # bench: this dev box; playa: 192.168.1.238
   api_port: "6062"
-  host_mac: "06:35:69:00:00:02"
+  host_mac: "06:35:69:00:00:02"    # sim-only (sim_host.yaml); unused on hardware
+  dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)
 
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
-  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
+  radar: !include ../packages/ld2410.yaml
+  dmx: !include ../packages/dmx_out.yaml
+  audio: !include ../packages/audio_s3.yaml
+  # WiFi mystery RESOLVED 07-25: antenna snap connector was unplugged (knocked
+  # loose during the speaker/DAC install) — never firmware.
+  # Audio 2026-07-25 (Tim): NOTHING stored on the chip — cues stream from the
+  # server as announcement URLs (node_audio_manager.py); the one-cue lite
+  # package + 8MB-USB-reflash detour is dead.
+  platform: !include ../packages/hardware_s3.yaml
 
-# FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "6"   # D5, radar room
-#   packages:           dmx: !include ../packages/dmx_out.yaml
-#   external_components: [{source: {type: local, path: ../components}}]
+external_components:   # for dmx_out.yaml — path is main-config-relative
+  - source:
+      type: local
+      path: ../components
+
+# Bench-bay RF treatment: pin the stronger mesh AP (bench-xiao-s3.yaml).
+# fast_connect DROPPED 07-25: with the audio firmware this box hit endless
+# 'Handshake Failed'/'4-Way Handshake Timeout' loops; full scan-assoc paces
+# the WPA exchange. REMOVE the bssid pin for playa (different AP); keep the
+# rescue AP.
+wifi:
+  ssid: !remove
+  password: !remove
+  networks:
+    - ssid: !secret wifi_ssid
+      password: !secret wifi_password
+      bssid: 70:58:A4:5E:16:29
+  fast_connect: true
+  ap:
+    ssid: "LoHP-Cop-Dodge"
+    password: "hiddenplaya"
+
+# On-playa diagnostics habit (bench-xiao-s3.yaml): RSSI visible from the server.
+sensor:
+  - platform: wifi_signal
+    name: "${room} node RSSI"
+    update_interval: 30s
+
+# Bring-up visibility: tripwire's logger.log + binary_sensor state changes are
+# DEBUG-level. Drop back to INFO (logic.yaml default) via OTA once validated.
+logger:
+  level: DEBUG
