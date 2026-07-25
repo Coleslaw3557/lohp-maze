@@ -46,7 +46,9 @@
 //     horizontally — the 34mm interior can't take a vertical connector.
 //     Dust caps/covers on playa.
 //   right wall: USB-C slot (CUT — the XIAO's USB end butts this wall so
-//     the port reaches through the slot) + AUX hole (CUT) — the DAC's OWN
+//     the port reaches through the slot; boot-sized 07-24 since the port
+//     face sits ~0.9 recessed — the cable plug's overmold passes the
+//     wall to seat) + AUX hole (CUT) — the DAC's OWN
 //     3.5mm jack barrel sits behind it (board butts the wall); no separate
 //     panel-mount jack. Antenna stays INSIDE the box — no hole.
 //   front wall: sensor aperture; the acrylic window panel screws over it
@@ -149,7 +151,15 @@ panel_w = cuddle ? 82 : 70;  panel_h = 32;   // acrylic window panel
 // window screws: 2x M2 self-tap ON THE MIDLINE near the panel ends — never
 // the corners (corner screws leave <1mm acrylic web -> CRACKS). No etched
 // positions; drill 2mm pilots through acrylic + ply on the bench
-usb_w = 10; usb_h = 4;       // XIAO USB-C slot — CUT (07-22, was etch+bench)
+usb_w = 13; usb_h = 7;       // XIAO USB-C slot — CUT (07-22, was etch+bench).
+                             //  07-24 upsize (was 10x4, shell-only): the
+                             //  shell reaches just +2 into the 2.9 ply, so
+                             //  the port face sits ~0.9 RECESSED and the
+                             //  CABLE PLUG's overmold must enter the slot
+                             //  to seat. Sized for a common boot (<=12 x
+                             //  6.5 — caliper YOUR cable), centered on the
+                             //  shell; the slot now runs INTO the floor-
+                             //  mortise notch below (see panel_right)
 usb_z = 3.7;                 // floor -> shell center (VHB 1 + PCB + shell/2)
 jack_z = 6;                  // floor -> DAC jack barrel center (PCB + barrel
                              //  + solder stubs) — still an ESTIMATE but now
@@ -362,9 +372,14 @@ module panel_right() difference() {              // x runs front->back
   // USB + AUX are CUTS (07-22, was etch + bench-drill). The boards behind
   // register themselves: the XIAO's USB-C noses into the slot (PCB flush
   // on the wall), the DAC's own jack barrel fills AUX. Both sit over a
-  // floor-mortise notch — the USB slot leaves only a ~1.7mm ply bridge
-  // (AUX ~2.5 at Ø7) until the floor tab glues in behind — handle gently
-  translate([t + xiao_cy, t + usb_z]) square([usb_w, usb_h], center = true);
+  // floor-mortise notch. The 07-24 boot-sized USB slot would leave a
+  // 0.2mm bridge over its notch — kerf dust — so it deliberately merges
+  // with the notch instead: one keyhole opening, and the glued floor
+  // tab's top edge becomes the slot's bottom sill (13 wide inside the
+  // 20 tab, so the sill is solid tab). AUX keeps its ~2.5 bridge at Ø7 —
+  // handle that one gently until the floor glues in
+  translate([t + xiao_cy - usb_w/2, t - 0.5])
+    square([usb_w, usb_z + usb_h/2 + 0.5]);
   translate([t + dac_cy + dac_jack_off, t + jack_z]) circle(d = jack_hole);
 }
 module right_etch() {                            // x runs front->back
@@ -455,6 +470,45 @@ module window_etch() {
   }                                              //  rooms cut this through
 }
 
+// ---- paper test-fit net (PRINT 1:1 — not a cut job) --------------------
+// Floor body flanked by both side walls, unfolded flat at their fold
+// lines (the red etch lines). Print on paper, cut the outline, fold each
+// wall UP at its red line: every port cut then stands at its TRUE height
+// above the floor top and TRUE front-back position — sit the real boards
+// on their etched footprints and check the DAC barrel meets AUX, the DB9
+// face meets its window, the XIAO's USB-C meets the slot.
+// Geometry notes that make the fold honest:
+//   * the wall strip below the floor-top line (bottom mortise notches,
+//     y < t) is clipped off, and the floor's tabs are omitted — the fold
+//     line IS the floor plane, so heights need no mental +t
+//   * folding puts the printed face INWARD, so each wall appears as its
+//     interior view: panel_left as-drawn already is (that's the whole
+//     07-24 mirror saga); panel_right (drawn = exterior) gets mirrored
+module wall_above_floor()                      // drop the sub-floor strip
+  intersection() { children(); translate([-1, t]) square([D + 2, Hw]); }
+
+module testfit() {                             // shared edges union away —
+  square([W - 2*t, D - 2*t]);                  //  the fold lines live on
+  translate([t, -t]) rotate(90)                //  the etch layer instead
+    wall_above_floor() panel_left();
+  translate([W - 3*t, -t]) rotate(90) mirror([0, 1])
+    wall_above_floor() panel_right();
+}
+
+module testfit_etch() {
+  floor_etch();
+  for (x = [0, W - 2*t])                       // the fold lines
+    translate([x - 0.15, -t]) square([0.3, D]);
+  translate([(W - 2*t)/2, 6]) label("FRONT", 3);
+  // wall labels re-drawn upright in page coords (the panel transforms
+  // would rotate/mirror the originals): page X = t - y_wall on the left,
+  // W - 3t + y_wall on the right; page Y = x_wall - t on both
+  translate([t - db9_cz - 12, db9_cx - t]) label("DB9", 3);
+  translate([t - xlr_cz - 14, xlr_cx - t]) label("DMX", 2.8);
+  translate([W - 2*t + 9, xiao_cy]) label("USB", 2.8);
+  translate([W - 2*t + 13, dac_cy + dac_jack_off]) label("AUX", 2.8);
+}
+
 // ---- layouts -----------------------------------------------------------
 // PLY job: the six wall panels nested with 6mm gaps. sheet() = cut layer,
 // sheet_etch() = the same placements' marks — shared coordinates, so the
@@ -498,6 +552,8 @@ else if (part == "floor")  panel_floor();
 else if (part == "lid")    panel_lid();
 else if (part == "window") panel_window();
 else if (part == "sheet")  sheet();
+else if (part == "testfit") testfit();
+else if (part == "testfit_etch") testfit_etch();
 else if (part == "front_etch")  front_etch();
 else if (part == "back_etch")   back_etch();
 else if (part == "left_etch")   left_etch_cut();

@@ -17,9 +17,11 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 SCAD = HERE / 'node-enclosure.scad'
-PANELS = ['sheet', 'window']    # ply job + the acrylic window job
-HAS_ETCH = {'sheet', 'window'}
-OUTNAME = {'sheet': 'node-enclosure.svg', 'window': 'window-acrylic.svg'}
+PANELS = ['sheet', 'window', 'testfit']  # ply job + acrylic window job +
+                                         #  the PAPER 1:1 fold-up net
+HAS_ETCH = {'sheet', 'window', 'testfit'}
+OUTNAME = {'sheet': 'node-enclosure.svg', 'window': 'window-acrylic.svg',
+           'testfit': 'node-enclosure-testfit.svg'}
 # 14 rooms cut the standard files; Cuddle's 2410C+2450 pair needs the wide
 # aperture -> a second pass with cuddle=true, suffixed filenames
 VARIANTS = [('', []), ('-cuddle', ['-D', 'cuddle=true'])]
@@ -75,4 +77,6 @@ def write_panel(name, suffix='', defs=()):
 if __name__ == '__main__':
     for suffix, defs in VARIANTS:
         for p in PANELS:
+            if p == 'testfit' and suffix:   # cuddle differs only at the
+                continue                    #  window/front — one net serves
             write_panel(p, suffix, defs)

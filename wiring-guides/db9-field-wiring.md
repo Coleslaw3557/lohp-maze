@@ -85,8 +85,8 @@ now it can't happen in the field.
 | Deep Playa Handshake | btn 1 | btn 2 | btn 3 | btn 4 | btn 5 | — | — |
 | Bike Lock | Q1-TRUE | Q1-FALSE | Q2-TRUE | Q2-FALSE | — | — | — |
 | No Friends Monday | ladder ADC | WS2812 data | — | — | — | — | — |
-| Photo Bomb | shutter | — | — | — | — | — | — |
-| Monkey | pedestal switch | — | — | — | — | — | — |
+| Photo Bomb | shutter (→ **D1**, button contract) | — | — | — | — | — | — |
+| Monkey | pedestal switch (→ **D1**, button contract) | — | — | — | — | — | — |
 | Porto | piezo 1 + | piezo 2 + | piezo 3 + | — | — | — | — |
 
 Gate banks: pads 1–3 = bank A, 4–6 = bank B. NFM's resistor ladder and
