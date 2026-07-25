@@ -2,10 +2,10 @@
 """Unit test for the ESP32 node-audio downlink (node_audio_manager.py) and its
 RemoteHostManager integration. No server or hardware needed:
 
-  1. cue ids match what make_node_audio.py compiles into firmware
-  2. WS command mirroring: play_effect_audio -> play_cue, music -> stream URL
-     (percent-encoded), audio_stop -> announcement-only stop (music survives),
-     stop_background_music -> media stop
+  1. cue ids match the WAV filenames make_node_audio.py generates
+  2. WS command mirroring: play_effect_audio -> streamed announcement cue URL,
+     music -> stream URL (percent-encoded), audio_stop -> announcement-only
+     stop (music survives), stop_background_music -> media stop
   3. room=None broadcasts to every node room; unmapped rooms are untouched
   4. per-node FIFO lock keeps rapid-fire cues in dispatch order
   5. a dead node fails quietly (returns False, never raises, never blocks)
@@ -30,20 +30,13 @@ def check(name, ok, detail=''):
         FAILS.append(name)
 
 
-class FakeService:
-    name = 'play_cue'
-
-
 class FakeClient:
     def __init__(self, calls):
         self.calls = calls
 
-    async def execute_service(self, svc, args):
-        await asyncio.sleep(0.005)  # let another task interleave if it can
-        self.calls.append(('cue', args['cue']))
-
     async def media_player_command(self, key, command=None, media_url=None,
                                    announcement=None):
+        await asyncio.sleep(0.005)  # let another task interleave if it can
         self.calls.append(('media', command, media_url, announcement))
 
     async def disconnect(self):
@@ -59,7 +52,6 @@ class FakeConn(nam._NodeConn):
     async def _ensure_connected(self):
         if self.client is None:
             self.client = FakeClient(self.calls)
-            self.services = {'play_cue': FakeService()}
             self.media_key = 7
 
 
@@ -97,8 +89,9 @@ async def run(tmp_path):
     ok = m.handle_command("Monkey Room", "play_effect_audio",
                           {"file_name": "monkey-shrine-complete.mp3", "loop": False})
     await drain(m)
-    check("play_effect_audio dispatches play_cue to its node",
-          ok and monkey.calls == [('cue', 'monkey_shrine_complete')]
+    cue_url = "http://10.0.0.2:5000/api/audio/cues/monkey_shrine_complete.wav"
+    check("play_effect_audio streams the cue URL to its node",
+          ok and monkey.calls == [('media', None, cue_url, True)]
           and temple.calls == [])
 
     # unmapped room: untouched, reported unhandled
@@ -133,16 +126,22 @@ async def run(tmp_path):
                          {"file_name": f"cue{i}.mp3"})
     await drain(m)
     check("8 rapid cues arrive in dispatch order",
-          monkey.calls == [('cue', f'cue{i}') for i in range(8)])
+          monkey.calls == [('media', None,
+                            f"http://10.0.0.2:5000/api/audio/cues/cue{i}.wav",
+                            True) for i in range(8)])
 
     # dead node: real _NodeConn against a closed port — quiet False, no raise,
     # and once the backoff is armed further commands fail fast instead of
     # queueing connect timeouts behind the node lock
     import time
     dead = nam._NodeConn("Dead Room", "127.0.0.1", 1)
-    result = await asyncio.wait_for(dead.play_cue("x"), timeout=15)
+    result = await asyncio.wait_for(
+        dead.play_announcement("http://10.0.0.2:5000/api/audio/cues/x.wav"),
+        timeout=15)
     t0 = time.monotonic()
-    result2 = await asyncio.wait_for(dead.play_cue("y"), timeout=15)
+    result2 = await asyncio.wait_for(
+        dead.play_announcement("http://10.0.0.2:5000/api/audio/cues/y.wav"),
+        timeout=15)
     fast = time.monotonic() - t0
     check("dead node returns False without raising", result is False and result2 is False)
     check("backoff makes the next command fail fast", fast < 1.0, f"({fast:.3f}s)")

@@ -89,10 +89,13 @@ Bring-up order (full checklist: `wiring-guides/room-node-audio-plan.md`):
 1. Prep the PCM5102A (boards ship silent): back jumpers FLT→L DEMP→L **XSMT→H**
    FMT→L, front SCK pads → GND. Wire D8/D9/D10 → BCK/LCK/DIN, 5V pin → VIN,
    line-out jack → Pebble; button between D1 (GPIO2) and GND.
-2. `./make_node_audio.py`, then flash `bench-xiao-s3.yaml`.
-3. Drive it the real way: press the button (or
-   `harness.py call <node-ip>:6098 play_cue cue=monkey_shrine_complete`) for the
-   embedded cue; `POST /api/start_music` for the streamed bed — the server's
+2. `./make_node_audio.py` (server-side prep: generates the streamable
+   `audio_files/cues/` WAVs — **NOTHING is stored on the node**, 2026-07-25),
+   then flash `bench-xiao-s3.yaml`.
+3. Drive it the real way: press the button (fires the room effect; the server
+   streams the cue to the node as an announcement URL
+   `/api/audio/cues/<cue_id>.wav`), or `POST /api/run_effect`;
+   `POST /api/start_music` for the streamed bed — the server's
    `node_audio_manager.py` handles both, additively beside the WS/sim path.
 4. Bench checks that gate the 15× buy: cue latency vs the VLC feel, 10× rapid
    `play_cue` retrigger (ESPHome #15692 regression), 30min music+cue soak on

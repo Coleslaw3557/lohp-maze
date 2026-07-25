@@ -9,9 +9,8 @@ photos/
 .playwright-mcp/
 .playwright-cli/
 Background-images/
-# generated node firmware audio (make_node_audio.py; machine-local abs paths)
-sim/esphome/audio/cues/
-sim/esphome/audio/cues-*.yaml
+# generated streamable cue WAVs (make_node_audio.py)
+audio_files/cues/
 # orb firmware credentials + build output
 firmware/orb/secrets.h
 firmware/orb/build/
