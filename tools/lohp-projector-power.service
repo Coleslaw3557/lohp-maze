@@ -1,0 +1,12 @@
+[Unit]
+Description=LOHP projector power reconciler (LS625X RS232: on dusk-to-sunrise, off daytime, 20-min checks)
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/dietpi/lohp-server/projector_power.py --daemon
+WorkingDirectory=/home/dietpi/lohp-server
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

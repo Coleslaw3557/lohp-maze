@@ -1,0 +1,19 @@
+[Unit]
+Description=LOHP projector graceful power-off when the Pi shuts down (RS232)
+# After the reconciler so shutdown ordering (reverse of start) sends the
+# projector OFF first, while the daemon is idle between passes.
+After=multi-user.target lohp-projector-power.service
+
+[Service]
+# Oneshot that "runs" for the whole uptime; the real work is ExecStop, which
+# systemd invokes only when this unit stops — i.e. at system shutdown/reboot.
+# Deploys restart lohp-projector-power but never touch this unit, so a deploy
+# does not power-cycle the projector.
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/bin/python3 /home/dietpi/lohp-server/projector_power.py --off
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

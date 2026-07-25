@@ -147,7 +147,7 @@ One firmware family; a room's YAML just picks its sensor package.
 | Rooms | Sensor pack |
 |---|---|
 | 10 wing bays (Monkey, Temple, NFM, Cop Dodge, Gate, Bike Lock, Deep Playa, Photo Bomb, Porto, Sparkle) | LD2410C radar |
-| Cuddle Cross | LD2410C + hex 4-button termination (+ LD2450 later, projection subsystem) |
+| Cuddle Cross | LD2410C (+ LD2450 later, projection subsystem) — no wall buttons: the orb IS the room's control surface (2026-07-23) |
 | Entrance / Exit | VL53L1X ToF (through the START/FINISH arch) |
 | Guy Line Climb / Vertical Moop March | VL53L1X ToF (across the shaft arch) |
 | Monkey (add-on) | puzzle microswitch, 2-wire to the box |
