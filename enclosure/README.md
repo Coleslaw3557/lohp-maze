@@ -86,6 +86,71 @@ on the midline** (corner screws would leave <1mm acrylic web → cracks).
   standard aperture. Cut the `-cuddle` files instead: 68-wide aperture,
   82 × 32 window, both footprints etched side by side.
 
+## Camp-sign variant (`-sign` files — the 16th box, 2026-07-29)
+
+The camp-sign controller (`../wiring-guides/camp-sign-plan.md`) rides in
+the same shell: `node-enclosure-sign.svg` cuts the identical six-panel
+box with the sign's port set instead of the room-node one — a third
+variant beside standard/cuddle (`sign=true` in the .scad). One cut, one
+box, mounted inside the band cavity behind the removable logo disc.
+The PSU feed and the four LED strip groups plug INTO this box; nothing
+sign-related lives loose in the cavity anymore.
+
+Different from the room kit:
+
+- **No sensor window** (front wall solid — etched **CAMP SIGN** on the
+  OUTSIDE face, the fleet's one exterior ID), so **no acrylic job**; no
+  DB9, no DAC/AUX, **no velcro slots** — the box screws down through its
+  floor inside the wooden cavity (wood screws where they land, house
+  no-pre-cut-holes rule as always).
+- **XLR Ø24 = DMX IN** (same cut position as the rooms' DMX OUT): the
+  Dfi RX's male stick plugs straight in if the tower-WiFi test fails —
+  jack cups bench-wired to the MAX485 A/B screws exactly like a room
+  box, **plus the 120Ω terminator across A/B** (the RX stub is its own
+  tiny bus). WiFi ArtDMX stays primary; the populated jack just makes
+  the fallback plug-and-play with zero playa soldering.
+- **12V hole Ø8, left wall** (roughly where the DB9 window would be): a
+  BTF 2-pin pigtail threads in to the buck's IN end, connector half
+  outside — the PSU run from the LEFT-pillar fuse block (circuit C3,
+  2A) plugs into it. Zip-tie knot inside = strain relief. All pigtails
+  (this one, D1–D3 and BTN) keep **~10 cm slack tail outside** —
+  connectors dangle and mate on slack, NEVER trimmed flush to the case
+  (flush = every unmate prying against the zip-tie and the ply hole
+  edge).
+- **BTN hole Ø7, right wall** ("STORM" etched under it): a BTF 2-pin
+  pigtail out to the arcade storm button on the sign scaffolding.
+  Inside: signal → the XIAO's D3 (GPIO4, INPUT_PULLUP, the wall the
+  XIAO sits against) + GND. A press POSTs `/api/sign_storm` — maze-wide
+  Lightning + thunder on every speaker at once; the SERVER owns the
+  30 s cooldown (`SIGN_STORM_COOLDOWN_S`, main.py).
+- **D1–D3 holes Ø7, back wall**, directly behind the AHCT zone: three
+  BTF 3-pin pigtails thread out, connectors outside — the strip chains
+  plug in. **Under each hole the wall etches its chain and connection
+  end** (2026-07-29 regroup): **D1 LEGENDS OF THE (e) · D2 LOGO ·
+  D3 HIDDEN PLAYA (H)** — the logo field is its own output so the
+  removable disc unplugs alone; the parenthesized letter is where that
+  chain lands at band center. Power runs mirror the data (one per
+  chain, entering only at word fronts/backs: 'L' / the disc / 'a' —
+  camp-sign-plan.md). Hole pitch 24, pattern symmetric about the wall
+  center — a flipped back wall lands the same holes and only the label
+  order mirrors (cosmetic; pigtail-to-channel pairing happens inside at
+  the AHCT). **Each pigtail's red +12V lead is DEAD inside the box**
+  (data + GND only): chain power comes from the pillar fuse blocks,
+  never through this box.
+- **Floor zones**: ESP32 + RS485/A-B unchanged from the room kit (the
+  validated positions); the **AHCT zone is populated here** (three
+  pixel-data buffers, dead-bug, series resistors at the chip, straight
+  out the D holes behind it; the chip's unused input ties to GND);
+  DB9/DAC zones replaced by a **BUCK zone**
+  (DIANN 12→5V, body 47 × 27 **confirmed by caliper 2026-07-29**; the
+  end screw-terminal blocks overhang the zone line at BOTH ends — the
+  body sits 14 off the left wall to make room for the IN-end block plus
+  a straight wire run from the 12V hole. **Mount the 12V-IN end toward
+  the left wall**, 5V-OUT end toward the XIAO).
+
+Etch orientation for the sign box: floor UP, **front OUT** (CAMP SIGN),
+back OUT (D1–D3), left/right forced by the pre-mirror as always.
+
 ## Cut layer vs mark layer
 
 Each SVG carries two colours in one coordinate frame — **black = CUT,
@@ -140,9 +205,13 @@ corner screws leave <1mm acrylic web and it cracks.
 - `window-acrylic.svg` — the ACRYLIC job: the sensor-window panel alone
 - `node-enclosure-cuddle.svg` / `window-acrylic-cuddle.svg` — Cuddle's
   wide-aperture one-off (14 rooms cut standard, 1 cuts these)
-- `export.py` — regenerates all four SVGs from the .scad
+- `node-enclosure-sign.svg` — the camp-sign controller box (ply job
+  only — no window/acrylic, no testfit: its new ports are wire
+  pass-throughs plus the already-validated XLR + USB cuts)
+- `export.py` — regenerates all the SVGs from the .scad
 - `sheet.png` / `sheet-etch.png` — the two layers; `preview-assembly.png`,
-  `preview-underside.png` — glued-up views
+  `preview-underside.png` — glued-up views; `sheet-sign.png` /
+  `sheet-etch-sign.png` / `preview-assembly-sign.png` — the sign variant
 
 The SVG is true mm scale — import straight into XCS. Cut outlines are
 exact; add kerf compensation in XCS if you want piston-fit joints (glue

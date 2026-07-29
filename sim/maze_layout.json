@@ -1151,6 +1151,18 @@
    ],
    "label": "Truck 5",
    "color": "f2f2f2"
+  },
+  "Sign Storm Button": {
+   "note": "arcade button on the sign scaffolding (right entrance tower, street face, chest height) — 2-wire run up to the sign node box's BTN pigtail (XIAO D3/GPIO4 + GND); the server owns the 30s cooldown (/api/sign_storm)",
+   "kind": "button",
+   "level": 0,
+   "pos": [
+    11.72,
+    1.15,
+    5.72
+   ],
+   "label": "STORM",
+   "color": "3fa8ff"
   }
  },
  "route": [

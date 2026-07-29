@@ -20,7 +20,11 @@
 // Holds the standard node build: XIAO ESP32-S3 + PCM5102A DAC + the room's
 // ranging sensor(s) against the window (LD2410C, VL53L1X, Cuddle's
 // 2410C+2450 pair — the pair needs the WIDER aperture: cuddle=true below;
-// export.py emits both jobs). Boards fix at their ETCHED footprint marks
+// export.py emits both jobs). A THIRD variant (sign=true, 07-29) is the
+// CAMP SIGN controller box: same shell, sign parts only — XIAO S3 +
+// MAX485 (DMX IN fallback) + 74AHCT125 (3x pixel data) + 12->5V buck;
+// ports = XLR + 12V in (left), D1-D3 data out (back), USB + the storm
+// button's BTN pigtail (right). Boards fix at their ETCHED footprint marks
 // however works on the bench (VHB/screws); no fastener holes are pre-drilled
 // (the PORT openings are pre-cut since 07-22).
 // Board footprints + ply thickness measured on the real parts 2026-07-21.
@@ -64,6 +68,15 @@
 
 part = "3d";     // front|back|left|right|floor|lid|window|sheet|3d
 cuddle = false;  // true = Cuddle's wide-aperture one-off (2450 + 2410C)
+sign = false;    // true = the CAMP SIGN controller box (one-off, 07-29):
+                 //  same shell + joinery, sign port set — no sensor
+                 //  window/acrylic, no DB9, no DAC/AUX, no strap slots
+                 //  (it screws down inside the band cavity behind the
+                 //  logo disc, not to a scaffold leg). XLR stays but is
+                 //  DMX IN (the Dfi fallback), the left wall gains a 12V
+                 //  feed hole, the back wall 4 pixel-data exits, the
+                 //  floor a BUCK zone. cuddle + sign never both true.
+                 //  wiring-guides/camp-sign-plan.md
 
 // ---- stock -------------------------------------------------------------
 t  = 2.9;        // ply thickness — back to 3mm stock (Tim 2026-07-24,
@@ -142,7 +155,72 @@ rs485_l = 49.22; rs485_w = 14.05;  // MAX485 breakout — the room's DMX
                                    //  belly to VHB until the bench pulls
                                    //  or flush-clips them (dmx-over-wifi.md)
 ahct_l = 21; ahct_w = 10;          // 74AHCT125, bare PDIP-14 over the legs
-                                   //  (Tim 07-23) — NFM's dead-bug shifter
+                                   //  (Tim 07-23) — NFM's dead-bug shifter;
+                                   //  the SIGN box dead-bugs its own here
+                                   //  (4 pixel-data buffers -> back holes)
+
+// ---- camp-sign variant (sign = true; wiring-guides/camp-sign-plan.md) ---
+buck_l = 47; buck_w = 27;    // DIANN 12->5V 3A buck — CONFIRMED by Tim
+                             //  2026-07-29: body exactly 47 x 27. The
+                             //  screw-terminal blocks OVERHANG the 47 at
+                             //  BOTH ends (length unmeasured — this zone
+                             //  marks the BODY only), wire entries low at
+                             //  the ends. 12V IN pair on one end, 5V OUT
+                             //  pair on the other: MOUNT THE 12V END
+                             //  TOWARD THE LEFT WALL's hole, 5V end
+                             //  toward the XIAO's 5V pin + AHCT VCC
+buck_cx = 37.5; buck_cy = 17;// body center, front-left quarter: left
+                             //  edge 14 off the wall = room for the
+                             //  IN-end terminal overhang + a straight
+                             //  wire shot from the Ø8 hole into the
+                             //  screws (pre-confirmation cx=26 left only
+                             //  2.5 — nothing for the overhang). Right
+                             //  edge 61: OUT-end block ends ~14 clear of
+                             //  the XIAO footprint at 82.7
+pwr_hole = 8;                // 12V feed: a BTF 2-pin pigtail's bare ends
+pwr_cx = 18; pwr_cz = t + 9; //  thread IN through this hole (connector
+                             //  stays outside — the PSU run plugs into
+                             //  it), zip-tie inside as strain relief.
+                             //  Left wall, roughly where the DB9 window
+                             //  would be; feeds the buck IN end
+data_hole = 7;               // 3x pixel-data exits, BACK wall: a BTF
+data_cs = [-24, 0, 24];      //  3-pin pigtail threads out each (its red
+data_cz = t + 10;            //  +12V lead is DEAD inside the box — data +
+                             //  GND only; group power comes from the
+                             //  pillar fuse blocks, NEVER through this
+                             //  box). Offsets about W/2, deliberately
+                             //  SYMMETRIC: a flipped back wall lands the
+                             //  same holes, only the label order mirrors
+                             //  (cosmetic — pigtail-to-channel pairing
+                             //  happens inside at the AHCT zone, which
+                             //  sits right in front of these holes)
+data_words = ["LEGENDS OF THE (e)", "LOGO",
+              "HIDDEN PLAYA (H)"];
+                             // 07-29 REGROUP v2 (Tim, superseding the
+                             //  same-day 4-group split): THREE chains —
+                             //  D1 = Legends+of+the (data enters at 'e',
+                             //  the center end), D2 = the logo field
+                             //  ALONE (the removable disc unplugs
+                             //  without touching a letter chain), D3 =
+                             //  Hidden+Playa (enters at 'H'). Power =
+                             //  three matching runs landing ONLY at
+                             //  word fronts/backs ('L' / the disc /
+                             //  'a' — Tim: 12V is forgiving over these
+                             //  lengths, no mid-word entries). Each word
+                             //  etches UNDER its hole so the wirer
+                             //  reads the wall; pitch 24 (16 collided —
+                             //  render-MEASURE text, font-math lies).
+                             //  LEGENDS OF THE (e) ~30 wide: gaps to
+                             //  LOGO ~6, LOGO to HIDDEN PLAYA ~8, ok
+btn_hole = 7;                // storm-button pigtail exit, RIGHT wall: a
+btn_cx = 45; btn_cz = t + 10;//  BTF 2-pin threads out to the arcade
+                             //  button on the sign scaffolding; inside,
+                             //  signal -> XIAO D3 (GPIO4, INPUT_PULLUP)
+                             //  + GND — the XIAO sits against this wall.
+                             //  Press = POST /api/sign_storm (maze-wide
+                             //  Lightning + thunder everywhere at once);
+                             //  the SERVER owns the 30s cooldown
+                             //  (main.py SIGN_STORM_COOLDOWN_S)
 
 // ---- features ----------------------------------------------------------
 win_w = cuddle ? 68 : 56;         // aperture (68 fits 2450+2410C side by side)
@@ -300,16 +378,23 @@ module panel_front() difference() {
   bottom_notches(W, long_cs);
   top_notches(W, lid_front_cs);        // lid tabs; center stays solid — the
                                        //  finger notch dips over it
-  translate([W/2 - win_w/2, win_cz - win_h/2]) square([win_w, win_h]); // aperture
+  if (!sign)                           // sign box has no sensor: solid wall
+    translate([W/2 - win_w/2, win_cz - win_h/2]) square([win_w, win_h]); // aperture
 }
 
-module front_etch() {                        // interior face marks
-  translate([W/2, win_cz]) oline(panel_w, panel_h);  // acrylic window panel
-  translate([10, win_cz]) label("SENSOR");           //  sits here
-  // no screw marks (M2s on the midline by eye — see the window comment);
-  // sensor footprints are etched on the WINDOW PANEL (window_etch), not
-  // here — anything drawn inside the aperture lands on the cutout scrap
-  // (caught 2026-07-22; the sensors VHB to the acrylic's inner face)
+module front_etch() {                        // node: interior face marks
+  if (sign)
+    // sign: EXTERIOR face — the wall is solid (no window), so it carries
+    // the box ID instead; 16 near-identical boxes want telling apart
+    translate([W/2, Hw/2]) label("CAMP SIGN", 6);
+  else {
+    translate([W/2, win_cz]) oline(panel_w, panel_h);  // acrylic window panel
+    translate([10, win_cz]) label("SENSOR");           //  sits here
+    // no screw marks (M2s on the midline by eye — see the window comment);
+    // sensor footprints are etched on the WINDOW PANEL (window_etch), not
+    // here — anything drawn inside the aperture lands on the cutout scrap
+    // (caught 2026-07-22; the sensors VHB to the acrylic's inner face)
+  }
 }
 
 module panel_back() difference() {
@@ -317,13 +402,27 @@ module panel_back() difference() {
   corner_notches(W);
   bottom_notches(W, long_cs);
   top_notches(W, long_cs);                       // lid tabs, all three
-  for (c = [-27, 27])                            // velcro strap slots
-    translate([W/2 + c - strap_w/2, (34 - strap_h)/2 + t])
-      square([strap_w, strap_h]);
+  if (sign)                                      // 4x pixel-data pigtail
+    for (c = data_cs)                            //  exits — right behind
+      translate([W/2 + c, data_cz])              //  the AHCT zone inside
+        circle(d = data_hole);
+  else
+    for (c = [-27, 27])                          // velcro strap slots
+      translate([W/2 + c - strap_w/2, (34 - strap_h)/2 + t])
+        square([strap_w, strap_h]);
 }
 
-module back_etch()
-  translate([W/2, 19]) label("VELCRO", 2.8);     // strap between the slots
+module back_etch() {
+  if (sign)                                      // labels face OUT (doc'd):
+    for (i = [0 : len(data_cs) - 1]) {           //  D-number above each
+      translate([W/2 + data_cs[i], data_cz + 9]) //  hole, its chain word +
+        label(str("D", i + 1), 2.8);             //  connection letter
+      translate([W/2 + data_cs[i], data_cz - 7]) //  below (07-29) — the
+        label(data_words[i], 2);                 //  wirer reads the wall,
+    }                                            //  not the docs
+  else
+    translate([W/2, 19]) label("VELCRO", 2.8);   // strap between the slots
+}
 
 module panel_side() {          // common left/right: full-D, full height —
   difference() {               //  rev4 deleted the channel, the cap rail
@@ -338,15 +437,23 @@ module panel_side() {          // common left/right: full-D, full height —
 
 module panel_left() difference() {               // x runs front->back
   panel_side();
-  // the DMX out is a CUT in every box (dmx-over-wifi.md): XLR3 female
+  // the DMX port is a CUT in every box (dmx-over-wifi.md): XLR3 female
   // panel jack, D-size footprint — BARREL HOLE ONLY. No fastener holes
   // (house rule): the jack is its own jig — hold it in the hole, drive
-  // wood screws through whichever flange diagonal the part has
+  // wood screws through whichever flange diagonal the part has.
+  // Room boxes: DMX OUT (MAX485 drives the fixtures). Sign box: DMX IN —
+  // the Dfi RX's male stick (or the packed fallback cable, via adapter)
+  // plugs in; same jack, same A/B screw landing, module just receives
   translate([xlr_cx, xlr_cz]) circle(d = xlr_hole);
-  // DB9 A window — CUT in every box since 07-22 (was etched, opened on the
-  // bench in the wired rooms). A loose frame only; the floor screws locate
-  // the PCB. The screwlock Ø6s stay a bench drill from the real part's posts
-  translate([db9_cx, db9_cz]) square([db9_cut_w, db9_cut_h], center = true);
+  if (sign)
+    // 12V feed hole — the BTF 2-pin pigtail threads in to the buck's IN
+    // end (zone right behind this wall); connector half stays outside
+    translate([pwr_cx, pwr_cz]) circle(d = pwr_hole);
+  else
+    // DB9 A window — CUT in every box since 07-22 (was etched, opened on the
+    // bench in the wired rooms). A loose frame only; the floor screws locate
+    // the PCB. The screwlock Ø6s stay a bench drill from the real part's posts
+    translate([db9_cx, db9_cz]) square([db9_cut_w, db9_cut_h], center = true);
 }
 
 // FLAT outputs pre-mirror the left wall (07-24 label-side fix): the two
@@ -360,8 +467,11 @@ module panel_left() difference() {               // x runs front->back
 module panel_left_cut() translate([D, 0]) mirror([1, 0]) panel_left();
 
 module left_etch_cut() {                         // x runs BACK->front
-  translate([D - db9_cx, db9_cz + 12]) label("DB9", 3);   // windows = CUT;
-  translate([D - xlr_cx, xlr_cz + 14]) label("DMX", 2.8); //  labels score
+  if (sign)                                               // holes = CUT;
+    translate([D - pwr_cx, pwr_cz + 10]) label("12V", 2.8); //  labels score
+  else
+    translate([D - db9_cx, db9_cz + 12]) label("DB9", 3);
+  translate([D - xlr_cx, xlr_cz + 14]) label("DMX", 2.8);
   // no screwlock marks: sit the breakout PCB in its floor zone, let the
   // posts touch the wall, mark the contact points, drill those Ø6 — the
   // real part beats the nominal 24.99 spacing (measured 24.26-ish)
@@ -380,12 +490,20 @@ module panel_right() difference() {              // x runs front->back
   // handle that one gently until the floor glues in
   translate([t + xiao_cy - usb_w/2, t - 0.5])
     square([usb_w, usb_z + usb_h/2 + 0.5]);
-  translate([t + dac_cy + dac_jack_off, t + jack_z]) circle(d = jack_hole);
+  if (!sign)                                     // no DAC on the sign box
+    translate([t + dac_cy + dac_jack_off, t + jack_z]) circle(d = jack_hole);
+  else                                           // storm-button pigtail exit
+    translate([btn_cx, btn_cz]) circle(d = btn_hole);
 }
 module right_etch() {                            // x runs front->back
   translate([t + xiao_cy, t + 9]) label("USB", 2.8);   // holes = CUT layer;
-  translate([t + dac_cy + dac_jack_off, t + 13]) label("AUX", 2.8);
-}                                                //  labels score only
+  if (!sign)                                           //  labels score only
+    translate([t + dac_cy + dac_jack_off, t + 13]) label("AUX", 2.8);
+  else {
+    translate([btn_cx, btn_cz + 9]) label("BTN", 2.8);
+    translate([btn_cx, btn_cz - 7]) label("STORM", 2);
+  }
+}
 
 module panel_floor() difference() {
   union() {
@@ -402,16 +520,25 @@ module panel_floor() difference() {
 }
 
 module floor_etch() {                            // component-side marks
-  // DB9-A breakout: bare PCB screwed to the floor in this zone (7 wired
-  // rooms), face through the wall window; screw positions per the real
-  // part (nothing pre-drilled, house rule)
-  translate([db9_zone[1]/2, db9_cx - t]) oline(db9_zone[1], db9_zone[0]);
-  translate([db9_zone[1]/2, db9_cx - t]) label("DB9 PCB", 2.8);
-  translate([W - 2*t - dac_w/2, dac_cy]) oline(dac_w, dac_l);   // PCM5102A —
-  translate([W - 2*t - dac_w/2, dac_cy]) label("DAC");          //  the LONG
+  if (!sign) {
+    // DB9-A breakout: bare PCB screwed to the floor in this zone (7 wired
+    // rooms), face through the wall window; screw positions per the real
+    // part (nothing pre-drilled, house rule)
+    translate([db9_zone[1]/2, db9_cx - t]) oline(db9_zone[1], db9_zone[0]);
+    translate([db9_zone[1]/2, db9_cx - t]) label("DB9 PCB", 2.8);
+    translate([W - 2*t - dac_w/2, dac_cy]) oline(dac_w, dac_l);   // PCM5102A —
+    translate([W - 2*t - dac_w/2, dac_cy]) label("DAC");          //  the LONG
                                                  //  jack edge butts the
                                                  //  right wall so the
                                                  //  barrel meets AUX
+  } else {
+    // DIANN buck in the freed front-left quarter (dims confirmed 07-29):
+    // zone = the 47x27 BODY — the end terminal blocks overhang the line
+    // both sides. 12V end toward the left wall's hole, 5V end dresses
+    // along the front wall to the XIAO's 5V pin + AHCT VCC
+    translate([buck_cx, buck_cy]) oline(buck_l, buck_w);
+    translate([buck_cx, buck_cy]) label("BUCK", 2.8);
+  }
   translate([W - 2*t - xiao_l/2, xiao_cy]) oline(xiao_l, xiao_w);  // XIAO
   translate([W - 2*t - xiao_l/2, xiao_cy]) label("ESP32", 3);      //  (VHB),
                                                  //  USB END to the wall, the
@@ -427,9 +554,11 @@ module floor_etch() {                            // component-side marks
   translate([rs485_x0 + rs485_l/2, rs485_cy]) oline(rs485_l, rs485_w);
   translate([rs485_x0 + rs485_l/2, rs485_cy]) label("RS485", 2.8);
   translate([rs485_x0 - 6, rs485_cy]) label("A/B", 2.2);
-  // 74AHCT125 (NFM only — the truck-lamp data shifter): dead-bug legs-up
-  // in this zone, recipe in wiring-guides/room-games-plan.md; the other
-  // 14 rooms leave it empty
+  // 74AHCT125: dead-bug legs-up in this zone. NFM's truck-lamp shifter
+  // (recipe in wiring-guides/room-games-plan.md) — and the SIGN box's
+  // pixel-data buffer (3 channels + series resistors at the chip,
+  // straight out the D1-D3 back holes behind it; the unused input ties
+  // to GND); other rooms leave empty
   translate([ahct_cx, ahct_cy]) oline(ahct_l, ahct_w);
   translate([ahct_cx, ahct_cy]) label("AHCT", 2.5);
 }
@@ -539,8 +668,9 @@ module assembly() {
   color("Sienna")    translate([W - t, 0, 0]) rotate([90, 0, 90]) linear_extrude(t) panel_right();
   color("Tan", 0.85)                              // lid hovering above its
     translate([t, t, Hw - t + 14]) linear_extrude(t) panel_lid();  // seat
-  color("LightBlue", 0.6)
-    translate([W/2, t + 4 + eps, win_cz]) rotate([90, 0, 0]) linear_extrude(acrylic_t) panel_window();
+  if (!sign)                                      // sign box: no window
+    color("LightBlue", 0.6)
+      translate([W/2, t + 4 + eps, win_cz]) rotate([90, 0, 0]) linear_extrude(acrylic_t) panel_window();
 }
 
 // ---- part selection ----------------------------------------------------

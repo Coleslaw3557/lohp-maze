@@ -623,6 +623,16 @@
           "effect_name": "WrongAnswer"
         }
       }
+    },
+    {
+      "name": "Sign Storm Button",
+      "type": "button",
+      "room": "Camp Sign",
+      "action": {
+        "method": "POST",
+        "path": "/api/sign_storm",
+        "data": {}
+      }
     }
   ],
   "_games_comment": "Triggers with a `game` key resolve through per-room game logic (mirrored in sim/web/app.js and the room node firmware, wiring-guides/room-games-plan.md): gate = two banks of 3 simultaneous body-pressed arcade buttons (bank 1 -> CorrectAnswer chime, then bank 2 -> GateInspection); dph = 1 random winner of 5 (CorrectAnswer, re-rolled on win; others WrongAnswer); bike = 2 true/false questions, correct key TBD until the sign is made (both right -> chime then BikeLockRoom); moop = 4 standalone battery button pucks, game rule TBD (any press chimes); lightsout = 5 lit truck buttons, press toggles self+neighbors, all lit -> chime then NoFriendsMonday."

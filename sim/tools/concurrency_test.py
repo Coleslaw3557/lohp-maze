@@ -14,12 +14,15 @@ once, and checks the invariants that used to break:
   5. concurrent start_music hammering leaves the server healthy, and
      toggle_music (the orb's swipe gesture) tracks playing state across both
      the toggle and the plain start/stop routes
+  6. the sign's storm button fires the all-rooms strike once, and its
+     server-side cooldown 429s the immediate re-press
 
 Run with the sim running: sim/.venv/bin/python sim/tools/concurrency_test.py [host]
 """
 import asyncio
 import json
 import sys
+import urllib.error
 import urllib.request
 
 HOST = sys.argv[1] if len(sys.argv) > 1 else 'localhost'
@@ -219,6 +222,24 @@ async def main():
     check('Entrance fixture returns to black, not stuck white',
           bool(frames) and not stuck,
           f'(last frame ch1-8: {list(frames[-1][:8]) if frames else "no frames"})')
+
+    print("7) sign storm button: one shared server-side cooldown")
+
+    def press_storm():
+        try:
+            return post('/api/sign_storm', {})
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read())
+    status, body = press_storm()
+    if status == 429:  # an earlier press (human on the sim panel) left it cooling
+        await asyncio.sleep(float(body.get('retry_after_s', 30)) + 0.5)
+        status, body = press_storm()
+    check('storm press fires maze-wide Lightning', status == 200,
+          f"({body.get('message')})")
+    status2, body2 = press_storm()
+    check('immediate re-press hits the cooldown (429 + retry_after_s)',
+          status2 == 429 and float(body2.get('retry_after_s', 0)) > 0,
+          f"({body2.get('retry_after_s')}s left)")
 
     # cleanup
     post('/api/stop_effect', {})

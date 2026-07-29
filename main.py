@@ -30,6 +30,11 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 # receive (zero-padded to 512 on the wire) and the sim's virtual universe.
 NUM_FIXTURES = 44
 CHANNELS_PER_FIXTURE = 8
+# The camp sign's arcade storm button (wiring-guides/camp-sign-plan.md):
+# every accepted press = Lightning + its thunder in every room and on every
+# speaker at once. ONE server-side cooldown covers all sources (the sign
+# node's POST, the sim's panel button) — presses inside it get 429.
+SIGN_STORM_COOLDOWN_S = 30
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
@@ -248,6 +253,38 @@ async def run_effect_all_rooms():
         return jsonify({'status': 'error', 'message': message}), 500
     except Exception as e:
         error_message = f"Error executing effect {effect_name} for all rooms: {e}"
+        logger.error(error_message, exc_info=True)
+        return jsonify({'status': 'error', 'message': error_message}), 500
+
+
+_sign_storm_last_fire = None  # time.monotonic() of the last accepted press
+
+
+@app.route('/api/sign_storm', methods=['POST'])
+async def sign_storm():
+    """The camp-sign arcade button: maze-wide Lightning + thunder on every
+    speaker simultaneously, behind one shared cooldown."""
+    global _sign_storm_last_fire
+    now = time.monotonic()
+    if _sign_storm_last_fire is not None:
+        remaining = SIGN_STORM_COOLDOWN_S - (now - _sign_storm_last_fire)
+        if remaining > 0:
+            return jsonify({'status': 'cooldown',
+                            'retry_after_s': round(remaining, 1),
+                            'message': f'storm cooling down — {remaining:.0f}s left'}), 429
+    # Check-and-stamp with no await between them = atomic on the event loop;
+    # stamping before the run keeps presses during the strike in the cooldown.
+    _sign_storm_last_fire = now
+    try:
+        success, message = await effects_manager.apply_effect_to_all_rooms('Lightning')
+        if success:
+            return jsonify({'status': 'success', 'message': 'Storm fired maze-wide'})
+        _sign_storm_last_fire = None  # a failed strike shouldn't burn the cooldown
+        logger.error(f"Sign storm failed: {message}")
+        return jsonify({'status': 'error', 'message': message}), 500
+    except Exception as e:
+        _sign_storm_last_fire = None
+        error_message = f"Error firing the sign storm: {e}"
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
 

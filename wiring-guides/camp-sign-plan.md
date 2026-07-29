@@ -49,10 +49,9 @@ RPi (server rack, back wall)
   └─ artnet_output_manager.py ~ ~ WiFi, ArtDMX unicast, ch 1-512 ~ ~ ┐
                                                                      ▼
                               SIGN ESP32 BRIDGE renders ch 161-352 as pixels
-                                          ├─ data 1: "Legends"
-                                          ├─ data 2: "of the" + logo
-                                          ├─ data 3: "Hidden"
-                                          └─ data 4: "Playa"
+                                          ├─ data 1: "Legends of the" (from 'e')
+                                          ├─ data 2: logo disc (center)
+                                          └─ data 3: "Hidden Playa" (from 'H')
 FALLBACK (weak tower WiFi only): FTDI/maze chain ── Dfi 2.4G TX ~ ~ Dfi RX
                                           ── short stub ── bridge UART1 RS485
 ```
@@ -97,8 +96,8 @@ ever get backlights: 4 zones @353–384, `NUM_FIXTURES 44→48`.
 
 ## The ESP32 bridge
 
-**Board: XIAO ESP32-S3** — fleet standard, already stocked for room audio, and
-it has 4 RMT TX channels = exactly the 4 pixel outputs (the C3 only has 2).
+**Board: XIAO ESP32-S3** — fleet standard, already stocked for room audio,
+with enough RMT TX channels for the 3 pixel outputs (the C3 has only 2).
 
 **Firmware is net-new** — a custom IDF/Arduino sketch: ArtDMX-over-UDP receive
 (trivial — mirror the parser in `sim/esphome/components/artnet_dmx/`, the room
@@ -132,6 +131,20 @@ dumb — all show logic stays on the Pi:
 4. **DMX-loss fallback**: no valid frame for 3 s → slow amber breathe (the camp
    sign shouldn't go black because the Pi rebooted); resume on the next frame.
    An all-zero frame is NOT loss — a deliberate blackout stays a blackout.
+5. **The storm button** (2026-07-29): an arcade push button on the sign
+   scaffolding, 2-wire run to the box's BTN pigtail → **D3 (GPIO4)
+   INPUT_PULLUP + GND**. Debounce ~50 ms; on press, POST `/api/sign_storm`
+   (empty JSON body) — the server fires **Lightning + its thunder in every
+   room and on every speaker at once** (the existing all-rooms broadcast
+   path). **The server owns the cooldown**: `SIGN_STORM_COOLDOWN_S = 30` in
+   `main.py`, one shared timer for every source; presses inside it get 429
+   with `retry_after_s`. The node adds nothing beyond debounce — fire and
+   forget with a short HTTP timeout (the 200 only lands after the ~3.5 s
+   strike completes, same as the room nodes' trigger POSTs). Live-tested in
+   the sim 2026-07-29: press → 200 + all-rooms Lightning, immediate second
+   press → 429. The sim's trigger panel and 3D scene carry the same button
+   (`triggers.json` "Sign Storm Button" → the STORM button on the right
+   entrance tower).
 
 ```text
 12V PSU ── buck 12→5V 3A ──► XIAO S3 + 74AHCT125 (+ Dfi RX if its barrel takes 5V)
@@ -153,19 +166,63 @@ one-shots produce random sparkle that reads as broken firmware. The AHCT is
 bought specifically for its strong push-pull line drive. (Keep the TXS stock
 for bidirectional short-haul buses like I2C.)
 
-Controller lives behind the removable logo disc; strips run center-out so every
-group's pixel 0 is near it ("Legends" runs s→L, reversed in the zone table;
-"Hidden"/"Playa" run outward normally; "of the"+logo starts at center).
+Controller lives **in the sign node box** (below) behind the removable logo
+disc; strips run center-out so every group's pixel 0 is near it. **THREE
+chains** since the 2026-07-29 regroup (supersedes both the original
+Legends / of-the+logo / Hidden / Playa split and the brief same-day 4-way):
+**"Legends of the"** is one chain entering at 'e' and running outward left
+to 'L' (zones 11→0, all reversed); the **logo field is output 2 by
+itself** — the removable disc unplugs at its own D2 pigtail without
+touching a letter chain; **"Hidden Playa"** is one chain entering at 'H',
+outward right to 'a' (zones 13→23). Power mirrors the data: one run per
+chain, landing only at word fronts/backs (the power section).
 
 **Letter→pixel table** (firmware constant, filled in during the build — count
 pixels as installed, 1 pixel = one 3-LED WS2811 group ≈ 2 in):
 
 | Output | Zone | Letter | px start | px end |
 |---|---|---|---|---|
-| 1 | 6→0 | s…L (reversed) | _ | _ |
-| 2 | 7–11, 12 | o f t h e, ◉ | _ | _ |
-| 3 | 13–18 | H…n | _ | _ |
-| 4 | 19–23 | P…a | _ | _ |
+| 1 | 11→0 | e h t · f o · s d n e g e L (reversed) | _ | _ |
+| 2 | 12 | ◉ logo disc | _ | _ |
+| 3 | 13–23 | H i d d e n · P l a y a | _ | _ |
+
+## Enclosure — the sign node box (2026-07-29)
+
+The bridge electronics get the **sign variant of the universal room-node
+box**: cut `../enclosure/node-enclosure-sign.svg` (3mm ply, xTool; `sign=true`
+in `../enclosure/node-enclosure.scad`, previews `preview-assembly-sign.png` +
+`sheet-sign*.png`). Same 110 × 78 × 39.8 shell, joinery and drop-in lid as the
+15 room boxes — sign port set instead of the room one. It holds **only the
+sign parts**: XIAO S3, 74AHCT125 (dead-bug, populated at the etched AHCT
+zone), the screw-terminal MAX485, and the DIANN buck (etched BUCK zone —
+body 47 × 27 confirmed 2026-07-29; its end terminal blocks overhang the
+zone both sides, **12V-IN end mounts toward the left wall's hole**, 5V-OUT
+end toward the XIAO). No DB9, no DAC/AUX, no sensor window/acrylic, no velcro
+slots — the floor screws to the cavity wood, front wall carries an etched
+CAMP SIGN ID.
+
+Everything plugs INTO the box; nothing sign-side is soldered in the field:
+
+| Port | Cut | Outside the wall | Inside the wall |
+|---|---|---|---|
+| 12V (left wall) | Ø8 | BTF 2-pin pigtail connector — the LEFT-block C3 run (18 AWG, 2A) plugs in | bare ends → buck IN+ / IN−; zip-tie strain relief |
+| D1–D3 (back wall) | 3 × Ø7 | BTF 3-pin pigtail connectors — each chain's data lead plugs in. The wall etches each hole's chain under it: **LEGENDS OF THE (e) · LOGO · HIDDEN PLAYA (H)** | data → its AHCT output's 33–100Ω, white → common GND; **red +12V lead CUT/dead** — chain power comes from the pillar fuse blocks, never through this box |
+| DMX (left wall) | Ø24 XLR | Dfi RX's male stick plugs straight in (fallback); antenna hangs clear outside | Devinal XLR3-F jack, cups bench-soldered: pin 3 → A, pin 2 → B, pin 1 → GND + **120Ω across A–B** |
+| USB (right wall) | slot | flash/debug cable | XIAO's own USB-C noses into the slot |
+| BTN (right wall) | Ø7 | BTF 2-pin pigtail — the storm button's 2-wire run from the scaffolding plugs in ("STORM" etched under the hole) | signal → XIAO D3 (GPIO4, INPUT_PULLUP) · other lead → common GND |
+
+Pigtail spec (2026-07-29): the 12V, D1–D3 and BTN pigtails keep **~10 cm of
+slack tail outside the wall** — connectors dangle and mate hand-to-hand on
+slack; the inside zip-tie (snug against the wall) takes any tug so the hole
+edge and the joints never do. **Do not trim them flush to the case** — a
+connector at the wall face is panel-mount mechanics faked with a pigtail,
+and every unmate would pry against the zip-tie and the 3mm ply.
+
+The jack + MAX485 are bench-populated even though WiFi is primary — that's
+what makes the Dfi fallback plug-and-play on site (no-solder rule is
+field-only). If the fallback activates, the RX's power pigtail (5V or 12V
+per its spec) can share the 12V hole. The MAYWILLA female pigtail the BOM
+bought for the RX link is **freed to spare** by the panel jack — pack it.
 
 ## LED strip + per-letter budget
 
@@ -191,23 +248,33 @@ continuous; bring the second ABI as the onsite spare).
 
 ## Power distribution (sized for full white, no software cap)
 
+**One power run per chain** (2026-07-29, with the data regroup), landing
+ONLY at a word's front or back — that's where the 3-wire jumps and pigtails
+are accessible; never mid-word. 12V tolerates these run lengths; the
+full-white soak is the check, and a second word-boundary entry from the
+nearest block is the fix if far letters sag.
+
 ```text
-PSU+ ── 35A main fuse ── distribution block (left pillar, with PSU + controller)
-          ├─ 10A ── 14AWG ── "Legends" feed + mid-string injection
-          ├─ 7.5A ── 14AWG ── "of the" + logo feed
-          ├─ 2A ──── 18AWG ── buck/controller
-          └─ 20A ── 10AWG trunk across the arch ── right-pillar fuse block
-                      ├─ 7.5A ── "Hidden" feed + injection
-                      └─ 7.5A ── "Playa" feed
+PSU+ ── 35A main fuse ── LEFT block (left pillar, with the PSU)
+          ├─ 10A ── 14AWG stub ─── "Legends of the" power in at 'L'
+          │                         (front of Legends — lands at THIS pillar)
+          ├─ 5A ─── 18AWG up-arch ─ logo-field power (cavity, beside the box)
+          ├─ 2A ─── 18AWG up-arch ─ controller box 12V pigtail → buck
+          └─ 20A ── 10AWG trunk across the band back ── RIGHT block
+                      └─ 10A ── 14AWG stub ── "Hidden Playa" power in at 'a'
+                                              (back of Playa — at THAT pillar)
 PSU− ── common negative bus (both pillars bridged by the trunk's return)
 ```
 
 - Fuse math: `strip meters × 1.2 A`, fuse the next size up; **fuses protect the
   wire**, so never fuse above the wire's rating (14 AWG→15 A max, 16→10, 18→7).
-- **Inject 12V every ~8 ft** and at the far end of each group — never carry
-  power across the whole sign on strip copper. Every injection + is fused at
-  its block; all returns to the common bus. One PSU feeds everything, so
-  both-ends feeding is fine.
+  Loads: "Legends of the" ≈ 6.4 m → ~7.7 A (10A); logo ≈ 2.5–3 m → ~3.6 A
+  (5A); "Hidden Playa" ≈ 7.7 m → ~9.2 A (10A).
+- Power and data enter each letter chain from **opposite ends** — data at the
+  center ('e' / 'H'), power at the outboard pillar ends ('L' / 'a') — all
+  word-boundary connections; the strip copper carries current inward. Both
+  blocks keep spare fuse positions for soak-test additions (word boundaries
+  only).
 - PSU mounted vertically inside a pillar: baffled vent path, fan clearance,
   rain/dust shielded but **not airtight** (it's fan-cooled), strain relief,
   terminals reachable.
@@ -219,9 +286,10 @@ PSU− ── common negative bus (both pillars bridged by the trunk's return)
 
 ## Connectors + playa-proofing
 
-- xConnect-style 3-pin waterproof connectors at every group boundary and the
-  logo disc (it's removable — controller access); separate 2-pin pigtails for
-  injection points.
+- xConnect-style 3-pin waterproof connectors at every group start (the logo
+  disc's doubles as its removable disconnect — controller access); separate
+  2-pin pigtails at the three power entries ('L' / logo field / 'a') and the
+  box's 12V feed.
 - Every cut end: sealed, adhesive-lined heat shrink, **neutral-cure** silicone
   only (acidic silicone corrodes the copper), strain relief so solder pads
   never carry cable tension.
@@ -242,11 +310,13 @@ Electronics to buy — essentials only, listings verified via browser
 |---|---|---|
 | BTF WS2811 12V 60/m **IP65** 5 m reels (`dp/B01CNL6LLA`, 4.4★ ×1,685) | 4 | $22.99 ea |
 | XIAO ESP32-S3 (pull from fleet order) | 1 | — |
+| Devinal XLR3 female jack (pull from the room-box jack packs, `dp/B07S6J8WVD` — 15 rooms + this box = 16 jacks total) | 1 | — |
+| Arcade push button, storm trigger (pull from the room-games button stock — verify the order covers one more than the games' 24) | 1 | — |
 | Donner Dfi 2.4G wireless DMX, 1 TX + 1 RX (`dp/B00URFIZZA`, 4.3★ ×348) | 1 kit | $50.99 |
 | HiLetgo TTL↔RS485 5-pack, fed 3.3V (`dp/B082Y19KV9`, 4.4★) | 1 pack | $7.39 |
 | SN74AHCT125N 10-pack (`dp/B08R6BCSYC`, 4.7★) | 1 pack | $7.99 |
 | DIANN 12V→5V 3A buck (`dp/B0BPRV1K6Q`, 4.5★) | 1 | $5.99 |
-| MAYWILLA XLR female pigtail (`dp/B0FFMY896F`) | 1 | $9.99 |
+| MAYWILLA XLR female pigtail (`dp/B0FFMY896F`) — now SPARE: the box's panel jack replaced the pigtail link (2026-07-29); keep packed | 1 | $9.99 |
 | BTF 3-pin pigtail pairs (`dp/B01LCV8LGA`, 4.6★) | 1 pack | $9.99 |
 | BTF 2-pin 18AWG pigtail pairs (`dp/B01LCV97AY`, 4.5★) | 2 packs | $12.99 ea |
 
@@ -255,7 +325,8 @@ New spend ≈ **$197**.
 **Shop stock, not bought** (rules still specced above): 120Ω terminator +
 33–100Ω data resistors, 35A main fuse/holder + blade fuses + blocks,
 10/14/18 AWG wire, crimp terminals, adhesive heat shrink, neutral-cure
-silicone, letter standoffs/strip clips, logo diffuser sheet.
+silicone, letter standoffs/strip clips, logo diffuser sheet. The enclosure
+is 3mm-ply stock too — cut `../enclosure/node-enclosure-sign.svg`.
 
 ## Build + bench sequence
 
@@ -265,11 +336,13 @@ silicone, letter standoffs/strip clips, logo diffuser sheet.
    bring-up). Bench the same TX placement you'll rig (Y-stub vs chain end).
 2. Install tape letter by letter; **count pixels per letter into the firmware
    table as you go**.
-3. Wire groups center-out, injection stubs every 8 ft, nothing fused yet.
+3. Wire groups center-out, power stubs at their word-boundary entries
+   ('L' / logo field / 'a'), nothing fused yet.
 4. Measure each group's actual meters → final fuse sizes (×1.2 A rule).
-5. Flash the zone table; test each output alone, then all four.
-6. Full white soak: measure 12V at the farthest pixel of every group; add
-   injection anywhere below ~11.5V.
+5. Flash the zone table; test each output alone, then all three.
+6. Full white soak: measure 12V at the farthest pixel of every group; any
+   letter below ~11.5V gets a second word-boundary entry from the nearest
+   block.
 7. Run the sign 8+ hours on the bench PSU before transport.
 8. Pack: spare ABI PSU, a spare S3 from the fleet, the extra HiLetgo modules
    (5-pack), a coiled DMX cable (wired fallback), fuses, connectors.

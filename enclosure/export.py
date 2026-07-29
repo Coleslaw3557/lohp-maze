@@ -23,8 +23,12 @@ HAS_ETCH = {'sheet', 'window', 'testfit'}
 OUTNAME = {'sheet': 'node-enclosure.svg', 'window': 'window-acrylic.svg',
            'testfit': 'node-enclosure-testfit.svg'}
 # 14 rooms cut the standard files; Cuddle's 2410C+2450 pair needs the wide
-# aperture -> a second pass with cuddle=true, suffixed filenames
-VARIANTS = [('', []), ('-cuddle', ['-D', 'cuddle=true'])]
+# aperture -> a second pass with cuddle=true, suffixed filenames; the CAMP
+# SIGN controller box is a third pass (sign=true) — ply sheet only: no
+# sensor window (acrylic job skipped) and no testfit net (its ports are
+# wire pass-throughs plus the already-validated XLR + USB cuts)
+VARIANTS = [('', []), ('-cuddle', ['-D', 'cuddle=true']),
+            ('-sign', ['-D', 'sign=true'])]
 
 PATH_RE = re.compile(r'<path[^>]*\sd="([^"]+)"[^>]*/?>')
 VIEW_RE = re.compile(r'viewBox="([-\d. ]+)"')
@@ -79,4 +83,6 @@ if __name__ == '__main__':
         for p in PANELS:
             if p == 'testfit' and suffix:   # cuddle differs only at the
                 continue                    #  window/front — one net serves
+            if p == 'window' and suffix == '-sign':
+                continue                    # sign box has no sensor window
             write_panel(p, suffix, defs)
