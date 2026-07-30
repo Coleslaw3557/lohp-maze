@@ -123,7 +123,6 @@
             "_comment": "Final Vertical Moop March success pool: the server fires this only after all four unique moop buttons are pressed within 60s. Individual moop button presses still use the shared CorrectAnswer pool.",
             "audio_files": [
                 "rooms/Bike Lock Room/clips/28_diablo_quest_complete_1.wav",
-                "rooms/Bike Lock Room/clips/29_diablo_quest_complete_2.wav",
                 "ff9-victory.mp3",
                 "rooms/Porto Room/sensor_responses/victory/03_zelda_chime_door_opens.wav"
             ],

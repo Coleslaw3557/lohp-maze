@@ -125,3 +125,68 @@ plate skin: monster_skin_lava.npz
 2026-07-30 20:42:39,565 - theme_manager - INFO - Theme paused for room: Vertical Moop March
 2026-07-30 20:42:41,566 - theme_manager - INFO - Theme resumed for room: Vertical Moop March
 [2026-07-30 20:42:47 +0000] [1277111] [INFO] 127.0.0.1:41652 - - [30/Jul/2026:20:42:47 +0000] "GET /api/health 1.1" 200 39 "-" "Python-urllib/3.12"
+[2026-07-30 20:48:24 +0000] [1277111] [INFO] 127.0.0.1:53994 - - [30/Jul/2026:20:48:24 +0000] "GET /api/health 1.1" 200 39 "-" "Python-urllib/3.12"
+2026-07-30 20:48:25,283 - remote_host_manager - INFO - Removed disconnected client LOHP-SIM-WEB (192.168.253.126)
+2026-07-30 20:48:25,283 - __main__ - INFO - WebSocket client disconnected
+2026-07-30 20:48:25,283 - websockets.server - INFO - connection closed
+[2026-07-30 20:48:25 +0000] [1277111] [INFO] 192.168.253.126:64258 - - [30/Jul/2026:20:48:25 +0000] "GET /api/themes 1.1" 200 2095 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+[2026-07-30 20:48:25 +0000] [1277111] [INFO] 192.168.253.126:64258 - - [30/Jul/2026:20:48:25 +0000] "GET /api/effects_list 1.1" 200 4545 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:48:25,586 - websockets.server - INFO - connection open
+2026-07-30 20:48:25,959 - __main__ - INFO - Client connected: LOHP-SIM-WEB (192.168.253.126) - Associated rooms: ['Bike Lock Room', 'Camp Sign', 'Cop Dodge', 'Cuddle Cross', 'Deep Playa Handshake', 'Entrance', 'Exit', 'Gate', 'Guy Line Climb', 'Monkey Room', 'No Friends Monday', 'Photo Bomb Room', 'Porto Room', 'Sparkle Pony Room', 'Temple Room', 'Vertical Moop March']
+2026-07-30 20:48:25,959 - remote_host_manager - INFO - Client LOHP-SIM-WEB (192.168.253.126) associated with rooms: ['Bike Lock Room', 'Camp Sign', 'Cop Dodge', 'Cuddle Cross', 'Deep Playa Handshake', 'Entrance', 'Exit', 'Gate', 'Guy Line Climb', 'Monkey Room', 'No Friends Monday', 'Photo Bomb Room', 'Porto Room', 'Sparkle Pony Room', 'Temple Room', 'Vertical Moop March']
+[2026-07-30 20:48:33 +0000] [1277111] [INFO] 192.168.253.126:64262 - - [30/Jul/2026:20:48:33 +0000] "OPTIONS /api/run_effect 1.1" 200 0 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:48:33,404 - __main__ - INFO - Moop march button latched: Moop Button 1 (1/4)
+2026-07-30 20:48:33,404 - effects_manager - INFO - Applying effect 'CorrectAnswer' to room 'Vertical Moop March'
+2026-07-30 20:48:33,405 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+2026-07-30 20:48:34,782 - __main__ - INFO - Moop march button latched: Moop Button 2 (2/4)
+2026-07-30 20:48:34,782 - effects_manager - INFO - Applying effect 'CorrectAnswer' to room 'Vertical Moop March'
+2026-07-30 20:48:34,782 - effects_manager - INFO - Stopping active effect in room: Vertical Moop March
+2026-07-30 20:48:34,782 - effects_manager - INFO - Effect 'CorrectAnswer' in room 'Vertical Moop March' was superseded
+[2026-07-30 20:48:34 +0000] [1277111] [INFO] 192.168.253.126:64262 - - [30/Jul/2026:20:48:34 +0000] "POST /api/run_effect 1.1" 200 90 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:48:34,783 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+2026-07-30 20:48:36,120 - __main__ - INFO - Moop march button latched: Moop Button 3 (3/4)
+2026-07-30 20:48:36,120 - effects_manager - INFO - Applying effect 'CorrectAnswer' to room 'Vertical Moop March'
+2026-07-30 20:48:36,120 - effects_manager - INFO - Stopping active effect in room: Vertical Moop March
+2026-07-30 20:48:36,120 - effects_manager - INFO - Effect 'CorrectAnswer' in room 'Vertical Moop March' was superseded
+[2026-07-30 20:48:36 +0000] [1277111] [INFO] 192.168.253.126:64263 - - [30/Jul/2026:20:48:36 +0000] "POST /api/run_effect 1.1" 200 90 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:48:36,121 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+2026-07-30 20:48:37,419 - __main__ - INFO - Moop march button latched: Moop Button 4 (4/4)
+2026-07-30 20:48:37,419 - __main__ - INFO - Moop march complete; scheduling room-local right-answer pool
+2026-07-30 20:48:37,419 - effects_manager - INFO - Applying effect 'CorrectAnswer' to room 'Vertical Moop March'
+2026-07-30 20:48:37,420 - effects_manager - INFO - Stopping active effect in room: Vertical Moop March
+2026-07-30 20:48:37,420 - effects_manager - INFO - Effect 'CorrectAnswer' in room 'Vertical Moop March' was superseded
+[2026-07-30 20:48:37 +0000] [1277111] [INFO] 192.168.253.126:64262 - - [30/Jul/2026:20:48:37 +0000] "POST /api/run_effect 1.1" 200 90 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:48:37,420 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+2026-07-30 20:48:39,434 - theme_manager - INFO - Theme resumed for room: Vertical Moop March
+[2026-07-30 20:48:39 +0000] [1277111] [INFO] 192.168.253.126:64263 - - [30/Jul/2026:20:48:39 +0000] "POST /api/run_effect 1.1" 200 90 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:48:39,435 - effects_manager - INFO - Applying effect 'VerticalMoopMarch-RightAnswer' to room 'Vertical Moop March'
+2026-07-30 20:48:39,435 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+2026-07-30 20:48:41,447 - theme_manager - INFO - Theme resumed for room: Vertical Moop March
+[2026-07-30 20:48:55 +0000] [1277111] [INFO] 127.0.0.1:39790 - - [30/Jul/2026:20:48:55 +0000] "GET /api/health 1.1" 200 39 "-" "Python-urllib/3.12"
+2026-07-30 20:48:55,922 - audio_manager - INFO - Loaded audio configuration from audio_config.json
+2026-07-30 20:48:55,922 - __main__ - INFO - Audio config reloaded: 70 pools, 116 files
+[2026-07-30 20:48:55 +0000] [1277111] [INFO] 127.0.0.1:39794 - - [30/Jul/2026:20:48:55 +0000] "POST /api/reload_audio_config 1.1" 200 1716 "-" "Python-urllib/3.12"
+[2026-07-30 20:48:56 +0000] [1277111] [INFO] 127.0.0.1:39808 - - [30/Jul/2026:20:48:56 +0000] "GET /api/health 1.1" 200 39 "-" "Python-urllib/3.12"
+[2026-07-30 21:05:14 +0000] [1277111] [INFO] 192.168.253.126:64445 - - [30/Jul/2026:21:05:14 +0000] "OPTIONS /api/run_effect 1.1" 200 0 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 21:05:14,840 - effects_manager - INFO - Applying effect 'BikeLock-Entry' to room 'Bike Lock Room'
+2026-07-30 21:05:14,840 - theme_manager - INFO - Theme paused for room: Bike Lock Room
+2026-07-30 21:05:14,840 - remote_host_manager - INFO - No audio configured for effect: BikeLock-Entry
+[2026-07-30 21:05:17 +0000] [1277111] [INFO] 192.168.253.126:64447 - - [30/Jul/2026:21:05:17 +0000] "OPTIONS /api/room_vacated 1.1" 200 0 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 21:05:17,717 - effects_manager - INFO - Applying effect 'DeepPlaya-BG' to room 'Deep Playa Handshake'
+2026-07-30 21:05:17,717 - theme_manager - INFO - Theme paused for room: Deep Playa Handshake
+2026-07-30 21:05:17,721 - __main__ - INFO - Room vacated: Bike Lock Room
+2026-07-30 21:05:17,721 - effects_manager - INFO - Stopping active effect in room: Bike Lock Room
+2026-07-30 21:05:17,721 - effects_manager - INFO - Effect 'BikeLock-Entry' in room 'Bike Lock Room' was superseded
+[2026-07-30 21:05:17 +0000] [1277111] [INFO] 192.168.253.126:64445 - - [30/Jul/2026:21:05:17 +0000] "POST /api/run_effect 1.1" 200 86 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 21:05:17,722 - theme_manager - INFO - Theme resumed for room: Bike Lock Room
+[2026-07-30 21:05:17 +0000] [1277111] [INFO] 192.168.253.126:64447 - - [30/Jul/2026:21:05:17 +0000] "POST /api/room_vacated 1.1" 200 60 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+[2026-07-30 21:05:20 +0000] [1277111] [INFO] 192.168.253.126:64445 - - [30/Jul/2026:21:05:20 +0000] "OPTIONS /api/run_effect 1.1" 200 0 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 21:05:21,061 - effects_manager - INFO - Applying effect 'WrongAnswer' to room 'Deep Playa Handshake'
+2026-07-30 21:05:21,061 - effects_manager - INFO - Stopping active effect in room: Deep Playa Handshake
+2026-07-30 21:05:21,061 - effects_manager - INFO - Effect 'DeepPlaya-BG' in room 'Deep Playa Handshake' was superseded
+[2026-07-30 21:05:21 +0000] [1277111] [INFO] 192.168.253.126:64448 - - [30/Jul/2026:21:05:21 +0000] "POST /api/run_effect 1.1" 200 90 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 21:05:21,061 - theme_manager - INFO - Theme paused for room: Deep Playa Handshake
+2026-07-30 21:05:22,567 - theme_manager - INFO - Theme resumed for room: Deep Playa Handshake
+[2026-07-30 21:05:22 +0000] [1277111] [INFO] 192.168.253.126:64445 - - [30/Jul/2026:21:05:22 +0000] "POST /api/run_effect 1.1" 200 89 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+[2026-07-30 21:11:05 +0000] [1277111] [INFO] 127.0.0.1:56944 - - [30/Jul/2026:21:11:05 +0000] "GET /api/health 1.1" 200 39 "-" "Python-urllib/3.12"
+[2026-07-30 21:13:14 +0000] [1277111] [INFO] 127.0.0.1:33240 - - [30/Jul/2026:21:13:14 +0000] "GET /api/health 1.1" 200 39 "-" "Python-urllib/3.12"

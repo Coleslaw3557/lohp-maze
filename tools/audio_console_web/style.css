@@ -1,5 +1,5 @@
 /* Palette matches the sim's panel (sim/web/style.css) so the two tools read as one system. */
-* { box-sizing: border-box; }
+* { box-sizing: border-box; border-radius: 0 !important; }
 body { margin: 0; background: #060609; color: #cfd2dc;
   font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
 code { color: #9fb4ff; font-size: 12px; }
@@ -21,7 +21,7 @@ main { padding: 14px 16px 60px; max-width: 1100px; }
 
 /* --- controls --- */
 button, select, input[type=text], input[type=search], input[type=number] {
-  background: #1d2030; color: #dfe2ee; border: 1px solid #32364e; border-radius: 6px;
+  background: #1d2030; color: #dfe2ee; border: 1px solid #32364e;
   padding: 5px 9px; font: inherit; }
 button { cursor: pointer; }
 button:hover { background: #262a40; }
@@ -36,14 +36,14 @@ button.danger:hover { background: #3d1420; border-color: #7a2437; color: #ff8296
 .footnote { margin-top: 22px; border-top: 1px solid #1d1f30; padding-top: 12px; }
 
 .dot { font-size: 10px; font-weight: 600; letter-spacing: .05em; padding: 3px 8px;
-  border-radius: 9px; background: #3a3d55; color: #b9bdd0; }
+  background: #3a3d55; color: #b9bdd0; }
 .dot.ok { background: #12351f; color: #55e08a; }
 .dot.err { background: #3d1420; color: #ff7285; }
 .dot.warn { background: #3a2f10; color: #ffc94d; }
 
 /* --- library inbox (drop anywhere on the page lands here) --- */
 #inbox { margin-bottom: 14px; }
-#dropzone { border: 2px dashed #32364e; border-radius: 10px; background: #0d0e15;
+#dropzone { border: 2px dashed #32364e; background: #0d0e15;
   padding: 16px; text-align: center; cursor: pointer; color: #7a7f92; }
 #dropzone b { display: block; color: #dfe2ee; font-size: 14px; margin-bottom: 2px; }
 #dropzone:hover { border-color: #4a6cb8; background: #121525; color: #9aa3c0; }
@@ -65,7 +65,7 @@ button.danger:hover { background: #3d1420; border-color: #7a2437; color: #ff8296
   padding: 8px 12px; background: #16223a; border-bottom: 1px solid #23253a; }
 
 /* --- room cards --- */
-.room { border: 1px solid #23253a; border-radius: 10px; background: #101119;
+.room { border: 1px solid #23253a; background: #101119;
   margin-bottom: 12px; overflow: hidden; padding: 0; }
 .room > summary { margin: 0; padding: 8px 12px; font-size: 14px; color: #fff;
   background: #161826; border-bottom: 1px solid #23253a; display: flex; gap: 8px;
@@ -85,15 +85,18 @@ button.danger:hover { background: #3d1420; border-color: #7a2437; color: #ff8296
 .answer-row button.selected { background: #12351f; border-color: #2c8f52; color: #7fd6a0; }
 
 /* --- one action's pool --- */
-.pool { padding: 9px 12px; border-top: 1px solid #1d1f30; }
+.pool { margin-left: 18px; padding: 0 12px 8px; border-top: 1px solid #1d1f30;
+  border-left: 2px solid #2a3144; }
 .room .pool:first-of-type { border-top: none; }
-.pool > .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pool > .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  cursor: pointer; margin: 0 -12px; padding: 9px 12px; list-style-position: inside; }
 .pool .trig { color: #cfd2dc; }
 .pool .eff { color: #9fb4ff; font-weight: 600; }
 .pool .head .spacer { flex: 1; }
 .pool .vol { width: 62px; }
 .pool .comment { color: #6e7386; font-size: 11px; margin: 4px 0 0; }
-.pool.silent { background: #17131b; }
+.pool.silent { background: #17131b; border-left-color: #403247; }
+.pool.has-sounds { border-left-color: #314565; }
 
 .files { list-style: none; margin: 6px 0 0; padding: 0; }
 .files li { display: flex; align-items: center; gap: 8px; padding: 3px 0;
@@ -114,11 +117,11 @@ button.danger:hover { background: #3d1420; border-color: #7a2437; color: #ff8296
 body.dragging .pool { outline: 1px dashed #2c3450; outline-offset: -3px; }
 
 /* --- library --- */
-details:not(.room) { border: 1px solid #23253a; border-radius: 10px; background: #101119;
+details:not(.room):not(.pool) { border: 1px solid #23253a; background: #101119;
   margin-bottom: 12px; padding: 0 12px; }
-details:not(.room) > summary { cursor: pointer; padding: 9px 0; color: #8b90a8; font-size: 11px;
+details:not(.room):not(.pool) > summary { cursor: pointer; padding: 9px 0; color: #8b90a8; font-size: 11px;
   text-transform: uppercase; letter-spacing: .08em; }
-details:not(.room)[open] > summary { border-bottom: 1px solid #1d1f30; margin-bottom: 8px; }
+details:not(.room):not(.pool)[open] > summary { border-bottom: 1px solid #1d1f30; margin-bottom: 8px; }
 .lib-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
   padding-bottom: 8px; }
 .lib-tools input[type=search], .lib-tools input[type=text] { min-width: 220px; }

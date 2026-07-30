@@ -221,15 +221,20 @@ function fileRow(pool, file) {
 }
 
 function poolBlock(pool, action) {
-  const block = el('div', { className: 'pool' + (pool.files.length ? '' : ' silent') });
+  const block = el('details', {
+    className: 'pool' + (pool.files.length ? ' has-sounds' : ' silent'),
+    open: pool.files.length > 0,
+  });
 
   const volume = el('input', {
     className: 'vol', type: 'number', min: 0, max: 1, step: 0.05, value: pool.volume,
     title: 'playback volume for this action',
   });
+  volume.onclick = (e) => e.stopPropagation();
+  volume.onkeydown = (e) => e.stopPropagation();
   volume.onchange = () => mutate(pool, { volume: parseFloat(volume.value) }, `${pool.name} volume ${volume.value}`);
 
-  const head = el('div', { className: 'head' },
+  const head = el('summary', { className: 'head' },
     action ? el('span', { className: 'dot' }, action.kind) : el('span', { className: 'dot' }, 'no trigger'),
     action ? el('span', { className: 'trig' }, action.triggers.join(', ')) : null,
     action ? '→' : null,
@@ -245,7 +250,8 @@ function poolBlock(pool, action) {
 
   if (action && action.room && action.testable !== false && STATE.server.online) {
     const test = el('button', { className: 'tiny secondary', title: 'run the real effect in the real room' }, 'Test in room');
-    test.onclick = async () => {
+    test.onclick = async (e) => {
+      e.stopPropagation();
       try {
         await api('/api/play_in_room', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -351,7 +357,7 @@ function render() {
   const global = $('global-actions');
   global.innerHTML = '';
   if (STATE.global_actions && STATE.global_actions.length) {
-    const card = el('details', { className: 'room global', open: true },
+    const card = el('details', { className: 'room global' },
       el('summary', null, 'Maze-wide',
         el('span', { className: 'count' },
           `${STATE.global_actions.length} global action${STATE.global_actions.length > 1 ? 's' : ''}`)));
