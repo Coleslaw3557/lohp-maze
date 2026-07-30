@@ -40,6 +40,14 @@
             ],
             "volume": 0.8
         },
+        "Backtrack": {
+            "_comment": "Played instead of the room's normal entry audio when a visitor enters an earlier room in the canonical maze route.",
+            "audio_files": [
+                "uploads/Broke_the_ever_loving_shit_out_of_it.mp3",
+                "uploads/You_ve_been_splooged_you_took_a_good_old_gulp_too.mp3"
+            ],
+            "volume": 0.9
+        },
         "CorrectAnswer": {
             "audio_files": [
                 "ff9-victory.mp3",

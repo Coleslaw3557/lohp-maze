@@ -1,5 +1,6 @@
 import os
 import sys
+import glob
 import time
 import json
 import logging
@@ -35,6 +36,13 @@ CHANNELS_PER_FIXTURE = 8
 # speaker at once. ONE server-side cooldown covers all sources (the sign
 # node's POST, the sim's panel button) — presses inside it get 429.
 SIGN_STORM_COOLDOWN_S = 30
+BACKTRACK_EFFECT_NAME = "Backtrack"
+BACKTRACK_TOKEN_TTL_S = 180
+BACKTRACK_ROOM_BLOCK_S = 30
+BACKTRACK_ENTRANCE_RESET_S = 8
+BACKTRACK_FORWARD_MIN_STEPS = 2
+BACKTRACK_REVERSE_TRIGGER_STEPS = 1
+BACKTRACK_BLIND_REVERSE_ENTRY_ROOMS = {"Entrance"}
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
@@ -154,6 +162,247 @@ effects_manager.register_effect_hooks(
     on_cancel=lambda room: camera_manager.cancel_pending(),
 )
 
+
+def _load_maze_route_tracking():
+    """Route order and entry effects used to infer reverse travel from entries."""
+    route = []
+    entry_effects = {}
+    try:
+        with open(os.path.join('sim', 'maze_layout.json')) as f:
+            route = json.load(f).get('route', [])
+    except (OSError, json.JSONDecodeError) as e:
+        logger.warning(f"Maze route tracking disabled; could not read route: {e}")
+    try:
+        with open('triggers.json') as f:
+            for trig in json.load(f).get('triggers', []):
+                action = trig.get('action') or {}
+                effect = (action.get('data') or {}).get('effect_name')
+                if (
+                    action.get('path') != '/api/run_effect'
+                    or not effect
+                    or trig.get('room') in entry_effects
+                    or trig.get('type') not in {'laser', 'presence'}
+                ):
+                    continue
+                entry_effects[trig['room']] = effect
+    except (OSError, json.JSONDecodeError) as e:
+        logger.warning(f"Maze route tracking disabled; could not read entry triggers: {e}")
+        entry_effects = {}
+    entry_route = [room for room in route if room in entry_effects]
+    return entry_route, {room: i for i, room in enumerate(entry_route)}, entry_effects
+
+
+MAZE_ENTRY_ROUTE, MAZE_ENTRY_INDEX, MAZE_ENTRY_EFFECTS = _load_maze_route_tracking()
+_route_tokens = []
+_next_route_token_id = 1
+_backtrack_room_until = {}
+
+
+def _reset_route_tracking():
+    _route_tokens.clear()
+    _backtrack_room_until.clear()
+
+
+def _prune_route_tokens(now):
+    _route_tokens[:] = [
+        token for token in _route_tokens
+        if now - token['updated_at'] <= BACKTRACK_TOKEN_TTL_S
+    ]
+    for room, until in list(_backtrack_room_until.items()):
+        if now >= until:
+            _backtrack_room_until.pop(room, None)
+
+
+def _route_tracking_idle(now, idle_s):
+    activity_times = [token['updated_at'] for token in _route_tokens]
+    activity_times.extend(
+        until - BACKTRACK_ROOM_BLOCK_S
+        for until in _backtrack_room_until.values()
+        if now < until
+    )
+    if not activity_times:
+        return True
+    return now - max(activity_times) >= idle_s
+
+
+def _maybe_reset_route_start(room, effect_name):
+    if (
+        MAZE_ENTRY_ROUTE
+        and room == MAZE_ENTRY_ROUTE[0]
+        and MAZE_ENTRY_EFFECTS.get(room) == effect_name
+    ):
+        now = time.monotonic()
+        _prune_route_tokens(now)
+        if _route_tracking_idle(now, BACKTRACK_ENTRANCE_RESET_S):
+            logger.info("Resetting route backtrack state for new Entrance start")
+            _reset_route_tracking()
+
+
+def _route_token_at(index):
+    candidates = [t for t in _route_tokens if t['index'] == index]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda t: t['updated_at'])
+
+
+def _nearest_route_token_before(index):
+    candidates = [t for t in _route_tokens if t['index'] < index]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda t: (t['index'], t['updated_at']))
+
+
+def _nearest_route_token_after(index):
+    candidates = [t for t in _route_tokens if t['index'] > index]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda t: (t['index'], -t['updated_at']))
+
+
+def _move_route_token(token, index, room, now):
+    old_index = token['index']
+    if index > token['index']:
+        token['forward_steps'] += index - token['index']
+        token['reverse_steps'] = 0
+        direction = 'forward'
+    elif index < token['index']:
+        token['reverse_steps'] += token['index'] - index
+        direction = 'reverse'
+    else:
+        direction = 'same'
+    token['last_index'] = old_index
+    token['last_move_direction'] = direction
+    token['last_moved_at'] = now
+    token['index'] = index
+    token['room'] = room
+    token['updated_at'] = now
+    token['occupied'] = True
+    return direction
+
+
+def _new_route_token(index, room, now):
+    global _next_route_token_id
+    token = {
+        'id': _next_route_token_id,
+        'index': index,
+        'room': room,
+        'updated_at': now,
+        'occupied': True,
+        'forward_steps': 0,
+        'reverse_steps': 0,
+        'last_index': None,
+        'last_move_direction': None,
+        'last_moved_at': now,
+    }
+    _next_route_token_id += 1
+    _route_tokens.append(token)
+    return token
+
+
+def _route_entry_action(room, effect_name):
+    """Infer reverse travel from triggerable route-room transitions.
+
+    There is no visitor id in node POSTs, so tokens are the best server-side
+    approximation: forward entries consume a token from the previous triggerable
+    room, while reverse entries consume a token from the next triggerable room.
+    A token must move forward a couple of rooms before reverse entries flip
+    rooms into Backtrack. Stale tokens expire so abandoned runs stop suppressing
+    normal room entries.
+    """
+    index = MAZE_ENTRY_INDEX.get(room)
+    if index is None or MAZE_ENTRY_EFFECTS.get(room) != effect_name:
+        return None
+
+    now = time.monotonic()
+    _prune_route_tokens(now)
+
+    same_token = _route_token_at(index)
+    if same_token:
+        _move_route_token(same_token, index, room, now)
+        if same_token.get('reverse_steps', 0) >= BACKTRACK_REVERSE_TRIGGER_STEPS:
+            return 'backtrack'
+        return 'same'
+
+    next_token = _nearest_route_token_after(index)
+    prev_token = _nearest_route_token_before(index)
+    reverse_candidate = (
+        next_token
+        and next_token.get('forward_steps', 0) >= BACKTRACK_FORWARD_MIN_STEPS
+    )
+    if reverse_candidate:
+        _move_route_token(next_token, index, room, now)
+        is_backtrack = next_token['reverse_steps'] >= BACKTRACK_REVERSE_TRIGGER_STEPS
+        logger.info(f"Reverse route step into {room} from route token "
+                    f"{next_token['id']} ({next_token['reverse_steps']}/"
+                    f"{BACKTRACK_REVERSE_TRIGGER_STEPS})")
+        return 'backtrack' if is_backtrack else 'reverse'
+
+    if prev_token:
+        _move_route_token(prev_token, index, room, now)
+        return 'forward'
+
+    _new_route_token(index, room, now)
+    return 'new'
+
+
+def _set_room_backtrack_block(room):
+    _backtrack_room_until[room] = time.monotonic() + BACKTRACK_ROOM_BLOCK_S
+
+
+def _clear_room_backtrack_block(room):
+    _backtrack_room_until.pop(room, None)
+
+
+def _room_backtrack_blocked(room):
+    until = _backtrack_room_until.get(room)
+    if until is None:
+        return False
+    if time.monotonic() >= until:
+        _backtrack_room_until.pop(room, None)
+        return False
+    return True
+
+
+def _route_room_vacated(room):
+    index = MAZE_ENTRY_INDEX.get(room)
+    if index is None:
+        return None
+    now = time.monotonic()
+    _prune_route_tokens(now)
+    token = _route_token_at(index)
+    if not token:
+        token = _nearest_route_token_after(index)
+        if not token:
+            return None
+        just_moved_forward_from_room = (
+            token.get('last_index') == index
+            and token.get('last_move_direction') == 'forward'
+            and now - token.get('last_moved_at', 0) < 8
+        )
+        if just_moved_forward_from_room:
+            return None
+        if token.get('forward_steps', 0) < BACKTRACK_FORWARD_MIN_STEPS:
+            return None
+        _move_route_token(token, index, room, now)
+    if token:
+        target_index = index - 1
+        target_room = MAZE_ENTRY_ROUTE[target_index] if target_index >= 0 else None
+        reverse_departure = token.get('last_move_direction') == 'reverse'
+        blind_reverse_ready = (
+            reverse_departure
+            and target_room in BACKTRACK_BLIND_REVERSE_ENTRY_ROOMS
+            and token.get('reverse_steps', 0) >= BACKTRACK_REVERSE_TRIGGER_STEPS
+        )
+        if blind_reverse_ready:
+            _move_route_token(token, target_index, target_room, now)
+            token['occupied'] = False
+            logger.info(f"Reverse route step toward blind entry {target_room}; "
+                        f"firing {BACKTRACK_EFFECT_NAME} from {room}")
+            return target_room
+        token['occupied'] = False
+        token['updated_at'] = now
+    return None
+
 dmx_state_manager.reset_all_fixtures()
 if dmx_output_manager:
     dmx_output_manager.start()
@@ -223,7 +472,23 @@ async def run_effect():
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
 
     try:
-        success, message = await effects_manager.apply_effect_to_room(room, effect_name)
+        _maybe_reset_route_start(room, effect_name)
+        route_action = _route_entry_action(room, effect_name)
+        if route_action == 'forward':
+            _clear_room_backtrack_block(room)
+        elif route_action == 'backtrack':
+            _set_room_backtrack_block(room)
+            effect_name = BACKTRACK_EFFECT_NAME
+        elif _room_backtrack_blocked(room):
+            effect_name = BACKTRACK_EFFECT_NAME
+        elif route_action in ('same', 'new'):
+            _clear_room_backtrack_block(room)
+
+        effect_data = effects_manager.get_effect(effect_name)
+        if not effect_data:
+            return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
+
+        success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
         if success:
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}'})
         logger.error(f"Failed to execute effect {effect_name} in room {room}: {message}")
@@ -299,6 +564,39 @@ async def stop_effect():
         return jsonify({'status': 'success', 'message': message})
     except Exception as e:
         logger.error(f"Error stopping effect: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/room_vacated', methods=['POST'])
+async def room_vacated():
+    """A room node reporting that its radar lost the last visitor — the
+    `leave_action` half of the occupancy contract in triggers.json.
+
+    Same work as a per-room /api/stop_effect (cancel anything still running,
+    silence lingering effect audio, hand the room back to the theme), but it is
+    the room reporting a fact rather than an operator issuing a stop, and it
+    reads as one in the log when something misbehaves at the maze. Background
+    music is deliberately untouched: it never stopped, and effect audio mixes
+    over it rather than replacing it."""
+    data = await request.json
+    room = data.get('room')
+    if not room:
+        return jsonify({'status': 'error', 'message': 'Room is required'}), 400
+    try:
+        logger.info(f"Room vacated: {room}")
+        blind_backtrack_room = _route_room_vacated(room)
+        if blind_backtrack_room:
+            _set_room_backtrack_block(room)
+            _set_room_backtrack_block(blind_backtrack_room)
+            success, message = await effects_manager.apply_effect_to_room(room, BACKTRACK_EFFECT_NAME)
+            if not success:
+                return jsonify({'status': 'error', 'message': message}), 500
+            return jsonify({'status': 'success',
+                            'message': f'Room {room} vacated; {BACKTRACK_EFFECT_NAME} fired'})
+        await effects_manager.stop_effect_in_room(room)
+        return jsonify({'status': 'success', 'message': f'Room {room} vacated'})
+    except Exception as e:
+        logger.error(f"Error handling vacate for room {room}: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
@@ -553,6 +851,14 @@ async def serve_audio(filename):
     base_dir = os.path.dirname(__file__)
     music_path = os.path.join(base_dir, 'music', os.path.basename(filename))
     audio_dir = os.path.join(base_dir, 'music' if os.path.exists(music_path) else 'audio_files')
+    # Play commands carry bare basenames (remote_host_manager strips any
+    # subdir), so lazy fetchers ask for names that only exist deeper under
+    # audio_files/. Basenames are unique across the tree.
+    if audio_dir.endswith('audio_files') and not os.path.exists(os.path.join(audio_dir, filename)):
+        matches = glob.glob(os.path.join(audio_dir, '**', os.path.basename(filename)),
+                            recursive=True)
+        if matches:
+            filename = os.path.relpath(matches[0], audio_dir)
     return await send_from_directory(audio_dir, filename)
 
 
