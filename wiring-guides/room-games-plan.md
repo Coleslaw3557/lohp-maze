@@ -23,20 +23,31 @@ kits, 5V LED + microswitch). Button LEDs wire straight to the node's 5V rail
 - **Logic** (`game_gate.yaml`, **bench-verified 2026-07-20** — 4-path harness
   test `sim/tools/gate_game_test.py`): pads carry a 350ms `delayed_off` hold,
   so "simultaneous" = all 3 of a bank ON together. Bank 1 → CorrectAnswer
-  chime and arms a 30s stage window; bank 2 inside the window →
-  **GateInspection** (room complete); bank 2 un-armed → WrongAnswer.
+  chime and arms a 30s stage window; bank 2 inside the window → CorrectAnswer
+  chime; bank 2 un-armed → WrongAnswer. Room entry/exit stays on the Gate
+  radar occupancy trigger.
 - **Placement: PENDING** — the sim shows the 6 pads side by side as a
   placeholder row only. The doorway radar trigger (GateInspection on entry)
   stays as-is alongside the game.
-- Sim note: one click = the whole bank (you can't press 3 at once with a
-  mouse); the real node genuinely requires all three.
+- Sim note: individual pad clicks are silent unless all three pads in the bank
+  are clicked inside the same 350ms hold window, matching the real node.
 
 ## Deep Playa Handshake — five buttons, one winner
 
 - **Hardware:** 5 buttons on **D0–D4** (+ radar UART + I2S = 10/11).
-- **Logic** (`game_dph.yaml`): exactly one button (random) is the winner —
-  CorrectAnswer and the winner re-rolls; the other four fire WrongAnswer.
+- **Logic** (`game_dph.yaml`): the doorway occupancy enter randomizes exactly
+  one winning button. It fires CorrectAnswer; the other four fire WrongAnswer.
   The winner persists across failed presses, so it's a real hunt.
+
+## Porto Room — three knock pads, one pass per entry
+
+- **Hardware:** 3 piezo knock pads on **D0-D2** (+ radar UART + I2S + DMX = 9/11).
+- **Logic** (`game_porto.yaml`): the doorway occupancy enter randomizes one
+  winning pad. Attempt 1 always fires `PortoHit`; attempts 2-3 pass only on
+  the winning pad; attempt 4 passes regardless so the visitor cannot get
+  stuck. Vacate clears the seed and attempt count so the next entry re-rolls.
+- **Hardware front-end** (`game_porto_hw.yaml`): each piezo ADC channel thresholds
+  into the same `porto_press` script used by the sim/harness action.
 
 ## Bike Lock Room — two-question true/false quiz
 
@@ -45,9 +56,9 @@ kits, 5V LED + microswitch). Button LEDs wire straight to the node's 5V rail
 - **Logic** (`game_bike.yaml`): correct button → CorrectAnswer and latches
   that question for 60s; wrong button → WrongAnswer and resets progress;
   both questions correct → chime then **BikeLockRoom**.
-- **ANSWER KEY IS A PLACEHOLDER** (Q1=TRUE, Q2=FALSE) until the sign exists —
-  edit the one lambda in `game_bike.yaml` (and the `correct` flags in
-  `triggers.json`) when the real questions are written.
+- **Answer key:** static for the room, not randomized. The `correct` flags in
+  `triggers.json` drive the sim, and the audio console mirrors them into
+  `sim/esphome/rooms/bike-lock.yaml` for the node firmware.
 
 ## Vertical Moop March — four standalone button pucks
 
@@ -57,9 +68,11 @@ kits, 5V LED + microswitch). Button LEDs wire straight to the node's 5V rail
   day shift per charge — they join the fleet's nightly dusk-recharge flip.
   Flash target `hardware_c3.yaml`; nodes `rooms/moop-button-{1..4}.yaml`
   (API 6076–6079, MACs :10–:13).
-- **Logic:** game rule **TBD** — for now every press fires the CorrectAnswer
-  chime (`button.yaml` reused, 3s cooldown). The room's own node keeps its
-  radar + audio unchanged.
+- **Logic:** every press fires the shared CorrectAnswer button-response pool
+  (`button.yaml` reused, 3s cooldown). The server opens a 60s round on the
+  first identified puck press; all four unique pucks in that window fire
+  `VerticalMoopMarch-RightAnswer`, while an incomplete round times out to
+  `VerticalMoopMarch-WrongAnswer` and resets.
 
 ## Monkey Room — button now, dance later
 

@@ -86,6 +86,8 @@ class WebSocketClient:
         ordered_handlers = {
             'play_effect_audio': self.handle_play_effect_audio,
             'audio_stop': self.handle_audio_stop,
+            'play_room_ambience': self.handle_play_room_ambience,
+            'stop_room_ambience': self.handle_stop_room_ambience,
             'start_background_music': self.handle_start_background_music,
             'stop_background_music': self.handle_stop_background_music,
             'connection_response': self.handle_ack,
@@ -133,6 +135,35 @@ class WebSocketClient:
             self.audio_manager.stop_audio(room)
         else:
             logger.warning(f"Received audio_stop for unassociated room: {room}")
+
+    async def handle_play_room_ambience(self, message):
+        """Looping room bed (the Cuddle floor show). Separate from effect audio:
+        effects mix over it and audio_stop leaves it alone."""
+        room = message.get('room')
+        audio_data = message.get('data', {})
+        file_name = audio_data.get('file_name')
+
+        if room is not None and not self.audio_manager.zones_for_room(room):
+            logger.warning(f"Received play_room_ambience for unassociated room: {room}")
+            return
+        if not file_name:
+            logger.warning("Received play_room_ambience without file_name")
+            return
+
+        try:
+            success = await self.audio_manager.play_room_ambience(
+                file_name, audio_data.get('volume', 1.0), audio_data.get('loop', True), room=room)
+            if not success:
+                logger.error(f"Failed to start ambience '{file_name}' for room '{room}'")
+        except Exception:
+            logger.exception(f"Error starting ambience '{file_name}' for room '{room}'")
+
+    async def handle_stop_room_ambience(self, message):
+        room = message.get('room')
+        if room is None or self.audio_manager.zones_for_room(room):
+            self.audio_manager.stop_room_ambience(room)
+        else:
+            logger.warning(f"Received stop_room_ambience for unassociated room: {room}")
 
     async def handle_audio_files_to_download(self, message):
         logger.info("Server sent list of audio files to download")

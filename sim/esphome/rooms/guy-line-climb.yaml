@@ -13,6 +13,7 @@ packages:
   platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
 
 # FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "44"   # D7, ToF room
-#   packages:           dmx: !include ../packages/dmx_out.yaml
+#   substitutions:      dmx_tx_pin: "6"   # D5, radar room
+#   packages:           radar: !include ../packages/ld2410.yaml
+#                       dmx: !include ../packages/dmx_out.yaml
 #   external_components: [{source: {type: local, path: ../components}}]

@@ -18,7 +18,7 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   chain during the transition. Runs themes (ambient, whole-maze lighting) and effects (short
   per-room sequences that interrupt the theme).
 - **Room nodes** (`sim/esphome/`): battery/AC-powered XIAO ESP32-S3 node boxes, one per room,
-  on the maze WiFi. Sensors (mmWave radar, ToF, buttons, piezos) fire effects by POSTing to the
+  on the maze WiFi. Sensors (mmWave radar in 13 rooms, ToF at Entrance/Exit, buttons, piezos) fire effects by POSTing to the
   server's REST API; each node's speaker plays effect cues and streamed music, commanded by the
   server over the ESPHome native API (`node_audio_manager.py` + `node_audio_config.json`).
 - **Floor projection** (`projection_engine.py` + `projection_renderer.py`): the Cuddle Cross
@@ -97,6 +97,45 @@ curl -X POST http://localhost:5000/api/set_master_brightness -H "Content-Type: a
 
 Full API reference: [api-docs.md](api-docs.md). Adding effects: [adding_new_effects.md](adding_new_effects.md).
 
+## Audio pool console
+
+Every sensor action plays **one file drawn at random from a pool** — never a fixed clip.
+The pools live in `audio_config.json`; `audio_manager.py` picks per play, weighted by an
+optional `audio_weights` row, and never repeats any of the last `len(pool)//2` picks (so a
+two-file pool strictly alternates). Runtime picks use Python `SystemRandom`, which draws
+from the Pi/Linux kernel CSPRNG, so no hardware RNG is needed. A pool of one is still a pool:
+drop a second file in and the action starts varying, no code change.
+
+`tools/audio-console.sh` serves a small web page for managing those pools — separate from
+the sim, and the page to hand to whoever is preparing sounds:
+
+```bash
+tools/audio-console.sh            # http://<host>:5055   (-d to run in the background)
+```
+
+It joins `triggers.json` to `audio_config.json` and shows one card per room, in walk order,
+listing each action (entry radar, button, piezo) with the pool it fires. Every room also gets
+right-answer and wrong-answer placeholder pools, even before its game actions exist. Per pool:
+audition any file in the browser, upload new ones, add existing files from the library, set
+per-file weights and the effect volume, and **Test in room** to fire the real lights-and-sound
+effect through the show server.
+
+Files go in by drag-and-drop (folders included) or by clicking any upload control:
+
+- the **drop zone at the top of the page** takes sounds into the library *unassigned* —
+  land them in `audio_files/uploads/` now, attach them to an action later. A file dropped
+  anywhere else on the page ends up here too, rather than the browser navigating away.
+- **onto a room card** — straight into that room's pool, or a "which action?" chooser if the
+  room has more than one. Lands in `audio_files/rooms/<Room>/uploads/`.
+- **onto one action's pool** — precise target, same folder.
+
+Edits write `audio_config.json` immediately (previous version kept as `audio_config.json.bak`);
+the running maze keeps the old pools until **Apply to maze**, which calls
+`POST /api/reload_audio_config` on the show server and can rebuild the ESP32 node cue WAVs.
+Uploads are renamed on collision because basenames must stay unique across `audio_files/` —
+play commands carry the bare basename and node cue ids come from the stem. Retiring a file
+pulls it from every pool and moves it to `audio_files/rejected/`; nothing is deleted.
+
 ## Photo booth & the silver monkey
 
 Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,
@@ -153,6 +192,17 @@ and grips your feet until you step out.
 All are presence-cued: the show starts when the radar sees someone and
 fades out 60 s after the deck empties.
 
+**The room follows the show** (`floor_show_manager.py`). Whichever renderer is driving
+reports its theme, liveness and events back to the server (`POST /api/floor_event`), which
+gives Cuddle Cross a looping bed for as long as the show is up — on an audio channel of
+its own, so effects mix over it instead of cutting it — plus the occasional accent fired
+by the projection's own moments (a stone sinking, Kukulkan surfacing): one file from the
+theme's pool and a matching ember flare on the pars. The same report picks the room's
+light palette, and squeezes the always-on maze-theme wash under a hard ceiling with zero
+white so the pars stay a peripheral glow and the projector keeps the deck. **LAVA** has
+sounds today (Tim's `audio_files/uploads/Lava/`); the other four light correctly and stay
+silent until theirs land.
+
 One numpy engine (`projection_engine.py`, `FloorShow` base + `THEMES` registry) drives both
 displays: the projector (`projection_renderer.py`, live-switchable via `POST :5002/theme/<name>` → `/dev/fb0`) and the
 sim preview (state + field streamed over `WS /sim/projection`; the page renders the
@@ -183,4 +233,6 @@ sharing the same radar — is specced in
   sim and projector; pure numpy)
 - `projection_renderer.py` — fullscreen framebuffer output on the server Pi
   (systemd `lohp-projection`, outside the container)
+- `floor_show_manager.py` — Cuddle Cross following the floor show: theme-driven bed audio,
+  event-fired accents, and the room's light palette (fed by `POST /api/floor_event`)
 - `effects/` — one file per effect; `effect_utils.py` — shared step interpolation and theme math

@@ -6,6 +6,19 @@ from effect_utils import generate_theme_values
 
 logger = logging.getLogger(__name__)
 
+# Rooms the maze theme may not light on its own terms. Cuddle Cross is the
+# projection room: an un-capped theme wash (the themes run total_dimming up to
+# 255) drowns the floor show, so the ambient there is squeezed under a ceiling
+# and pulled toward the colour of whatever the projector is currently running.
+# floor_show_manager -> effects_manager.set_floor_theme() replaces rgb/cap as
+# the floor theme changes; these are the safe values until it reports one.
+# `mix` = how far the room's colour is dragged from the theme's hue to the
+# floor theme's (1.0 would ignore the maze theme's colour entirely).
+ROOM_LIGHT_PROFILES = {
+    "Cuddle Cross": {"cap": 48, "rgb": (255, 60, 110), "mix": 0.75},
+}
+
+
 class ThemeManager:
     def __init__(self, dmx_state_manager, light_config_manager, interrupt_handler):
         self.dmx_state_manager = dmx_state_manager
@@ -19,6 +32,8 @@ class ThemeManager:
         self.master_brightness = 1.0
         self.frequency = 10  # Reduce update rate to 10 Hz
         self.paused_rooms = set()
+        self.room_profiles = {room: dict(profile)
+                              for room, profile in ROOM_LIGHT_PROFILES.items()}
         self.theme_list = []
         self.previous_values = {}  # Store previous values for smoothing
         self.smoothing_factor = 0.2  # Adjust this value to control smoothing (0.0 to 1.0)
@@ -233,6 +248,7 @@ class ThemeManager:
             if room not in self.paused_rooms:
                 room_channels = generate_theme_values(theme_data, current_time, self.master_brightness,
                                                       room_index, total_rooms, self.temporary_theme_values)
+                room_channels = self._apply_room_profile(room, room_channels)
                 smoothed_channels = self._smooth_channels(room, room_channels)
                 all_room_channels[room] = smoothed_channels
                 logger.debug(f"Generated channels for room {room}: {smoothed_channels}")
@@ -244,6 +260,39 @@ class ThemeManager:
             logger.warning("No room channels were generated. Check if all rooms are paused or if there's an issue with room layout.")
         
         return all_room_channels
+
+    def set_room_light_profile(self, room, rgb=None, cap=None, mix=None):
+        """Retune a room's ambient lens (the floor projection moving Cuddle
+        Cross to a new theme). Unknown rooms get a profile created for them;
+        omitted values keep whatever the room already had."""
+        profile = self.room_profiles.setdefault(room, {})
+        if rgb is not None:
+            profile['rgb'] = tuple(rgb)
+        if cap is not None:
+            profile['cap'] = int(cap)
+        if mix is not None:
+            profile['mix'] = float(mix)
+        logger.info(f"Room light profile for {room}: {profile}")
+
+    def _apply_room_profile(self, room, channels):
+        """Squeeze one room's theme step through its profile: hard brightness
+        ceiling, no white, and a pull toward the room's own colour. The maze
+        theme still drives the movement — this only changes how far and in
+        which direction it may go."""
+        profile = self.room_profiles.get(room)
+        if not profile:
+            return channels
+        out = dict(channels)
+        cap = profile.get('cap')
+        if cap is not None:
+            out['total_dimming'] = min(out.get('total_dimming', 0), cap)
+        rgb = profile.get('rgb')
+        if rgb:
+            mix = profile.get('mix', 0.75)
+            for key, target in zip(('r_dimming', 'g_dimming', 'b_dimming'), rgb):
+                out[key] = int(round(out.get(key, 0) * (1 - mix) + target * mix))
+        out['w_dimming'] = 0  # the projection room never gets white
+        return out
 
     def _smooth_channels(self, room, new_channels):
         if room not in self.previous_values:

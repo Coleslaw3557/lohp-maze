@@ -1,7 +1,8 @@
 # Vertical Moop March sensor node — trigger map from triggers.json
 # No trigger packages yet: the Lightning-on-entry placeholder was test wiring
-# (removed 2026-07-17). Include tripwire.yaml + an `effect` substitution once
-# this room gets its bespoke effect.
+# (removed 2026-07-17). Include tripwire.yaml + ld2410.yaml together (they
+# pair: the radar publishes into the tripwire sensor) plus an `effect`
+# substitution once this room gets its bespoke effect.
 substitutions:
   node_name: lohp-node-vertical-moop-march
   room: "Vertical Moop March"
@@ -14,6 +15,6 @@ packages:
   platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
 
 # FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "44"   # D7, ToF room
+#   substitutions:      dmx_tx_pin: "6"   # D5, radar room
 #   packages:           dmx: !include ../packages/dmx_out.yaml
 #   external_components: [{source: {type: local, path: ../components}}]

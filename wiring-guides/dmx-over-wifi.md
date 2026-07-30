@@ -116,12 +116,12 @@ packages:
 
 The `room-node-audio-plan.md` pin map leaves exactly one clean output pin per
 room, and it differs by sensor type. **DMX TX is D5 (GPIO6) everywhere except
-the four ToF rooms, which use D7 (GPIO44), and Gate, which uses D0 (GPIO1):**
+Entrance and Exit, which use D7 (GPIO44), and Gate, which uses D0 (GPIO1):**
 
 | Rooms | Sensor pins in use | DMX TX | why |
 |---|---|---|---|
-| 10 radar rooms (not Gate) | LD2410C on D6/D7 | **D5** (GPIO6) | I2C position unused — no ToF |
-| Entrance, Exit, Guy Line, VMM | VL53L1X on D4/D5 (I2C) | **D7** (GPIO44) | radar position unused |
+| 11 radar rooms (not Gate, not Cuddle) | LD2410C on D6/D7 | **D5** (GPIO6) | I2C position unused — no ToF |
+| Entrance, Exit | TOF200C on D4/D5 (I2C) | **D7** (GPIO44) | radar position unused |
 | Cuddle Cross | LD2450 D2/D3 + LD2410C D6/D7 | **D5** (GPIO6) | I2C position unused |
 | Gate | LD2410C D6/D7 **+ 6 pads** | **D0** (GPIO1) | see below |
 

@@ -1,0 +1,11 @@
+trigger,file,suggested_weight,notes
+background,background/13_selfie_influencer_presence.wav,4,Primary influencer setup
+background,background/14_wii_photo_gallery.wav,2,Light Nintendo option
+background,background/15_dsi_camera_album.wav,2,Playful camera-menu option
+background,background/16_pokemon_snap_photo_safari.wav,3,Game-photography option
+background,background/17_tomodachi_photo_studio.wav,2,Quirky photo-studio option
+photo,photo_triggers/18_selfie_then_mean_girls.wav,4,Primary complete joke sequence
+photo,photo_triggers/19_pokemon_snap_wonderful.wav,3,Short game success
+photo,photo_triggers/20_austin_powers_approval.wav,2,Long movie reaction
+photo,photo_triggers/21_dead_rising_fantastic.wav,3,Very short game reaction
+photo,photo_triggers/22_kris_amazing_sweetie.wav,1,Optional television follow-up

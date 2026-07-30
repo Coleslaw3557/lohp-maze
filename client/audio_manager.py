@@ -2,6 +2,7 @@ import asyncio
 import os
 import logging
 import time
+from urllib.parse import quote
 import aiohttp
 import aiofiles
 import vlc
@@ -18,6 +19,9 @@ class ZonePlayer:
         self.vlc_instance = self._initialize_vlc()
         self.background_player = None
         self.effect_players = []
+        # Room beds (the Cuddle floor show's lava rumble): their own player per
+        # room so effect audio mixes OVER them and stop_effects never cuts them.
+        self.ambience_players = {}  # room key -> player
 
     def _initialize_vlc(self):
         # vlc.Instance returns None on failure rather than raising
@@ -73,6 +77,26 @@ class ZonePlayer:
             self.background_player.stop()
             self.background_player.release()
             self.background_player = None
+
+    def play_ambience(self, room_key, full_path, volume, loop=True):
+        """Start (or replace) this zone's bed for one room."""
+        self.stop_ambience(room_key)
+        player = self.vlc_instance.media_player_new()
+        media = self._new_media(full_path, loop)
+        player.set_media(media)
+        media.release()  # the player holds its own reference
+        player.audio_set_volume(int(volume * 100))
+        player.play()
+        self.ambience_players[room_key] = player
+        return player
+
+    def stop_ambience(self, room_key=None):
+        keys = [room_key] if room_key is not None else list(self.ambience_players)
+        for key in keys:
+            player = self.ambience_players.pop(key, None)
+            if player:
+                player.stop()
+                player.release()
 
     def stop_effects(self):
         for player in self.effect_players:
@@ -135,7 +159,10 @@ class AudioManager:
     # --- Playback ---
 
     async def play_effect_audio(self, file_name, volume=1.0, loop=False, room=None):
-        full_path = self.preloaded_audio.get(file_name)
+        full_path = (
+            self.preloaded_audio.get(file_name)
+            or self.preloaded_audio.get(os.path.basename(file_name))
+        )
         if not full_path:
             logger.warning(f"Audio file not found: {file_name}")
             return False
@@ -173,11 +200,51 @@ class AudioManager:
 
     def stop_audio(self, room=None):
         """Stop effect playback in the room's zone (all zones when room is None).
-        Background music is deliberately untouched: it has its own stop command,
-        and stopping a room's effect must not silence the zone's music."""
+        Background music and room ambience beds are deliberately untouched:
+        both have their own stop command, and stopping a room's effect must not
+        silence the zone's music or the bed the effect was playing over."""
         for zone in self.zones_for_room(room):
             zone.stop_effects()
         logger.info(f"Stopped effect audio ({'room ' + room if room else 'all zones'})")
+
+    async def play_room_ambience(self, file_name, volume=1.0, loop=True, room=None):
+        """Start a looping bed for one room (the floor show's rumble under
+        Cuddle Cross). Mixes under effect audio and survives audio_stop."""
+        full_path = (
+            self.preloaded_audio.get(file_name)
+            or self.preloaded_audio.get(os.path.basename(file_name))
+        )
+        if not full_path:
+            logger.warning(f"Ambience file not found: {file_name}")
+            return False
+        zones = self.zones_for_room(room)
+        if not zones:
+            logger.warning(f"No audio zone covers room: {room}")
+            return False
+        key = (room or '__all__').lower()
+        started = []
+        for zone in zones:
+            if zone.vlc_instance is None:
+                logger.warning(f"Zone '{zone.name}' has no audio output; skipping ambience {file_name}")
+                continue
+            try:
+                zone.play_ambience(key, full_path, volume, loop)
+                started.append(zone.name)
+            except Exception as e:
+                logger.error(f"Zone '{zone.name}': failed to start ambience {file_name}: {e}",
+                             exc_info=True)
+        if not started:
+            return False
+        logger.info(f"Ambience '{file_name}' (volume {volume}, loop {loop}) "
+                    f"for {room or 'all rooms'} in zones: {started}")
+        return True
+
+    def stop_room_ambience(self, room=None):
+        key = (room or '__all__').lower()
+        for zone in self.zones_for_room(room):
+            zone.stop_ambience(key if room else None)
+        logger.info(f"Stopped ambience ({'room ' + room if room else 'all zones'})")
+        return True
 
     async def start_background_music(self, music_file):
         current_time = time.time()
@@ -251,23 +318,34 @@ class AudioManager:
                     files_to_download = await response.json()
                     for category, file_list in files_to_download.items():
                         for file_name in file_list:
-                            if file_name and file_name not in self.preloaded_audio:
+                            if not file_name:
+                                continue
+                            local_name = os.path.basename(file_name)
+                            if local_name in self.preloaded_audio:
+                                self.preloaded_audio[file_name] = self.preloaded_audio[local_name]
+                            else:
                                 await self.download_audio_file(session, file_name, audio_dir)
                 else:
                     logger.error(f"Failed to get list of audio files to download. Status: {response.status}")
 
     async def download_audio_file(self, session, file_name, audio_dir):
-        file_path = os.path.join(audio_dir, file_name)
+        # Server refs may live in subdirs (audio_files/rooms/<Room>/...), but the
+        # client cache is flat. Key both the exact server ref and its basename so
+        # old basename-only commands and new path-preserving commands both work.
+        local_name = os.path.basename(file_name)
+        file_path = os.path.join(audio_dir, local_name)
         if os.path.exists(file_path):
             self.preloaded_audio[file_name] = file_path
+            self.preloaded_audio[local_name] = file_path
             return
         try:
-            async with session.get(f"{self.server_url}/api/audio/{file_name}") as response:
+            async with session.get(f"{self.server_url}/api/audio/{quote(file_name)}") as response:
                 if response.status == 200:
                     async with aiofiles.open(file_path, mode='wb') as f:
                         await f.write(await response.read())
                     logger.info(f"Downloaded audio file: {file_name}")
                     self.preloaded_audio[file_name] = file_path
+                    self.preloaded_audio[local_name] = file_path
                 elif response.status == 404:
                     logger.warning(f"Audio file not found on server: {file_name}")
                 else:

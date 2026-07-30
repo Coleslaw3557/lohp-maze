@@ -5,18 +5,25 @@ from contextlib import AsyncExitStack
 from effects import (
     create_lightning_effect, create_police_lights_effect, create_gate_inspection_effect,
     create_gate_greeters_effect, create_wrong_answer_effect, create_correct_answer_effect,
-    create_backtrack_effect, create_entrance_effect, create_guy_line_climb_effect, create_spark_pony_effect,
+    create_backtrack_effect, create_entrance_effect, create_exit_effect,
+    create_spark_pony_effect,
     create_porto_standby_effect, create_porto_hit_effect, create_cuddle_puddle_effect,
     create_photobomb_bg_effect, create_photobomb_spot_effect, create_deep_playa_bg_effect,
     create_deep_playa_hit_effect, create_image_enhancement_effect, create_bike_lock_room_effect,
-    create_no_friends_monday_effect, create_lightning_storm_effect, create_photobomb_shot_effect,
-    create_monkey_business_effect
+    create_bike_lock_entry_effect, create_no_friends_monday_effect, create_lightning_storm_effect,
+    create_photobomb_shot_effect, create_monkey_business_effect,
+    create_cuddle_lava_hit_effect, create_cuddle_lava_breach_effect, palette_for
 )
 from theme_manager import ThemeManager
 from effect_utils import get_effect_step_values
 from interrupt_handler import InterruptHandler
+from room_answer_pools import ANSWER_EFFECTS, ROOM_ANSWER_POOL_PREFIXES, answer_pool_name
 
 logger = logging.getLogger(__name__)
+
+CUDDLE_ROOM = "Cuddle Cross"  # the projection room; its lights follow the floor show
+NO_SHARED_ANSWER_AUDIO_FALLBACK_ROOMS = {"Bike Lock Room"}
+SHARED_ANSWER_AUDIO_ROOMS = {"Vertical Moop March"}
 
 
 class EffectsManager:
@@ -38,7 +45,7 @@ class EffectsManager:
             "Backtrack": create_backtrack_effect(),
             "CorrectAnswer": create_correct_answer_effect(),
             "Entrance": create_entrance_effect(),
-            "GuyLineClimb": create_guy_line_climb_effect(),
+            "Exit": create_exit_effect(),
             "SparkPony": create_spark_pony_effect(),
             "PortoStandBy": create_porto_standby_effect(),
             "PortoHit": create_porto_hit_effect(),
@@ -49,15 +56,68 @@ class EffectsManager:
             "DeepPlaya-Hit": create_deep_playa_hit_effect(),
             "ImageEnhancement": create_image_enhancement_effect(),
             "BikeLockRoom": create_bike_lock_room_effect(),
+            "BikeLock-Entry": create_bike_lock_entry_effect(),
             "NoFriendsMonday": create_no_friends_monday_effect(),
             "LightningStorm": create_lightning_storm_effect(),
             "PhotoBomb-Shot": create_photobomb_shot_effect(),
             "MonkeyBusiness": create_monkey_business_effect(),
+            # Cuddle Cross accents, fired by the floor projection's own events
+            # (floor_show_manager.py), not by a sensor
+            "Cuddle-Lava-Hit": create_cuddle_lava_hit_effect(),
+            "Cuddle-Lava-Breach": create_cuddle_lava_breach_effect(),
         }
+        self._register_room_answer_effects()
         # effect_name -> {'start': fn(room), 'cancel': fn(room)} side-channel for
         # non-lighting actions tied to an effect run (the Photo Bomb camera)
         self.effect_hooks = {}
+        self.floor_theme = None
         logger.info(f"Initialized {len(self.effects)} effects")
+
+    def _register_room_answer_effects(self):
+        """Room-local answer pools reuse the shared answer light effects.
+
+        Empty room pools are valid placeholders in audio_config.json and the
+        audio console. When existing game code still fires the shared
+        CorrectAnswer/WrongAnswer effect, _audio_effect_name() below prefers the
+        room pool only once it has files, so placeholders do not make answers
+        silently lose their fallback chime/fail sounds.
+        """
+        for room in ROOM_ANSWER_POOL_PREFIXES:
+            right = create_correct_answer_effect()
+            right['description'] = f"{room} right-answer cue"
+            self.effects[answer_pool_name(room, "CorrectAnswer")] = right
+
+            wrong = create_wrong_answer_effect()
+            wrong['description'] = f"{room} wrong-answer cue"
+            self.effects[answer_pool_name(room, "WrongAnswer")] = wrong
+
+    def _audio_effect_name(self, room, effect_name):
+        if effect_name not in ANSWER_EFFECTS:
+            return effect_name
+        candidate = answer_pool_name(room, effect_name)
+        if not candidate:
+            return effect_name
+        if room in SHARED_ANSWER_AUDIO_ROOMS:
+            return effect_name
+        config = self.audio_manager.audio_config.get('effects', {}).get(candidate, {})
+        if room in NO_SHARED_ANSWER_AUDIO_FALLBACK_ROOMS:
+            return candidate
+        return candidate if config.get('audio_files') else effect_name
+
+    def set_floor_theme(self, theme):
+        """Point Cuddle Cross's lights at the floor projection's current theme
+        (floor_show_manager.py). Rebuilds the room's entry swell in the theme's
+        palette and hands the ambient colour/ceiling to the maze theme, so the
+        projection room matches the deck whether an effect is running or not."""
+        if theme == self.floor_theme:
+            return False
+        self.floor_theme = theme
+        self.effects["CuddlePuddle"] = create_cuddle_puddle_effect(theme)
+        pal = palette_for(theme)
+        self.theme_manager.set_room_light_profile(
+            CUDDLE_ROOM, rgb=pal['ambient'], cap=pal['cap'])
+        logger.info(f"Cuddle Cross lights following floor theme: {theme}")
+        return True
 
     def register_effect_hooks(self, effect_name, on_start=None, on_cancel=None):
         """Attach callbacks to an effect's lifecycle. ``on_start`` fires when a
@@ -123,7 +183,8 @@ class EffectsManager:
                 except Exception as e:
                     logger.error(f"Start hook for '{effect_name}' failed: {e}", exc_info=True)
             if send_audio:
-                await self.remote_host_manager.play_effect_audio(effect_name, rooms=[room],
+                await self.remote_host_manager.play_effect_audio(self._audio_effect_name(room, effect_name),
+                                                                 rooms=[room],
                                                                  audio_params=effect_data.get('audio', {}))
             await self._run_lights(fixture_ids, effect_data)
             completed = True
@@ -224,11 +285,15 @@ class EffectsManager:
             if stopped:
                 for fixture_id in self._room_fixture_ids(room):
                     self.dmx_state_manager.reset_fixture(fixture_id)
-                self.theme_manager.resume_theme_for_room(room)
             elif send_audio:
                 # Audio can outlive the lights; an explicit per-room stop must
                 # silence the room even with no lighting task left to cancel.
                 await self.remote_host_manager.send_audio_command(room, 'audio_stop')
+            # Hand the room back to the theme even when there was nothing left to
+            # cancel: a room vacated long after its entry effect finished must
+            # still end up on ambient. resume is a set discard, so repeating it
+            # costs nothing and can never unbalance a pause.
+            self.theme_manager.resume_theme_for_room(room)
 
     # --- Theme / music passthroughs used by the API ---
 

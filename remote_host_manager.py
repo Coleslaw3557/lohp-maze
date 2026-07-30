@@ -1,20 +1,20 @@
 import json
 import logging
 import asyncio
-import os
 import random
 
 logger = logging.getLogger(__name__)
 
 
 class RemoteHostManager:
-    def __init__(self, audio_manager=None, node_audio=None):
+    def __init__(self, audio_manager=None, node_audio=None, rng=None):
         # Keyed by websocket, one entry per CONNECTION: two clients on the same
         # IP (sim browser tab + a test unit, or two tabs) must coexist — an
         # IP-keyed registry silently replaces the first and strands its socket.
         self.clients = {}  # websocket -> {"name": unit_name, "rooms": [...], "ip": client_ip}
         self.audio_manager = audio_manager
         self.node_audio = node_audio  # NodeAudioManager: ESP32 node boxes with speakers
+        self._rng = rng or random.SystemRandom()
         self.background_music_task = None
         self.music_lock = asyncio.Lock()  # serializes background music start/stop
 
@@ -60,6 +60,14 @@ class RemoteHostManager:
         if not sockets and warn_if_empty:
             logger.warning(f"No audio client found for room: {room}")
         return sockets
+
+    def has_audio_client(self, room):
+        """Whether anything can play audio for this room right now — a connected
+        unit, or the room's own ESP32 speaker node. Lets a caller skip quietly
+        and try again later instead of logging a failure per attempt."""
+        if self.get_websockets_by_room(room, warn_if_empty=False):
+            return True
+        return bool(self.node_audio) and self.node_audio.enabled_for(room)
 
     async def _send(self, websocket, message):
         client = self.clients.get(websocket)
@@ -111,7 +119,7 @@ class RemoteHostManager:
                 'volume', self.audio_manager.audio_config.get('default_volume', 0.7))
         data = {
             'effect_name': effect_name,
-            'file_name': os.path.basename(audio_file),
+            'file_name': audio_file,
             'volume': volume,
             'loop': audio_params.get('loop', False)
         }
@@ -120,11 +128,43 @@ class RemoteHostManager:
         results = [await self.send_audio_command(room, 'play_effect_audio', data) for room in rooms]
         return all(results)
 
+    # --- Room ambience (looping beds) ---
+
+    async def start_room_ambience(self, room, effect_name, audio_params=None):
+        """Start a looping bed in one room, on a channel of its own.
+
+        An ambience bed is NOT owned by an effect: a room-scoped `audio_stop`
+        (which every effect takeover issues) leaves it running, the same way
+        background music is left alone, so accent effects mix over the bed
+        instead of replacing it. Only `stop_room_ambience` ends it.
+        Returns the file that was started, or None when nothing was.
+        """
+        audio_params = audio_params or {}
+        audio_file = audio_params.get('file') or self.audio_manager.get_random_audio_file(effect_name)
+        if not audio_file:
+            logger.info(f"No ambience audio configured for {effect_name}")
+            return None
+        volume = audio_params.get('volume')
+        if volume is None:  # an explicit 0 must stay 0, so no `or` fallback
+            volume = self.audio_manager.get_audio_config(effect_name).get(
+                'volume', self.audio_manager.audio_config.get('default_volume', 0.7))
+        data = {
+            'effect_name': effect_name,
+            'file_name': audio_file,
+            'volume': volume,
+            'loop': audio_params.get('loop', True),
+        }
+        ok = await self.send_audio_command(room, 'play_room_ambience', data)
+        return audio_file if ok else None
+
+    async def stop_room_ambience(self, room):
+        return await self.send_audio_command(room, 'stop_room_ambience', {})
+
     # --- Background music ---
 
     def get_random_music_file(self):
         music_files = self.audio_manager.get_background_music_files()
-        return random.choice(music_files) if music_files else None
+        return self._rng.choice(music_files) if music_files else None
 
     async def start_background_music(self):
         async with self.music_lock:

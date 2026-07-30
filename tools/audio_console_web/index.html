@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoHP audio pools</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>%F0%9F%94%8A</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="top">
+  <div class="bar">
+    <h1>Audio pools</h1>
+    <span class="sub">every action plays one sound picked at random from its pool</span>
+    <span class="spacer"></span>
+    <span id="server-dot" class="dot">server ?</span>
+    <label class="chk" title="Rebuild the volume-baked WAVs the ESP32 speaker nodes stream (needs ffmpeg)">
+      <input type="checkbox" id="apply-cues"> node cues
+    </label>
+    <button id="apply-btn" title="Tell the running show server to re-read audio_config.json">Apply to maze</button>
+  </div>
+  <div id="toast"></div>
+</header>
+
+<main>
+  <section id="inbox">
+    <div id="dropzone" tabindex="0" role="button" aria-label="Add sounds to the library">
+      <b>Drop sound files here</b>
+      <span>or click to choose — they land in the library unassigned, ready to attach to a room action whenever you want</span>
+    </div>
+    <input type="file" id="inbox-input" multiple accept="audio/*" hidden>
+    <div id="inbox-list"></div>
+  </section>
+
+  <section id="global-actions"></section>
+
+  <div id="rooms"><p class="fine">reading audio_config.json, triggers.json and the sound library…</p></div>
+
+  <details id="orphans-wrap">
+    <summary><span id="orphans-title">Pools with no trigger</span></summary>
+    <div id="orphans"></div>
+  </details>
+
+  <details id="library-wrap">
+    <summary><span id="library-title">Sound library</span></summary>
+    <div class="lib-tools">
+      <input type="search" id="lib-search" placeholder="filter by name…">
+      <label class="chk"><input type="checkbox" id="lib-unused"> only files in no pool</label>
+      <button id="lib-upload-btn" class="secondary">Upload to library…</button>
+      <input type="file" id="lib-upload" multiple accept="audio/*" hidden>
+    </div>
+    <div id="library"></div>
+  </details>
+
+  <details id="newpool-wrap">
+    <summary>New pool</summary>
+    <p class="fine">For an effect that has no sounds yet — a button you just added, say.
+      The name must match the <code>effect_name</code> in <code>triggers.json</code>.
+      Lights for a brand-new effect are still Python in <code>effects/</code>.</p>
+    <div class="lib-tools">
+      <input type="text" id="newpool-name" placeholder="EffectName">
+      <button id="newpool-btn">Create empty pool</button>
+    </div>
+  </details>
+
+  <p class="fine footnote">
+    Edits save to <code>audio_config.json</code> as you make them (previous version kept as
+    <code>audio_config.json.bak</code>). The running maze keeps the old pools until you hit
+    <b>Apply to maze</b>. Retired files move to <code>audio_files/rejected/</code>, never deleted.
+  </p>
+</main>
+
+<audio id="player"></audio>
+<script src="app.js"></script>
+</body>
+</html>

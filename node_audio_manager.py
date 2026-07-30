@@ -226,6 +226,19 @@ class NodeAudioManager:
                 logger.warning(f"Node audio [{conn.room}]: loop requested for "
                                f"{data.get('file_name')} — embedded cues don't loop")
             return conn.play_announcement(self.cue_url(data['file_name']))
+        if command == 'play_room_ambience':
+            # A bed belongs on the media pipeline, so effect cues duck it as
+            # announcements instead of replacing it. Two caveats on a real node,
+            # both live until a Cuddle box exists (nothing in node_audio_config
+            # needs a bed yet): ESPHome's media player has no repeat, so the bed
+            # plays through once, and it shares the pipeline with the maze's
+            # background music — last command wins.
+            logger.warning(f"Node audio [{conn.room}]: ambience "
+                           f"{data.get('file_name')} streams once — the node media "
+                           f"player has no repeat, and it displaces background music")
+            return conn.play_url(self.music_url(data['file_name']))
+        if command == 'stop_room_ambience':
+            return conn.stop(announcement=False)
         if command == 'start_background_music':
             return conn.play_url(self.music_url(data['music_file']))
         if command == 'stop_background_music':

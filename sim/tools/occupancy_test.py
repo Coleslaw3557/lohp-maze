@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""Occupancy-pair test for the simulator (headless).
+
+Radar room sensors report two facts (triggers.json presence triggers): enter
+fires the room's effect, leave fires
+`/api/room_vacated`. This checks the leave half actually does what the room
+needs, which the effect-duration timeout used to do by accident:
+
+  1. enter runs the room's effect and the unit hears its audio
+  2. leave DURING an effect cancels it, silences the room, and hands the
+     fixture back to the theme
+  3. leave AFTER the effect already finished still silences the room (looping
+     or long audio outlives the lighting) and still leaves it on the theme —
+     the resume is unconditional for exactly this case
+  4. leave with no visitor and leave twice are both harmless
+  5. a whole visit never touches background music: effect audio MIXES over it
+     rather than replacing it, so the music playing before someone walked in is
+     still playing after they leave
+  6. a leave with no room is rejected
+
+Run with the sim running: sim/.venv/bin/python sim/tools/occupancy_test.py [host]
+"""
+import asyncio
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+HOST = sys.argv[1] if len(sys.argv) > 1 else 'localhost'
+API = f'http://{HOST}:5000'
+ROOM = 'Cop Dodge'
+FAILS = []
+
+
+def check(name, ok, detail=''):
+    print(f"  {'PASS' if ok else 'FAIL'}  {name} {detail}")
+    if not ok:
+        FAILS.append(name)
+
+
+def post(path, data, timeout=60):
+    req = urllib.request.Request(API + path, data=json.dumps(data).encode(),
+                                 headers={'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read() or b'{}')
+
+
+def get(path):
+    with urllib.request.urlopen(API + path, timeout=10) as r:
+        return json.loads(r.read())
+
+
+async def post_bg(path, data):
+    """The server holds run_effect open until the effect ends/is superseded."""
+    return asyncio.create_task(asyncio.to_thread(post, path, data))
+
+
+async def collect_frames(seconds, out):
+    import websockets
+    async with websockets.connect(f'ws://{HOST}:5001/sim/dmx') as ws:
+        try:
+            async with asyncio.timeout(seconds):
+                while True:
+                    msg = json.loads(await ws.recv())
+                    out.append(bytes(msg['ch']))
+        except TimeoutError:
+            pass
+
+
+class FakeUnit:
+    """Speaks the room-unit WS protocol and records every audio command."""
+
+    def __init__(self, rooms):
+        self.rooms = rooms
+        self.messages = []  # (type, room-or-None)
+        self.task = None
+
+    async def _run(self):
+        import websockets
+        async with websockets.connect(f'ws://{HOST}:8765') as ws:
+            await ws.send(json.dumps({
+                'type': 'client_connected',
+                'data': {'unit_name': 'OCCUPANCY-UNIT', 'associated_rooms': self.rooms},
+            }))
+            while True:
+                msg = json.loads(await ws.recv())
+                if msg.get('type') in ('play_effect_audio', 'audio_stop',
+                                       'start_background_music', 'stop_background_music'):
+                    self.messages.append((msg['type'], msg.get('room')))
+
+    def start(self):
+        self.task = asyncio.create_task(self._run())
+
+    async def stop(self):
+        self.task.cancel()
+        try:
+            await self.task
+        except (asyncio.CancelledError, Exception):
+            pass
+
+    def for_room(self, room):
+        return [(t, r) for t, r in self.messages if r == room or r is None]
+
+
+def room_channel(room):
+    """Index into the DMX frame of the room's first fixture's first channel."""
+    lights = get('/api/rooms')[room]
+    return lights[0]['start_address'] - 1
+
+
+async def theme_animates(channel, seconds=2.0):
+    frames = []
+    await collect_frames(seconds, frames)
+    return len({f[channel] for f in frames if len(f) > channel})
+
+
+def entry_effect(room):
+    """The room's real entry effect, from the canonical trigger map — so the test
+    exercises the configured path rather than an arbitrary effect."""
+    path = os.path.join(os.path.dirname(__file__), '..', '..', 'triggers.json')
+    with open(path) as f:
+        for trig in json.load(f)['triggers']:
+            if trig['room'] == room and trig['type'] == 'presence':
+                return trig['action']['data']['effect_name']
+    raise SystemExit(f"no presence trigger for {room} in triggers.json")
+
+
+async def main():
+    rooms = list(get('/api/rooms').keys())
+    channel = room_channel(ROOM)
+    effect = entry_effect(ROOM)
+    duration = get('/api/effects_details')[effect].get('duration')
+    if duration < 5:
+        raise SystemExit(f"{ROOM}'s entry effect {effect} is only {duration}s — "
+                         f"too short to land a leave mid-effect; pick another room")
+    print(f"Room {ROOM} (dmx ch {channel + 1}); entry effect {effect} ({duration}s)\n")
+
+    unit = FakeUnit(rooms)
+    unit.start()
+    await asyncio.sleep(1.0)  # let the room claims register
+
+    status, body = post('/api/set_theme', {'theme_name': 'NeonNightlife'})
+    check('theme running for the test', status == 200, body.get('message', ''))
+    await asyncio.sleep(1.0)
+
+    print("1) enter runs the room's effect")
+    unit.messages.clear()
+    enter = await post_bg('/api/run_effect', {'room': ROOM, 'effect_name': effect})
+    await asyncio.sleep(1.0)
+    seq = unit.for_room(ROOM)
+    check('unit heard the effect audio',
+          any(t == 'play_effect_audio' for t, _ in seq), f'({seq})')
+
+    print("2) leave DURING the effect cancels it and restores the theme")
+    status, body = post('/api/room_vacated', {'room': ROOM})
+    check('room_vacated accepted', status == 200, body.get('message', ''))
+    enter_status, enter_body = await asyncio.wait_for(enter, 60)
+    check('the held enter request completed', enter_status == 200,
+          f"({enter_status} {enter_body.get('message', '')})")
+    await asyncio.sleep(0.5)
+    seq = unit.for_room(ROOM)
+    check('room silenced on leave (last command is audio_stop)',
+          bool(seq) and seq[-1][0] == 'audio_stop', f'(last={seq[-1] if seq else None})')
+    distinct = await theme_animates(channel)
+    check('theme animates the room again after leave', distinct > 1,
+          f'({distinct} distinct values on ch {channel + 1})')
+
+    print("3) leave AFTER the effect already finished")
+    unit.messages.clear()
+    status, _ = post('/api/run_effect', {'room': ROOM, 'effect_name': 'WrongAnswer'})
+    check('short effect ran to completion', status == 200)
+    await asyncio.sleep(0.5)
+    unit.messages.clear()
+    status, body = post('/api/room_vacated', {'room': ROOM})
+    check('room_vacated accepted post-effect', status == 200, body.get('message', ''))
+    await asyncio.sleep(0.5)
+    seq = unit.for_room(ROOM)
+    check('lingering audio still stopped',
+          any(t == 'audio_stop' for t, _ in seq), f'({seq})')
+    distinct = await theme_animates(channel)
+    check('room still on the theme', distinct > 1,
+          f'({distinct} distinct values on ch {channel + 1})')
+
+    print("4) leave with no visitor / leave twice")
+    status1, _ = post('/api/room_vacated', {'room': ROOM})
+    status2, _ = post('/api/room_vacated', {'room': ROOM})
+    check('repeated leaves are harmless', (status1, status2) == (200, 200),
+          f'({status1}, {status2})')
+    distinct = await theme_animates(channel)
+    check('theme survives repeated leaves', distinct > 1, f'({distinct} distinct values)')
+
+    print("5) a visit never touches background music")
+    status, body = post('/api/start_music', {})
+    music_started = status == 200 and 'error' not in str(body.get('status', ''))
+    if not music_started:
+        print(f"  SKIP  no background music available ({body.get('message', '')})")
+    else:
+        await asyncio.sleep(0.5)
+        unit.messages.clear()
+        visit = await post_bg('/api/run_effect', {'room': ROOM, 'effect_name': effect})
+        await asyncio.sleep(1.0)
+        post('/api/room_vacated', {'room': ROOM})
+        await asyncio.wait_for(visit, 60)
+        await asyncio.sleep(0.5)
+        stops = [t for t, _ in unit.messages if t == 'stop_background_music']
+        check('music untouched by enter+leave (effects mix over it)', not stops,
+              f'({len(stops)} stop_background_music during the visit)')
+        post('/api/stop_music', {})
+
+    print("6) malformed leave")
+    status, body = post('/api/room_vacated', {})
+    check('leave with no room is rejected', status == 400, body.get('message', ''))
+
+    await unit.stop()
+    print(f"\n{'ALL PASS' if not FAILS else 'FAILURES: ' + ', '.join(FAILS)}")
+    return 1 if FAILS else 0
+
+
+sys.exit(asyncio.run(main()))

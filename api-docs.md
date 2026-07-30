@@ -275,6 +275,87 @@ curl -X POST http://localhost:5000/api/stop_effect \
 curl -X POST http://localhost:5000/api/stop_effect
 ```
 
+### 12b. Room Vacated
+
+The leave half of a radar room's occupancy pair, and the `leave_action` on
+radar-backed `presence` triggers in `triggers.json`. A room node POSTs it when
+its radar stops seeing anyone for the room's absence timeout (5 s standard,
+60 s on dwell rooms), meaning no target at all, moving or still. Entrance and
+Exit use narrow ToF beams and intentionally do not POST this on beam clear;
+once a ToF room triggers, its routine finishes normally.
+
+The server cancels anything still running in the room, silences lingering effect
+audio, and hands the room's fixtures back to the current theme. The resume is
+unconditional, so a room vacated long after its entry effect already finished
+still ends up on ambient. **Background music is deliberately untouched** — it
+never stopped, because effect audio mixes over it rather than replacing it.
+
+Functionally the same work as a per-room `/stop_effect`; it exists as its own
+route because the room is reporting a fact rather than an operator issuing a
+stop, and it reads as one in the log.
+
+- **URL:** `/room_vacated`
+- **Method:** `POST`
+- **Data Params:**
+  ```json
+  {
+    "room": "[string]"
+  }
+  ```
+  `room` is required (400 without it). Repeated calls are harmless.
+
+#### Example
+```bash
+curl -X POST http://localhost:5000/api/room_vacated \
+     -H "Content-Type: application/json" \
+     -d '{"room": "Entrance"}'
+```
+
+### 12c. Floor Event
+
+The Cuddle floor projection reporting what it is doing, so the room can follow
+it (`floor_show_manager.py`). Posted by whichever renderer is driving the
+projector — `projection_renderer.py` on the Pi, the sim's engine on the bench —
+every couple of seconds while a show is up, immediately whenever the engine's
+own events happen, and once when the deck empties (an empty deck then stays
+quiet: there is no bed left to watch over).
+
+The server turns a report into three things: the room's light palette (the
+entry swell's colours and the ceiling/tint the maze theme's wash is squeezed
+into for the projection room), a looping ambience **bed** for as long as
+`active` is true, and the occasional **accent** — a capped ember flare on the
+pars plus one file from the theme's accent pool.
+
+`active` is the authority for the bed. A renderer that dies simply stops
+reporting, and the bed stops on its own 20 s later; there is no way for the
+room to be left rumbling to an empty deck. Only LAVA has sounds today; the
+other four themes light correctly and stay silent.
+
+- **URL:** `/floor_event`
+- **Method:** `POST`
+- **Data Params:**
+  ```json
+  {
+    "theme": "lava",
+    "active": true,
+    "events": [{"e": "sink", "id": 3, "x": 128.0, "y": 96.0}]
+  }
+  ```
+  All three are optional: `theme` and `active` are remembered when omitted, and
+  a report with no `events` is a plain heartbeat. Event names are the floor
+  engine's own (`projection_engine.py`): `sink`, `rise`, `pop`, `monster_swim`,
+  `monster_breach`, `show_on`, `show_off`.
+- **Response:** the floor state, plus `accent` — the effect this batch fired,
+  or `null` (most batches: accents are gated by probability and cooldown, and
+  at most one fires per report).
+
+#### Example
+```bash
+curl -X POST http://localhost:5000/api/floor_event \
+     -H "Content-Type: application/json" \
+     -d '{"theme": "lava", "active": true, "events": [{"e": "monster_breach"}]}'
+```
+
 ### 13. Get Effects Details
 
 Retrieves detailed information about all available effects.
@@ -313,6 +394,9 @@ curl http://localhost:5000/api/light_models
 | GET | `/api/light_fixtures` | Plain-text fixture listing (ROBCO terminal style) |
 | GET | `/api/audio_files_to_download` | Lists effect/music audio files clients should cache |
 | GET | `/api/audio/<filename>` | Serves an audio file (music or effect clip) |
+| POST | `/api/reload_audio_config` | Re-reads `audio_config.json` without a restart, so pool edits from the audio console (`tools/audio_console.py`) go live. Returns `{"pools": {"<effect>": <file count>}}` |
+| GET | `/api/floor_state` | What the server believes the Cuddle floor show is doing: `theme`, `active`, the `bed` pool playing, `has_sounds`, and `age_s` since the renderer last reported (`null` = never) |
+| POST | `/api/next_floor_theme` | Switches the projector's floor theme through the renderer's control port (`FLOOR_CTL_URL`, default `:5002`) and recolours the room to match. Body `{"theme": "lava"}` picks one; an empty body cycles |
 | GET | `/api/photobomb/photos` | Photo booth captures, newest first (`photos_dir`, capture `backend`, and per-photo filename/size/timestamp) |
 | GET | `/api/photobomb/photos/<filename>` | Serves one captured photo (JPEG) |
 | POST | `/api/shutdown` | Powers off the server host and all connected units after 3 seconds |

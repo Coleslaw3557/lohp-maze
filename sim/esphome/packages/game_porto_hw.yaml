@@ -1,0 +1,71 @@
+# REAL-HARDWARE companion to game_porto.yaml: Porto's three piezo knock pads.
+#
+# Each pad uses a piezo disc bonded to the back of the knock target and an ADC
+# front-end/bleed resistor in the node box. A hit above threshold calls the same
+# porto_press script used by the sim action, so game behavior stays in one file.
+# NOT validated by validate_all.sh (adc needs the esp32 platform).
+
+substitutions:
+  porto_pad1_pin: GPIO1   # XIAO S3 D0, DB9-A pin 3
+  porto_pad2_pin: GPIO2   # XIAO S3 D1, DB9-A pin 4
+  porto_pad3_pin: GPIO3   # XIAO S3 D2, DB9-A pin 5
+  porto_piezo_threshold: "0.5"
+  porto_piezo_cooldown_ms: "600"
+
+globals:
+  - id: porto_pad1_last_ms
+    type: uint32_t
+    initial_value: '0'
+  - id: porto_pad2_last_ms
+    type: uint32_t
+    initial_value: '0'
+  - id: porto_pad3_last_ms
+    type: uint32_t
+    initial_value: '0'
+
+sensor:
+  - platform: adc
+    id: porto_pad1_adc
+    pin: ${porto_pad1_pin}
+    attenuation: 12db
+    update_interval: 20ms
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t now = millis();
+            if (x > ${porto_piezo_threshold} &&
+                now - id(porto_pad1_last_ms) > ${porto_piezo_cooldown_ms}) {
+              id(porto_pad1_last_ms) = now;
+              id(porto_press)->execute(1);
+            }
+  - platform: adc
+    id: porto_pad2_adc
+    pin: ${porto_pad2_pin}
+    attenuation: 12db
+    update_interval: 20ms
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t now = millis();
+            if (x > ${porto_piezo_threshold} &&
+                now - id(porto_pad2_last_ms) > ${porto_piezo_cooldown_ms}) {
+              id(porto_pad2_last_ms) = now;
+              id(porto_press)->execute(2);
+            }
+  - platform: adc
+    id: porto_pad3_adc
+    pin: ${porto_pad3_pin}
+    attenuation: 12db
+    update_interval: 20ms
+    internal: true
+    on_value:
+      then:
+        - lambda: |-
+            uint32_t now = millis();
+            if (x > ${porto_piezo_threshold} &&
+                now - id(porto_pad3_last_ms) > ${porto_piezo_cooldown_ms}) {
+              id(porto_pad3_last_ms) = now;
+              id(porto_press)->execute(3);
+            }

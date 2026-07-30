@@ -1,19 +1,21 @@
 # Exit sensor node — trigger map from triggers.json
-# No trigger packages yet: the Lightning-on-entry placeholder was test wiring
-# (removed 2026-07-17). Include tripwire.yaml + an `effect` substitution once
-# this room gets its bespoke effect.
+# Exit is a ToF room, NOT radar — see packages/tof.yaml for why. The ToF
+# publishes into tripwire for entry only; beam clear must not vacate the room.
 substitutions:
   node_name: lohp-node-exit
   room: "Exit"
+  effect: "Exit"
   server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
   api_port: "6075"
   host_mac: "06:35:69:00:00:0f"
 
 packages:
   logic: !include ../packages/logic.yaml
+  tripwire: !include ../packages/tripwire.yaml
   platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
 
 # FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "44"   # D7, ToF room
-#   packages:           dmx: !include ../packages/dmx_out.yaml
+#   substitutions:      dmx_tx_pin: "44"   # D7 — ToF room: I2C owns D5 (dmx-over-wifi.md)
+#   packages:           tof: !include ../packages/tof.yaml
+#                       dmx: !include ../packages/dmx_out.yaml
 #   external_components: [{source: {type: local, path: ../components}}]

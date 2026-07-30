@@ -1,0 +1,19 @@
+trigger,outcome,file,suggested_weight,cooldown_seconds,notes
+music,ambient,music/01_drugs_from_amsterdam_intro.wav,4,0,Primary 30-second music bed
+music,ambient,music/02_drugs_from_amsterdam_afterhours.wav,3,0,Quieter darker 30-second option
+music,ambient,music/03_born_slippy_opening.wav,2,0,Restrained Underworld opening
+music,ambient,music/04_born_slippy_drive.wav,2,0,More energetic Underworld option
+music,ambient,music/05_re4_serenity.wav,3,0,Merchant-centered game atmosphere
+entry,entry,entry/26_welcome_whatre_ya_buyin.wav,5,8,Primary entry; do not retrigger while playing
+entry,entry,entry/27_something_interesting_welcome.wav,2,8,Alternate entry
+presence,hesitation,presence_prompts/28_merchant_waiting.wav,5,10,Short preferred prompt
+presence,hesitation,presence_prompts/29_circus_of_values.wav,1,12,Occasional BioShock alternate
+button,victory,result_sequences/victory/30_primary_clean_exchange.wav,5,2,Primary realistic handoff
+button,victory,result_sequences/victory/31_high_price_rupee.wav,3,2,Merchant and Zelda alternate
+button,victory,result_sequences/victory/32_circus_vendor_exchange.wav,1,2,BioShock alternate
+button,victory,result_sequences/victory/33_thank_you_come_back.wav,3,2,Merchant farewell alternate
+button,victory,result_sequences/victory/34_fast_game_pickup.wav,2,2,Fast nonverbal game sequence
+button,failure,result_sequences/failure/35_not_enough_cash.wav,5,2,Primary canonical failure
+button,failure,result_sequences/failure/36_come_back_with_money.wav,2,2,BioShock money failure
+button,failure,result_sequences/failure/37_no_refunds.wav,2,2,BioShock no-refunds failure
+button,failure,result_sequences/failure/38_papers_please_denied.wav,3,2,Short nonverbal game denial

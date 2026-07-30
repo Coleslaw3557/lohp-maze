@@ -226,6 +226,70 @@ class ThemeControl:
         return want
 
 
+class ServerReporter:
+    """Tell the maze server what the show is doing, so Cuddle Cross's speakers
+    and pars can follow it (POST /api/floor_event -> floor_show_manager.py).
+
+    The render loop only ever appends to a list; a daemon thread does the HTTP,
+    batching events and — while a show is UP — sending a heartbeat every
+    `period` seconds, so the server can tell a quiet show from a dead renderer.
+    An empty deck reports once and then goes silent: there is no bed left to
+    watch over, and nothing should be writing to the journal all night. Every
+    failure is swallowed after one warning — the projection never waits on the
+    server.
+    """
+
+    def __init__(self, url, period=2.0, min_gap=0.25):
+        self.url = url.rstrip('/') + '/api/floor_event'
+        self.period = period
+        self.min_gap = min_gap
+        self._lock = threading.Lock()
+        self._events = []
+        self._theme = None
+        self._active = False
+        self._sent = None       # (theme, active) last successfully reported
+        self._warned = False
+        threading.Thread(target=self._run, name='floor-report', daemon=True).start()
+
+    def report(self, theme, active, events):
+        with self._lock:
+            self._theme, self._active = theme, active
+            if events:
+                self._events.extend(events)
+                if len(self._events) > 200:  # server is down; don't grow forever
+                    del self._events[:-200]
+
+    def _run(self):
+        import urllib.error
+        import urllib.request
+        last_post = 0.0
+        while True:
+            time.sleep(self.min_gap)
+            now = time.monotonic()
+            with self._lock:
+                state = (self._theme, self._active)
+                due = (self._events or state != self._sent
+                       or (self._active and now - last_post >= self.period))
+                if not due or self._theme is None:
+                    continue
+                body = json.dumps({'theme': self._theme, 'active': self._active,
+                                   'events': self._events}).encode()
+                self._events = []
+            last_post = now
+            req = urllib.request.Request(self.url, data=body, method='POST',
+                                         headers={'Content-Type': 'application/json'})
+            try:
+                with urllib.request.urlopen(req, timeout=2):
+                    pass
+                self._sent = state  # only a delivered report counts as told
+                self._warned = False
+            except (urllib.error.URLError, OSError, TimeoutError) as e:
+                if not self._warned:
+                    self._warned = True
+                    print(f"floor events: server unreachable at {self.url} ({e}); "
+                          f"the room's audio/lights won't follow the show", file=sys.stderr)
+
+
 class FbOutput:
     """Write the engine frame into /dev/fb0, integer-upscaling if the fb is
     larger than the grid. All color math happens at GRID resolution and the
@@ -329,6 +393,10 @@ def main():
     ap.add_argument('--node', default='', help='esphome: cuddle node host/IP')
     ap.add_argument('--api-key', default='', help='esphome: noise PSK if set')
     ap.add_argument('--invert-x', action='store_true')
+    ap.add_argument('--server-url',
+                    default=os.environ.get('LOHP_SERVER_URL', 'http://127.0.0.1:5000'),
+                    help='maze server to report show state/events to, so the '
+                         'room follows the projection (empty string disables)')
     ap.add_argument('--fps', type=int, default=25)
     ap.add_argument('--grid', type=int, default=256)
     ap.add_argument('--windowed', action='store_true', help='debug on a desktop')
@@ -359,9 +427,12 @@ def main():
         source = DemoTracks(layout)
 
     out = PygameOutput(engine.gw, engine.gh) if args.windowed else FbOutput()
+    reporter = ServerReporter(args.server_url) if args.server_url else None
+    seen = {e.THEME: e.event_total for e in engines.values()}
     print(f"floor renderer [{boot}]: {out.size()[0]}x{out.size()[1]} "
           f"grid {engine.gw}x{engine.gh} source={args.source} fps<={args.fps} "
-          f"ctl={'off' if not ctl else f':{args.ctl_port}/theme'}",
+          f"ctl={'off' if not ctl else f':{args.ctl_port}/theme'} "
+          f"report={args.server_url or 'off'}",
           flush=True)
 
     running = [True]
@@ -388,6 +459,11 @@ def main():
                     pass
             engine.set_tracks(source.tracks(dt, engine))
             engine.step(dt)
+            if reporter is not None:
+                # one cursor per engine: a theme switch must not replay (or
+                # skip) the events of the show it just left
+                events, seen[engine.THEME] = engine.fresh_events(seen.get(engine.THEME, 0))
+                reporter.report(engine.THEME, engine.active, events)
             frame = engine.render()
             t_mid = time.monotonic()
             out.blit(frame)

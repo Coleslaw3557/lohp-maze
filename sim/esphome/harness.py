@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
 """Trigger virtual ESPHome sensor nodes over the native API.
 
-Calls the node's `trip` action (tripwire) or `press_button` action (rooms with
-a physical button: photo-bomb, monkey), which publishes the matching template
-binary_sensor — the node firmware then runs its real automation (debounce ->
-HTTP POST to the LoHP server), exactly as a physical sensor event would.
+Calls the node's `trip` action (someone entered), `vacate` action (a radar lost
+them — the other half of the occupancy pair) or `press_button` action (rooms
+with a physical button: photo-bomb, monkey), which publishes the matching
+template binary_sensor or runs the matching script — the node firmware then runs
+its real automation (debounce -> HTTP POST to the LoHP server), exactly as a
+physical sensor event would.
+
+On real radar hardware both edges come off the room's LD2410C: enter on a
+moving target, leave after `absence_timeout` with no target at all. Entrance and
+Exit ToF hardware only trips; beam clear does not vacate the room. `visit`
+replays the full occupancy shape for radar rooms.
 
 Usage (with the esphome venv):
     .venv/bin/python harness.py list
     .venv/bin/python harness.py trip entrance
     .venv/bin/python harness.py trip all
+    .venv/bin/python harness.py vacate cop-dodge
+    .venv/bin/python harness.py visit cop-dodge       # enter, linger, leave
+    .venv/bin/python harness.py visit cop-dodge 12    # linger 12s
     .venv/bin/python harness.py press photo-bomb
     .venv/bin/python harness.py press monkey
 
@@ -69,14 +79,27 @@ async def main():
             print(f"  {name:24} room={info['room']:22} api_port={info['port']}")
         return
 
-    if cmd in ('trip', 'press'):
-        action = 'trip' if cmd == 'trip' else 'press_button'
+    if cmd in ('trip', 'press', 'vacate'):
+        action = {'trip': 'trip', 'press': 'press_button', 'vacate': 'vacate'}[cmd]
         target = sys.argv[2] if len(sys.argv) > 2 else 'all'
         picked = nodes if target == 'all' else {target: nodes[target]}
         for name, info in picked.items():
             await fire(name, info, action)
             if target == 'all':
                 await asyncio.sleep(1.0)
+        return
+
+    if cmd == 'visit':
+        # A whole occupancy cycle: enter -> linger -> leave. The default linger
+        # outlasts fire_effect's 5s cooldown so the leave POST lands after the
+        # entry effect has finished on its own, which is the common real case.
+        target = sys.argv[2]
+        linger = float(sys.argv[3]) if len(sys.argv) > 3 else 8.0
+        info = nodes[target]
+        await fire(target, info, 'trip')
+        print(f"  ... in the room for {linger}s")
+        await asyncio.sleep(linger)
+        await fire(target, info, 'vacate')
         return
 
     if cmd == 'call':

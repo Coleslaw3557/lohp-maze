@@ -20,8 +20,10 @@ from effects_manager import EffectsManager
 from remote_host_manager import RemoteHostManager
 from audio_manager import AudioManager
 from node_audio_manager import NodeAudioManager
+from floor_show_manager import FloorShowManager, read_saved_theme
 from camera_manager import CameraManager
 from effects.photobomb_shot import SHUTTER_OFFSET
+from room_answer_pools import answer_pool_name
 
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -43,6 +45,15 @@ BACKTRACK_ENTRANCE_RESET_S = 8
 BACKTRACK_FORWARD_MIN_STEPS = 2
 BACKTRACK_REVERSE_TRIGGER_STEPS = 1
 BACKTRACK_BLIND_REVERSE_ENTRY_ROOMS = {"Entrance"}
+DEEP_PLAYA_ROOM = "Deep Playa Handshake"
+DEEP_PLAYA_ENTRY_EFFECT = "DeepPlaya-BG"
+DEEP_PLAYA_STALE_ENTRY_EFFECT = "DeepPlaya-Hit"
+MOOP_ROOM = "Vertical Moop March"
+MOOP_BUTTON_EFFECT = "CorrectAnswer"
+MOOP_RIGHT_EFFECT = answer_pool_name(MOOP_ROOM, "CorrectAnswer")
+MOOP_WRONG_EFFECT = answer_pool_name(MOOP_ROOM, "WrongAnswer")
+MOOP_WINDOW_S = 60
+MOOP_BUTTON_COUNT = 4
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
@@ -55,6 +66,93 @@ app = Quart(__name__, static_folder='frontend/static')
 app = cors(app)
 
 connected_clients = set()
+_moop_lock = asyncio.Lock()
+_moop_state = {
+    'pressed': set(),
+    'started_at': None,
+    'timer': None,
+}
+
+
+def _moop_button_id(data):
+    for key in ('trigger_name', 'button_name', 'sensor_name'):
+        value = data.get(key)
+        if value:
+            return str(value)
+    index = data.get('button_index')
+    if index is None:
+        index = data.get('game_index')
+    if index is not None:
+        try:
+            return f"Moop Button {int(index) + 1}"
+        except (TypeError, ValueError):
+            return str(index)
+    return None
+
+
+def _reset_moop_locked():
+    timer = _moop_state.get('timer')
+    current = asyncio.current_task()
+    if timer and timer is not current and not timer.done():
+        timer.cancel()
+    _moop_state['pressed'] = set()
+    _moop_state['started_at'] = None
+    _moop_state['timer'] = None
+
+
+async def _apply_moop_resolution(effect_name):
+    effect_data = effects_manager.get_effect(effect_name)
+    if not effect_data:
+        logger.error(f"Moop march resolution effect {effect_name} not found")
+        return
+    success, message = await effects_manager.apply_effect_to_room(
+        MOOP_ROOM, effect_name, effect_data)
+    if not success:
+        logger.error(f"Moop march resolution failed: {message}")
+
+
+async def _moop_timeout(started_at):
+    try:
+        await asyncio.sleep(MOOP_WINDOW_S)
+        async with _moop_lock:
+            if _moop_state.get('started_at') != started_at:
+                return
+            if not _moop_state['pressed'] or len(_moop_state['pressed']) >= MOOP_BUTTON_COUNT:
+                return
+            pressed = sorted(_moop_state['pressed'])
+            logger.info(f"Moop march timed out with {len(pressed)}/{MOOP_BUTTON_COUNT}: {pressed}")
+            _reset_moop_locked()
+        await _apply_moop_resolution(MOOP_WRONG_EFFECT)
+    except asyncio.CancelledError:
+        return
+
+
+async def _record_moop_press(data):
+    button_id = _moop_button_id(data)
+    if not button_id:
+        logger.warning("Moop march CorrectAnswer did not include trigger_name; "
+                       "playing button sound without changing round state")
+        return False
+
+    async with _moop_lock:
+        now = time.monotonic()
+        if (
+            _moop_state['started_at'] is None
+            or now - _moop_state['started_at'] > MOOP_WINDOW_S
+        ):
+            _reset_moop_locked()
+            _moop_state['started_at'] = now
+            _moop_state['timer'] = asyncio.create_task(_moop_timeout(now))
+
+        _moop_state['pressed'].add(button_id)
+        count = len(_moop_state['pressed'])
+        logger.info(f"Moop march button latched: {button_id} ({count}/{MOOP_BUTTON_COUNT})")
+        if count < MOOP_BUTTON_COUNT:
+            return False
+
+        logger.info("Moop march complete; scheduling room-local right-answer pool")
+        _reset_moop_locked()
+        return True
 
 
 def log_and_exit(error_message):
@@ -152,6 +250,12 @@ node_audio_manager = NodeAudioManager(audio_manager=audio_manager)
 remote_host_manager = RemoteHostManager(audio_manager=audio_manager, node_audio=node_audio_manager)
 effects_manager = EffectsManager(light_config, dmx_state_manager, remote_host_manager, audio_manager)
 camera_manager = CameraManager()
+# Cuddle Cross takes its sound and its colour from whatever the floor projector
+# is running (floor_show_manager.py). The renderer reports in on
+# /api/floor_event; until it does, the room is lit for the theme the projector
+# was last showing.
+floor_show_manager = FloorShowManager(effects_manager, remote_host_manager)
+floor_show_manager.prime_theme(read_saved_theme(os.path.dirname(os.path.abspath(__file__))))
 
 # Photo Bomb camera: every PhotoBomb-Shot run schedules a webcam capture at the
 # flash; a superseded/stopped run (button re-press restarts the countdown)
@@ -468,10 +572,19 @@ async def run_effect():
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
 
+    if room == DEEP_PLAYA_ROOM and effect_name == DEEP_PLAYA_STALE_ENTRY_EFFECT:
+        logger.warning(f"Rewriting stale {room} entry effect "
+                       f"{DEEP_PLAYA_STALE_ENTRY_EFFECT} -> {DEEP_PLAYA_ENTRY_EFFECT}")
+        effect_name = DEEP_PLAYA_ENTRY_EFFECT
+
     if not effects_manager.get_effect(effect_name):
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
 
     try:
+        moop_complete = False
+        if room == MOOP_ROOM and effect_name == MOOP_BUTTON_EFFECT:
+            moop_complete = await _record_moop_press(data)
+
         _maybe_reset_route_start(room, effect_name)
         route_action = _route_entry_action(room, effect_name)
         if route_action == 'forward':
@@ -490,6 +603,8 @@ async def run_effect():
 
         success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
         if success:
+            if moop_complete:
+                asyncio.create_task(_apply_moop_resolution(MOOP_RIGHT_EFFECT))
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}'})
         logger.error(f"Failed to execute effect {effect_name} in room {room}: {message}")
         return jsonify({'status': 'error', 'message': message}), 500
@@ -560,6 +675,11 @@ async def stop_effect():
     room = data.get('room')
     try:
         await effects_manager.stop_current_effect(room)
+        if room is None:
+            # Stop-all must mean silence, and the floor bed rides its own
+            # channel. A running projection show starts it again on its next
+            # report — the projector owns whether the deck has a show on it.
+            await floor_show_manager.stop()
         message = f"Effect stopped in room: {room}" if room else "Effects stopped in all rooms"
         return jsonify({'status': 'success', 'message': message})
     except Exception as e:
@@ -603,6 +723,20 @@ async def room_vacated():
 @app.route('/api/audio_files_to_download', methods=['GET'])
 def get_audio_files_to_download():
     return jsonify(audio_manager.get_audio_files_to_download())
+
+
+@app.route('/api/reload_audio_config', methods=['POST'])
+def reload_audio_config():
+    """Re-read audio_config.json without a restart, after the audio pool console
+    (tools/audio_console.py) edits it. AudioManager is the only holder of the
+    parsed config; its anti-repeat history re-sizes itself to the new pools."""
+    audio_manager.audio_config = audio_manager.load_config()
+    pools = {name: len(cfg.get('audio_files', []))
+             for name, cfg in audio_manager.audio_config.get('effects', {}).items()}
+    logger.info(f"Audio config reloaded: {len(pools)} pools, "
+                f"{sum(pools.values())} files")
+    return jsonify({'status': 'success', 'pools': pools,
+                    'message': f'{len(pools)} pools, {sum(pools.values())} files'})
 
 
 @app.route('/api/rooms', methods=['GET'])
@@ -730,6 +864,9 @@ async def next_floor_theme():
                 return r.status, json.loads(r.read())
 
         status, body = await asyncio.to_thread(_post)
+        # Recolour the room (and swap its bed) now rather than waiting for the
+        # renderer's next report — the switch is already committed.
+        await floor_show_manager.set_theme(body.get('theme'))
         return jsonify({"status": "success", "theme": body.get('theme'),
                         "message": f"Floor theme -> {body.get('theme')}"})
     except urllib.error.HTTPError as e:
@@ -743,6 +880,37 @@ async def next_floor_theme():
     except Exception as e:
         logger.error(f"Error switching floor theme: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/floor_event', methods=['POST'])
+async def floor_event():
+    """The floor projection reporting in (projection_renderer.py on the Pi,
+    sim_ui's engine on the bench). Fire-and-forget from the renderer's side:
+
+        {"theme": "lava", "active": true, "events": [{"e": "sink", ...}, ...]}
+
+    `active` is the authority for the room's ambience bed; `events` are the
+    engine's own moments, which occasionally earn an accent (sound + a capped
+    light flare). While a show is UP the renderer reports every couple of
+    seconds even if nothing happens, so silence means it is gone and the bed
+    stops; an empty deck reports once and then keeps quiet."""
+    data = await request.get_json(silent=True) or {}
+    try:
+        accent = await floor_show_manager.handle_report(
+            theme=data.get('theme'),
+            active=data.get('active'),
+            events=data.get('events') or [])
+        return jsonify({'status': 'success', 'accent': accent,
+                        **floor_show_manager.state()})
+    except Exception as e:
+        logger.error(f"Error handling floor event: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/floor_state', methods=['GET'])
+async def floor_state():
+    """What the server thinks the floor show is doing (theme, bed, liveness)."""
+    return jsonify(floor_show_manager.state())
 
 
 @app.route('/api/toggle_music', methods=['POST'])
@@ -849,11 +1017,13 @@ async def health():
 @app.route('/api/audio/<path:filename>')
 async def serve_audio(filename):
     base_dir = os.path.dirname(__file__)
-    music_path = os.path.join(base_dir, 'music', os.path.basename(filename))
-    audio_dir = os.path.join(base_dir, 'music' if os.path.exists(music_path) else 'audio_files')
-    # Play commands carry bare basenames (remote_host_manager strips any
-    # subdir), so lazy fetchers ask for names that only exist deeper under
-    # audio_files/. Basenames are unique across the tree.
+    is_bare_name = os.path.basename(filename) == filename
+    music_path = os.path.join(base_dir, 'music', filename) if is_bare_name else None
+    audio_dir = os.path.join(
+        base_dir,
+        'music' if music_path and os.path.exists(music_path) else 'audio_files')
+    # Older clients can still ask by bare basename, even though new play
+    # commands preserve the selected pool member's relative path.
     if audio_dir.endswith('audio_files') and not os.path.exists(os.path.join(audio_dir, filename)):
         matches = glob.glob(os.path.join(audio_dir, '**', os.path.basename(filename)),
                             recursive=True)

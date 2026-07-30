@@ -1,5 +1,5 @@
 {
-  "_comment": "Canonical sensor-trigger map: which sensor in which room fires which action. Sensors live in the per-room ESP32-S3 node boxes (wiring-guides/room-node-enclosure-plan.md); sim/esphome/rooms/*.yaml and the sim's trigger panel are both built from this file. Promoted 2026-07-20 from the retired client/config-unit-*.json (units A/B/C decommissioned); thresholds are the bench-proven ADC/piezo values carried over as node-tuning reference.",
+  "_comment": "Canonical sensor-trigger map: which sensor in which room fires which action. Sensors live in the per-room ESP32-S3 node boxes (wiring-guides/room-node-enclosure-plan.md); sim/esphome/rooms/*.yaml and the sim's trigger panel are both built from this file. Promoted 2026-07-20 from the retired client/config-unit-*.json (units A/B/C decommissioned); thresholds are the bench-proven ADC/piezo values carried over as node-tuning reference. 2026-07-30: 13 rooms sense with an LD2410C radar and Entrance/Exit with a TOF200C ToF module, so doorway triggers are type \"presence\", not the historical \"laser\". Radar presence triggers are an OCCUPANCY PAIR: `action` fires when the radar first sees a moving target (enter) and `leave_action` fires when it has seen nothing at all for the room's absence timeout (leave), which stops anything still running and hands the room back to the theme. ToF presence triggers are trigger-only because beam clear is not room-vacated; once ToF fires, the room routine finishes normally. Trigger NAMES are identifiers referenced from sim/maze_layout.json sensors and its projection `cue` \u2014 don't rename them.",
   "piezo_settings": {
     "attempts_required": 3,
     "correct_answer_probability": 0.25
@@ -7,7 +7,7 @@
   "triggers": [
     {
       "name": "Entrance LT",
-      "type": "laser",
+      "type": "presence",
       "room": "Entrance",
       "action": {
         "data": {
@@ -20,7 +20,7 @@
     },
     {
       "name": "Cuddle Cross LT",
-      "type": "laser",
+      "type": "presence",
       "room": "Cuddle Cross",
       "action": {
         "data": {
@@ -29,11 +29,18 @@
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Cuddle Cross"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {
       "name": "Photo Bomb LT",
-      "type": "laser",
+      "type": "presence",
       "room": "Photo Bomb Room",
       "action": {
         "data": {
@@ -42,16 +49,43 @@
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Photo Bomb Room"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {
       "name": "No Friends Monday LT",
-      "type": "laser",
+      "type": "presence",
       "room": "No Friends Monday",
       "action": {
         "data": {
           "effect_name": "NoFriendsMonday",
           "room": "No Friends Monday"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "No Friends Monday"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
+      }
+    },
+    {
+      "name": "Exit LT",
+      "type": "presence",
+      "room": "Exit",
+      "action": {
+        "data": {
+          "effect_name": "Exit",
+          "room": "Exit"
         },
         "method": "POST",
         "path": "/api/run_effect"
@@ -72,7 +106,7 @@
     },
     {
       "name": "Cop Dodge Laser",
-      "type": "laser",
+      "type": "presence",
       "room": "Cop Dodge",
       "action": {
         "data": {
@@ -81,11 +115,18 @@
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Cop Dodge"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {
       "name": "Gate Laser",
-      "type": "laser",
+      "type": "presence",
       "room": "Gate",
       "action": {
         "data": {
@@ -94,11 +135,18 @@
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Gate"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {
       "name": "Guy Line Laser",
-      "type": "laser",
+      "type": "presence",
       "room": "Guy Line Climb",
       "action": {
         "data": {
@@ -107,11 +155,18 @@
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Guy Line Climb"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {
       "name": "Sparkle Pony Laser",
-      "type": "laser",
+      "type": "presence",
       "room": "Sparkle Pony Room",
       "action": {
         "data": {
@@ -120,11 +175,18 @@
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Sparkle Pony Room"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {
       "name": "Porto Laser",
-      "type": "laser",
+      "type": "presence",
       "room": "Porto Room",
       "action": {
         "data": {
@@ -133,6 +195,13 @@
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Porto Room"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {
@@ -140,9 +209,13 @@
       "type": "piezo",
       "room": "Porto Room",
       "threshold": 0.5,
+      "game": {
+        "id": "porto",
+        "index": 0
+      },
       "action": {
         "data": {
-          "effect_name": "WrongAnswer",
+          "effect_name": "PortoHit",
           "room": "Porto Room"
         },
         "method": "POST",
@@ -154,9 +227,13 @@
       "type": "piezo",
       "room": "Porto Room",
       "threshold": 0.5,
+      "game": {
+        "id": "porto",
+        "index": 1
+      },
       "action": {
         "data": {
-          "effect_name": "WrongAnswer",
+          "effect_name": "PortoHit",
           "room": "Porto Room"
         },
         "method": "POST",
@@ -168,9 +245,13 @@
       "type": "piezo",
       "room": "Porto Room",
       "threshold": 0.5,
+      "game": {
+        "id": "porto",
+        "index": 2
+      },
       "action": {
         "data": {
-          "effect_name": "WrongAnswer",
+          "effect_name": "PortoHit",
           "room": "Porto Room"
         },
         "method": "POST",
@@ -179,28 +260,42 @@
     },
     {
       "name": "Bike Lock Room Laser",
-      "type": "laser",
+      "type": "presence",
       "room": "Bike Lock Room",
       "action": {
         "data": {
-          "effect_name": "BikeLockRoom",
+          "effect_name": "BikeLock-Entry",
           "room": "Bike Lock Room"
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Bike Lock Room"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {
       "name": "Deep Playa Handshake Laser",
-      "type": "laser",
+      "type": "presence",
       "room": "Deep Playa Handshake",
       "action": {
         "data": {
-          "effect_name": "DeepPlaya-Hit",
+          "effect_name": "DeepPlaya-BG",
           "room": "Deep Playa Handshake"
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Deep Playa Handshake"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {
@@ -480,14 +575,15 @@
       "type": "button",
       "room": "Vertical Moop March",
       "game": {
-        "id": "moop"
+        "id": "moop",
+        "index": 0
       },
       "action": {
         "method": "POST",
         "path": "/api/run_effect",
         "data": {
           "room": "Vertical Moop March",
-          "effect_name": "WrongAnswer"
+          "effect_name": "CorrectAnswer"
         }
       }
     },
@@ -496,14 +592,15 @@
       "type": "button",
       "room": "Vertical Moop March",
       "game": {
-        "id": "moop"
+        "id": "moop",
+        "index": 1
       },
       "action": {
         "method": "POST",
         "path": "/api/run_effect",
         "data": {
           "room": "Vertical Moop March",
-          "effect_name": "WrongAnswer"
+          "effect_name": "CorrectAnswer"
         }
       }
     },
@@ -512,14 +609,15 @@
       "type": "button",
       "room": "Vertical Moop March",
       "game": {
-        "id": "moop"
+        "id": "moop",
+        "index": 2
       },
       "action": {
         "method": "POST",
         "path": "/api/run_effect",
         "data": {
           "room": "Vertical Moop March",
-          "effect_name": "WrongAnswer"
+          "effect_name": "CorrectAnswer"
         }
       }
     },
@@ -528,14 +626,15 @@
       "type": "button",
       "room": "Vertical Moop March",
       "game": {
-        "id": "moop"
+        "id": "moop",
+        "index": 3
       },
       "action": {
         "method": "POST",
         "path": "/api/run_effect",
         "data": {
           "room": "Vertical Moop March",
-          "effect_name": "WrongAnswer"
+          "effect_name": "CorrectAnswer"
         }
       }
     },
@@ -635,5 +734,5 @@
       }
     }
   ],
-  "_games_comment": "Triggers with a `game` key resolve through per-room game logic (mirrored in sim/web/app.js and the room node firmware, wiring-guides/room-games-plan.md): gate = two banks of 3 simultaneous body-pressed arcade buttons (bank 1 -> CorrectAnswer chime, then bank 2 -> GateInspection); dph = 1 random winner of 5 (CorrectAnswer, re-rolled on win; others WrongAnswer); bike = 2 true/false questions, correct key TBD until the sign is made (both right -> chime then BikeLockRoom); moop = 4 standalone battery button pucks, game rule TBD (any press chimes); lightsout = 5 lit truck buttons, press toggles self+neighbors, all lit -> chime then NoFriendsMonday."
+  "_games_comment": "Triggers with a `game` key resolve through per-room game logic (mirrored in sim/web/app.js and the room node firmware, wiring-guides/room-games-plan.md): gate = two banks of 3 simultaneous body-pressed arcade buttons (bank 1 -> CorrectAnswer chime, then bank 2 -> CorrectAnswer chime, then leave on the room occupancy trigger); porto = 1 random winning knock pad of 3 per room entry, attempt 1 always fails, attempts 2-3 pass on the winner, attempt 4 force-passes; dph = 1 random winner of 5 per room entry (CorrectAnswer on winner; others WrongAnswer); bike = 2 static true/false answers for this room (both right -> chime then BikeLockRoom); moop = 4 standalone battery button pucks (each press -> CorrectAnswer, all four unique pucks in 60s -> VerticalMoopMarch-RightAnswer, timeout after partial set -> VerticalMoopMarch-WrongAnswer); lightsout = 5 lit truck buttons, press toggles self+neighbors, all lit -> chime then NoFriendsMonday."
 }

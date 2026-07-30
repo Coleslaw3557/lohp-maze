@@ -1,10 +1,34 @@
-# Doorway-crossing trigger. Contract: when the tripwire binary_sensor turns on,
-#   POST {"room": "${room}", "effect_name": "${effect}"}
-# to the LoHP server — exactly what the Pi laser triggers fired.
+# The room's trigger latch — the node end of the presence triggers in
+# triggers.json. Radar rooms use the full occupancy pair:
+#
+#   enter -> POST {"room": "${room}", "effect_name": "${effect}"} /api/run_effect
+#   leave -> POST {"room": "${room}"}                             /api/room_vacated
+#
+# Enter is what the Pi laser triggers fired, unchanged. Leave is new (2026-07-30):
+# the server stops anything still running in the room, silences lingering effect
+# audio and hands the room back to the theme. Background music is never touched
+# by either — effect audio mixes over it.
+#
+# This package owns BOTH scripts and the `room_occupied` latch so that sensor
+# front-ends funnel through one place. packages/ld2410.yaml drives enter/leave
+# from real radar. packages/tof.yaml drives enter only, because beam clear is not
+# the same as room vacated for Entrance/Exit. The `trip`/`vacate` api actions
+# drive the same scripts from harness.py on host-platform sim nodes.
+#
+# The latch is what makes leave safe. Only a real enter arms it, so a radar that
+# briefly still-locks onto furniture and then clears cannot POST a leave for a
+# room nobody ever entered. The inverse failure — furniture holding a permanent
+# still-lock, so leave never fires — costs nothing here: the theme has already
+# resumed on its own when the entry effect ended, and the next real enter simply
+# re-arms the latch.
 #
 # Include alongside logic.yaml and set the `effect` substitution. Rooms whose
 # doorway has no bespoke effect yet simply omit this package (the old generic
 # Lightning-on-entry placeholders were test wiring, removed 2026-07-17).
+
+substitutions:
+  entry_hook: ""
+  leave_hook: ""
 
 api:
   actions:
@@ -17,6 +41,18 @@ api:
         - binary_sensor.template.publish:
             id: tripwire
             state: OFF
+    - action: vacate   # virtual "the radar lost them" — harness.py vacate <room>
+      then:
+        - script.execute: room_vacated
+
+globals:
+  # Armed by a real enter, cleared by the leave that follows it. Not restored
+  # across reboots: a node that resets mid-visit has no idea who is still in
+  # the room, and inventing a leave POST on boot would stomp a running effect.
+  - id: room_occupied
+    type: bool
+    restore_value: false
+    initial_value: 'false'
 
 binary_sensor:
   - platform: template
@@ -30,6 +66,9 @@ binary_sensor:
       - delayed_on: 30ms   # debounce, same as the planned hardware config
     on_press:
       then:
+        - lambda: |-
+            id(room_occupied) = true;
+            ${entry_hook}
         - script.execute: fire_effect
 
 script:
@@ -47,3 +86,25 @@ script:
             room: ${room}
             effect_name: ${effect}
       - delay: 5s
+
+  - id: room_vacated
+    # No trailing cooldown: a leave is one fact, and the latch already makes a
+    # repeat a no-op. mode: single only guards against re-entering mid-POST.
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: 'return id(room_occupied);'
+          then:
+            - lambda: |-
+                id(room_occupied) = false;
+                ${leave_hook}
+            - logger.log:
+                format: "Room vacated: POST room_vacated room=%s"
+                args: ['"${room}"']
+            - http_request.post:
+                url: http://${server_host}:5000/api/room_vacated
+                request_headers:
+                  Content-Type: application/json
+                json:
+                  room: ${room}

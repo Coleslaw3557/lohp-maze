@@ -3,13 +3,15 @@
 #   correct button              -> CorrectAnswer chime, question latched 60s
 #   wrong button                -> WrongAnswer, progress reset
 #   both questions correct      -> chime then ${bike_complete_effect}
-# ANSWER KEY IS A PLACEHOLDER (Q1=TRUE, Q2=FALSE) until the sign is made —
-# edit bike_press's `correct` lambda when the real questions exist.
+# The answer key is static for the room and supplied by the room yaml
+# substitutions, mirrored from triggers.json by the audio console.
 # Spec: wiring-guides/room-games-plan.md.
 # Sim/harness: `call <host>:<port> press_bike n=1` (n = 1-4).
 # Real S3 wiring: buttons on D0-D3, LEDs hardwired to the 5V rail.
 substitutions:
   bike_complete_effect: "BikeLockRoom"
+  bike_q1_correct: "true"
+  bike_q2_correct: "false"
 
 globals:
   - id: bike_q1_ok
@@ -45,8 +47,11 @@ script:
           }
       - if:
           condition:
-            # PLACEHOLDER answer key: buttons 1 (Q1-TRUE) and 4 (Q2-FALSE) are correct
-            lambda: 'return n == 1 || n == 4;'
+            lambda: |-
+              return (n == 1 && ${bike_q1_correct})
+                  || (n == 2 && !${bike_q1_correct})
+                  || (n == 3 && ${bike_q2_correct})
+                  || (n == 4 && !${bike_q2_correct});
           then:
             - lambda: |-
                 if (n <= 2) id(bike_q1_ok) = true; else id(bike_q2_ok) = true;

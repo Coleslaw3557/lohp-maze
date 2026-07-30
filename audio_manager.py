@@ -2,15 +2,18 @@ import json
 import logging
 import os
 import random
+from collections import deque
 
 logger = logging.getLogger(__name__)
 
 
 class AudioManager:
-    def __init__(self, config_file='audio_config.json', music_dir='music'):
+    def __init__(self, config_file='audio_config.json', music_dir='music', rng=None):
         self.config_file = config_file
         self.music_dir = music_dir
+        self._rng = rng or random.SystemRandom()
         self.audio_config = self.load_config()
+        self._recent = {}  # effect_name -> deque of recently played files (anti-repeat)
 
     def load_config(self):
         try:
@@ -45,7 +48,40 @@ class AudioManager:
         return config
 
     def get_random_audio_file(self, effect_name):
-        audio_files = self.get_audio_config(effect_name).get('audio_files', [])
+        config = self.get_audio_config(effect_name)
+        audio_files = config.get('audio_files', [])
         if not audio_files:
             return None
-        return random.choice(audio_files)
+        # Optional per-file selection weights (parallel to audio_files, e.g. the
+        # pack TRIGGER_MAP.csv suggested_weight column). Absent -> uniform.
+        weights = config.get('audio_weights')
+        if weights and len(weights) != len(audio_files):
+            logger.warning(f"audio_weights length mismatch for {effect_name} "
+                           f"({len(weights)} weights vs {len(audio_files)} files); picking uniformly")
+            weights = None
+        if weights and (any(weight < 0 for weight in weights) or sum(weights) <= 0):
+            logger.warning(f"Invalid audio_weights for {effect_name}; picking uniformly")
+            weights = None
+        # Independent draws feel repetitive, so never replay any of the last
+        # len//2 picks for this effect (a 2-file effect strictly alternates).
+        history_len = len(audio_files) // 2
+        recent = self._recent.get(effect_name)
+        if recent is None or recent.maxlen != history_len:
+            keep = list(recent)[-history_len:] if (recent and history_len) else []
+            recent = deque(keep, maxlen=history_len)
+            self._recent[effect_name] = recent
+        eligible = [i for i, f in enumerate(audio_files) if f not in recent]
+        if not eligible:  # unreachable (history < list size), but never dead-end
+            eligible = list(range(len(audio_files)))
+        if weights:
+            eligible_weights = [weights[i] for i in eligible]
+            if sum(eligible_weights) <= 0:
+                eligible = [i for i, weight in enumerate(weights) if weight > 0]
+                eligible_weights = [weights[i] for i in eligible]
+            choice = self._rng.choices(eligible, weights=eligible_weights, k=1)[0]
+        else:
+            choice = self._rng.choice(eligible)
+        picked = audio_files[choice]
+        if history_len:
+            recent.append(picked)
+        return picked

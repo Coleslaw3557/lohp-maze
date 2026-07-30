@@ -105,8 +105,8 @@ An unprepped board is silent; this is the #1 bring-up trap.
 |---|---|---|---|
 | D0, D2, D3 | 2, 4, 5 | 1, 3, 4 | ADC / aux (Porto piezos; Cuddle LD2450 UART1 on D2/D3; **Gate: D0 = DMX TX**) |
 | D1 | 3 | 2 | Button contract (`button_gpio_c3.example.yaml`) |
-| D4 / D5 | 6 / 7 | 5 / 6 | I2C — VL53L1X (ToF rooms) + Gate's MCP23017; **D5 = DMX512 TX in radar rooms + Cuddle** (`dmx-over-wifi.md`) |
-| D6 / D7 | 21 / 20 | 43 / 44 | UART — LD2410C (radar rooms); **D7 = DMX512 TX in the 4 ToF rooms** |
+| D4 / D5 | 6 / 7 | 5 / 6 | I2C — TOF200C (Entrance/Exit) + Gate's MCP23017; **D5 = DMX512 TX in the 13 radar rooms** (`dmx-over-wifi.md`) |
+| D6 / D7 | 21 / 20 | 43 / 44 | UART — LD2410C (the 13 radar rooms); **D7 = DMX512 TX in Entrance + Exit** |
 | **D8** | **8** | **7** | **I2S BCLK → PCM5102A BCK** |
 | **D9** | **9** | **8** | **I2S LRCLK → PCM5102A LCK** |
 | **D10** | **10** | **9** | **I2S DOUT → PCM5102A DIN** |
@@ -127,42 +127,50 @@ piezos sit on D0/D1/D2.
   ≈ **200 mA @5 V** — above bank auto-off thresholds (and `power_save_mode:
   none` already enforces this). Pebble adds its own draw from a second bank
   port; music at party volume averages roughly +0.5–1 W.
-- **Topology (2026-07-19 v5, Tim's calls): the generator IS the night power
-  — it runs all evening/night (the same backstage AC that feeds the DMX
-  fixtures). On-hand USB banks ($0, "assume I have them") bridge ONLY the
-  ~12h day shift, recharging overnight at their own boxes.** NIGHT: box gear
-  runs off a small AC→USB wall cube on the fixture runs, the room's bank
-  charging on the same cube (~3 A-ports ≈ 15W per room; drawer cubes first,
-  a 6-port PowerPort-6-class shared between two adjacent rooms fills gaps).
-  DAY: the bank carries the box — ~15–25Wh per shift (~1W node steady +
-  lighter daytime Pebble duty), so **any ≥10000mAh bank covers a full day**
-  (~24Wh usable); big banks go to loud rooms and the server Pi (biggest day
-  load, 50–70Wh; the mast router ~25Wh charges in place overnight via a 10ft
-  A-extension — charge current tolerates the droop — or swaps daily). Daily
-  flip = two 10-second plug moves per room (dawn: gear cube→bank; dusk:
-  gear→cube, bank→charge port); **banks that pass through skip the flips**
-  — leave them inline 24/7 and feed the input from the cube at night (the
-  plug-in blip = one harmless node reboot at dusk; banks that won't output
-  while charging use flips). Per-bank requirements: ≥2 outputs with at least
-  one USB-A (the Pebble's captive plug is A-male; the node takes A or C),
-  holds the ~200 mA load without auto-off (10-min node test, cull flunkers —
-  the draw sits 3–4× over typical cutoffs), pass-through check sorts the
-  fleet into inline-24/7 vs flip piles. Room plug set: Pebble captive A-male
-  into an A port, node USB-C via a 1ft A-to-C; bank velcro'd OUTSIDE the box
-  (flips without opening it, no battery heat inside, shaded). v3 (3× SOLIX
-  C300 cluster stations, ~$840) superseded: the night problem is the
-  generator's, and the day problem is bank-drawer sized. Unchanged physics:
-  5V won't survive 30–50ft runs — banks and cubes sit AT the boxes. Top-up
-  reference if the fleet runs short: Miady 2-pack 20000mAh $28.99
-  (B0GQM3SB65) / INIU single $29.99 (B0DFLSQBHT). Bench gate before install
-  week: one representative bank + node + Pebble through a full day-shift
-  discharge with audio duty-cycling (ESPHome uptime sensor = the witness).
+- **Topology (2026-07-30 central day-power revision):** the generator still
+  owns night power and the DMX fixtures. During the day, when the generator and
+  DMX lights are off, one back-side **12 V 100 Ah LiFePO4 battery** keeps the
+  node boxes and Creative Pebbles alive through a 12 V bus. Eight 8-35 V -> 5 V
+  / 8 A four-port USB buck converters sit behind the stacked bay pairs, one
+  converter per pair: VMM, Monkey/Bike, Temple/Deep Playa, No Friends/Photo,
+  hex center, Cop/Porto, Gate/Sparkle, Guy Line. That gives 32 USB ports for
+  15 rooms x 2 loads (node + Pebble) = 30 ports, with two spare.
+- The 100 ft 14/2 duplex cable covers the back-side 12 V trunk: the maze width
+  is 57.6 ft, leaving roughly 42 ft for battery/charger leads, tap slack, and
+  service loops. Keep the high-current 12 V run on the back side; do not run a
+  long 5 V bus.
+- **Measurement catch from the sim:** back-corner Pebble placement does not
+  reach the node boxes on the stock Pebble audio lead when the cable is routed
+  behind the maze. Creative publishes 1.2 m USB power and 1.2 m 3.5 mm line-in
+  leads; the sim's back-side routed audio runs are ~3.55 m for normal wing
+  rooms, ~2.24 m Entrance/Exit, ~3.33 m Cuddle, ~3.27 m VMM, and ~5.17 m Guy
+  Line. Add 3.5 mm TRS extensions/strain relief per room, or move the right
+  Pebble satellite closer to its node box. The 1.35 m right-to-left speaker
+  cable also cannot place the two Pebble satellites in opposite rear corners of
+  a 7 ft bay.
+- **Safety item not in the price list yet:** add a main DC fuse/disconnect at
+  the LiFePO4 positive terminal and fused branch protection sized for the
+  converter/tap wiring. The lever connectors and ring terminals make the bus
+  buildable; they do not replace over-current protection.
 - **Wiring collapses without the amp board:** port 1 → XIAO USB-C; the
   radar's VCC and the DAC's VIN tap the XIAO's **5 V pin** (~105 mA combined,
   well within the pin's budget); port 2 → Pebble USB. No USB breakout board,
   no bulk capacitor, no Schottky — all three existed only to feed the amp
   (the 1N5817 is needed only when pushing power *into* the 5 V pin, not
   drawing from it).
+
+Back-side day-power BOM snapshot (prices/availability checked by Tim with
+playwright-cli before this revision):
+
+| Qty | Component | Purpose | Extended price |
+|---:|---|---|---:|
+| 1 | 12 V 100 Ah LiFePO4 battery - eBay | 1,280 Wh nominal storage | $118.29 |
+| 1 | 14.6 V/20 A LiFePO4 charger - Amazon | AC operation and battery charging | $42.69 |
+| 8 | 8-35 V to 5 V/8 A, four-port USB converter - Amazon | One converter per stacked bay pair | $71.92 |
+| 1 | 100 ft 14/2 tinned-copper marine duplex cable - Amazon | Complete 12 V distribution bus | $54.99 |
+| 1 | 20-pack three-port 12-28 AWG lever connectors - Amazon | Bus taps for eight converters | $9.99 |
+| 1 | 60-pack 16-14 AWG M8 heat-shrink ring terminals - Amazon | Battery connections | $6.49 |
+| | **Total before tax** | | **$304.37** |
 
 ## Enclosure + radar coexistence
 

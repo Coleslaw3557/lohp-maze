@@ -18,7 +18,8 @@
 // outline), back etch OUT. Burn the sheet as imported — etch face up.
 //
 // Holds the standard node build: XIAO ESP32-S3 + PCM5102A DAC + the room's
-// ranging sensor(s) against the window (LD2410C, VL53L1X, Cuddle's
+// ranging sensor(s) against the window (LD2410C in 13 rooms, TOF200C in
+// Entrance/Exit, Cuddle's
 // 2410C+2450 pair — the pair needs the WIDER aperture: cuddle=true below;
 // export.py emits both jobs). A THIRD variant (sign=true, 07-29) is the
 // CAMP SIGN controller box: same shell, sign parts only — XIAO S3 +
@@ -56,9 +57,10 @@
 //     3.5mm jack barrel sits behind it (board butts the wall); no separate
 //     panel-mount jack. Antenna stays INSIDE the box — no hole.
 //   front wall: sensor aperture; the acrylic window panel screws over it
-//     (2x M2 self-tap on the midline). Radar sees through plain acrylic;
-//     the 4 ToF rooms cut the marked aperture through the panel (940nm
-//     won't pass acrylic).
+//     (2x M2 self-tap on the midline). Radar sees through plain acrylic, so
+//     11 of the 13 radar panels are solid; Entrance and Exit cut the marked
+//     16x16 aperture through the panel (940nm won't pass acrylic). Those two
+//     are the ONLY openings in the whole fleet.
 //   back wall: two vertical velcro-strap slots (CUT — a 20mm one-wrap
 //     threads through and wraps the scaffold leg).
 //
@@ -581,8 +583,9 @@ module panel_lid() difference() {
 
 module panel_window() difference() {             // cut this one in acrylic
   translate([-panel_w/2, -panel_h/2]) square([panel_w, panel_h]);
-  // OPTIONAL ToF aperture — uncomment for Entrance/Exit/Guy Line/VMM
-  // (940nm won't pass plain acrylic; radar rooms keep the panel solid)
+  // ToF aperture — uncomment for ENTRANCE and EXIT only (940nm won't pass
+  // plain acrylic). The other 13 rooms are radar and keep the panel solid.
+  // Guy Line/VMM are radar too as of 2026-07-30 — they do NOT need this.
   // square([16, 16], center = true);
 }
 
@@ -594,9 +597,9 @@ module window_etch() {
     translate([(ld2450_w - cud_t)/2, 0]) oline(ld2450_w, ld2450_h);
     translate([(cud_t - ld2410_w)/2, 0]) oline(ld2410_w, ld2410_h);
   } else {
-    oline(ld2410_w, ld2410_h);                   // LD2410C footprint (11 rooms)
-    oline(16, 16);                               // ToF aperture — the 4 ToF
-  }                                              //  rooms cut this through
+    oline(ld2410_w, ld2410_h);                   // LD2410C footprint (13 rooms)
+    oline(16, 16);                               // ToF aperture — Entrance +
+  }                                              //  Exit cut this through
 }
 
 // ---- paper test-fit net (PRINT 1:1 — not a cut job) --------------------

@@ -71,7 +71,8 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
 1. In the room's yaml: swap `sim_host.yaml` → `hardware_s3.yaml` (fleet standard;
    button rooms also set `button_pin: GPIO2` — S3's D1), set
    `server_host: "192.168.1.238"`, copy `secrets.example.yaml` → `secrets.yaml`.
-2. Add the room's actual sensor (VL53L1X / LD2410 / gpio per the hardware doc) and
+2. Add the room's actual sensor (`ld2410.yaml` radar in 13 rooms, `tof.yaml` at
+   Entrance/Exit, plus any gpio button per the hardware doc) and
    have it drive the automation — either publish to the `tripwire` template sensor,
    or replace it with the platform sensor keeping `id: tripwire` + the `on_press`.
 3. Speaker rooms: add `audio_s3.yaml` + the generated `audio/cues-<node>.yaml` to

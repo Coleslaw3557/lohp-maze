@@ -1,60 +1,52 @@
 import logging
-import random
 
 logger = logging.getLogger(__name__)
 
-def create_bike_lock_room_effect():
-    bike_lock_room_effect = {
-        "duration": 10.0,
-        "description": "Borg ship action scene effect for Bike Lock Room",
-        "steps": []
-    }
-    
-    # Colors: Green, Red, and Blue (Borg-like colors)
-    colors = [
-        {"r": 0, "g": 255, "b": 0},    # Green
-        {"r": 255, "g": 0, "b": 0},    # Red
-        {"r": 0, "g": 0, "b": 255},    # Blue
-    ]
-    
-    step_duration = 0.1  # 100ms per step
-    num_steps = int(bike_lock_room_effect["duration"] / step_duration)
-    
-    for i in range(num_steps):
-        time = i * step_duration
-        color = random.choice(colors)
-        intensity = random.randint(100, 255)  # Random intensity for flickering effect
-        
-        step = {
-            "time": time,
-            "channels": {
-                "total_dimming": intensity,
-                "r_dimming": color["r"],
-                "g_dimming": color["g"],
-                "b_dimming": color["b"],
-                "w_dimming": 0,
-                "total_strobe": 0,
-                "function_selection": 0,
-                "function_speed": 0
-            }
-        }
-        bike_lock_room_effect["steps"].append(step)
-    
-    # Ensure the last step turns off the lights
-    bike_lock_room_effect["steps"].append({
-        "time": bike_lock_room_effect["duration"],
+GOLD = (255, 195, 25)
+GREEN = (70, 255, 100)
+BRIGHT = (255, 220, 90)
+
+
+def _step(t, total, r, g, b, w=0):
+    return {
+        "time": t,
         "channels": {
-            "total_dimming": 0,
-            "r_dimming": 0,
-            "g_dimming": 0,
-            "b_dimming": 0,
-            "w_dimming": 0,
-            "total_strobe": 0,
-            "function_selection": 0,
-            "function_speed": 0
-        }
-    })
-    
-    logger.debug(f"Created BikeLockRoom effect: {bike_lock_room_effect}")
-    logger.info(f"BikeLockRoom effect created with {len(bike_lock_room_effect['steps'])} steps over {bike_lock_room_effect['duration']} seconds")
-    return bike_lock_room_effect
+            "total_dimming": total, "r_dimming": r, "g_dimming": g,
+            "b_dimming": b, "w_dimming": w,
+            "total_strobe": 0, "function_selection": 0, "function_speed": 0,
+        },
+    }
+
+
+def create_bike_lock_room_effect():
+    """Victory payoff for the correct pair (Doom secret / Diablo quest unlocks,
+    2.45-3.45s): double gold secret-found flash, gold/green celebration
+    shimmer, triumphant swell, fade."""
+    steps = [
+        _step(0.0, 10, 40, 30, 0),
+        _step(0.1, 255, *GOLD, w=140),       # secret found!
+        _step(0.25, 255, *GOLD, w=90),
+        _step(0.45, 120, *GOLD),
+        _step(0.6, 245, *GOLD, w=60),
+        _step(0.75, 130, *GOLD),
+        # Celebration shimmer
+        _step(0.95, 200, *GREEN),
+        _step(1.25, 210, *GOLD),
+        _step(1.55, 220, *GREEN),
+        _step(1.85, 230, *GOLD),
+        _step(2.15, 210, *GREEN),
+        # Triumphant swell, then out
+        _step(2.5, 220, *GOLD, w=60),
+        _step(3.1, 255, *BRIGHT, w=110),
+        _step(3.5, 160, *GOLD),
+        _step(4.0, 0, 0, 0, 0),
+    ]
+
+    effect = {
+        "duration": 4.0,
+        "description": "Bike Lock victory: gold secret-found flashes, "
+                       "gold/green shimmer, triumphant swell",
+        "steps": steps,
+    }
+    logger.info(f"BikeLockRoom effect created with {len(steps)} steps over {effect['duration']} seconds")
+    return effect

@@ -1,6 +1,6 @@
 """Exercise the Gate node's two-bank game over its ESPHome API and assert the
 right effects hit the server (four paths: bank2-first fail, bank1 chime,
-bank1->bank2 complete, single-pad no-fire).
+bank1->bank2 chime, single-pad no-fire).
 
 Bench tool, not part of the standing suite — needs the sim server up AND the
 gate node running first:  sim/esphome/run_node.sh gate -d  (API on :6063)
@@ -50,9 +50,9 @@ async def main():
     # bank 1 simultaneous -> CorrectAnswer chime
     await round_('bank1 x3 -> CorrectAnswer chime', [1, 2, 3],
                  "Applying effect 'CorrectAnswer' to room 'Gate'", settle=5)
-    # bank 2 while staged -> GateInspection complete
-    await round_('bank2 after bank1 -> GateInspection', [4, 5, 6],
-                 "Applying effect 'GateInspection' to room 'Gate'", settle=8)
+    # bank 2 while staged -> second CorrectAnswer chime
+    await round_('bank2 after bank1 -> CorrectAnswer chime', [4, 5, 6],
+                 "Applying effect 'CorrectAnswer' to room 'Gate'", settle=5)
     # a single pad press must NOT resolve a bank
     await round_('single pad -> nothing fires', [2],
                  '', expect_absent="to room 'Gate'", settle=3)

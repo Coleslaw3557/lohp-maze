@@ -1,14 +1,14 @@
 # Gate crossing game — 6 illuminated 30mm arcade buttons in two banks of 3.
 # The visitor lines their body up and presses a whole bank AT ONCE:
 #   bank 1 (pads 1-3) all held within the 350ms window -> CorrectAnswer chime
-#   then bank 2 (pads 4-6) within 30s               -> ${gate_complete_effect}
+#   then bank 2 (pads 4-6) within 30s               -> CorrectAnswer chime
 #   bank 2 without bank 1 first                     -> WrongAnswer
 # Spec: wiring-guides/room-games-plan.md. Sim/harness presses one pad at a
 # time — the 350ms delayed_off hold makes three quick presses count as
 # simultaneous (`call <host>:<port> press_pad pad=1` x3).
 # Real S3 wiring: pads on D0-D5, button LEDs hardwired to the 5V rail.
 substitutions:
-  gate_complete_effect: "GateInspection"
+  gate_complete_effect: "CorrectAnswer"
 
 globals:
   - id: gate_stage_ms
@@ -111,7 +111,7 @@ script:
                   lambda: 'return id(gate_stage_ms) != 0 && (millis() - id(gate_stage_ms)) < 30000;'
                 then:
                   - lambda: 'id(gate_stage_ms) = 0;'
-                  - logger.log: "Gate bank 2 — room complete"
+                  - logger.log: "Gate bank 2 simultaneous — chime"
                   - script.execute:
                       id: gate_fire
                       effect: "${gate_complete_effect}"

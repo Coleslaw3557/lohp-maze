@@ -1,7 +1,8 @@
 # Temple Room sensor node — trigger map from triggers.json
 # No trigger packages yet: the Lightning-on-entry placeholder was test wiring
-# (removed 2026-07-17). Include tripwire.yaml + an `effect` substitution once
-# this room gets its bespoke effect.
+# (removed 2026-07-17). Include tripwire.yaml + ld2410.yaml together (they
+# pair: the radar publishes into the tripwire sensor) plus an `effect`
+# substitution once this room gets its bespoke effect.
 substitutions:
   node_name: lohp-node-temple
   room: "Temple Room"

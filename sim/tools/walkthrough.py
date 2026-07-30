@@ -58,21 +58,38 @@ def main():
     route = cfg['layout']['route']
     by_room = {}
     for t in cfg['triggers']:
-        if t['room'] and t['type'] == 'laser' and t['room'] not in by_room:
+        if t['room'] and t['type'] == 'presence' and t['room'] not in by_room:
             by_room[t['room']] = t
 
     print(f"Walkthrough: {len(route)} rooms, one visitor, ~{PACE}s per room\n")
     threads = []
+
+    def spawn(name, action):
+        th = threading.Thread(target=fire, args=(name, action['path'], action['data']))
+        th.start()
+        threads.append(th)
+
+    # One visitor is in exactly one room at a time, so arriving somewhere means
+    # having left the room before it: fire each room's leave_action on the way
+    # out. That exercises the whole occupancy pair (enter -> effect, leave ->
+    # room handed back to the theme), not just the entry half.
+    prev = None
     for room in route:
         trig = by_room.get(room)
         if not trig:
-            print(f"  --  {room}: no doorway trigger configured")
+            print(f"  --  {room}: no presence trigger configured")
             continue
+        if prev and prev.get('leave_action'):
+            print(f"  <<  leaving {prev['room']}")
+            spawn(f"{prev['name']} leave", prev['leave_action'])
         print(f"  >>  entering {room} -> {trig['action']['data'].get('effect_name')}")
-        th = threading.Thread(target=fire, args=(trig['name'], trig['action']['path'], trig['action']['data']))
-        th.start()
-        threads.append(th)
+        spawn(trig['name'], trig['action'])
+        prev = trig
         time.sleep(PACE)
+
+    if prev and prev.get('leave_action'):   # out the far end of the maze
+        print(f"  <<  leaving {prev['room']}")
+        spawn(f"{prev['name']} leave", prev['leave_action'])
 
     for th in threads:
         th.join()

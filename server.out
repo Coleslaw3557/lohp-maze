@@ -1,0 +1,127 @@
+[sim] virtual DMX active; sim UI on :5001; launching real server...
+stack skin: stone_skin_lava.npz (9 variants)
+2026-07-30 20:41:59,017 - virtual_artnet - INFO - Sim Art-Net HARDWARE BRIDGE: real unicast to ['Cop Dodge'] — all other rooms stay virtual
+2026-07-30 20:41:59,017 - artnet_output_manager_real - INFO - Art-Net output initialized: universe 0 -> ['Cop Dodge']
+2026-07-30 20:41:59,017 - virtual_dmx - INFO - Virtual DMX output initialized (simulation — no FTDI hardware)
+2026-07-30 20:41:59,017 - light_config_manager - INFO - Light configuration loaded from light_config.json
+2026-07-30 20:41:59,018 - audio_manager - INFO - Loaded audio configuration from audio_config.json
+2026-07-30 20:41:59,018 - node_audio_manager - INFO - Node audio enabled for: ['Cop Dodge', 'Monkey Room']
+2026-07-30 20:41:59,018 - effects.lightning - INFO - Lightning effect created with 13 steps over 3.5 seconds
+2026-07-30 20:41:59,018 - effects.police_lights - INFO - Police Lights effect created with 56 steps over 15.0 seconds
+2026-07-30 20:41:59,018 - effects.gate_inspection - INFO - Gate Inspection effect created with 30 steps over 14.0 seconds
+2026-07-30 20:41:59,018 - effects.gate_greeters - INFO - Gate Greeters effect created with 13 steps over 10.0 seconds
+2026-07-30 20:41:59,018 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,018 - effects.backtrack - INFO - Backtrack effect created with 9 steps over 2.4 seconds
+2026-07-30 20:41:59,018 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,018 - effects.entrance - INFO - Entrance effect created with 20 steps over 15.0 seconds
+2026-07-30 20:41:59,018 - effects.exit_room - INFO - Exit effect created with 19 steps over 12.0 seconds
+2026-07-30 20:41:59,019 - effects.spark_pony - INFO - Spark Pony effect created with 56 steps over 15.0 seconds
+2026-07-30 20:41:59,019 - effects.porto_standby - INFO - Porto Standby effect created with 20 steps over 15.0 seconds
+2026-07-30 20:41:59,019 - effects.porto_hit - INFO - Porto Hit effect created with 16 steps over 3.5 seconds
+2026-07-30 20:41:59,019 - effects.cuddle_puddle - INFO - Cuddle Puddle effect created for floor theme 'none' with 11 steps over 16.0 seconds
+2026-07-30 20:41:59,019 - effects.photobomb_bg - INFO - Photo Bomb Background effect created with 12 steps over 15.0 seconds
+2026-07-30 20:41:59,019 - effects.photobomb_spot - INFO - PhotoBomb-Spot effect created with 104 steps over 14.0 seconds
+2026-07-30 20:41:59,020 - effects.deep_playa_bg - INFO - Deep Playa Background effect created with 201 steps over 20.0 seconds
+2026-07-30 20:41:59,020 - effects.deep_playa_hit - INFO - DeepPlaya-Hit effect created with 6 steps over 3.0 seconds
+2026-07-30 20:41:59,020 - effects.image_enhancement - INFO - Image Enhancement effect created with 31 steps over 15.0 seconds
+2026-07-30 20:41:59,020 - effects.bike_lock_room - INFO - BikeLockRoom effect created with 15 steps over 4.0 seconds
+2026-07-30 20:41:59,020 - effects.bike_lock_entry - INFO - BikeLock-Entry effect created with 17 steps over 3.0 seconds
+2026-07-30 20:41:59,020 - effects.no_friends_monday - INFO - NoFriendsMonday effect created with 34 steps over 12.0 seconds
+2026-07-30 20:41:59,043 - effects.lightning_storm - INFO - LightningStorm effect created with 6044 steps over 600.0 seconds
+2026-07-30 20:41:59,043 - effects.photobomb_shot - INFO - PhotoBomb-Shot effect created with 41 steps over 6.5 seconds
+2026-07-30 20:41:59,043 - effects.monkey_business - INFO - MonkeyBusiness effect created with 36 steps over 5.0 seconds
+2026-07-30 20:41:59,043 - effects.cuddle_puddle - INFO - Cuddle lava hit effect created with 7 steps over 2.6 seconds
+2026-07-30 20:41:59,043 - effects.cuddle_puddle - INFO - Cuddle lava breach effect created with 11 steps over 5.4 seconds
+2026-07-30 20:41:59,043 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,043 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,043 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,043 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,043 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,043 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,043 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,043 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,043 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,043 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,043 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects.correct_answer - INFO - Correct Answer effect created with 6 steps over 2.0 seconds
+2026-07-30 20:41:59,044 - effects.wrong_answer - INFO - Wrong Answer effect created with 6 steps over 1.5 seconds
+2026-07-30 20:41:59,044 - effects_manager - INFO - Initialized 58 effects
+2026-07-30 20:41:59,045 - camera_manager - INFO - CameraManager ready: backend=synthetic device=/dev/video0 photos_dir=/home/tlister/lohp/lohp-maze/photos
+2026-07-30 20:41:59,045 - effects.cuddle_puddle - INFO - Cuddle Puddle effect created for floor theme 'lava' with 20 steps over 16.0 seconds
+2026-07-30 20:41:59,045 - theme_manager - INFO - Room light profile for Cuddle Cross: {'cap': 44, 'rgb': (255, 55, 0), 'mix': 0.75}
+2026-07-30 20:41:59,045 - effects_manager - INFO - Cuddle Cross lights following floor theme: lava
+Starting server on http://0.0.0.0:5000
+plate skin: monster_skin_lava.npz
+2026-07-30 20:41:59,066 - websockets.server - INFO - server listening on 0.0.0.0:8765
+[2026-07-30 20:41:59 +0000] [1277111] [INFO] Running on http://0.0.0.0:5000 (CTRL + C to quit)
+2026-07-30 20:41:59,066 - hypercorn.error - INFO - Running on http://0.0.0.0:5000 (CTRL + C to quit)
+[2026-07-30 20:41:59 +0000] [1277111] [INFO] Running on http://0.0.0.0:5001 (CTRL + C to quit)
+2026-07-30 20:41:59,090 - hypercorn.error - INFO - Running on http://0.0.0.0:5001 (CTRL + C to quit)
+[2026-07-30 20:41:59 +0000] [1277111] [INFO] 127.0.0.1:57842 - - [30/Jul/2026:20:41:59 +0000] "POST /api/floor_event 1.1" 200 127 "-" "Python-urllib/3.12"
+2026-07-30 20:42:00,858 - websockets.server - INFO - connection open
+2026-07-30 20:42:00,869 - __main__ - INFO - Client connected: LOHP-SIM-WEB (192.168.253.126) - Associated rooms: ['Bike Lock Room', 'Camp Sign', 'Cop Dodge', 'Cuddle Cross', 'Deep Playa Handshake', 'Entrance', 'Exit', 'Gate', 'Guy Line Climb', 'Monkey Room', 'No Friends Monday', 'Photo Bomb Room', 'Porto Room', 'Sparkle Pony Room', 'Temple Room', 'Vertical Moop March']
+2026-07-30 20:42:00,869 - remote_host_manager - INFO - Client LOHP-SIM-WEB (192.168.253.126) associated with rooms: ['Bike Lock Room', 'Camp Sign', 'Cop Dodge', 'Cuddle Cross', 'Deep Playa Handshake', 'Entrance', 'Exit', 'Gate', 'Guy Line Climb', 'Monkey Room', 'No Friends Monday', 'Photo Bomb Room', 'Porto Room', 'Sparkle Pony Room', 'Temple Room', 'Vertical Moop March']
+2026-07-30 20:42:04,072 - artnet_output_manager_real - WARNING - Art-Net node Cop Dodge (lohp-node-cop-dodge.local) unresolvable: [Errno -2] Name or service not known (retrying every 10s — container mDNS? use an IP)
+[2026-07-30 20:42:15 +0000] [1277111] [INFO] 127.0.0.1:36372 - - [30/Jul/2026:20:42:15 +0000] "GET /api/health 1.1" 200 39 "-" "curl/8.5.0"
+[2026-07-30 20:42:15 +0000] [1277111] [INFO] 127.0.0.1:36380 - - [30/Jul/2026:20:42:15 +0000] "GET /api/effects_list 1.1" 200 4545 "-" "curl/8.5.0"
+[2026-07-30 20:42:17 +0000] [1277111] [INFO] 127.0.0.1:36392 - - [30/Jul/2026:20:42:17 +0000] "GET /api/health 1.1" 200 39 "-" "Python-urllib/3.12"
+2026-07-30 20:42:25,215 - remote_host_manager - INFO - Removed disconnected client LOHP-SIM-WEB (192.168.253.126)
+2026-07-30 20:42:25,215 - __main__ - INFO - WebSocket client disconnected
+2026-07-30 20:42:25,215 - websockets.server - INFO - connection closed
+[2026-07-30 20:42:25 +0000] [1277111] [INFO] 192.168.253.126:64119 - - [30/Jul/2026:20:42:25 +0000] "GET /api/themes 1.1" 200 2095 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+[2026-07-30 20:42:25 +0000] [1277111] [INFO] 192.168.253.126:64119 - - [30/Jul/2026:20:42:25 +0000] "GET /api/effects_list 1.1" 200 4545 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:25,443 - websockets.server - INFO - connection open
+2026-07-30 20:42:25,818 - __main__ - INFO - Client connected: LOHP-SIM-WEB (192.168.253.126) - Associated rooms: ['Bike Lock Room', 'Camp Sign', 'Cop Dodge', 'Cuddle Cross', 'Deep Playa Handshake', 'Entrance', 'Exit', 'Gate', 'Guy Line Climb', 'Monkey Room', 'No Friends Monday', 'Photo Bomb Room', 'Porto Room', 'Sparkle Pony Room', 'Temple Room', 'Vertical Moop March']
+2026-07-30 20:42:25,819 - remote_host_manager - INFO - Client LOHP-SIM-WEB (192.168.253.126) associated with rooms: ['Bike Lock Room', 'Camp Sign', 'Cop Dodge', 'Cuddle Cross', 'Deep Playa Handshake', 'Entrance', 'Exit', 'Gate', 'Guy Line Climb', 'Monkey Room', 'No Friends Monday', 'Photo Bomb Room', 'Porto Room', 'Sparkle Pony Room', 'Temple Room', 'Vertical Moop March']
+[2026-07-30 20:42:33 +0000] [1277111] [INFO] 192.168.253.126:64123 - - [30/Jul/2026:20:42:33 +0000] "OPTIONS /api/run_effect 1.1" 200 0 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:33,141 - __main__ - INFO - Moop march button latched: Moop Button 1 (1/4)
+2026-07-30 20:42:33,141 - effects_manager - INFO - Applying effect 'CorrectAnswer' to room 'Vertical Moop March'
+2026-07-30 20:42:33,141 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+[2026-07-30 20:42:33 +0000] [1277111] [INFO] 192.168.253.126:64124 - - [30/Jul/2026:20:42:33 +0000] "GET /api/audio/rooms/Bike Lock Room/clips/22_quake_button_4.wav 1.1" 200 142158 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:34,407 - __main__ - INFO - Moop march button latched: Moop Button 2 (2/4)
+2026-07-30 20:42:34,407 - effects_manager - INFO - Applying effect 'CorrectAnswer' to room 'Vertical Moop March'
+2026-07-30 20:42:34,407 - effects_manager - INFO - Stopping active effect in room: Vertical Moop March
+2026-07-30 20:42:34,407 - effects_manager - INFO - Effect 'CorrectAnswer' in room 'Vertical Moop March' was superseded
+[2026-07-30 20:42:34 +0000] [1277111] [INFO] 192.168.253.126:64123 - - [30/Jul/2026:20:42:34 +0000] "POST /api/run_effect 1.1" 200 90 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:34,408 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+[2026-07-30 20:42:34 +0000] [1277111] [INFO] 192.168.253.126:64123 - - [30/Jul/2026:20:42:34 +0000] "GET /api/audio/rooms/Bike Lock Room/rapid/button_responses/01_button_1_quake.wav 1.1" 200 115278 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:36,010 - __main__ - INFO - Moop march button latched: Moop Button 3 (3/4)
+2026-07-30 20:42:36,010 - effects_manager - INFO - Applying effect 'CorrectAnswer' to room 'Vertical Moop March'
+2026-07-30 20:42:36,010 - effects_manager - INFO - Stopping active effect in room: Vertical Moop March
+2026-07-30 20:42:36,010 - effects_manager - INFO - Effect 'CorrectAnswer' in room 'Vertical Moop March' was superseded
+[2026-07-30 20:42:36 +0000] [1277111] [INFO] 192.168.253.126:64124 - - [30/Jul/2026:20:42:36 +0000] "POST /api/run_effect 1.1" 200 90 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:36,012 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+[2026-07-30 20:42:36 +0000] [1277111] [INFO] 192.168.253.126:64124 - - [30/Jul/2026:20:42:36 +0000] "GET /api/audio/rooms/Bike Lock Room/clips/20_quake_button_2.wav 1.1" 200 142158 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:37,540 - __main__ - INFO - Moop march button latched: Moop Button 4 (4/4)
+2026-07-30 20:42:37,540 - __main__ - INFO - Moop march complete; scheduling room-local right-answer pool
+2026-07-30 20:42:37,540 - effects_manager - INFO - Applying effect 'CorrectAnswer' to room 'Vertical Moop March'
+2026-07-30 20:42:37,540 - effects_manager - INFO - Stopping active effect in room: Vertical Moop March
+2026-07-30 20:42:37,540 - effects_manager - INFO - Effect 'CorrectAnswer' in room 'Vertical Moop March' was superseded
+[2026-07-30 20:42:37 +0000] [1277111] [INFO] 192.168.253.126:64123 - - [30/Jul/2026:20:42:37 +0000] "POST /api/run_effect 1.1" 200 90 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:37,541 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+[2026-07-30 20:42:37 +0000] [1277111] [INFO] 192.168.253.126:64123 - - [30/Jul/2026:20:42:37 +0000] "GET /api/audio/rooms/Bike Lock Room/clips/21_quake_button_3.wav 1.1" 200 140238 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:39,564 - theme_manager - INFO - Theme resumed for room: Vertical Moop March
+[2026-07-30 20:42:39 +0000] [1277111] [INFO] 192.168.253.126:64124 - - [30/Jul/2026:20:42:39 +0000] "POST /api/run_effect 1.1" 200 90 "http://192.168.253.185:5001/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+2026-07-30 20:42:39,565 - effects_manager - INFO - Applying effect 'VerticalMoopMarch-RightAnswer' to room 'Vertical Moop March'
+2026-07-30 20:42:39,565 - theme_manager - INFO - Theme paused for room: Vertical Moop March
+2026-07-30 20:42:41,566 - theme_manager - INFO - Theme resumed for room: Vertical Moop March
+[2026-07-30 20:42:47 +0000] [1277111] [INFO] 127.0.0.1:41652 - - [30/Jul/2026:20:42:47 +0000] "GET /api/health 1.1" 200 39 "-" "Python-urllib/3.12"

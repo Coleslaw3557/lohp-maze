@@ -1,20 +1,47 @@
-# LD2410C presence radar -> the room's tripwire (packages/tripwire.yaml).
+# LD2410C presence radar -> the room's occupancy pair (packages/tripwire.yaml).
+# 13 of the 15 rooms use this. Entrance and Exit use packages/tof.yaml instead —
+# radar can't work there without foiling their shared divider, which was ruled out
+# 2026-07-30. Guy Line Climb and Vertical Moop March DID move to radar that day:
+# their boxes sit at the TOP of the room pointed straight down, so the cone covers
+# the whole shaft floor and catches someone at the bottom whether they came in
+# through the doorway or climbed down the ropes or the scaffolding.
+#
 # HARDWARE-FLASH package (like dmx_out.yaml): real S3 builds only — the host
-# platform has no UART; sim rooms keep firing trips via the API `trip` action.
+# platform has no UART; sim rooms drive the same two scripts through the
+# `trip` / `vacate` api actions instead.
 #
 #   packages:
 #     radar: !include ../packages/ld2410.yaml   # alongside tripwire.yaml
+#   substitutions:
+#     absence_timeout: 5s    # dwell rooms override — see the table below
 #
 # Wiring (room-node-wiring-guide.md): radar Tx -> D7/GPIO44 (node RX),
 # radar Rx <- D6/GPIO43 (node TX), VCC <- 5V rail, OUT unconnected.
 # Hi-Link manual: UART 256000 8N1. dmx_out.yaml owns UART2 and the logger
 # owns USB-JTAG, so this auto-assigns UART0/1 — no explicit uart_num needed.
 #
-# A moving target appearing = the doorway trip: pulse the shared tripwire
-# template instead of firing the effect directly, so debounce, the 5s
-# cooldown, first-event handling and the harness `trip` action all stay in
-# one place. has_still_target is deliberately unused for triggering — a
-# radar can hold a still-lock on furniture.
+# The two edges come off two DIFFERENT radar outputs, deliberately:
+#
+#   ENTER = has_moving_target rising edge. A person walking in is always moving,
+#     and a moving-target edge cannot be produced by furniture, so the effect
+#     that fires here can't be triggered by the room's own contents. It pulses
+#     the shared tripwire rather than POSTing directly, keeping debounce, the 5s
+#     cooldown, first-event handling and the harness `trip` action in one place.
+#
+#   LEAVE = has_target falling edge, after `absence_timeout` of nothing.
+#     has_target covers moving OR still, so someone who walks in and then stands
+#     perfectly still still counts as present — using the moving output here
+#     would declare the room empty the moment they held a pose. delayed_off adds
+#     the grace period on top of the radar's own absence delay so a momentary
+#     dropout mid-visit can't fire a spurious leave.
+#
+# Absence timeout per room (room-node-enclosure-plan.md): 5s standard,
+# 60s on dwell rooms (No Friends Monday, Cuddle Cross) where standing still and
+# staying a while IS the point and an early leave would cut the room off.
+
+substitutions:
+  absence_timeout: 5s
+
 uart:
   id: radar_uart
   tx_pin: GPIO43
@@ -28,6 +55,12 @@ binary_sensor:
   - platform: ld2410
     has_target:
       name: "${room} radar presence"
+      id: radar_presence
+      filters:
+        - delayed_off: ${absence_timeout}
+      on_release:
+        then:
+          - script.execute: room_vacated
     has_moving_target:
       name: "${room} radar moving"
       on_press:

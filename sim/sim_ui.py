@@ -21,6 +21,8 @@ import os
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 
 from quart import Quart, jsonify, send_from_directory, websocket
 from hypercorn.config import Config as HyperConfig
@@ -199,16 +201,58 @@ def _start_floor_ctl():
     logger.info(f"floor theme ctl on :{FLOOR_CTL_PORT} (bench stand-in for the Pi renderer)")
 
 
+def _post_floor_report(theme, active, events):
+    """Blocking POST, run off the loop — the bench stand-in for the Pi
+    renderer's ServerReporter (projection_renderer.py). Failures are silent
+    after the first: main.py may simply not be listening yet."""
+    body = json.dumps({'theme': theme, 'active': active, 'events': events}).encode()
+    req = urllib.request.Request(f'{SERVER_URL}/api/floor_event', data=body,
+                                 method='POST', headers={'Content-Type': 'application/json'})
+    global _report_warned
+    try:
+        with urllib.request.urlopen(req, timeout=2):
+            pass
+        _report_warned = False
+    except (urllib.error.URLError, OSError, TimeoutError) as e:
+        if not _report_warned:
+            _report_warned = True
+            logger.warning(f"floor events: server did not take the report ({e}); "
+                           f"Cuddle Cross audio/lights won't follow the floor show")
+
+
+_report_warned = False
+_REPORT_PERIOD_S = 2.0   # heartbeat, so the server can tell quiet from dead
+# the real server in this same process (main.py binds :5000)
+SERVER_URL = os.environ.get('LOHP_SERVER_URL', 'http://127.0.0.1:5000')
+
+
 async def _floor_loop():
     if _get_show() is None:
         return
     prev = time.monotonic()
+    seen = {}
+    pending = []
+    last_report = 0.0
+    sent = None
     while True:
         await asyncio.sleep(1 / 20)
         now = time.monotonic()
         show = _get_show()
         if show is not None:
             show.step(min(now - prev, 0.25))
+            # Report the show to the server exactly as the Pi renderer does, so
+            # the bench exercises the real path into floor_show_manager.py
+            # (one event cursor per engine — a theme switch must not replay the
+            # show it just left; heartbeat only while a show is actually up).
+            events, seen[show.THEME] = show.fresh_events(seen.get(show.THEME, 0))
+            pending.extend(events)
+            state = (show.THEME, show.active)
+            if (pending or state != sent
+                    or (show.active and now - last_report >= _REPORT_PERIOD_S)):
+                last_report = now
+                sent = state
+                batch, pending = pending, []
+                await asyncio.to_thread(_post_floor_report, show.THEME, show.active, batch)
         prev = now
 
 app = Quart(__name__, static_folder=WEB_DIR, static_url_path='')

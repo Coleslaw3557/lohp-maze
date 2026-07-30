@@ -11,24 +11,6 @@
 <div id="scene"></div>
 <div id="crosshair" class="hidden">+</div>
 
-<div id="enter-overlay">
-  <div class="card">
-    <h1>LoHP Maze Simulator</h1>
-    <p>Virtual walkthrough of the maze — real server, virtual DMX &amp; sensors.</p>
-    <ul class="help">
-      <li>Two-story open-faced maze — <b>Street view</b> shows the whole facade</li>
-      <li><b>M</b> — cycle Street / First-person / Overhead views &nbsp;·&nbsp; <b>N</b> — day / night</li>
-      <li><b>W A S D</b> move &nbsp;·&nbsp; <b>Shift</b> run &nbsp;·&nbsp; click canvas for mouse-look</li>
-      <li><b>E</b> / click — buttons, knock pads &amp; <b>ladders</b> (climb up in Guy Line Climb, down in Vertical Moop March)</li>
-      <li>Walk into a room sensor's detection wedge to trip it; click floor to teleport (street/overhead)</li>
-    </ul>
-    <button id="enter-btn">Enter the maze (enables audio)</button>
-    <button id="enter-muted-btn" class="secondary">Enter without audio</button>
-    <p class="fine">Audio: keep only one tab as the audio client — the server sends each
-    room's audio to every client that claimed it, so extra tabs double the sound.</p>
-  </div>
-</div>
-
 <div id="panel">
   <header>
     <h2>LoHP Sim</h2>
@@ -40,12 +22,11 @@
 
   <section>
     <div class="row">
-      <button id="btn-view" title="Cycle Street / First-person / Overhead (M)">View</button>
-      <button id="btn-respawn" title="Back to the entrance">Respawn</button>
       <button id="btn-daynight" title="Toggle day / night (N)">☀ Day</button>
       <button id="btn-towers" title="Show / hide the decorative entrance towers">Towers ✓</button>
       <button id="btn-sign" title="Show / hide the camp sign — 24 REAL DMX letter zones @161–352 (cad-items/camp-sign.svg)">Sign ✓</button>
       <button id="btn-steel" title="Show the custom hex deck steel (cad-items drawings) — cycles deck / roof / both; the ply ghosts while it's shown">Steel ✕</button>
+      <button id="btn-mount" title="Cuddle projector MOUNT dimensions — the calculated LS625X arm/enclosure position off the NE deck corner, the corner-to-corner string line and the deck surface (fab spec: wiring-guides/cuddle-projector-mount.md)">Mount ✕</button>
       <button id="btn-eye" title="Cuddle orb — Guition JC3636W518C round display under the rear node box: an Olmec stone head whose ember eyes track the room's LD2450. Toggles off / Olmec">Eye: Olmec</button>
       <button id="btn-floor" title="Cuddle floor projection theme — ONE shared engine, every tab switches together: LAVA stepping stones / JUNGLE snakes on the moss floor / TEMPLE torch-lit flagstones / WATER stepping stones / CHAMBER trap doors + quicksand">Floor: …</button>
       <button id="btn-vidbase" hidden title="EXPERIMENT — base layer under the reactive floor show: AI-generated video loop (experiments/video-base) vs the production static texture">Base: Video</button>

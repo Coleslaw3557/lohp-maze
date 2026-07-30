@@ -33,10 +33,10 @@ yellow**, pin 1 = black.
 | D1 | 2 | button contract (Photo Bomb, Monkey) / NFM lamp data / DPH+Bike button 2 / Porto piezo 2 |
 | D2 | 3 | Cuddle: LD2450 (node Tx) / DPH+Bike button 3 / Porto piezo 3 |
 | D3 | 4 | Cuddle: LD2450 (node Rx) / DPH+Bike button 4 |
-| D4 | 5 | I2C SDA — VL53L1X (ToF rooms), MCP23017 (Gate) / DPH button 5 |
-| D5 | 6 | **DMX TX (default)** / I2C SCL in ToF rooms + Gate |
-| D6 | 43 | LD2410C Rx (node Tx) |
-| D7 | 44 | LD2410C Tx (node Rx) / **DMX TX in the 4 ToF rooms** |
+| D4 | 5 | I2C SDA — TOF200C (Entrance/Exit), MCP23017 (Gate) / DPH button 5 |
+| D5 | 6 | **DMX TX (default)** / I2C SCL in Entrance/Exit + Gate |
+| D6 | 43 | LD2410C Rx (node Tx) — the 13 radar rooms |
+| D7 | 44 | LD2410C Tx (node Rx) / **DMX TX in Entrance + Exit** |
 | D8 | 7 | I2S BCLK → DAC BCK |
 | D9 | 8 | I2S LRCLK → DAC LCK |
 | D10 | 9 | I2S DOUT → DAC DIN |
@@ -44,8 +44,9 @@ yellow**, pin 1 = black.
 | 3V3 | — | Gate: MCP23017 VCC+RESET; NFM: ladder 10k top resistor |
 | GND | — | common: every module GND, XLR pin 1, DB9 pin 2 |
 
-DMX TX per room: **D5** everywhere except the 4 ToF rooms (**D7**) and Gate
-(**D0**) — `dmx-over-wifi.md`.
+DMX TX per room: **D5** in the 13 radar rooms, **D7** in Entrance + Exit
+(their I2C ToF owns D4/D5, and with no radar D6/D7 is free), **D0** at Gate
+(pads moved to the MCP23017) — `dmx-over-wifi.md`.
 
 ## MAX485 → XLR jack (every box — the DMX out)
 
@@ -80,7 +81,7 @@ back pads **FLT→L, DEMP→L, XSMT→H, FMT→L**; front pads **SCK→GND**.
 | SCK | no wire (bridged to GND on-board) |
 | 3.5mm jack | line out → Pebble speaker through the AUX hole |
 
-## LD2410C radar (11 rooms: all except the 4 ToF rooms; Cuddle has one too)
+## LD2410C radar (13 rooms — all but Entrance/Exit; Cuddle has a second, the LD2450)
 
 Hi-Link manual Table 1 pin order **Tx, Rx, OUT, GND, VCC** — wire by the board
 silk. UART 256000 baud 8N1, 3.3V logic, 5V supply (~79 mA).
@@ -93,9 +94,9 @@ silk. UART 256000 baud 8N1, 3.3V logic, 5V supply (~79 mA).
 | Rx | XIAO D6 (GPIO43) |
 | OUT | not connected (UART carries everything) |
 
-## VL53L1X time-of-flight (Entrance, Exit, Guy Line Climb, Vertical Moop March)
+## TOF200C time-of-flight (Entrance + Exit only)
 
-| VL53L1X pin | Wire to |
+| TOF200C pin | Wire to |
 |---|---|
 | VIN | 5V rail (board regulates; I2C pull-ups sit at 3.3V on-board) |
 | GND | GND |
@@ -103,7 +104,27 @@ silk. UART 256000 baud 8N1, 3.3V logic, 5V supply (~79 mA).
 | SCL | XIAO D5 (GPIO6) |
 | XSHUT, GPIO1 | not connected |
 
-These 4 rooms have no radar, so their DMX TX is **D7**.
+These 2 rooms have no radar, so their DMX TX is **D7**. They are also the only
+two boxes with an opening in the window panel — 940 nm passes neither wood nor
+plain acrylic, so they keep the 16×16 aperture (see `enclosure/README.md`).
+
+**Radar is not an option here** and this was settled 2026-07-30: it only works
+with a foil layer behind the shared Exit|Entrance divider (bare ply passes
+24 GHz and the two halves detect each other), and Tim ruled the foil out. Do not
+re-propose it. Firmware: `packages/tof.yaml`. **Part: TOF200C** (VL53L0X inside —
+ESPHome native, no external component). Gate stays 2.1 m; the module's own 2 m
+ceiling is what actually excludes the street, since past ~2 m it returns nothing
+and that reads as empty. Confirm the board is in I2C mode at 0x29 before
+flashing — some batches ship UART. The TOF050C (0.5 m) is too short to use here.
+
+## Guy Line Climb + Vertical Moop March (radar, top of the room pointed down)
+
+Full-height shafts with ropes going in all directions, which can't be arranged
+predictably. The radar mounts at the **top of the room pointed straight down**
+(Guy Line 3.70 m; VMM 1.80 m above the level-1 deck) so its cone covers the whole
+floor and it sees someone at the bottom **however they got there** — in through
+the doorway, or down the ropes or the scaffolding. Wiring is the standard radar
+recipe above: D6/D7, DMX TX on D5.
 
 ## LD2450 tracking radar (Cuddle only, second radar)
 
@@ -176,7 +197,8 @@ notch pointing away, pin 1 is the far-RIGHT leg; paint-mark pin 1 before gluing.
 
 | Room | Sensor(s) | DMX TX | Port A |
 |---|---|---|---|
-| Entrance / Exit / Guy Line Climb / Vertical Moop March | VL53L1X (D4/D5) | D7 | blank |
+| Entrance / Exit | TOF200C (D4/D5) | D7 | blank |
+| Guy Line Climb / Vertical Moop March | LD2410C, top of room pointed down | D5 | blank |
 | Gate | LD2410C + 6 pads via MCP23017 | D0 | pins 3–8 |
 | Deep Playa Handshake | LD2410C + 5 buttons D0–D4 | D5 | pins 3–7 |
 | Bike Lock | LD2410C + 4 buttons D0–D3 | D5 | pins 3–6 |
@@ -200,7 +222,7 @@ Draw on the 5V pin: radar + DAC + MAX485 ≈ 135 mA — within the pin budget.
 - PCM5102A GY board: board schematic (macsbug 2021-02-19) — header
   SCK/BCK/DIN/LCK/GND/VIN, inputs 5V-tolerant, VIN through on-board 3.3V
   regulator, FLT/DEMP/XSMT/FMT tri-pads + SCK-to-GND bridge.
-- VL53L1X breakout: VIN/GND/SDA/SCL/XSHUT/GPIO1 (interrupt) — generic board,
+- TOF200C breakout (VL53L0X): VIN/GND/SDA/SCL/XSHUT/GPIO1 (interrupt) — generic board,
   confirm silk on the received units.
 - SN74AHCT125: TI datasheet (quad 3-state buffer; 1OE̅/1A/1Y = pins 1/2/3,
   GND = 7, VCC = 14).

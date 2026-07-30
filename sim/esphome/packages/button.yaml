@@ -6,6 +6,7 @@
 #
 # Include from a room yaml alongside logic.yaml and set:
 #   button_effect    effect fired on press (required)
+#   trigger_name     physical trigger name sent to the server; defaults to "Button"
 #   button_cooldown  lockout after a press; default 8s covers the longest
 #                    button-driven sequence (PhotoBomb-Shot runs 6.5s)
 #
@@ -14,6 +15,7 @@
 # packages/button_gpio_c3.example.yaml.
 substitutions:
   button_cooldown: 8s
+  trigger_name: "Button"
 
 api:
   actions:
@@ -55,4 +57,5 @@ script:
           json:
             room: ${room}
             effect_name: ${button_effect}
+            trigger_name: ${trigger_name}
       - delay: ${button_cooldown}

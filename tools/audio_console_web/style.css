@@ -1,0 +1,132 @@
+/* Palette matches the sim's panel (sim/web/style.css) so the two tools read as one system. */
+* { box-sizing: border-box; }
+body { margin: 0; background: #060609; color: #cfd2dc;
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+code { color: #9fb4ff; font-size: 12px; }
+h1 { margin: 0; font-size: 16px; color: #fff; }
+
+/* --- header --- */
+#top { position: sticky; top: 0; z-index: 5; background: rgba(13,14,20,0.97);
+  border-bottom: 1px solid #23253a; }
+#top .bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; flex-wrap: wrap; }
+#top .sub { color: #7a7f92; }
+#top .spacer { flex: 1; }
+#toast { padding: 0 16px; height: 0; overflow: hidden; transition: height .12s; }
+#toast.show { height: 26px; padding-bottom: 6px; }
+#toast .ok { color: #7fd6a0; }
+#toast .err { color: #ff8296; }
+#toast .info { color: #9aa3c0; }
+
+main { padding: 14px 16px 60px; max-width: 1100px; }
+
+/* --- controls --- */
+button, select, input[type=text], input[type=search], input[type=number] {
+  background: #1d2030; color: #dfe2ee; border: 1px solid #32364e; border-radius: 6px;
+  padding: 5px 9px; font: inherit; }
+button { cursor: pointer; }
+button:hover { background: #262a40; }
+button:active { transform: translateY(1px); }
+button.secondary { background: transparent; }
+button.tiny { padding: 2px 7px; font-size: 11px; }
+button.play { width: 30px; text-align: center; color: #9fd2ff; }
+button.play.on { background: #2c4a86; border-color: #4a6cb8; color: #fff; }
+button.danger:hover { background: #3d1420; border-color: #7a2437; color: #ff8296; }
+.chk { color: #8b90a8; cursor: pointer; user-select: none; }
+.fine { color: #7a7f92; font-size: 12px; }
+.footnote { margin-top: 22px; border-top: 1px solid #1d1f30; padding-top: 12px; }
+
+.dot { font-size: 10px; font-weight: 600; letter-spacing: .05em; padding: 3px 8px;
+  border-radius: 9px; background: #3a3d55; color: #b9bdd0; }
+.dot.ok { background: #12351f; color: #55e08a; }
+.dot.err { background: #3d1420; color: #ff7285; }
+.dot.warn { background: #3a2f10; color: #ffc94d; }
+
+/* --- library inbox (drop anywhere on the page lands here) --- */
+#inbox { margin-bottom: 14px; }
+#dropzone { border: 2px dashed #32364e; border-radius: 10px; background: #0d0e15;
+  padding: 16px; text-align: center; cursor: pointer; color: #7a7f92; }
+#dropzone b { display: block; color: #dfe2ee; font-size: 14px; margin-bottom: 2px; }
+#dropzone:hover { border-color: #4a6cb8; background: #121525; color: #9aa3c0; }
+#dropzone:focus-visible { outline: 2px solid #4a6cb8; outline-offset: 2px; }
+#dropzone.drop, body.dragging #dropzone { border-color: #55e08a; background: #101c16;
+  color: #7fd6a0; }
+#inbox-list ul { list-style: none; margin: 4px 0 0; padding: 0; }
+#inbox-list li { display: flex; align-items: center; gap: 8px; padding: 3px 0;
+  border-top: 1px solid #16182a; }
+#inbox-list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+#inbox-list .pools { color: #7fd6a0; font-size: 11px; width: 230px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+#inbox-list .pools.none { color: #6e7386; }
+#inbox-list select { width: 140px; }
+
+/* which-action chooser, shown when files land on a multi-action room card */
+.ask { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 8px 12px; background: #16223a; border-bottom: 1px solid #23253a; }
+
+/* --- room cards --- */
+.room { border: 1px solid #23253a; border-radius: 10px; background: #101119;
+  margin-bottom: 12px; overflow: hidden; padding: 0; }
+.room > summary { margin: 0; padding: 8px 12px; font-size: 14px; color: #fff;
+  background: #161826; border-bottom: 1px solid #23253a; display: flex; gap: 8px;
+  align-items: center; cursor: pointer; }
+.room > summary .count { color: #7a7f92; font-size: 11px; font-weight: 400; }
+.room:not([open]) > summary { border-bottom: none; }
+.room.empty > summary { color: #8b90a8; }
+.room .none { padding: 10px 12px; color: #7a7f92; font-size: 12px; }
+.room.global { background: #11151d; border-color: #2d3545; }
+.room.global > summary { background: #17202c; }
+.game-key { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 12px; background: #111827; border-bottom: 1px solid #23253a; }
+.game-title { color: #8b90a8; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; }
+.answer-row { display: flex; align-items: center; gap: 4px; }
+.answer-row .q { color: #dfe2ee; font-weight: 600; margin-right: 2px; }
+.answer-row button.selected { background: #12351f; border-color: #2c8f52; color: #7fd6a0; }
+
+/* --- one action's pool --- */
+.pool { padding: 9px 12px; border-top: 1px solid #1d1f30; }
+.room .pool:first-of-type { border-top: none; }
+.pool > .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pool .trig { color: #cfd2dc; }
+.pool .eff { color: #9fb4ff; font-weight: 600; }
+.pool .head .spacer { flex: 1; }
+.pool .vol { width: 62px; }
+.pool .comment { color: #6e7386; font-size: 11px; margin: 4px 0 0; }
+.pool.silent { background: #17131b; }
+
+.files { list-style: none; margin: 6px 0 0; padding: 0; }
+.files li { display: flex; align-items: center; gap: 8px; padding: 3px 0;
+  border-top: 1px solid #16182a; }
+.files li:first-child { border-top: none; }
+.files .name, #library .name { flex: 1; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.files .dir { color: #5e6377; }
+.files .dur { color: #8b90a8; font-variant-numeric: tabular-nums; width: 46px;
+  text-align: right; }
+.files .w { width: 52px; padding: 2px 6px; }
+.files li.missing .name { color: #ff8296; text-decoration: line-through; }
+.empty-note { color: #ffc94d; font-size: 12px; padding: 6px 0 2px; }
+
+.pool > .foot { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; align-items: center; }
+.pool > .foot select { max-width: 320px; }
+.pool.drop, .room.drop, details.drop { outline: 2px dashed #55e08a; outline-offset: -3px; }
+body.dragging .pool { outline: 1px dashed #2c3450; outline-offset: -3px; }
+
+/* --- library --- */
+details:not(.room) { border: 1px solid #23253a; border-radius: 10px; background: #101119;
+  margin-bottom: 12px; padding: 0 12px; }
+details:not(.room) > summary { cursor: pointer; padding: 9px 0; color: #8b90a8; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .08em; }
+details:not(.room)[open] > summary { border-bottom: 1px solid #1d1f30; margin-bottom: 8px; }
+.lib-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding-bottom: 8px; }
+.lib-tools input[type=search], .lib-tools input[type=text] { min-width: 220px; }
+#library { max-height: 60vh; overflow-y: auto; padding-bottom: 10px; }
+#library li { display: flex; align-items: center; gap: 8px; padding: 3px 0;
+  border-top: 1px solid #16182a; }
+#library ul { list-style: none; margin: 0; padding: 0; }
+#library .pools { color: #7fd6a0; font-size: 11px; width: 230px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+#library .pools.none { color: #6e7386; }
+#library select { width: 140px; }

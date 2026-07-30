@@ -63,8 +63,8 @@ only gives you sluggish PIR blobs — skip it.
 
 | Use case | Primary | Fallback |
 |---|---|---|
-| Doorway crossing | **VL53L1X ToF (~$5–8)**: one-sided "virtual tripwire" on the jamb — beam across at hip height, trigger when range < doorway width. Invisible, eye-safe, nothing to align, I2C straight into the node. Recess it behind a small aperture and threshold generously (e.g. <60cm across a 90cm doorway) so dust-shortened readings don't false-trigger. | IR break-beam pair — Adafruit #2168-style ($6) for narrow dark doorways; industrial M18 through-beam pair (E3F-5DN1, ~$15 with brackets, needs a $1.50 5V→12V boost) where you want modulated, never-think-about-it-again certainty over longer spans. LED cone beam = far more alignment-tolerant than a laser. |
-| Room presence | **HLK-LD2410C mmWave radar (~$4)**: sees moving *and stationary* people through plastic, so it lives **fully sealed inside the dust-proof box**. Dark-immune, zero alignment. Native ESPHome support. Tune max-gate distance so it doesn't see through thin walls into the next room. | AM312 PIR (~$1.50) where "someone moved, roughly" is enough — degraded on hot afternoons and slow to re-trigger, fine on cool nights. |
+| Doorway crossing (**Entrance/Exit only** — every other room uses radar presence) | **TOF200C ToF (VL53L0X, on hand)**: one-sided "virtual tripwire" on the jamb — beam across at hip height, trigger when range < doorway width. Invisible, eye-safe, nothing to align, I2C straight into the node. Recess it behind a small aperture and threshold generously (e.g. <60cm across a 90cm doorway) so dust-shortened readings don't false-trigger. | IR break-beam pair — Adafruit #2168-style ($6) for narrow dark doorways; industrial M18 through-beam pair (E3F-5DN1, ~$15 with brackets, needs a $1.50 5V→12V boost) where you want modulated, never-think-about-it-again certainty over longer spans. LED cone beam = far more alignment-tolerant than a laser. |
+| Room presence (**13 of 15 rooms**) | **HLK-LD2410C mmWave radar (~$4)**: sees moving *and stationary* people through plastic, so it lives **fully sealed inside the dust-proof box**. Dark-immune, zero alignment. Native ESPHome support. Tune max-gate distance so it doesn't see through thin walls into the next room. | AM312 PIR (~$1.50) where "someone moved, roughly" is enough — degraded on hot afternoons and slow to re-trigger, fine on cool nights. |
 | Buttons / knock stations | Arcade buttons straight to node GPIOs (internal pull-ups + ESPHome debounce). **Implemented**: `sim/esphome/packages/button.yaml` + `button_gpio_c3.example.yaml` (GPIO3→GND) drive the Photo Bomb shutter button and the Monkey puzzle completion switch. Piezo discs to a node ADC pin with a 1MΩ bleed resistor, or a $1 LM393 knock module to a GPIO. | — |
 
 The Monkey puzzle switch is just a button in disguise: a lever microswitch under the
@@ -148,8 +148,8 @@ One firmware family; a room's YAML just picks its sensor package.
 |---|---|
 | 10 wing bays (Monkey, Temple, NFM, Cop Dodge, Gate, Bike Lock, Deep Playa, Photo Bomb, Porto, Sparkle) | LD2410C radar |
 | Cuddle Cross | LD2410C (+ LD2450 later, projection subsystem) — no wall buttons: the orb IS the room's control surface (2026-07-23) |
-| Entrance / Exit | VL53L1X ToF (through the START/FINISH arch) |
-| Guy Line Climb / Vertical Moop March | VL53L1X ToF (across the shaft arch) |
+| Entrance / Exit | **TOF200C** ToF (VL53L0X inside, ESPHome-native), 2.1 m gate through the START/FINISH arch. Radar rejected 2026-07-30 — needs the shared divider foiled and that was ruled out |
+| Guy Line Climb / Vertical Moop March | LD2410C radar at the **top of the room pointed straight down** — sees someone at the bottom whether they came through the doorway or down the ropes/scaffolding (2026-07-30) |
 | Monkey (add-on) | puzzle microswitch, 2-wire to the box |
 | Photo Bomb (add-on) | shutter arcade button, 2-wire to the box |
 | Porto (add-on) | 3 piezo discs + ADC front-ends |
@@ -159,8 +159,8 @@ One firmware family; a room's YAML just picks its sensor package.
 | Item | Qty | Ext |
 |---|---|---|
 | XIAO ESP32-S3 (15 rooms + 3 flashed spares) | 18 | $135 |
-| LD2410C mmWave (presence rooms) | 10 | $45 |
-| VL53L1X ToF (doorway tripwires) | 6 | $39 |
+| LD2410C mmWave (13 rooms + spares) | 16 | $72 |
+| TOF200C ToF (Entrance/Exit — **on hand**, with TOF050C spares too short to use) | 2 | $0 |
 | M18 through-beam pairs (problem doorways) | 2 | $31 |
 | AM312 PIR (spares/backup) | 5 | $7 |
 | PCM5102A I2S DAC 2-packs (amzn B0DNW32Y46; 15 rooms + 1 spare) | 8 | $71 |
@@ -221,7 +221,7 @@ Adds to the BOM: 3 × USB sound dongles (~$30), replaces two Pi power feeds.
 
 ## Migration plan
 
-1. Bench-build one node + VL53L1X and one node + LD2410C; point them at the dev server and watch
+1. Bench-build one node + TOF200C and one node + LD2410C; point them at the dev server and watch
    `/api/run_effect` fire. The server can't tell an ESP32 trigger from a Pi trigger.
 2. Build the fleet: the shared packages (`sim/esphome/packages/`) + one substitution file per room, checked in here. Label each
    enclosure with node name = room = static IP suffix. Flash 3 spares.

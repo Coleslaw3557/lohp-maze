@@ -1,0 +1,15 @@
+outcome,file,suggested_weight,notes
+victory,sensor_responses/victory/01_satisfying_unlatch.wav,3,Subtle mechanical success
+victory,sensor_responses/victory/02_tf2_well_done_mate.wav,3,Short sampled-game success
+victory,sensor_responses/victory/03_zelda_chime_door_opens.wav,3,Nonverbal recognizable success
+victory,sensor_responses/victory/04_mario_64_star_get.wav,3,Recognizable Mario success
+victory,sensor_responses/victory/05_sonic_checkpoint.wav,3,Very short Sonic success
+occupied,sensor_responses/occupied/01_hl2_hold_it.wav,5,Primary fast denial
+occupied,sensor_responses/occupied/02_papers_please_denied.wav,3,Nonverbal processing denial
+occupied,sensor_responses/occupied/03_mgs_alert_denied.wav,3,Recognizable alert denial
+occupied,sensor_responses/occupied/04_portal_nice_job_hero.wav,2,Short sampled comedy response
+occupied,sensor_responses/occupied/05_starfox_cant_let_you_do_that.wav,3,Direct sampled denial
+occupied,sensor_responses/occupied/06_tf2_where_learn_to_push.wav,3,Short sampled insult
+occupied,sensor_responses/occupied/07_duke_warning_door_rattle.wav,2,Aggressive sampled warning
+occupied,sensor_responses/occupied/09_no_response_silence.wav,2,Intentional uncertainty
+occupied,sensor_responses/occupied/10_locked_handle_jiggle.wav,3,Nonverbal locked response

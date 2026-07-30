@@ -1,0 +1,102 @@
+# Time-of-flight range gate -> the room's trigger input (packages/tripwire.yaml).
+# Entrance and Exit only. Those two reverted to ToF on 2026-07-30 (Tim: the foil
+# layer behind the shared divider is not happening, and without it a radar in each
+# hex half detects through the plywood into the other one). Every other room is
+# LD2410C radar — see packages/ld2410.yaml.
+#
+# HARDWARE-FLASH package (like dmx_out.yaml): real S3 builds only. Sim rooms drive
+# the same two scripts through the `trip` / `vacate` api actions instead.
+#
+#   packages:
+#     tof: !include ../packages/tof.yaml       # alongside tripwire.yaml
+#   substitutions:
+#     tof_trigger_m: "2.1"                     # closer than this = someone there
+#
+# ### The part: TOF200C (VL53L0X), on hand
+#
+# Tim has TOF050C and TOF200C modules — both VL53L0X-based, which ESPHome drives
+# natively, so no external component is needed. (TOF400C is the VL53L1X 4 m part;
+# he does not have those. The plan's old VL53L1X line is dead.)
+#
+# **Use the TOF200C. The TOF050C tops out at 0.5 m — too short from the back leg.**
+#
+# Gate stays at **2.1 m** (Tim's call 2026-07-30: 2 m is close enough). The module
+# reaches 2 m and the arch is ~1.9 m out, so in practice the sensor's own range
+# ceiling does the gating rather than the threshold: anything past ~2 m returns
+# nothing, and this package reads no-return as an empty room. A person at the arch
+# is inside the module's range; the street crowd beyond it is not. Worth knowing
+# the margin is thin — 1.9 m of a 2 m rating, and ambient IR in daylight and dust
+# shortens effective range. If these two ever prove flaky at the arch, drop
+# `tof_trigger_m` to 1.5 and the trigger becomes "inside the room, past the arch",
+# which sits well clear of the ceiling.
+#
+# **Check on the physical board before flashing:** these modules ship in either
+# I2C or UART mode depending on batch. This package assumes I2C, raw VL53L0X,
+# address 0x29 — confirm with an i2cscan. A UART-mode board needs a different
+# front-end entirely (its onboard MCU does not speak the VL53L0X register map).
+#
+# Wiring (room-node-wiring-guide.md): VIN <- 5V rail, SDA -> D4/GPIO5,
+# SCL -> D5/GPIO6, XSHUT and GPIO1 unconnected. Because I2C takes D5, these two
+# rooms put DMX TX on **D7/GPIO44** — free here, since they carry no radar.
+# These are also the only two boxes with an opening: 940 nm does not pass wood or
+# plain acrylic, so the window panel keeps its 16x16 aperture.
+#
+# ### How this differs from radar
+#
+# A ToF returns one distance for whatever is nearest in a narrow (~27 deg) cone,
+# so this is a one-sided range gate: closer than `tof_trigger_m` = occupied, no
+# return at all = empty (the beam passes through the arch and finds nothing inside
+# the gate, so the street crowd beyond it never counts).
+#
+# That means "beam clear" is not the same as "room vacated" — a visitor who
+# walks through the arch and stands off-axis reads as gone even though the room's
+# entry routine should keep running. Unlike packages/ld2410.yaml, this package
+# deliberately does NOT execute room_vacated on release. ToF rooms are
+# trigger-only: once the beam trips, the server lets the effect finish normally.
+# Do not copy this package into a room where true occupancy matters; radar
+# reports presence over a whole wedge and is the right sensor there.
+
+substitutions:
+  tof_trigger_m: "2.1"
+  # How long the beam must be clear before it can fire again. This is a re-arm
+  # delay only; it does not cause /api/room_vacated.
+  tof_absence_timeout: 5s
+
+i2c:
+  id: tof_i2c
+  sda: GPIO5         # XIAO D4
+  scl: GPIO6         # XIAO D5
+  frequency: 100kHz  # board pull-ups unverified; ranging needs no speed
+
+sensor:
+  - platform: vl53l0x   # TOF200C — native, no external component
+    id: tof_range
+    name: "${room} ToF range"
+    i2c_id: tof_i2c
+    address: 0x29
+    long_range: true
+    update_interval: 200ms
+
+binary_sensor:
+  - platform: template
+    id: tof_present
+    name: "${room} ToF presence"
+    # NaN means no return inside the sensor's reach. For a one-sided gate that is
+    # an EMPTY room, not a dropped reading — treating it as "hold last state"
+    # would latch the room occupied forever the moment someone walked out of the
+    # beam. A genuine momentary dropout while someone IS there is covered by
+    # delayed_off below.
+    lambda: |-
+      if (isnan(id(tof_range).state)) return false;
+      return id(tof_range).state < ${tof_trigger_m};
+    filters:
+      - delayed_off: ${tof_absence_timeout}
+    on_press:
+      then:
+        - binary_sensor.template.publish:
+            id: tripwire
+            state: ON
+        - delay: 250ms
+        - binary_sensor.template.publish:
+            id: tripwire
+            state: OFF

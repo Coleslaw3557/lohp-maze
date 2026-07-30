@@ -35,7 +35,7 @@ offset before the next burn. Acrylic 3 nominal, velcro 20mm one-wrap.
 |---|---|
 | XIAO ESP32-S3 (21.46 × 17.78, USB-C on the short END +2mm) | VHB to the floor, USB end butted to the right wall (long axis into the box) so the port noses into the cut USB slot; footprint centered on the front floor-mortise tab — the tab seams at the joint line the board up |
 | PCM5102A DAC (31.93 × 17.23, jack on a LONG edge +2.44mm, barrel ~10mm off board center) | screwed to the floor wherever it lands; the long jack edge butted to the right wall (board reaches only 17.23 into the box) so its **own barrel fills the AUX hole** — no separate panel jack; barrel-in-hole is the datum, hole cut at `dac_cy + dac_jack_off` (10), board mounted **jack-end toward the back** |
-| LD2410C (22.14 × 16) / VL53L1X / Cuddle's 2450 + 2410C | **VHB'd to the acrylic window panel's inner face** at the footprint etched on the panel, sensor side out the wall aperture — the acrylic is the mounting plate (tape at the board edges, clear of the antennas; radar reads through the acrylic, ToF boards sit over their cut 16×16 hole) |
+| LD2410C (22.14 × 16) / TOF200C / Cuddle's 2450 + 2410C | **VHB'd to the acrylic window panel's inner face** at the footprint etched on the panel, sensor side out the wall aperture — the acrylic is the mounting plate (tape at the board edges, clear of the antennas; radar reads through the acrylic, the two ToF boards sit over their cut 16×16 hole) |
 | MAX485 module (49.22 × 14.05 — the received 07-23 batch is the screw-terminal variant: A/B under a 2-pos screw terminal ON TOP above the VCC/B/A/GND header end, RO/RE/DE/DI at the far end, both headers factory-soldered PINS DOWN) | headers pulled (wick) or flush-clipped at the bench — there's no flat belly until they're gone — then VHB'd at the etched **RS485 floor footprint**: the lane sits 2mm behind the DB9 zone, terminal end at the A/B mark, 7mm back from the jack's ~19mm rear reach (07-24 dry-fit rearrange); the jack's pin-2/pin-3 cup pigtails land under the A/B screws, 5V/GND solder into the terminal-end holes and dress back along the wall, DI + the DE/RE tie leave the far end toward the XIAO |
 | 74AHCT125 (NFM only; bare PDIP-14, ~21 × 10 over the legs) | **dead-bug at the etched AHCT zone** (back-center of the floor): glued on its back legs-up, wired per `../wiring-guides/room-games-plan.md`; the other 14 rooms leave the zone empty |
 
@@ -79,9 +79,10 @@ on the midline** (corner screws would leave <1mm acrylic web → cracks).
 
 - **Radar rooms** (LD2410C / LD2450): solid plain acrylic — 24 GHz passes
   through. Nothing metallic on or behind it.
-- **ToF rooms** (Entrance / Exit / Guy Line / VMM): 940 nm does NOT pass
-  plain acrylic — uncomment the marked aperture in `panel_window()` and
-  re-export, or use IR-pass acrylic.
+- **ToF rooms** (Entrance / Exit **only** as of 2026-07-30 — Guy Line and VMM
+  became radar): 940 nm does NOT pass plain acrylic. Uncomment the marked
+  aperture in `panel_window()` and re-export, or use IR-pass acrylic. These two
+  are the fleet's only openings.
 - **Cuddle**: the 2450 + 2410C pair is 66.3mm wide — wider than the
   standard aperture. Cut the `-cuddle` files instead: 68-wide aperture,
   82 × 32 window, both footprints etched side by side.
@@ -188,8 +189,8 @@ The red marks are:
 - right wall: the USB + AUX labels (slot and hole are cuts)
 - back: a VELCRO label between the two strap slots
 - window: the sensor footprint (radar outline, or the pair on the cuddle
-  variant) + the 16×16 ToF aperture outline (cut it through for the 4
-  ToF rooms; radar rooms just leave it marked) — sensors VHB to this
+  variant) + the 16×16 ToF aperture outline (cut it through for Entrance and
+  Exit; the 13 radar rooms just leave it marked) — sensors VHB to this
   panel's inner face
 
 No screw-position marks anywhere: parts are their own jigs (drive screws

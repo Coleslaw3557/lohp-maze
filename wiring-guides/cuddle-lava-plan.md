@@ -120,6 +120,37 @@ positions in world meters; output is an RGB frame plus a JSON-able state dict.
    flip the service to `--source esphome`, tune stone count/cooldowns on the
    real deck.
 
+## Sound and room light (2026-07-30)
+
+The projection no longer plays to a silent room. `floor_show_manager.py` on the
+server takes reports from whichever renderer is driving (`POST /api/floor_event`
+— `ServerReporter` in `projection_renderer.py`, `_floor_loop` in the sim) and
+gives Cuddle Cross:
+
+| | pool | fired by |
+|---|---|---|
+| bed | `Cuddle-Lava-Bed` ← `uploads/Lava/lava.wav` | looping the whole time the show is up (`active`), on the ambience channel — effect audio mixes over it, `audio_stop` never cuts it |
+| accent | `Cuddle-Lava-Hit` ← lava1/2/3 | `sink` p 0.75, `rise` p 0.35, `pop` p 0.05 — 11 s cooldown (24 s for a bubble) |
+| accent | `Cuddle-Lava-Breach` ← lava4/5/2 | `monster_swim` p 0.9, `monster_breach` p 1.0 — 3 s cooldown, so Kukulkan's approach and his breach both land |
+
+At most one accent per report, highest-ranked event first; each is a real room
+effect, so it brings its own ember flare on the two pars (`Cuddle-Lava-Hit` 2.6 s,
+`Cuddle-Lava-Breach` 5.4 s, both capped at 75 with zero white).
+
+**Brightness.** The pars are the room's peripheral glow, never a wash. Every
+Cuddle effect caps at total 75 (`effects/cuddle_puddle.py` PEAK), and the
+always-on maze-theme wash — which runs to 255 in an ordinary room — is squeezed
+to 44 for LAVA and dragged 75 % of the way to ember orange
+(`theme_manager.ROOM_LIGHT_PROFILES`, retuned per theme by
+`effects_manager.set_floor_theme`). White is forced to 0 either way. Measure on
+the deck before raising anything: the projector is the room's light.
+
+Open: the 8.2 s bed loops with a small level step at the seam (head RMS 0.067 vs
+tail 0.103). Inaudible under a rumble at 0.45, but if it pulses on the deck,
+crossfade a longer master rather than turning it up. A node-box speaker (once
+Cuddle gets one) cannot loop a bed — ESPHome's media player has no repeat — so
+the bed stays on the Pi/unit path for now.
+
 ## Tuning knobs (all constants at the top of projection_engine.py)
 
 approach cone dot ≥ 0.68, approach window 0.35–1.7 m, dwell 0.7 s,

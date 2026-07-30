@@ -3,6 +3,8 @@ substitutions:
   node_name: lohp-node-porto
   room: "Porto Room"
   effect: "PortoStandBy"
+  entry_hook: "id(porto_randomize)->execute();"
+  leave_hook: "id(porto_entry_seeded) = false; id(porto_attempts) = 0; id(porto_solved) = false;"
   server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
   api_port: "6066"
   host_mac: "06:35:69:00:00:06"
@@ -10,9 +12,12 @@ substitutions:
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
+  game: !include ../packages/game_porto.yaml
   platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
 
 # FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
 #   substitutions:      dmx_tx_pin: "6"   # D5, radar room
-#   packages:           dmx: !include ../packages/dmx_out.yaml
+#   packages:           radar: !include ../packages/ld2410.yaml
+#                       game_hw: !include ../packages/game_porto_hw.yaml
+#                       dmx: !include ../packages/dmx_out.yaml
 #   external_components: [{source: {type: local, path: ../components}}]

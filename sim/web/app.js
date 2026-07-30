@@ -20,9 +20,6 @@ const SIM = `http://${HOST}:${location.port || 5001}`;
 let API = `http://${HOST}:5000`;
 let AUDIO_WS = `ws://${HOST}:8765`;
 
-const MODES = ['street', 'first', 'top'];
-const MODE_LABEL = { street: 'Street view', first: 'First-person', top: 'Overhead plan' };
-
 // first-person eye line: our visitors stand ≈5'11" (1.80 m), eyes at 1.69 m
 const EYE = 1.69;
 
@@ -49,7 +46,7 @@ const S = {
   prev2: { x: 11.7, z: 4.5 },
   yaw: 0, pitch: 0,
   pointerLocked: false,
-  audio: { on: false, ws: null, ctx: null, rooms: new Map(), music: null, buffers: new Map() },
+  audio: { on: false, ws: null, ctx: null, rooms: new Map(), beds: new Map(), music: null, buffers: new Map() },
   dmxWs: null,
   teleporting: false,
 };
@@ -434,6 +431,31 @@ function carve(a0, a1, gaps) {
 
 function roomLevels(r) { return r.floor === 'both' ? [0, 1] : [r.floor || 0]; }
 
+function buildAudioPowerLayer(L) {
+  const cfg = L.audio_power;
+  if (!cfg || cfg.enabled === false) return;
+  const power = new THREE.Group();
+  power.name = 'backside audio + day power';
+  levelGroups[2].add(power);
+
+  const batteryMat = new THREE.MeshStandardMaterial({ color: 0x26352d, roughness: 0.72, metalness: 0.08 });
+  const chargerMat = new THREE.MeshStandardMaterial({ color: 0x222936, roughness: 0.62, metalness: 0.16 });
+  if (cfg.battery) {
+    const d = cfg.battery.dim_m || [0.34, 0.19, 0.22];
+    const [x, z] = cfg.battery.pos;
+    const b = new THREE.Mesh(new THREE.BoxGeometry(d[0], d[2], d[1]), batteryMat);
+    b.position.set(x, d[2] / 2, z);
+    power.add(b);
+  }
+  if (cfg.charger) {
+    const d = cfg.charger.dim_m || [0.18, 0.06, 0.08];
+    const [x, z] = cfg.charger.pos;
+    const c = new THREE.Mesh(new THREE.BoxGeometry(d[0], d[2], d[1]), chargerMat);
+    c.position.set(x, d[2] / 2, z);
+    power.add(c);
+  }
+}
+
 function buildMaze(cfg) {
   const L = cfg.layout;
   const LH = S.levelHeight = L.level_height || 3.2;
@@ -660,9 +682,6 @@ function buildMaze(cfg) {
     ladder.add(hit);
     S.interactables.push(hit);
     S.ladders.push({ room: lad.room, x: lx, z: lz });
-    const lbl = makeLabel(lad.label || 'Climb (E)', 0.32);
-    lbl.position.set(lx, S.levelHeight + 1.25, lz);
-    ladder.add(lbl);
     levelGroups[2].add(ladder);
   }
 
@@ -681,18 +700,18 @@ function buildMaze(cfg) {
       new THREE.MeshBasicMaterial({ color: 0x33ff66 }));
     led.position.set(rx + 0.1, yBase + 1.2, rz - 0.085); // faces out the back
     grp(lv).add(led);
-    const lbl = makeLabel(L.server_rack.label || 'SERVER', 0.3);
-    lbl.position.set(rx, yBase + 1.48, rz);
-    grp(lv).add(lbl);
   }
 
   // per-room node enclosures — the wooden sensor boxes from
-  // wiring-guides/room-node-enclosure-plan.md (XIAO C3 + the room's radar or
-  // ToF + power), hose-clamped to a frame member: wing bays on the ENTRY-side
+  // wiring-guides/room-node-enclosure-plan.md (XIAO C3 + the room's ranging
+  // sensor + power), hose-clamped to a frame member: wing bays on the ENTRY-side
   // front leg at 1.55 m with the radar window (local +z) aimed at the
-  // diagonally-opposite back corner; ToF rooms' windows face their aim. The
-  // room's sensor wedge/boresight is drawn by buildSensors from the matching
-  // `sensors` entry; pos/aim here come from the per-room "enclosure" entries.
+  // diagonally-opposite back corner. The two shafts carry `tilt_deg: -90` — box
+  // at the TOP of the room with the window facing straight down. Radar boxes are
+  // sealed (mmWave passes plywood); Entrance/Exit are the only two with an
+  // aperture, because 940 nm doesn't. The room's sensor
+  // wedge/boresight is drawn by buildSensors from the matching `sensors` entry;
+  // pos/aim here come from the per-room "enclosure" entries.
   for (const r of Object.values(L.rooms)) {
     const enc = r.enclosure;
     if (!enc) continue;
@@ -700,6 +719,7 @@ function buildMaze(cfg) {
     const eg = new THREE.Group();
     eg.position.set(enc.pos[0], lv * LH + (enc.h || 1.55), enc.pos[1]);
     eg.rotation.y = (enc.yaw_deg || 0) * Math.PI / 180;
+    eg.rotation.x = -(enc.tilt_deg || 0) * Math.PI / 180;
     const box = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.22, 0.10), matPly);
     eg.add(box);
     // thinned window panel the radar looks through
@@ -713,6 +733,8 @@ function buildMaze(cfg) {
     eg.add(led);
     grp(lv).add(eg);
   }
+
+  buildAudioPowerLayer(L);
 }
 
 // ---------------------------------------------------------------- hex center
@@ -852,9 +874,15 @@ function buildHexCenter(L) {
         b[0] - ux * EPS, b[1] - uz * EPS, lv * LH, matFramePaint[(k + lv) % 2]));
     }
   }
-  // hose-clamp blocks around each corner's leg pair
+  // hose-clamp blocks around each corner's leg pair — except the TOP block
+  // at the projection rig's corner: the rig's arm bracket is the hardware
+  // there, and the decorative block (33 mm radius on the idealized vertex;
+  // real legs stand in pairs OUTSIDE the V point) would poke through the
+  // drawn projector body, which hangs with its rear face 15 mm off the legs
+  const PJ = ((L.projection || {}).projector || {}).pos;
   for (const [vx, vz] of V) {
     for (const cy of [0.35, 1.05, 1.7, LH + 0.35, LH + 1.05, LH + 1.7]) {
+      if (PJ && cy > LH + 1.6 && Math.hypot(vx - PJ[0], vz - PJ[1]) < 0.25) continue;
       const clamp = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.06), matGalv);
       clamp.position.set(vx, cy, vz);
       grp(cy > LH ? 1 : 0).add(clamp);
@@ -1682,17 +1710,6 @@ function buildSensors(cfg) {
   const placeholders = new Set((cfg.layout.placeholder_effects || {}).rooms || []);
   const triggerList = $('trigger-list');
 
-  // labels are wider than the button spacing at stations (hex 4-button row,
-  // Porto knock pads) — alternate clustered labels between two rows so the
-  // words don't overlap
-  const labelSpots = [];
-  const labelRow = (x, y, z) => {
-    const n = labelSpots.filter(p => Math.abs(p.x - x) < 1.3
-      && Math.abs(p.y - y) < 0.5 && Math.abs(p.z - z) < 0.5).length;
-    labelSpots.push({ x, y, z });
-    return (n % 2) * 0.26;
-  };
-
   for (const trig of cfg.triggers) {
     const geo = byName[trig.name] || {};
     // geo.level 0 is a real value — the || fallback once swallowed it and the
@@ -1702,6 +1719,10 @@ function buildSensors(cfg) {
     const sensor = {
       name: trig.name, kind: geo.kind || trig.type, room: trig.room, level,
       action: trig.action, type: trig.type, game: trig.game || null,
+      // The other half of a radar presence trigger's occupancy pair: fired when
+      // the walker leaves the detection zone (triggers.json leave_action). ToF
+      // zones are trigger-only, so they intentionally have no leave action.
+      leaveAction: trig.leave_action || null, occupied: false,
       lastFired: -1e9, meshes: [], seg: geo.seg || null,
     };
 
@@ -1723,39 +1744,47 @@ function buildSensors(cfg) {
       }
       sensor.meshes.push(beam);
     } else if ((geo.kind === 'radar' || geo.kind === 'tof') && geo.pos) {
-      // zone sensor firing from inside the room's node box: horizontal wedge
-      // = detection footprint (range/fov/clip), boresight line = exact aim
-      // (yaw + down-tilt). Radar detects presence in the wedge; the ToF cone
-      // is a range-gated tripwire — same enter-the-zone trigger model.
-      const range = geo.range_m || (geo.kind === 'radar' ? 3.0 : 2.0);
-      const fov = geo.fov_deg || (geo.kind === 'radar' ? 120 : 27);
+      // Zone sensor firing from the room's node box: 13 rooms carry an LD2410C
+      // presence radar, Entrance and Exit a TOF200C ToF (they cannot use radar —
+      // it would see through their shared divider, and the foil fix was ruled out
+      // 2026-07-30). Horizontal wedge = detection footprint (range/fov/clip),
+      // boresight line = exact aim (yaw + down-tilt).
+      const isRadar = geo.kind === 'radar';
+      const range = geo.range_m || (isRadar ? 3.0 : 2.1);
+      const fov = geo.fov_deg || (isRadar ? 120 : 27);
       const yaw = geo.yaw_deg || 0;
       const yawR = yaw * Math.PI / 180;
+      const h = geo.h || 1.55;
+      // The two shafts mount the radar at the TOP pointed straight down; fov 360
+      // + tilt -90 means the "wedge" is the floor footprint under it, so draw the
+      // disc on the deck and run the boresight down to meet it.
+      const topDown = (geo.tilt_deg || 0) <= -85;
       sensor.zone = {
         x: geo.pos[0], z: geo.pos[1], yaw, fov, range, clip: geo.clip || null,
-        // thin ToF cones get a boresight seg-cross backstop; wide radar wedges
-        // don't need one (and their 3 m bore can graze the neighboring bay)
-        bore: geo.kind === 'tof'
-          ? [[geo.pos[0], geo.pos[1]],
-            [geo.pos[0] + range * Math.sin(yawR), geo.pos[1] + range * Math.cos(yawR)]]
-          : null,
+        // Thin ToF cones get a boresight seg-cross backstop so a sprint through
+        // can't step over the zone between frames; wide radar wedges don't need
+        // one (and their 3 m bore can graze the neighbouring bay).
+        bore: isRadar ? null
+          : [[geo.pos[0], geo.pos[1]],
+            [geo.pos[0] + range * Math.sin(yawR), geo.pos[1] + range * Math.cos(yawR)]],
       };
-      const color = geo.kind === 'radar' ? 0x37ffb0 : 0xff2b2b;
+      const color = isRadar ? 0x37ffb0 : 0xff2b2b;
       const zg = new THREE.Group();
-      zg.position.set(geo.pos[0], level * S.levelHeight + (geo.h || 1.55), geo.pos[1]);
+      zg.position.set(geo.pos[0], level * S.levelHeight + h, geo.pos[1]);
       zg.rotation.y = yawR;
       const fovR = fov * Math.PI / 180;
       const wedge = new THREE.Mesh(
         new THREE.CircleGeometry(range, 48, Math.PI / 2 - fovR / 2, fovR),
         new THREE.MeshBasicMaterial({ color, transparent: true, side: THREE.DoubleSide,
-          opacity: geo.kind === 'radar' ? 0.07 : 0.16, depthWrite: false }));
+          opacity: isRadar ? 0.07 : 0.16, depthWrite: false }));
       wedge.rotation.x = Math.PI / 2; // lay flat, opening along local +z (the box window)
+      if (topDown) wedge.position.y = -(h - 0.02);  // the footprint is on the deck
       zg.add(wedge);
       const boreG = new THREE.Group();
       boreG.rotation.x = -(geo.tilt_deg || 0) * Math.PI / 180; // -10° tilt = aim below horizon
       const bore = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(
-          [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, range)]),
+          [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, topDown ? h : range)]),
         new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.65 }));
       boreG.add(bore);
       zg.add(boreG);
@@ -1769,13 +1798,6 @@ function buildSensors(cfg) {
       btn.position.set(geo.pos[0], geo.pos[1], geo.pos[2]);
       btn.userData.sensor = sensor;
       grp(level).add(btn);
-      // label_off ([dx,dy,dz] in the layout) places the label beside the
-      // button — used by vertical rail stacks; default sits above, row-staggered
-      const off = geo.label_off
-        || [0, 0.19 + labelRow(geo.pos[0], geo.pos[1], geo.pos[2]), 0.04];
-      const lbl = makeLabel(geo.label || trig.name, 0.24);
-      lbl.position.set(geo.pos[0] + off[0], geo.pos[1] + off[1], geo.pos[2] + off[2]);
-      grp(level).add(lbl);
       sensor.meshes.push(btn);
       S.interactables.push(btn);
     } else if (geo.kind === 'knock' && geo.pos) {
@@ -1784,11 +1806,6 @@ function buildSensors(cfg) {
       pad.position.set(geo.pos[0], geo.pos[1], geo.pos[2]);
       pad.userData.sensor = sensor;
       grp(level).add(pad);
-      const off = geo.label_off
-        || [0, 0.22 + labelRow(geo.pos[0], geo.pos[1], geo.pos[2]), 0.04];
-      const lbl = makeLabel(geo.label || trig.name, 0.24);
-      lbl.position.set(geo.pos[0] + off[0], geo.pos[1] + off[1], geo.pos[2] + off[2]);
-      grp(level).add(lbl);
       sensor.meshes.push(pad);
       S.interactables.push(pad);
     }
@@ -1798,9 +1815,11 @@ function buildSensors(cfg) {
       && (trig.action.data || {}).effect_name === 'Lightning';
     b.textContent = trig.name + (isPlaceholder ? ' ⚠' : '');
     b.title = `${trig.type} → ${JSON.stringify(trig.action.data)}`
-      + (sensor.zone ? `\n${geo.kind === 'radar' ? 'LD2410C radar' : 'VL53L1X ToF'} in the `
-        + `${trig.room} node box — yaw ${sensor.zone.yaw}°, tilt ${geo.tilt_deg || 0}°, `
-        + `fov ${sensor.zone.fov}°, reach ${sensor.zone.range} m` : '')
+      + (sensor.zone ? `\n${geo.kind === 'radar' ? 'LD2410C radar' : 'TOF200C ToF'} ${(geo.tilt_deg || 0) <= -85
+        ? `at the top of ${trig.room}, pointed straight down`
+        : `in the ${trig.room} node box`} — yaw ${sensor.zone.yaw}°, `
+        + `tilt ${geo.tilt_deg || 0}°, fov ${sensor.zone.fov}°, reach ${sensor.zone.range} m` : '')
+      + (sensor.leaveAction ? `\nleave -> ${sensor.leaveAction.path}` : '')
       + (isPlaceholder ? '\n⚠ placeholder: no bespoke effect designed for this room yet' : '');
     b.onclick = () => fireSensor(sensor, true);
     triggerList.appendChild(b);
@@ -1810,7 +1829,16 @@ function buildSensors(cfg) {
 }
 
 // --- room game logic (mirrors the node firmware; spec: wiring-guides/room-games-plan.md) ---
-const GAME = { gateStage: 0, gateAt: -1e9, dphWinner: Math.floor(Math.random() * 5), bike: {}, lamps: null };
+const GAME = {
+  gate: { stage: 0, at: -1e9, pads: Array(7).fill(false), timers: Array(7).fill(null) },
+  portoWinner: Math.floor(Math.random() * 3),
+  portoAttempts: 0,
+  portoSolved: false,
+  dphWinner: Math.floor(Math.random() * 5),
+  bike: {},
+  moop: { pressed: new Set(), at: null, timer: null },
+  lamps: null,
+};
 
 function lampSensors() {
   return S.sensors.filter(s => s.game && s.game.id === 'lightsout')
@@ -1838,11 +1866,33 @@ function scrambleLamps() {
   paintLamps();
 }
 
+function actionData(sensor, effect) {
+  const data = Object.assign({}, sensor.action.data || {});
+  if (effect) data.effect_name = effect;
+  if (sensor.name) data.trigger_name = sensor.name;
+  return data;
+}
+
 function chimeThen(sensor, finalEffect, source) {
   // maze-wide victory chime, then the room's big effect once the chime lands
-  post(sensor.action.path, Object.assign({}, sensor.action.data, { effect_name: 'CorrectAnswer' }), source);
+  post(sensor.action.path, actionData(sensor, 'CorrectAnswer'), source);
   setTimeout(() => post(sensor.action.path,
-    Object.assign({}, sensor.action.data, { effect_name: finalEffect }), source), 2500);
+    actionData(sensor, finalEffect), source), 2500);
+}
+
+function gatePadNumber(sensor) {
+  const m = /^Gate Pad ([1-6])$/.exec(sensor.name || '');
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function resetGateGame() {
+  for (const timer of GAME.gate.timers) if (timer) clearTimeout(timer);
+  GAME.gate = { stage: 0, at: -1e9, pads: Array(7).fill(false), timers: Array(7).fill(null) };
+}
+
+function resetMoopGame() {
+  if (GAME.moop.timer) clearTimeout(GAME.moop.timer);
+  GAME.moop = { pressed: new Set(), at: null, timer: null };
 }
 
 // Returns {effect} to POST, null when the game already POSTed, or 'silent'.
@@ -1851,25 +1901,53 @@ function resolveGame(sensor, source) {
   const now = clock.getElapsedTime();
   switch (g.id) {
     case 'gate': {
-      // sim stand-in: one click = the whole bank pressed at once (the real
-      // node requires all 3 pads of a bank held within its 350ms window)
-      if (GAME.gateStage === 1 && now - GAME.gateAt > 30) GAME.gateStage = 0;
-      if (g.bank === 1) {
-        GAME.gateStage = 1; GAME.gateAt = now;
-        toast('Gate: first three hit — now the far three!');
+      // Mirror the node firmware: a single pad press is silent. A bank only
+      // resolves when all three pads in that bank are held within the 350 ms
+      // delayed-off window.
+      if (GAME.gate.stage === 1 && now - GAME.gate.at > 30) resetGateGame();
+      const pad = gatePadNumber(sensor);
+      if (!pad) return 'silent';
+      GAME.gate.pads[pad] = true;
+      if (GAME.gate.timers[pad]) clearTimeout(GAME.gate.timers[pad]);
+      GAME.gate.timers[pad] = setTimeout(() => { GAME.gate.pads[pad] = false; }, 350);
+
+      const bank1 = GAME.gate.pads[1] && GAME.gate.pads[2] && GAME.gate.pads[3];
+      const bank2 = GAME.gate.pads[4] && GAME.gate.pads[5] && GAME.gate.pads[6];
+      if (g.bank === 1 && GAME.gate.stage === 0 && bank1) {
+        GAME.gate.stage = 1; GAME.gate.at = now;
+        GAME.gate.pads[1] = GAME.gate.pads[2] = GAME.gate.pads[3] = false;
+        toast('Gate: bank 1 victory — now press 4-6');
         return { effect: 'CorrectAnswer' };
       }
-      if (GAME.gateStage === 1) {
-        GAME.gateStage = 0;
-        toast('Gate complete!');
-        return { effect: 'GateInspection' };
+      if (g.bank === 2 && bank2) {
+        GAME.gate.pads[4] = GAME.gate.pads[5] = GAME.gate.pads[6] = false;
+        if (GAME.gate.stage === 1) {
+          resetGateGame();
+          toast('Gate: bank 2 victory — leave the room');
+          return { effect: 'CorrectAnswer' };
+        }
+        toast('Gate: bank 1 first');
+        return { effect: 'WrongAnswer' };
       }
-      toast('Gate: hit pads 1-3 first');
-      return { effect: 'WrongAnswer' };
+      return 'silent';
+    }
+    case 'porto': {
+      if (GAME.portoSolved) {
+        toast('Porto: already passed');
+        return { effect: 'CorrectAnswer' };
+      }
+      GAME.portoAttempts += 1;
+      if (GAME.portoAttempts >= 2
+        && (g.index === GAME.portoWinner || GAME.portoAttempts >= 4)) {
+        GAME.portoSolved = true;
+        toast(`Porto: pass on attempt ${GAME.portoAttempts}`);
+        return { effect: 'CorrectAnswer' };
+      }
+      toast(`Porto: occupied (${GAME.portoAttempts}/4)`);
+      return { effect: 'PortoHit' };
     }
     case 'dph': {
       if (g.index === GAME.dphWinner) {
-        GAME.dphWinner = Math.floor(Math.random() * 5);
         toast('Handshake: WINNER!');
         return { effect: 'CorrectAnswer' };
       }
@@ -1894,8 +1972,27 @@ function resolveGame(sensor, source) {
       toast(`Bike Q${g.question}: correct`);
       return { effect: 'CorrectAnswer' };
     }
-    case 'moop':  // standalone pucks; game rule TBD — every press chimes
+    case 'moop': {
+      if (!GAME.moop.at || now - GAME.moop.at > 60) {
+        resetMoopGame();
+        GAME.moop.at = now;
+        GAME.moop.timer = setTimeout(() => {
+          if (GAME.moop.pressed.size > 0 && GAME.moop.pressed.size < 4) {
+            toast('Moop: timed out — server plays failure');
+          }
+          resetMoopGame();
+        }, 60000);
+      }
+      GAME.moop.pressed.add(sensor.name || `Moop Button ${g.index + 1}`);
+      const count = GAME.moop.pressed.size;
+      if (count >= 4) {
+        resetMoopGame();
+        toast('Moop: all buttons — server plays right answer');
+      } else {
+        toast(`Moop: ${count}/4 buttons`);
+      }
       return { effect: 'CorrectAnswer' };
+    }
     case 'lightsout': {
       if (!GAME.lamps) scrambleLamps();
       for (const j of [g.index - 1, g.index, g.index + 1])
@@ -1916,7 +2013,29 @@ function resolveGame(sensor, source) {
 
 function fireSensor(sensor, manual) {
   const now = clock.getElapsedTime();
-  const cooldown = sensor.game ? (sensor.game.id === 'lightsout' ? 0.4 : 1.5) : COOLDOWN_S;
+  // Arm the room's occupancy latch BEFORE the cooldown gate, exactly like the
+  // node firmware (tripwire on_press sets room_occupied unconditionally, then
+  // hands off to fire_effect whose mode:single may swallow the run): someone who
+  // walks in during a cooldown is still in the room and must still produce a
+  // leave when they walk out.
+  if (sensor.leaveAction) {
+    const entering = !sensor.occupied;
+    sensor.occupied = true;
+    if (entering && sensor.room === 'Porto Room') {
+      GAME.portoWinner = Math.floor(Math.random() * 3);
+      GAME.portoAttempts = 0;
+      GAME.portoSolved = false;
+      toast('Porto: pads randomized');
+    } else if (entering && sensor.room === 'Deep Playa Handshake') {
+      GAME.dphWinner = Math.floor(Math.random() * 5);
+      toast('Handshake: buttons randomized');
+    } else if (entering && sensor.room === 'Gate') {
+      resetGateGame();
+    }
+  }
+  const cooldown = sensor.game
+    ? (sensor.game.id === 'lightsout' ? 0.4 : sensor.game.id === 'porto' ? 0.6 : 1.5)
+    : COOLDOWN_S;
   if (now - sensor.lastFired < cooldown) {
     if (manual) toast(`${sensor.name}: cooling down`);
     return;
@@ -1929,7 +2048,7 @@ function fireSensor(sensor, manual) {
     if (r === 'silent') return;  // lamp paint owns the button look; no flash
     if (r && r.effect) {
       toast(`${sensor.name} → ${r.effect}`);
-      post(sensor.action.path, Object.assign({}, sensor.action.data, { effect_name: r.effect }), source);
+      post(sensor.action.path, actionData(sensor, r.effect), source);
     }
   } else if (sensor.type === 'piezo') {
     const ps = S.cfg.piezo_settings;
@@ -1937,14 +2056,14 @@ function fireSensor(sensor, manual) {
     let effect = 'WrongAnswer';
     if (S.piezoAttempts >= (ps.attempts_required || 3)) {
       S.piezoAttempts = 0;
-      if (Math.random() < (ps.correct_answer_probability || 0.25)) effect = 'CorrectAnswer';
+        if (Math.random() < (ps.correct_answer_probability || 0.25)) effect = 'CorrectAnswer';
     }
-    const data = Object.assign({}, sensor.action.data, { effect_name: effect });
+    const data = actionData(sensor, effect);
     toast(`${sensor.name} → ${effect}`);
     post(sensor.action.path, data, source);
   } else {
     toast(`${sensor.name}${sensor.room ? ' → ' + (sensor.action.data.effect_name || '') : ''}`);
-    post(sensor.action.path, sensor.action.data, source);
+    post(sensor.action.path, actionData(sensor), source);
   }
   if (S.projection && sensor.name === S.projection.cfg.cue) projectionCue('cue: ' + sensor.name);
 
@@ -1957,6 +2076,19 @@ function fireSensor(sensor, manual) {
       setTimeout(() => m.material.color.copy(orig), COOLDOWN_S * 1000);
     }
   }
+}
+
+// The leave half of a presence trigger. No cooldown and no game/piezo logic —
+// a leave is one fact, and the `occupied` latch makes a repeat a no-op, matching
+// the room_vacated script in packages/tripwire.yaml. Only an enter that actually
+// armed the latch can produce a leave, so a walker who never triggered the room
+// can't tell the server to tear it down.
+function fireLeave(sensor, manual) {
+  if (!sensor.leaveAction || !sensor.occupied) return;
+  sensor.occupied = false;
+  if (sensor.room === 'Gate') resetGateGame();
+  toast(`${sensor.name}: room vacated`);
+  post(sensor.leaveAction.path, sensor.leaveAction.data, manual ? 'click' : 'walkthrough');
 }
 
 function segCross(ax, az, bx, bz, cx, cz, dx, dz) {
@@ -1986,15 +2118,18 @@ function checkSensorTriggers() {
   const moved = px !== x || pz !== z;
   for (const sensor of S.sensors) {
     if (sensor.zone) {
-      // fire on entering the detection wedge (teleports re-seat state without
-      // firing, like beams); a ToF boresight seg-cross is the fast-mover
-      // backstop so a sprint through the thin cone can't step over it
+      // Radar occupancy pair, both edges of the detection wedge: entering fires
+      // the room's effect, leaving fires leave_action so the server stops
+      // whatever is still running and hands the room back to the theme. ToF
+      // zones only fire on entry; clearing that narrow beam must not stop the
+      // room routine. Teleports re-seat state without firing either, like beams.
       const inside = sensor.level === S.level && zoneContains(sensor.zone, x, z);
       if (!tele && ((inside && !sensor.wasInside)
         || (moved && sensor.zone.bore && sensor.level === S.level
           && segCross(px, pz, x, z,
             sensor.zone.bore[0][0], sensor.zone.bore[0][1],
             sensor.zone.bore[1][0], sensor.zone.bore[1][1])))) fireSensor(sensor, false);
+      if (!tele && sensor.kind !== 'tof' && !inside && sensor.wasInside) fireLeave(sensor, false);
       sensor.wasInside = inside;
     } else if (sensor.seg && sensor.level === S.level && !tele && moved) {
       const [[x1, z1], [x2, z2]] = sensor.seg;
@@ -2037,23 +2172,8 @@ function buildProjection(cfg) {
     new THREE.MeshStandardMaterial({ color: 0xe8e4dc, roughness: 0.55 }));
   rig.add(body);
   g.add(rig);
-  // mount arm from the body back to its supporting frame (arm_deg = absolute
-  // world direction to the support; default = opposite the throw)
-  const armDeg = P.projector.arm_deg != null ? P.projector.arm_deg
-    : (P.projector.yaw_deg || 0) + 180;
-  const armG = new THREE.Group();
-  armG.position.set(P.projector.pos[0], yProj, P.projector.pos[1]);
-  armG.rotation.y = armDeg * Math.PI / 180;
-  const armLen = P.projector.arm_len || 0.5;
-  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, armLen), matGalv);
-  arm.rotation.x = Math.PI / 2;
-  arm.position.z = bd / 2 - 0.07 + armLen / 2;
-  armG.add(arm);
-  g.add(armG);
-  const lbl = makeLabel(P.projector.label || 'floor projection (planned)', 0.22);
-  lbl.position.set(P.projector.pos[0], yProj + 0.34, P.projector.pos[1]);
-  g.add(lbl);
-
+  // the mount hardware (yoke / arm / shroud) draws further down, once the
+  // hex vertices exist to hang it off — see "mount assembly"
   // projected image: live canvas on the deck, additive like thrown light.
   // w = the lateral (long, 4:3-width) axis, d = the along-throw (short)
   // axis; the plane rides in a group yawed with the projector so diagonal
@@ -2082,18 +2202,11 @@ function buildProjection(cfg) {
              y: (dx * fwd[0] + dz * fwd[1] + P.image.d / 2) * ppm };
   };
 
-  // beam edges from the projection window to the image corners
+  // the projection window (bottom face, lens ~28 mm behind the nose) — beam
+  // linework draws below, after the deck outline exists to clip against
   const win = new THREE.Vector3(P.projector.pos[0] + fwd[0] * (bd / 2 - 0.03),
     yProj - bh / 2,
     P.projector.pos[1] + fwd[1] * (bd / 2 - 0.03));
-  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-    const corner = new THREE.Vector3(
-      P.image.center[0] + lat[0] * sx * P.image.w / 2 + fwd[0] * sz * P.image.d / 2,
-      yDeck + 0.005,
-      P.image.center[1] + lat[1] * sx * P.image.w / 2 + fwd[1] * sz * P.image.d / 2);
-    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([win, corner]),
-      new THREE.LineBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.22 })));
-  }
 
   // LD2450 tracker wedge — faint blue, just under the LD2410 trigger wedge
   const T = P.tracker;
@@ -2136,7 +2249,219 @@ function buildProjection(cfg) {
   });
   deckPath.closePath();
 
-  S.projection = { cfg: P, canvas, ctx: canvas.getContext('2d'), tex, plane,
+  // beam linework — TWO distinct things, so light never appears to cross
+  // steel it cannot touch in reality:
+  //  1) the LIT cone: the deck outline clipped to the image rectangle — the
+  //     exact footprint the software mask leaves lit. Solid rays + outline.
+  //     Every one of these rays clears the scaffold (that is what the
+  //     inboard-of-the-legs placement bought).
+  //  2) the masked SPILL: the full rectangle the optics throw. All four of
+  //     its corners land OFF-deck and render black on the real rig (a DLP's
+  //     black still leaks faint gray, and the shroud aperture must clear
+  //     this whole frustum, so it stays drawn) — faint and dashed. The
+  //     edges that cross the east arch / street frame live here: dead rays.
+  const toImg = ([wx, wz]) => [
+    lat[0] * (wx - P.image.center[0]) + lat[1] * (wz - P.image.center[1]),
+    fwd[0] * (wx - P.image.center[0]) + fwd[1] * (wz - P.image.center[1])];
+  const toWorldImg = ([u, v]) => [
+    P.image.center[0] + lat[0] * u + fwd[0] * v,
+    P.image.center[1] + lat[1] * u + fwd[1] * v];
+  let lit = deckPts.map(toImg);
+  for (const [ax, sn, lim] of [[0, 1, P.image.w / 2], [0, -1, P.image.w / 2],
+    [1, 1, P.image.d / 2], [1, -1, P.image.d / 2]]) {
+    const prev = lit;
+    lit = [];
+    for (let i = 0; i < prev.length; i++) {
+      const a = prev[i], b = prev[(i + 1) % prev.length];
+      const ia = sn * a[ax] <= lim, ib = sn * b[ax] <= lim;
+      if (ia) lit.push(a);
+      if (ia !== ib) {
+        const t = (lim - sn * a[ax]) / (sn * b[ax] - sn * a[ax]);
+        lit.push([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]);
+      }
+    }
+  }
+  const litPts = lit.map(toWorldImg).map(([wx, wz]) => new THREE.Vector3(wx, yDeck + 0.007, wz));
+  const shoelace = (pts) => Math.abs(pts.reduce((s, p, i) => {
+    const q = pts[(i + 1) % pts.length];
+    return s + p[0] * q[1] - q[0] * p[1];
+  }, 0)) / 2;
+  const litPct = Math.round(shoelace(lit) / shoelace(deckPts.map(toImg)) * 1000) / 10;
+  const matBeam = new THREE.LineBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.22 });
+  for (const p of litPts) {
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([win, p]), matBeam));
+  }
+  g.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(litPts),
+    new THREE.LineBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.35 })));
+  const matSpill = new THREE.LineDashedMaterial({ color: 0x9fd8ff, transparent: true,
+    opacity: 0.09, dashSize: 0.05, gapSize: 0.06 });
+  const rectPts = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sz]) => {
+    const [wx, wz] = toWorldImg([sx * P.image.w / 2, sz * P.image.d / 2]);
+    return new THREE.Vector3(wx, yDeck + 0.004, wz);
+  });
+  for (const p of rectPts) {
+    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([win, p]), matSpill);
+    l.computeLineDistances();
+    g.add(l);
+  }
+  const rectLoop = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(rectPts), matSpill);
+  rectLoop.computeLineDistances();
+  g.add(rectLoop);
+
+  // the clamp corner = the hex vertex nearest the body; the string line runs
+  // to the opposite vertex (the throw diagonal). Shared by the mount
+  // assembly and the Mount dimension overlay.
+  let ci = 0;
+  for (let k = 1; k < 6; k++) {
+    if (Math.hypot(V[k][0] - P.projector.pos[0], V[k][1] - P.projector.pos[1])
+      < Math.hypot(V[ci][0] - P.projector.pos[0], V[ci][1] - P.projector.pos[1])) ci = k;
+  }
+  const C = V[ci], F = V[(ci + 3) % 6];
+
+  // ---- mount assembly (2026-07-29 stand-off revision): the REAL planned
+  // hardware, to scale — yoke plate hose-clamped to the paired corner legs
+  // in the two clean bands (between the header/rail weld zones and above
+  // the rail), arm slab threading the 77 mm header-to-rail gap on the
+  // corner bisector, and the ply shroud sleeve around the nose-down body
+  // (open bottom; the roof slab rides ~6 mm above the top panel). Cut
+  // files: enclosure/projector-shroud.scad; build spec:
+  // wiring-guides/cuddle-projector-mount.md.
+  {
+    const legTop = (P.level + 1) * LH;      // top of the corner legs
+    const armY = legTop - 0.1325;           // mid rail-header gap (abs)
+    const asm = new THREE.Group();
+    asm.position.set(P.projector.pos[0], yProj, P.projector.pos[1]);
+    asm.rotation.y = (P.projector.arm_deg != null ? P.projector.arm_deg
+      : (P.projector.yaw_deg || 0) + 180) * Math.PI / 180;
+    const zCorner = Math.hypot(C[0] - P.projector.pos[0], C[1] - P.projector.pos[1]);
+    const matShroud = new THREE.MeshStandardMaterial({ color: 0x9a7b52, roughness: 0.85,
+      metalness: 0.02, transparent: true, opacity: 0.55, depthWrite: false });
+    const boxAt = (w, h, dpt, x, y, z, mat) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, dpt), mat);
+      m.position.set(x, y, z);
+      asm.add(m);
+    };
+    // shroud sleeve: 4 walls + top, OPEN bottom (beam and dust both exit)
+    const iw = 0.301, id = 0.123, t = 0.006;
+    boxAt(iw + 2 * t, bh + 0.006, t, 0, 0.0015, -(id / 2 + t / 2), matShroud);
+    boxAt(iw + 2 * t, bh + 0.006, t, 0, 0.0015, id / 2 + t / 2, matShroud);
+    for (const sx of [-1, 1]) boxAt(t, bh + 0.006, id + 2 * t, sx * (iw / 2 + t / 2), 0.0015, 0, matShroud);
+    boxAt(iw + 2 * t, t, id + 2 * t, 0, bh / 2 + 0.006, 0, matShroud);
+    // mount plate on the chassis ceiling-mount bosses (its rear face,
+    // nose-down), arm slab out through the rear-wall opening to the yoke
+    // carriage plate on the chassis bosses, box beam out to the corner
+    // (front end 40 mm shy of the vertex), side plates rising into the
+    // back frames (they stop 65 mm inboard — where the rail/header ends
+    // live), and the horizontal cradle ribs that actually grab the legs
+    boxAt(0.14, 0.16, 0.009, 0, armY - yProj, bd / 2 + 0.0075, matPly);
+    boxAt(0.1, 0.045, zCorner - 0.06, 0, armY - yProj, (zCorner - 0.04 + 0.02) / 2, matPly);
+    for (const sx of [-1, 1])
+      boxAt(0.006, 0.245, 0.08, sx * 0.047, legTop - 0.1375 - yProj, zCorner - 0.105, matPly);
+    for (const cyAbs of [legTop - 0.2525, legTop - 0.0375])
+      boxAt(0.15, 0.006, 0.124, 0, cyAbs - yProj, zCorner - 0.04, matPly);
+    // hose clamps: two per leg at the rib bands — below the brace studs
+    // and above the top-rail weld (the beam band itself stays clamp-free)
+    for (const sx of [-1, 1]) {
+      for (const cyAbs of [legTop - 0.2525, legTop - 0.0375]) {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.0245, 0.004, 8, 20), matGalv);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(sx * 0.0225, cyAbs - yProj, zCorner - 0.013);
+        asm.add(ring);
+      }
+    }
+    g.add(asm);
+  }
+
+  // ---- Mount overlay (header Mount button): the CALCULATED real-world rig
+  // position for the arm/enclosure build, dimensioned off datums a tape
+  // measure can find on the finished deck — the corner the arm clamps to
+  // (the paired legs stand just outside the deck corner), the corner-to-
+  // corner string line, and the deck surface. Every number derives from the
+  // same layout values that draw the rig, so the callouts can never drift
+  // from the picture. Build spec: wiring-guides/cuddle-projector-mount.md.
+  const mountG = new THREE.Group();
+  {
+    const ySlab = P.level * LH + 0.14;   // deck ply top — the height datum
+    const yDim = ySlab + 0.018;          // deck linework, above the show plane
+    const mm = (v) => `${Math.round(v * 1000)} mm`;
+    const dimMat = new THREE.LineBasicMaterial({ color: 0xffc966, transparent: true, opacity: 0.95, depthWrite: false });
+    const dimDash = new THREE.LineDashedMaterial({ color: 0xffc966, transparent: true, opacity: 0.8, dashSize: 0.07, gapSize: 0.05, depthWrite: false });
+    const vec = (x, y, z) => new THREE.Vector3(x, y, z);
+    const seg = (a, b, mat) => {
+      const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), mat || dimMat);
+      if ((mat || dimMat).isLineDashedMaterial) l.computeLineDistances();
+      mountG.add(l);
+    };
+    const note = () => {};
+    const ring = (x, z, r) => {
+      const m = new THREE.Mesh(new THREE.RingGeometry(r * 0.8, r, 40),
+        new THREE.MeshBasicMaterial({ color: 0xffc966, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, yDim, z);
+      mountG.add(m);
+    };
+    const tick = (x, z, half = 0.09) => seg(vec(x - lat[0] * half, yDim, z - lat[1] * half),
+      vec(x + lat[0] * half, yDim, z + lat[1] * half));
+    const dAt = (x, z) => Math.hypot(x - C[0], z - C[1]);
+    const winH = win.y - ySlab, topH = winH + bh;
+    const roofH = LH + (cfg.layout.ceiling_height || 1.88) + 0.02 - ySlab;
+    seg(vec(C[0], yDim, C[1]), vec(F[0], yDim, F[1]), dimDash);
+    ring(C[0], C[1], 0.055);
+    // labels spread in PLAN (out over the void / along the axes) — in the
+    // overhead view height separation collapses, so each note hangs beside
+    // its feature, never on top of the pile at the corner
+    const outL = Math.hypot(C[0] - H.cx, C[1] - H.cz);
+    const out = [(C[0] - H.cx) / outL, (C[1] - H.cz) / outL];
+    note('corner legs — datum 0', C[0] + out[0] * 0.45, ySlab + 0.16, C[1] + out[1] * 0.45, 0.13);
+    // lens plumb: deck target, vertical plumb line, height dimension
+    ring(win.x, win.z, 0.075);
+    tick(win.x, win.z);
+    seg(vec(win.x, yDim, win.z), vec(win.x, win.y, win.z), dimDash);
+    note(`lens plumb — ${mm(dAt(win.x, win.z))} in from the corner, ON the line`,
+      win.x + fwd[0] * 0.6, ySlab + 0.42, win.z + fwd[1] * 0.6);
+    note(`window ${mm(winH)} above deck`, win.x + lat[0] * 0.32, ySlab + winH * 0.56, win.z + lat[1] * 0.32);
+    // body heights + the gap back to the legs (arm slots ±80 mm radially,
+    // final plumb set on-site — see the fab spec)
+    const rearX = P.projector.pos[0] - fwd[0] * bd / 2, rearZ = P.projector.pos[1] - fwd[1] * bd / 2;
+    note(`body top ${mm(topH)} — ${mm(roofH - topH)} under the roof slab`,
+      P.projector.pos[0] + lat[0] * 0.55, ySlab + topH, P.projector.pos[1] + lat[1] * 0.55, 0.13);
+    note(`rear face ${mm(dAt(rearX, rearZ))} off the corner — slot the arm ±80 mm on the line`,
+      rearX - lat[0] * 0.5, ySlab + winH + 0.06, rearZ - lat[1] * 0.5, 0.13);
+    // arm-angle callout: the arm bisects the 120° corner — 60° to each face
+    const thDiag = Math.atan2(F[1] - C[1], F[0] - C[0]);
+    const arcPts = [];
+    for (let i = 0; i <= 32; i++) {
+      const th = thDiag - Math.PI / 3 + (i / 32) * (2 * Math.PI / 3);
+      arcPts.push(vec(C[0] + Math.cos(th) * 0.42, yDim, C[1] + Math.sin(th) * 0.42));
+    }
+    mountG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(arcPts), dimMat));
+    note('60° + 60° — arm on the corner bisector', C[0] + Math.cos(thDiag) * 0.66,
+      ySlab + 0.30, C[1] + Math.sin(thDiag) * 0.66, 0.13);
+    // mount hardware callouts (heights above deck; bands dodge the frames'
+    // header/rail weld zones — the arm threads between those two members)
+    note(`yoke on the leg pair — clamps ~${mm((P.level + 1) * LH - 0.25 - ySlab)} & ~${mm((P.level + 1) * LH - 0.035 - ySlab)} above deck`,
+      C[0], ySlab + 1.32, C[1], 0.13);
+    note('arm threads the 77 mm rail–header gap', C[0] + fwd[0] * 0.35, ySlab + 1.62, C[1] + fwd[1] * 0.35, 0.13);
+    note(`lit footprint ${litPct}% of deck — slide the slot outboard on-site to recover`,
+      P.image.center[0], ySlab + 0.55, P.image.center[1], 0.13);
+    // image edges as deck tape marks: verify the mapping with a tape from
+    // the corner before locking the arm
+    const near = [P.image.center[0] - fwd[0] * P.image.d / 2, P.image.center[1] - fwd[1] * P.image.d / 2];
+    const far = [P.image.center[0] + fwd[0] * P.image.d / 2, P.image.center[1] + fwd[1] * P.image.d / 2];
+    tick(near[0], near[1]);
+    tick(far[0], far[1]);
+    note(`image near edge — ${mm(dAt(near[0], near[1]))} from the corner`, near[0], ySlab + 0.2, near[1], 0.13);
+    note(`image far edge — ${mm(dAt(far[0], far[1]))} from the corner (${mm(Math.hypot(F[0] - far[0], F[1] - far[1]))} shy of the far corner)`,
+      far[0], ySlab + 0.2, far[1], 0.13);
+    // beam legend: solid = lit cone (never touches steel); dashed = the
+    // optics' full rectangle, masked black — size the shroud aperture to it
+    note('solid beam = LIT cone · faint dashed = masked spill (renders black)',
+      win.x + fwd[0] * 1.0, ySlab + winH * 0.32, win.z + fwd[1] * 1.0, 0.13);
+    mountG.visible = false;
+    g.add(mountG);
+  }
+
+  S.projection = { cfg: P, mountG, canvas, ctx: canvas.getContext('2d'), tex, plane,
     cw, ch: chp, ppm, toPx, mast, winPx, deckPath, active: false, fade: 0,
     lastPresence: -1e9, smooth: null, accum: 0,
     // floor engine link (projection_engine.py stepped by sim_ui, streamed
@@ -2147,7 +2472,20 @@ function buildProjection(cfg) {
     heatStep: 2, theme: null, stones: [], snakes: [], snakeMeta: {}, flies: [],
     glyphs: [], glyphGlint: {}, scarabs: [],
     tracksPx: [], fx: [], engineFade: 0, lastTrackSend: 0 };
+  let savedMount = null;
+  try { savedMount = localStorage.getItem('lohp-sim-mount'); } catch (e) { /* private mode */ }
+  setMountDims(savedMount === '1');
   connectProjection();
+}
+
+// Mount button: show/hide the calculated projector build-position dimensions
+// (mountG linework built in buildProjection); the choice sticks per browser
+function setMountDims(on) {
+  const pr = S.projection;
+  if (!pr || !pr.mountG) return;
+  pr.mountG.visible = on;
+  $('btn-mount').textContent = on ? 'Mount ✓' : 'Mount ✕';
+  try { localStorage.setItem('lohp-sim-mount', on ? '1' : '0'); } catch (e) { /* private mode */ }
 }
 
 function connectProjection() {
@@ -2861,9 +3199,6 @@ function buildEye(cfg) {
     new THREE.MeshBasicMaterial({ map: tex }));       // unlit: it's a screen
   disc.position.z = 0.012;
   g.add(disc);
-  const lbl = makeLabel(E.label || 'Cuddle orb (Guition S3 · sim)', 0.16);
-  lbl.position.y = D / 2 + 0.06;
-  g.add(lbl);
   grp(E.level || 0).add(g);
 
   let saved = null; try { saved = localStorage.getItem('lohp-sim-eye'); } catch (e) { /**/ }
@@ -3074,6 +3409,7 @@ function drawOlmecFace(ctx, ey, blink, now) {
 // ---------------------------------------------------------------- audio unit
 function connectAudio() {
   const a = S.audio;
+  if (a.ws && (a.ws.readyState === WebSocket.OPEN || a.ws.readyState === WebSocket.CONNECTING)) return;
   a.ws = new WebSocket(AUDIO_WS);
   a.ws.onopen = () => {
     setDot('audio', true);
@@ -3099,6 +3435,14 @@ function connectAudio() {
       case 'audio_stop':
         stopEffectAudio('room' in msg ? msg.room : null);
         break;
+      case 'play_room_ambience': {
+        const d = msg.data || {};
+        playRoomAmbience(msg.room, d.file_name, d.volume, d.effect_name);
+        break;
+      }
+      case 'stop_room_ambience':
+        stopRoomAmbience('room' in msg ? msg.room : null);
+        break;
       case 'start_background_music':
         playMusic((msg.data || {}).music_file);
         break;
@@ -3115,10 +3459,38 @@ function connectAudio() {
   };
 }
 
+function startAudio() {
+  const a = S.audio;
+  if (!a.ctx) {
+    try {
+      a.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      setDot('audio', false);
+      log('err', `audio unavailable: ${e.message}`);
+      return;
+    }
+  }
+  a.on = true;
+  connectAudio();
+
+  const resume = () => {
+    if (a.ctx && a.ctx.state === 'suspended') a.ctx.resume().catch(() => {});
+    removeEventListener('pointerdown', resume);
+    removeEventListener('keydown', resume);
+    removeEventListener('touchstart', resume);
+  };
+  if (a.ctx.state === 'suspended') {
+    addEventListener('pointerdown', resume, { once: true });
+    addEventListener('keydown', resume, { once: true });
+    addEventListener('touchstart', resume, { once: true });
+  }
+}
+
 async function getBuffer(file) {
   const a = S.audio;
   if (a.buffers.has(file)) return a.buffers.get(file);
-  const res = await fetch(`${API}/api/audio/${encodeURIComponent(file)}`);
+  const audioPath = file.split('/').map(encodeURIComponent).join('/');
+  const res = await fetch(`${API}/api/audio/${audioPath}`);
   if (!res.ok) throw new Error(`audio ${file}: ${res.status}`);
   const buf = await a.ctx.decodeAudioData(await res.arrayBuffer());
   a.buffers.set(file, buf);
@@ -3163,6 +3535,50 @@ function stopEffectAudio(room) {
     if (v) { try { v.src.stop(); } catch (e) { /* already stopped */ } a.rooms.delete(key); }
   };
   if (room == null) { for (const key of Array.from(a.rooms.keys())) stopOne(key); }
+  else stopOne(room);
+}
+
+// Looping room bed (the Cuddle floor show's lava rumble). Kept in its own map
+// so effect audio plays OVER it and audio_stop never cuts it — the same split
+// the Pi client makes between effect players and ambience players.
+async function playRoomAmbience(room, file, volume, effectName) {
+  const a = S.audio;
+  if (!a.ctx || !file) return;
+  try {
+    const buf = await getBuffer(file);
+    stopRoomAmbience(room);
+    const src = a.ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    const gain = a.ctx.createGain();
+    gain.gain.value = volume == null ? 0.5 : volume;
+    const rm = room && S.roomsMeshes[room];
+    if (rm) {
+      const p = new PannerNode(a.ctx, {
+        panningModel: 'HRTF', distanceModel: 'linear',
+        refDistance: 1.5, maxDistance: 18, rolloffFactor: 1,
+        positionX: rm.center.x, positionY: rm.center.y, positionZ: rm.center.z,
+      });
+      gain.connect(p).connect(a.ctx.destination);
+    } else {
+      gain.connect(a.ctx.destination);
+    }
+    src.connect(gain);
+    src.start();
+    a.beds.set(room || '__all__', { src, gain });
+    log('info', `≈ bed ${effectName || ''} ${file}${room ? ' @ ' + room : ''}`);
+  } catch (e) {
+    log('err', `ambience play failed: ${e.message}`);
+  }
+}
+
+function stopRoomAmbience(room) {
+  const a = S.audio;
+  const stopOne = (key) => {
+    const v = a.beds.get(key);
+    if (v) { try { v.src.stop(); } catch (e) { /* already stopped */ } a.beds.delete(key); }
+  };
+  if (room == null) { for (const key of Array.from(a.beds.keys())) stopOne(key); }
   else stopOne(room);
 }
 
@@ -3246,8 +3662,6 @@ function frameStreetView() {
 
 function setMode(mode) {
   S.mode = mode;
-  const next = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
-  $('btn-view').textContent = `View: ${MODE_LABEL[mode]} ▸ ${MODE_LABEL[next]}`;
   $('crosshair').classList.toggle('hidden', mode !== 'first' || !S.pointerLocked);
   $('floor-filter').classList.toggle('hidden', mode !== 'top');
   roofGroup.visible = mode !== 'top'; // keep the plan view readable
@@ -3317,7 +3731,6 @@ function setupControls(cfg) {
   addEventListener('keydown', (ev) => {
     if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT') return;
     S.keys[ev.code] = true;
-    if (ev.code === 'KeyM') setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]);
     if (ev.code === 'KeyN') setDayNight(!ENV.day);
     if (ev.code === 'KeyE' && S.mode === 'first') tryInteract();
   });
@@ -3352,12 +3765,15 @@ function setupControls(cfg) {
     }
   });
 
-  $('btn-view').onclick = () => setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]);
   $('btn-daynight').onclick = () => setDayNight(!ENV.day);
   $('btn-towers').onclick = () => setTowersVisible(!(towersGroup && towersGroup.visible));
   $('btn-sign').onclick = () => setSignVisible(!(signGroup && signGroup.visible));
   $('btn-steel').onclick = () => setSteelMode(STEEL_MODES[(STEEL_MODES.indexOf(steelMode) + 1) % STEEL_MODES.length]);
   $('btn-eye').onclick = () => setEyeSkin(EYE_MODES[(EYE_MODES.indexOf(S.eyeSkin) + 1) % EYE_MODES.length]);
+  $('btn-mount').onclick = () => {
+    if (!S.projection) { log('err', 'projection: rig not in the layout — no mount dims'); return; }
+    setMountDims(!S.projection.mountG.visible);
+  };
   $('btn-floor').onclick = () => {
     // server-side shared state, deliberately NOT localStorage: every tab (and
     // production, were it wired) shows one theme, like the one real deck
@@ -3376,14 +3792,6 @@ function setupControls(cfg) {
     const v = S.projection && S.projection.baseVid;
     if (S.vidBase && v) v.play().catch(() => {});
     log('info', `projection: base layer → ${S.vidBase ? 'AI VIDEO loop' : 'static texture'}`);
-  };
-  $('btn-respawn').onclick = () => {
-    const sp = cfg.layout.spawn;
-    S.pos.set(sp.pos[0], EYE, sp.pos[1]);
-    S.level = sp.level || 0;
-    S.yaw = (sp.yaw_deg || 0) * Math.PI / 180;
-    S.pitch = 0;
-    S.teleporting = true;
   };
   for (const btn of document.querySelectorAll('#floor-filter button')) {
     btn.onclick = () => setFloorFilter(btn.dataset.f);
@@ -3479,6 +3887,12 @@ function buildAvatar() {
 async function wireUi(cfg) {
   $('cp-link').href = `${API}/`;
 
+  // stamp which build of the sim code this tab is actually running — a
+  // long-lived tab keeps executing the JS it loaded, so "nothing changed"
+  // usually means "the tab never reloaded"; this line settles it instantly
+  fetch('app.js', { method: 'HEAD' }).then((r) =>
+    log('info', `sim code build: ${r.headers.get('last-modified') || 'unknown'}`)).catch(() => {});
+
   const themes = await fetch(`${API}/api/themes`).then(r => r.json()).catch(() => ({}));
   const themeNames = Array.isArray(themes) ? themes : Object.keys(themes);
   $('theme-select').innerHTML = themeNames.map(t => `<option>${escapeHtml(t)}</option>`).join('');
@@ -3562,17 +3976,8 @@ async function boot() {
   await wireUi(cfg);
   connectDmx();
   pollRpiStatus();
-  setMode('street');
-
-  $('enter-btn').onclick = () => {
-    S.audio.on = true;
-    S.audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    connectAudio();
-    $('enter-overlay').classList.add('hidden');
-  };
-  $('enter-muted-btn').onclick = () => {
-    $('enter-overlay').classList.add('hidden');
-  };
+  setMode('first');
+  startAudio();
 
   log('info', `sim ready — ${S.fixtures.length} fixtures${S.sign ? `, ${S.sign.zones.length} sign zones` : ''}, ${S.sensors.length} sensors, ${Object.keys(cfg.room_layout).length} rooms, two stories`);
   log('info', 'note: lights/audio also react to OTHER clients & test scripts — this log only shows YOUR actions');

@@ -10,18 +10,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #060609; col
 
 .hidden { display: none !important; }
 
-/* --- enter overlay --- */
-#enter-overlay { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center;
-  justify-content: center; background: rgba(3,3,6,0.82); backdrop-filter: blur(3px); }
-#enter-overlay .card { max-width: 440px; padding: 28px 32px; border-radius: 12px;
-  background: #12131c; border: 1px solid #2a2c3e; box-shadow: 0 12px 48px rgba(0,0,0,.6); }
-#enter-overlay h1 { margin: 0 0 6px; font-size: 20px; color: #fff; }
-#enter-overlay .help { margin: 12px 0 18px; padding-left: 18px; }
-#enter-overlay .help li { margin: 3px 0; }
-#enter-overlay .fine { color: #7a7f92; font-size: 11px; margin-top: 14px; }
-#enter-btn { width: 100%; padding: 10px; font-size: 15px; }
-#enter-muted-btn { width: 100%; margin-top: 8px; }
-
 /* --- side panel --- */
 #panel { position: fixed; top: 0; right: 0; bottom: 0; width: 324px; z-index: 20;
   background: rgba(13,14,20,0.94); border-left: 1px solid #23253a;

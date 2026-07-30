@@ -17,11 +17,14 @@ DEFAULT_PIEZO_THRESHOLD = 2.0
 
 
 class TriggerManager:
-    def __init__(self, config):
+    def __init__(self, config, rng=None):
         self.config = config
+        self._rng = rng or random.SystemRandom()
         self.associated_rooms = config.get('associated_rooms', [])
         self.triggers = [t for t in config.get('triggers', [])
-                         if not t.get('room') or t.get('room') in self.associated_rooms]
+                         if not self.associated_rooms
+                         or not self._trigger_room(t)
+                         or self._trigger_room(t) in self.associated_rooms]
         self.server_ip = config.get('server_ip')
         self.start_time = time.time()
         self.startup_delay = config.get('startup_delay', 10)
@@ -31,6 +34,10 @@ class TriggerManager:
         self.button_pressed = {}     # trigger name -> currently held down
         self.adc_channels = {}       # trigger name -> AnalogIn
         self.piezo_attempts = 0
+        self.porto_winner = self._rng.randrange(3)
+        self.porto_seeded = False
+        self.porto_attempts = 0
+        self.porto_solved = False
         self.piezo_settings = config.get('piezo_settings', {
             'attempts_required': 3,
             'correct_answer_probability': 0.25
@@ -97,6 +104,12 @@ class TriggerManager:
             if self._cooldown_passed(name, now):
                 logger.info(f"Laser beam broken: {name}")
                 self.trigger_cooldowns[name] = now
+                if self._trigger_room(trigger) == 'Porto Room':
+                    self.porto_winner = self._rng.randrange(3)
+                    self.porto_seeded = True
+                    self.porto_attempts = 0
+                    self.porto_solved = False
+                    logger.info(f"Porto knock game: entry winner is pad {self.porto_winner + 1}")
                 self.fire(trigger)
         elif previous_state == GPIO.LOW and rx_state == GPIO.HIGH:
             logger.info(f"Laser beam restored: {name}")
@@ -127,12 +140,38 @@ class TriggerManager:
         if not self._cooldown_passed(name, now):
             return
         self.trigger_cooldowns[name] = now
+        if self._trigger_room(trigger) == 'Porto Room':
+            if not self.porto_seeded:
+                self.porto_winner = self._rng.randrange(3)
+                self.porto_seeded = True
+                self.porto_attempts = 0
+                self.porto_solved = False
+                logger.info(f"Porto knock game: lazy winner is pad {self.porto_winner + 1}")
+            pad_index = trigger.get('game', {}).get('index')
+            if pad_index is None and trigger.get('channel') is not None:
+                pad_index = int(trigger['channel'])
+            if not self.porto_solved:
+                self.porto_attempts += 1
+            pass_now = (
+                self.porto_solved
+                or (
+                    self.porto_attempts >= 2
+                    and (pad_index == self.porto_winner or self.porto_attempts >= 4)
+                )
+            )
+            if pass_now:
+                self.porto_solved = True
+            effect_name = "CorrectAnswer" if pass_now else "PortoHit"
+            logger.info(f"Porto piezo triggered: {name} attempt {self.porto_attempts} -> {effect_name}")
+            self.fire(trigger, effect_override=effect_name)
+            return
+
         self.piezo_attempts += 1
         logger.info(f"Piezo triggered: {name} (attempt {self.piezo_attempts})")
 
         if self.piezo_attempts >= self.piezo_settings['attempts_required']:
             self.piezo_attempts = 0
-            if random.random() < self.piezo_settings['correct_answer_probability']:
+            if self._rng.random() < self.piezo_settings['correct_answer_probability']:
                 effect_name = "CorrectAnswer"
             else:
                 effect_name = "WrongAnswer"
@@ -142,6 +181,9 @@ class TriggerManager:
 
     def _cooldown_passed(self, name, now):
         return now - self.trigger_cooldowns.get(name, 0) > self.cooldown_period
+
+    def _trigger_room(self, trigger):
+        return trigger.get('room') or trigger.get('action', {}).get('data', {}).get('room')
 
     def fire(self, trigger, effect_override=None):
         """Fire a trigger's action in the background so polling never blocks."""
@@ -155,6 +197,7 @@ class TriggerManager:
 
         url = action['url'].replace('${server_ip}', self.server_ip)
         data = dict(action.get('data', {}))
+        data.setdefault('trigger_name', trigger.get('name'))
         if effect_override:
             data['effect_name'] = effect_override
 

@@ -8,25 +8,28 @@
         },
         "PoliceLights": {
             "audio_files": [
-                "gadget-policelights.mp3",
-                "vintage-police.mp3",
-                "borg.mp3"
+                "rooms/Cop Dodge/mixes/11_escalation_detected_to_checkpoint.wav",
+                "rooms/Cop Dodge/mixes/12_dispatch_chase_bed.wav",
+                "rooms/Cop Dodge/mixes/13_rapid_spotted_checkpoint.wav",
+                "rooms/Cop Dodge/mixes/14_overwatch_hunt_closing_in.wav"
             ],
             "volume": 0.8
         },
         "GateInspection": {
+            "_comment": "Tim 2026-07: the two legacy tickets-please stay in rotation alongside the Gate pack mixes",
             "audio_files": [
                 "fallout-ticketsplease.mp3",
-                "jones-ticketsplease.mp3"
+                "jones-ticketsplease.mp3",
+                "rooms/Gate/mixes/11_checkpoint_inspection_sequence.wav",
+                "rooms/Gate/mixes/12_tickets_please_comedy_sequence.wav",
+                "rooms/Gate/mixes/13_strict_checkpoint.wav",
+                "rooms/Gate/mixes/14_aperture_gate_processing.wav",
+                "rooms/Gate/mixes/15_border_shift_loop.wav"
             ],
             "volume": 0.7
         },
         "GateGreeters": {
-            "audio_files": [
-                "greeters-weed.mp3",
-                "greeters-jurasic-park.mp3",
-                "prosper-spock.mp3"
-            ],
+            "audio_files": [],
             "volume": 0.7
         },
         "WrongAnswer": {
@@ -34,9 +37,7 @@
                 "fail.mp3",
                 "growl1.mp3",
                 "growl2.mp3",
-                "megaman.mp3",
-                "dinorar.mp3",
-                "spacedoorsclosed.mp3"
+                "dinorar.mp3"
             ],
             "volume": 0.8
         },
@@ -49,65 +50,400 @@
             "volume": 0.9
         },
         "CorrectAnswer": {
+            "_comment": "Shared maze-wide victory chime (room-games plan); MechWarrior Betty lines removed 2026-07-29 (Tim)",
             "audio_files": [
-                "ff9-victory.mp3",
-                "MW2-Betty-Area-Secure.mp3",
-                "MW2-Betty-gate-Code.mp3",
-                "MW2-Bety-Inspection-Successful.mp3"
+                "rooms/Bike Lock Room/rapid/button_responses/01_button_1_quake.wav",
+                "rooms/Bike Lock Room/clips/20_quake_button_2.wav",
+                "rooms/Bike Lock Room/clips/21_quake_button_3.wav",
+                "rooms/Bike Lock Room/clips/22_quake_button_4.wav"
             ],
+            "volume": 0.8
+        },
+        "VerticalMoopMarch-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "BikeLockRoom-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "CampSign-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "CopDodge-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "Entrance-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "Exit-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "Gate-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "GuyLineClimb-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "MonkeyRoom-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "NoFriendsMonday-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "SparklePonyRoom-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "TempleRoom-Background": {
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "VerticalMoopMarch-RightAnswer": {
+            "_comment": "Final Vertical Moop March success pool: the server fires this only after all four unique moop buttons are pressed within 60s. Individual moop button presses still use the shared CorrectAnswer pool.",
+            "audio_files": [
+                "rooms/Bike Lock Room/clips/28_diablo_quest_complete_1.wav",
+                "rooms/Bike Lock Room/clips/29_diablo_quest_complete_2.wav",
+                "ff9-victory.mp3",
+                "rooms/Porto Room/sensor_responses/victory/03_zelda_chime_door_opens.wav"
+            ],
+            "volume": 0.8
+        },
+        "VerticalMoopMarch-WrongAnswer": {
+            "_comment": "Final Vertical Moop March failure pool: the server fires one sound from here when a partial moop round times out after 60s, then resets the room.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "BikeLockRoom-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Weights = Bike Lock Room TRIGGER_MAP.csv correct_pair.",
+            "audio_files": [
+                "rooms/Bike Lock Room/rapid/victory/01_doom_secret_unlock.wav",
+                "rooms/Bike Lock Room/rapid/victory/02_diablo_quest_unlock.wav",
+                "rooms/Bike Lock Room/rapid/victory/03_diablo_quest_unlock_alt1.wav"
+            ],
+            "audio_weights": [5, 4, 3],
+            "volume": 0.8
+        },
+        "BikeLockRoom-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Weights = Bike Lock Room TRIGGER_MAP.csv wrong_pair.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "CampSign-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "CampSign-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "CopDodge-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "CopDodge-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Seeded from the cop-alert clips; no right-answer pack exists yet.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "CuddleCross-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "CuddleCross-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "DeepPlayaHandshake-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "DeepPlayaHandshake-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "Entrance-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "Entrance-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "Exit-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "Exit-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "Gate-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Seeded from Gate pass/proceed cues.",
+            "audio_files": [
+                "rooms/Gate/clips/07_portal_proceed_to_chamberlock.wav",
+                "rooms/Gate/clips/09_papers_please_passport_stamp.wav",
+                "rooms/Gate/clips/10_papers_please_gate_open_close.wav"
+            ],
+            "volume": 0.8
+        },
+        "Gate-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Seeded from Gate denial/control cues.",
+            "audio_files": [
+                "rooms/Gate/clips/03_hl2_move_along.wav",
+                "rooms/Gate/clips/04_hl2_citizen.wav",
+                "rooms/Gate/clips/05_hl2_pick_up_that_can.wav",
+                "rooms/Gate/clips/06_hl2_hold_it_right_there.wav"
+            ],
+            "volume": 0.8
+        },
+        "GuyLineClimb-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Seeded from the pack success chime; no wrong-answer pack exists yet.",
+            "audio_files": [
+                "rooms/Guy Line Climb/clips/12_zelda_success_chime.wav"
+            ],
+            "volume": 0.8
+        },
+        "GuyLineClimb-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "MonkeyRoom-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Seeded from the monkey assembly completion cue; no wrong-answer pack exists yet.",
+            "audio_files": [],
+            "volume": 1.0
+        },
+        "MonkeyRoom-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "NoFriendsMonday-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "NoFriendsMonday-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "PhotoBombRoom-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Seeded from Photo Bomb photo-trigger approval clips. Weights = Photo Bomb TRIGGER_MAP.csv minus the Mean Girls failure beat.",
+            "audio_files": [
+                "rooms/Photo Bomb Room/photo_triggers/19_pokemon_snap_wonderful.wav",
+                "rooms/Photo Bomb Room/photo_triggers/20_austin_powers_approval.wav",
+                "rooms/Photo Bomb Room/photo_triggers/21_dead_rising_fantastic.wav",
+                "rooms/Photo Bomb Room/photo_triggers/22_kris_amazing_sweetie.wav"
+            ],
+            "audio_weights": [3, 2, 3, 1],
+            "volume": 0.8
+        },
+        "PhotoBombRoom-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Seeded from the Photo Bomb Mean Girls rejection beat.",
+            "audio_files": [
+                "rooms/Photo Bomb Room/clips/08_mean_girls_she_doesnt_go_here.wav"
+            ],
+            "volume": 0.8
+        },
+        "PortoRoom-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Weights = Porto Room TRIGGER_MAP.csv victory.",
+            "audio_files": [
+                "rooms/Porto Room/sensor_responses/victory/01_satisfying_unlatch.wav",
+                "rooms/Porto Room/sensor_responses/victory/02_tf2_well_done_mate.wav",
+                "rooms/Porto Room/sensor_responses/victory/03_zelda_chime_door_opens.wav",
+                "rooms/Porto Room/sensor_responses/victory/04_mario_64_star_get.wav",
+                "rooms/Porto Room/sensor_responses/victory/05_sonic_checkpoint.wav"
+            ],
+            "volume": 0.9
+        },
+        "PortoRoom-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Mirrors PortoHit occupied-denial pool. Weights = Porto Room TRIGGER_MAP.csv occupied.",
+            "audio_files": [
+                "rooms/Porto Room/sensor_responses/occupied/01_hl2_hold_it.wav",
+                "rooms/Porto Room/sensor_responses/occupied/02_papers_please_denied.wav",
+                "rooms/Porto Room/sensor_responses/occupied/03_mgs_alert_denied.wav",
+                "rooms/Porto Room/sensor_responses/occupied/04_portal_nice_job_hero.wav",
+                "rooms/Porto Room/sensor_responses/occupied/05_starfox_cant_let_you_do_that.wav",
+                "rooms/Porto Room/sensor_responses/occupied/06_tf2_where_learn_to_push.wav",
+                "rooms/Porto Room/sensor_responses/occupied/07_duke_warning_door_rattle.wav",
+                "rooms/Porto Room/sensor_responses/occupied/09_no_response_silence.wav",
+                "rooms/Porto Room/sensor_responses/occupied/10_locked_handle_jiggle.wav"
+            ],
+            "audio_weights": [5, 3, 3, 2, 3, 3, 2, 2, 3],
+            "volume": 0.9
+        },
+        "SparklePonyRoom-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Seeded from non-generated praise/success clips; generated legacy_tts stays quarantined.",
+            "audio_files": [
+                "rooms/Sparkle Pony Room/clips/02_excessive_sparkle_cascade.wav",
+                "rooms/Sparkle Pony Room/clips/04_glados_load_bearing_well_done.wav",
+                "rooms/Sparkle Pony Room/clips/06_glados_congratulations_worth_it.wav",
+                "rooms/Sparkle Pony Room/clips/11_tf2_barely_a_challenge.wav",
+                "rooms/Sparkle Pony Room/clips/12_tf2_well_done_mate.wav"
+            ],
+            "volume": 0.8
+        },
+        "SparklePonyRoom-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Seeded from non-generated push/insult clips; generated legacy_tts stays quarantined.",
+            "audio_files": [
+                "rooms/Sparkle Pony Room/clips/01_door_lift_strain_and_stop.wav",
+                "rooms/Sparkle Pony Room/clips/07_glados_nice_job_hero.wav",
+                "rooms/Sparkle Pony Room/clips/08_glados_horrible_person.wav",
+                "rooms/Sparkle Pony Room/clips/09_tf2_come_on_push.wav",
+                "rooms/Sparkle Pony Room/clips/10_tf2_where_learn_to_push.wav"
+            ],
+            "volume": 0.8
+        },
+        "TempleRoom-RightAnswer": {
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool.",
+            "audio_files": [],
+            "volume": 0.8
+        },
+        "TempleRoom-WrongAnswer": {
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool.",
+            "audio_files": [],
             "volume": 0.8
         },
         "Entrance": {
             "audio_files": [
-                "doom.mp3",
                 "pornhub.mp3",
-                "bjbjbj.mp3"
+                "rooms/Entrance/uploads/Helllllooooo_crawlers.mp3",
+                "rooms/Entrance/uploads/Let_chaos_rain.mp3",
+                "rooms/Entrance/uploads/Welcome_to_the_arena.mp3",
+                "rooms/Entrance/uploads/Good_luck_van_damme.mp3"
             ],
             "volume": 0.9
         },
-        "GuyLineClimb": {
-            "audio_files": [],
-            "volume": 0.7
+        "Exit": {
+            "_comment": "FINISH-arch payoff, fired by the Exit ToF on entry. Pool of one so far (Tim's upload 2026-07-30); drop more send-off lines in beside it — no pack authored for Exit yet",
+            "audio_files": [
+                "uploads/Do_you_know_how_many_of_these_achievements.mp3"
+            ],
+            "volume": 0.9
         },
         "SparkPony": {
+            "_comment": "Pack clips 13-17 and mixes 19/22 are generated speech — quarantined in rooms/Sparkle Pony Room/legacy_tts/, never wire them (no-TTS rule)",
             "audio_files": [
-                "mcoy-doctor.mp3"
+                "rooms/Sparkle Pony Room/mixes/18_push_then_load_bearing_praise.wav",
+                "rooms/Sparkle Pony Room/mixes/20_horrible_person_celebration.wav",
+                "rooms/Sparkle Pony Room/mixes/21_barely_a_challenge.wav"
             ],
             "volume": 0.8
         },
         "PortoStandBy": {
             "audio_files": [
-                "elevator.mp3",
-                "bjuice.mp3"
+                "rooms/Porto Room/ambience/16_crash_temple_walk.wav",
+                "rooms/Porto Room/ambience/17_dkc_temple_passage.wav",
+                "rooms/Porto Room/ambience/18_lost_woods_doorway.wav",
+                "rooms/Porto Room/ambience/19_mellow_playa_firelight.wav",
+                "rooms/Porto Room/ambience/20_playful_playa_stroll.wav"
             ],
             "volume": 0.6
         },
         "PortoHit": {
-            "audio_files": [],
+            "_comment": "Knock-on-occupied-door denials; not triggered yet (piezos fire WrongAnswer until the porto knock game lands, victory = maze-wide CorrectAnswer chime). 09 is intentional silence. Weights = pack TRIGGER_MAP.csv. Pack victory files wait in rooms/Porto Room/sensor_responses/victory/",
+            "audio_files": [
+                "rooms/Porto Room/sensor_responses/occupied/01_hl2_hold_it.wav",
+                "rooms/Porto Room/sensor_responses/occupied/02_papers_please_denied.wav",
+                "rooms/Porto Room/sensor_responses/occupied/03_mgs_alert_denied.wav",
+                "rooms/Porto Room/sensor_responses/occupied/04_portal_nice_job_hero.wav",
+                "rooms/Porto Room/sensor_responses/occupied/05_starfox_cant_let_you_do_that.wav",
+                "rooms/Porto Room/sensor_responses/occupied/06_tf2_where_learn_to_push.wav",
+                "rooms/Porto Room/sensor_responses/occupied/07_duke_warning_door_rattle.wav",
+                "rooms/Porto Room/sensor_responses/occupied/09_no_response_silence.wav",
+                "rooms/Porto Room/sensor_responses/occupied/10_locked_handle_jiggle.wav"
+            ],
+            "audio_weights": [5, 3, 3, 2, 3, 3, 2, 2, 3],
             "volume": 0.9
         },
         "CuddlePuddle": {
-            "audio_files": [
-                "dance.mp3"
-            ],
+            "_comment": "Entry swell for the projection room — LIGHTS ONLY on purpose. Cuddle's sound comes from the floor show instead (floor_show_manager.py): a looping Cuddle-<theme>-Bed plus accent pools fired by the projection's own events. dance.mp3 retired 2026-07-29 (Tim)",
+            "audio_files": [],
             "volume": 0.7
         },
+        "Cuddle-Lava-Bed": {
+            "_comment": "LAVA floor theme: the room's looping bed, on the ambience channel (survives effect audio_stop, accents mix over it). Tim's Lava pool, 2026-07-30. 8.2s loop — the seam steps up in level slightly, so if it pulses on the deck, crossfade a longer master rather than raising the volume",
+            "audio_files": [
+                "uploads/Lava/lava.wav"
+            ],
+            "volume": 0.45
+        },
+        "Cuddle-Lava-Hit": {
+            "_comment": "LAVA accents for the small stuff — a stepping stone going under, a bubble bursting (projection_engine sink/rise/pop). Weights favour the fast lava1 spit over the slower gurgles",
+            "audio_files": [
+                "uploads/Lava/lava1.wav",
+                "uploads/Lava/lava2.wav",
+                "uploads/Lava/lava3.wav"
+            ],
+            "audio_weights": [4, 3, 3],
+            "volume": 0.7
+        },
+        "Cuddle-Lava-Breach": {
+            "_comment": "LAVA accents for Kukulkan (projection_engine monster_swim/monster_breach): lava4 is the punch, lava5 the long swell",
+            "audio_files": [
+                "uploads/Lava/lava4.wav",
+                "uploads/Lava/lava5.wav",
+                "uploads/Lava/lava2.wav"
+            ],
+            "audio_weights": [4, 4, 2],
+            "volume": 0.8
+        },
         "PhotoBomb-BG": {
-            "audio_files": [],
+            "_comment": "Weights = pack TRIGGER_MAP.csv",
+            "audio_files": [
+                "rooms/Photo Bomb Room/background/13_selfie_influencer_presence.wav",
+                "uploads/PhotoBomb-BG/Make_way_for_the_bigshot_-_boosted.mp3"
+            ],
             "volume": 0.6
         },
         "PhotoBomb-Spot": {
+            "_comment": "Pack's photo-button reaction sequences, played on the entry laser instead — the shutter button must stay PhotoBomb-Shot's camera-synced countdown (capture at 4.0s). Weights = pack TRIGGER_MAP.csv",
             "audio_files": [
-                "girls-on-film.mp3",
-                "bearsounds.mp3"
+                "rooms/Photo Bomb Room/photo_triggers/18_selfie_then_mean_girls.wav",
+                "rooms/Photo Bomb Room/photo_triggers/19_pokemon_snap_wonderful.wav",
+                "rooms/Photo Bomb Room/photo_triggers/20_austin_powers_approval.wav",
+                "rooms/Photo Bomb Room/photo_triggers/21_dead_rising_fantastic.wav",
+                "rooms/Photo Bomb Room/photo_triggers/22_kris_amazing_sweetie.wav"
             ],
+            "audio_weights": [4, 3, 2, 3, 1],
             "volume": 0.8
         },
         "PhotoBomb-Shot": {
             "_comment": "Camera sequence: power-up, 3-2-1 countdown, shutter at 4.0s (tools/make_photobomb_audio.py)",
-            "audio_files": [
-                "photobomb-countdown.mp3"
-            ],
+            "audio_files": [],
             "volume": 0.9
         },
         "MonkeyBusiness": {
@@ -125,33 +461,41 @@
         },
         "DeepPlaya-Hit": {
             "audio_files": [
-                "drink-with-me.mp3",
-                "tea.mp3",
-                "fail.mp3",
-                "medicalemergency.mp3",
-                "spacedoorsclosed.mp3"
+                "fail.mp3"
             ],
             "volume": 0.8
         },
         "ImageEnhancement": {
+            "_comment": "Guy Line Climb entry laser (room yaml fires ImageEnhancement; the unused GuyLineClimb placeholder effect was removed 2026-07-29)",
             "audio_files": [
-                "mw2-imageenhancement.mp3",
-                "sf64-roll.mp3",
-                "faster.mp3"
+                "rooms/Guy Line Climb/mixes/13_realistic_ascent_to_extraction.wav",
+                "rooms/Guy Line Climb/mixes/14_industrial_shaft_climb.wav",
+                "rooms/Guy Line Climb/mixes/15_retro_game_climb.wav",
+                "rooms/Guy Line Climb/mixes/16_pure_rope_and_wind.wav",
+                "rooms/Guy Line Climb/mixes/17_arcade_panic_to_extraction.wav"
             ],
             "volume": 0.7
         },
         "BikeLockRoom": {
+            "_comment": "Victory payoff — the bike game fires chime-then-BikeLockRoom on the correct pair. Weights = pack TRIGGER_MAP.csv. Per-button acks / duplicate-denied / wrong-pair failure files are node-firmware phase (pack README controller logic); failure stays shared WrongAnswer meanwhile",
             "audio_files": [
-                "ramming-speed.mp3"
+                "rooms/Bike Lock Room/rapid/victory/01_doom_secret_unlock.wav",
+                "rooms/Bike Lock Room/rapid/victory/02_diablo_quest_unlock.wav"
             ],
+            "audio_weights": [5, 4],
+            "volume": 0.8
+        },
+        "BikeLock-Entry": {
+            "_comment": "Entry laser prompt (door activates, inputs live). Weights = pack TRIGGER_MAP.csv",
+            "audio_files": [],
             "volume": 0.8
         },
         "NoFriendsMonday": {
             "audio_files": [
                 "biggerboat.mp3",
                 "excuses.mp3",
-                "iwillsurvive.mp3"
+                "iwillsurvive.mp3",
+                "rooms/No Friends Monday/uploads/bbbbboss_battle.mp3"
             ],
             "volume": 0.8
         }

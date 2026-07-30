@@ -15,7 +15,7 @@ if [ "${1:-}" = "-d" ]; then
     if [ -f sim.pid ] && kill -0 "$(cat sim.pid)" 2>/dev/null; then
         echo "[sim] already running (pid $(cat sim.pid))"; exit 0
     fi
-    nohup .venv/bin/python run_server.py >> sim.log 2>&1 &
+    setsid .venv/bin/python run_server.py >> sim.log 2>&1 < /dev/null &
     echo $! > sim.pid
     echo "[sim] started (pid $(cat sim.pid)) — UI: http://$(hostname -I | awk '{print $1}'):5001  log: sim/sim.log"
 else

@@ -95,14 +95,26 @@ overhead plan view), and **all lights mount on the back scaffolding/cross
 members**: fixtures are bracket-mounted, tilted down into their rooms (no
 poles in the walkways, nothing hangs mid-room). **Each room's entire sensing
 lives in its wooden node-enclosure box** (XIAO ESP32-S3 — the fleet standard —
-+ the room's LD2410C radar or VL53L1X ToF + power) at the planned mount from
-`wiring-guides/room-node-enclosure-plan.md` — wing bays on the entry-side front
-leg with the radar window aimed at the opposite back corner, ToF rooms with the
-window facing their arch (`enclosure` keys in `maze_layout.json`). The sim
++ the room's LD2410C radar, or a TOF200C ToF at Entrance/Exit + power) at the
+planned mount from `wiring-guides/room-node-enclosure-plan.md` — wing bays on the
+entry-side front leg with the radar window aimed at the opposite back corner, the
+two shafts at the top of the room pointed straight down, Entrance/Exit firing out
+through their arch (`enclosure` keys in `maze_layout.json`). The sim
 draws each box's detection wedge and boresight at its configured yaw/tilt;
 buttons and knock pads stay at their interaction points and wire back to screw
 terminals in the room's box. Doorway openings are declared in `doorways` (they
 used to be implied by the old break-beam segs).
+
+**Back-side audio/day power** (`audio_power` in `maze_layout.json`): the sim
+keeps the Creative Pebble room plan and back-side power BOM in the layout data,
+but the visible scene only draws the back-side 100 Ah LiFePO4 battery/charger.
+Speakers, wiring, and converter/tap hardware are intentionally not drawn in the
+sim.
+With back-corner speakers every room needs a 3.5 mm extension from the
+Pebble/right speaker to the node box or a closer box/speaker placement.
+Back-side routed audio runs are about 3.55 m for normal wing rooms against the
+Pebble's 1.2 m aux lead; the speaker-to-speaker cable is 1.35 m, so a Pebble
+pair also cannot occupy both opposite rear corners of a 7 ft bay.
 
 **Room backdrops**: every room's back wall carries its real printed-canvas
 background (the print masters live in `Background-images/` at the repo root,
@@ -160,7 +172,7 @@ Stop with `sim/stop.sh`. First run creates `sim/.venv` automatically.
 **Views** (M cycles): **Street** (default — the whole facade at once, drag to pan,
 wheel to dolly, the way the piece reads on playa) · **First-person** (WASD + mouse-
 look, E to use buttons/pads/ladders, walk into a room's radar wedge (green) or ToF
-cone (red) to trip its sensor)
+cone (red) to trip its sensor — and walk back OUT to fire the room's leave event)
 · **Overhead plan** (Ground/Upper/Both floor filter, click floor to teleport).
 **Day / night** (N or the ☀/☾ button, remembered across reloads): night is the
 default show environment; day mode brings up playa daylight — handy for checking
@@ -242,6 +254,27 @@ the server Pi, painted straight to the HDMI framebuffer
 `lohp-projection.service`, demo phantom walkers until the LD2450 lands).
 Rig geometry below is unchanged.
 
+**The room follows the show** (2026-07-30, `floor_show_manager.py`). Whichever
+renderer is driving reports theme, liveness and events to the server
+(`POST /api/floor_event` — the sim's `_floor_loop` does it in-process, the Pi
+renderer through `ServerReporter`), and the server gives Cuddle Cross:
+
+- a **looping bed** while the show is up, on an audio channel of its own so
+  effects mix over it instead of cutting it (`play_room_ambience` /
+  `stop_room_ambience`, handled by the Pi client, the sim's browser audio unit,
+  and the node path). LAVA runs Tim's `lava.wav`;
+- **accents** on the engine's own moments — a stone sinking, Kukulkan
+  surfacing — each one file from the theme's pool plus a capped ember flare on
+  the pars, gated by probability and cooldown so they stay occasional;
+- the room's **light palette**: the entry swell is rebuilt in the theme's
+  colours, and the maze theme's ambient wash is capped at 44–48 with zero white
+  and tinted to the theme (`theme_manager.ROOM_LIGHT_PROFILES`) — un-capped it
+  runs to 255 and drowns the projection.
+
+`sim/tools/floor_audio_test.py` covers the whole path headless. Only LAVA has
+sounds; the other four light correctly and stay silent. `GET /api/floor_state`
+shows what the server currently believes.
+
 ## Rig geometry: Cuddle Cross floor projection (sim preview, 2026-07-18)
 
 The `projection` key in `maze_layout.json` renders the **planned** cuddle-pit
@@ -275,6 +308,37 @@ presence is lost,
 like the planned cue daemon. **Sim-only** — no production config exists for
 this yet; delete the `projection` key to remove the rig.
 
+**Mount button (2026-07-29):** overlays the **calculated build position** for
+the arm/enclosure, dimensioned off datums a tape measure can find on the real
+deck — the NE ply corner (the paired legs stand just outside it), the
+corner-to-corner string line (= the throw axis and the corner bisector, 60°
+to each frame face) and the deck surface. **Stand-off revision, same day:**
+the frames' top rail (75 mm below the leg tops) and full-width header
+(190 mm down) run right through where the body's rear corners used to
+overhang — a real collision the roof-cap math missed — so the whole rig sits
+**120 mm further down the diagonal**: lens plumb 220 mm in from the corner on
+the line, window 1525 mm above deck (= the 0.49 throw ratio × 3112 mm image —
+height IS the mapping), body top 1745 mm, rear face 135 mm off the corner,
+image near/far edges 640 / 2974 mm from the corner as deck verification
+marks. Nominal lit coverage 88.1%, recoverable ~1–2 pt on-site via the
+carriage slot. The sim draws the actual mount hardware: box beam threading
+the 77 mm rail–header gap, side-plate back frames stopping 65 mm inboard,
+cradle ribs grabbing the leg pair at the two member-free clamp bands
+(~1540 / ~1755 above deck), and the ply shroud sleeve. The overlay is
+computed from the same layout values that draw the rig, so it can never
+disagree with the picture. Fab spec + cut files:
+`wiring-guides/cuddle-projector-mount.md`, `enclosure/projector-shroud.scad`.
+
+Beam linework draws two different things (2026-07-29, after the full-rect
+frustum read as "light through the scaffold"): **solid rays = the LIT cone**,
+the deck outline clipped to the image rectangle — every solid ray clears the
+steel, which is what the inboard-of-the-legs placement bought — and **faint
+dashed = the masked spill**, the optics' full 3.11 × 2.33 m rectangle whose
+four corners all land off-deck and render black (a DLP's black leaks a whisper
+of gray, and the shroud aperture must clear this whole frustum, so it stays
+visible). The dashed edges crossing the east arch and street frame are dead
+rays only.
+
 ## Camp sign: 24 real DMX zones out front (2026-07-19)
 
 The arched "Legends of the ◉ Hidden Playa" sign between the entrance towers is
@@ -307,10 +371,13 @@ get designed (the old aspirational names were MoopMarch/TempleAmbience;
 MonkeyBusiness now exists but is the puzzle *button* effect, deliberately not
 the doorway). Other design gaps found:
 
-- **Bespoke effects that exist but nothing triggers**: GateGreeters, GuyLineClimb
-  (the Guy Line sensor fires ImageEnhancement instead — intentional?), PortoHit,
-  PhotoBomb-BG, DeepPlaya-BG, LightningStorm.
-- **Effects with no audio mapped**: GuyLineClimb, PortoHit, PhotoBomb-BG.
+- **Bespoke effects that exist but nothing triggers**: GateGreeters (manual/panel
+  only; also the concurrency test's bright-hold case), PortoHit (waits on the
+  porto knock game), PhotoBomb-BG, DeepPlaya-BG, LightningStorm. The unused
+  GuyLineClimb placeholder was removed 2026-07-29 — the Guy Line sensor fires
+  ImageEnhancement, which carries the room's climb audio (intentional).
+- **Effects with no audio mapped**: (none — CuddlePuddle and BikeLock game
+  fail-sounds are deliberately empty/shared pending packs).
 
 ## ⚠ HARDWARE DAY: re-address the physical fixtures (config already fixed)
 
@@ -356,7 +423,7 @@ open and you'll see the "ghost" activity they produce.
 |---|---|---|
 | DMX output | `virtual_dmx.py` replaces the FTDI thread; same 44Hz loop over `DMXStateManager` | Same frames that would hit the wire |
 | Fixtures | Each 3D fixture decodes the **raw universe at its configured start address** using the channel map from `light_config.json` | Reproduces addressing bugs |
-| Sensors | Radar/ToF detection wedges fired from each room's node box (pos + yaw/tilt/fov/range in `maze_layout.json`, floor-aware, clipped to room bounds) plus button/pad geometry; actions verbatim from `triggers.json` (the canonical trigger map); piezo 3-attempt/25% logic mirrors `trigger_manager.py`; room games (Gate banks, Handshake winner, Bike quiz, Moop pucks, truck Lights-Out) mirror the node `game_*.yaml` packages per `wiring-guides/room-games-plan.md`; 5s cooldowns (games faster) | Same HTTP POSTs as the ESP32 nodes (and the retired Pi units before them) |
+| Sensors | Radar/ToF detection wedges fired from each room's node box (pos + yaw/tilt/fov/range in `maze_layout.json`, floor-aware, clipped to room bounds) plus button/pad geometry; actions verbatim from `triggers.json` (the canonical trigger map) — presence triggers are an occupancy pair, so entering a wedge POSTs the room's effect and leaving it POSTs `leave_action` (`/api/room_vacated`); piezo 3-attempt/25% logic mirrors `trigger_manager.py`; room games (Gate banks, Handshake winner, Bike quiz, Moop pucks, truck Lights-Out) mirror the node `game_*.yaml` packages per `wiring-guides/room-games-plan.md`; 5s cooldowns (games faster) | Same HTTP POSTs as the ESP32 nodes (and the retired Pi units before them) |
 | Audio | The page connects to `:8765` speaking the unit protocol, claims all 16 rooms (incl. Camp Sign), plays served MP3s via Web Audio, spatialized at room+floor positions | Same messages a unit client receives |
 | ESP32 nodes | Real ESPHome YAML compiled for the `host` platform → native Linux processes that fire real `http_request` POSTs (`esphome/`, verified end-to-end) | Real firmware engine, virtual sensor input |
 

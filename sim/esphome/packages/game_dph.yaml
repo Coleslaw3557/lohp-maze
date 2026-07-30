@@ -1,6 +1,6 @@
-# Deep Playa Handshake game — 5 arcade buttons, exactly ONE (random) is the
-# winner: it fires the CorrectAnswer victory chime and the winner re-rolls;
-# every other button fires WrongAnswer. Winner persists across failed presses.
+# Deep Playa Handshake game — 5 arcade buttons, exactly ONE random winner per
+# room entry: it fires the CorrectAnswer victory chime; every other button
+# fires WrongAnswer. Winner persists across failed presses.
 # Spec: wiring-guides/room-games-plan.md.
 # Sim/harness: `call <host>:<port> press_shake n=1` (n = 1-5).
 # Real S3 wiring: buttons on D0-D4, LEDs hardwired to the 5V rail.
@@ -23,19 +23,32 @@ api:
             n: !lambda 'return n;'
 
 script:
+  - id: dph_randomize
+    mode: restart
+    then:
+      - lambda: |-
+          id(dph_winner) = random_uint32() % 5;
+          id(dph_seeded) = true;
+      - logger.log:
+          format: "Handshake: entry winner is button %d"
+          args: ['id(dph_winner) + 1']
+
   - id: dph_press
     mode: single   # 2s lockout between presses
     parameters:
       n: int
     then:
       - lambda: |-
-          if (!id(dph_seeded)) { id(dph_winner) = random_uint32() % 5; id(dph_seeded) = true; }
+          if (!id(dph_seeded)) {
+            id(dph_winner) = random_uint32() % 5;
+            id(dph_seeded) = true;
+            ESP_LOGI("dph", "Handshake: lazy winner is button %d", id(dph_winner) + 1);
+          }
       - if:
           condition:
             lambda: 'return (n - 1) == id(dph_winner);'
           then:
-            - logger.log: "Handshake: WINNER — re-rolling"
-            - lambda: 'id(dph_winner) = random_uint32() % 5;'
+            - logger.log: "Handshake: WINNER"
             - script.execute:
                 id: dph_fire
                 effect: "CorrectAnswer"

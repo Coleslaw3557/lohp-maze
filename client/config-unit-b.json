@@ -113,8 +113,12 @@
         },
         "data": {
           "room": "Porto Room",
-          "effect_name": "WrongAnswer"
+          "effect_name": "PortoHit"
         }
+      },
+      "game": {
+        "id": "porto",
+        "index": 0
       },
       "channel": 0
     },
@@ -131,8 +135,12 @@
         },
         "data": {
           "room": "Porto Room",
-          "effect_name": "WrongAnswer"
+          "effect_name": "PortoHit"
         }
+      },
+      "game": {
+        "id": "porto",
+        "index": 1
       },
       "channel": 1
     },
@@ -149,8 +157,12 @@
         },
         "data": {
           "room": "Porto Room",
-          "effect_name": "WrongAnswer"
+          "effect_name": "PortoHit"
         }
+      },
+      "game": {
+        "id": "porto",
+        "index": 2
       },
       "channel": 2
     }

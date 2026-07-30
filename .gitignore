@@ -11,6 +11,10 @@ photos/
 Background-images/
 # generated streamable cue WAVs (make_node_audio.py)
 audio_files/cues/
+# audio console's one-deep undo copy (tools/audio_console.py) + its pidfile
+audio_config.json.bak
+audio_config.json.tmp
+tools/audio-console.pid
 # orb firmware credentials + build output
 firmware/orb/secrets.h
 firmware/orb/build/
