@@ -84,9 +84,10 @@ etched body outline at both ends, wire entries low.
 | 12 ← GND (unused input — never float a CMOS input) | 11 n.c. |
 
 Series resistors at the chip end; the chip dead-bugs at the floor's etched
-AHCT zone, its outputs going straight out the D1–D3 back-wall holes on BTF
-3-pin pigtails (data + GND only — each pigtail's **red +12V lead stays
-cut**; group power is fuse-block business). Data leads run along the band
+AHCT zone, its outputs going straight out the D1–D3 back-wall holes on
+3-pin pigtails. **As-built 2026-08-01: the RED lead carries DATA on D1–D3**
+(printed cable labels match) — data + GND only either way; chain +12V never
+passes through this box, group power is fuse-block business. Data leads run along the band
 to each group's pixel 0 (longest: ~4 ft to 'P'). On-hand TXS0108E is NOT a
 sub here.
 
@@ -97,11 +98,11 @@ room-games-plan.md), the 25th button of the games order. Bench-make the
 button tail so the scaffold end just plugs in; the lamp is always lit — no
 GPIO spent, the game rooms' rule:
 
-| BTF 3-pin lead | Button end | Box end (inside the wall) |
+| Lead (as-built 2026-08-01) | Button end | Box end (inside the wall) |
 |---|---|---|
-| green (signal) | Microswitch NO | S3 D3 (GPIO4, INPUT_PULLUP) |
-| red (+5V) | Lamp + | Buck OUT+ |
-| white (GND) | Microswitch COM + lamp − spliced | Common GND |
+| yellow (signal/data) | Microswitch NO | S3 D3 (GPIO4, INPUT_PULLUP) |
+| red (+5V power) | Lamp + | Buck OUT+ |
+| black (GND) | Microswitch COM + lamp − spliced | Common GND |
 
 Red on THIS pigtail carries live 5V for the lamp — unlike the D1–D3 data
 pigtails, whose red +12V lead stays cut.

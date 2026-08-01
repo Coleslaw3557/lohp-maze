@@ -219,10 +219,10 @@ Everything plugs INTO the box; nothing sign-side is soldered in the field:
 | Port | Cut | Outside the wall | Inside the wall |
 |---|---|---|---|
 | 12V (left wall) | Ø8 | BTF 2-pin pigtail connector — the LEFT-block C3 run (18 AWG, 2A) plugs in | bare ends → buck IN+ / IN−; zip-tie strain relief |
-| D1–D3 (back wall) | 3 × Ø7 | BTF 3-pin pigtail connectors — each chain's data lead plugs in. The wall etches each hole's chain under it: **LEGENDS OF THE (e) · LOGO · HIDDEN PLAYA (H)** | data → its AHCT output's 33–100Ω, white → common GND; **red +12V lead CUT/dead** — chain power comes from the pillar fuse blocks, never through this box |
+| D1–D3 (back wall) | 3 × Ø7 | BTF 3-pin pigtail connectors — each chain's data lead plugs in. The wall etches each hole's chain under it: **LEGENDS OF THE (e) · LOGO · HIDDEN PLAYA (H)** | data → its AHCT output's 33–100Ω + GND to common. **As-built 2026-08-01: RED lead = DATA** (cable labels printed to match; supersedes the planned green-data/red-cut BTF scheme) — chain +12V still comes from the pillar fuse blocks, never through this box |
 | DMX (left wall) | Ø24 XLR | Dfi RX's male stick plugs straight in (fallback); antenna hangs clear outside | Devinal XLR3-F jack, cups bench-soldered: pin 3 → A, pin 2 → B, pin 1 → GND + **120Ω across A–B** |
 | USB (right wall) | slot | flash/debug cable | XIAO's own USB-C noses into the slot |
-| BTN (right wall) | Ø7 | BTF **3-pin** pigtail (2026-07-31, was 2-pin — adds the lamp feed; Ø7 passes 3-pin same as D1–D3, no re-cut) — the storm button's 3-wire run from the scaffolding plugs in ("STORM" etched under the hole) | green signal → XIAO D3 (GPIO4, INPUT_PULLUP) · red +5V → buck OUT+ (lamp, always lit) · white → common GND |
+| BTN (right wall) | Ø7 | BTF **3-pin** pigtail (2026-07-31, was 2-pin — adds the lamp feed; Ø7 passes 3-pin same as D1–D3, no re-cut) — the storm button's 3-wire run from the scaffolding plugs in ("STORM" etched under the hole) | **as-built colors 2026-08-01:** yellow signal → XIAO D3 (GPIO4, INPUT_PULLUP) · red +5V → buck OUT+ (lamp, always lit) · black → common GND |
 
 Pigtail spec (2026-07-29): the 12V, D1–D3 and BTN pigtails keep **~10 cm of
 slack tail outside the wall** — connectors dangle and mate hand-to-hand on
