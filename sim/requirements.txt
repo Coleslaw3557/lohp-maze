@@ -8,3 +8,4 @@ werkzeug==2.3.8
 # lava floor-projection engine (../projection_engine.py) — sim and the Pi
 # renderer share it
 numpy==2.5.1
+Pillow==10.2.0  # Photo Bomb watermark (../camera_manager.py)

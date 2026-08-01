@@ -1,35 +1,48 @@
 #!/usr/bin/env python3
-"""Regression test for the Photo Bomb camera sequence and the Monkey Room
+"""Regression test for the Photo Bomb booth game and the Monkey Room
 silver-monkey celebration (headless, against a running sim).
 
 Covers:
-  1. both effects registered
-  2. PhotoBomb-Shot: countdown pops at 1/2/3s, white FLASH at 4s on the room's
-     fixtures, countdown audio delivered to the room's audio client, and a
-     timestamped photo written at the shutter moment
-  3. button hammering: a re-trigger mid-countdown supersedes the run and
+  1. effects registered
+  2. watermark: captures get a Pacific-time stamp in the lower-right corner
+     (direct CameraManager check, synthetic backend — no server needed)
+  3. PhotoBomb-Shot: countdown pops at 0.75/1.5/2.25s, white FLASH at 3s on the
+     room's fixtures, a photo written at the shutter moment, and the victory
+     cue (CorrectAnswer chime) delivered after the capture
+  4. entry (PhotoBomb-BG) plays the room's music bed and resets the shot budget
+  5. booth budget: 5 shots per visitor — the 6th press runs WrongAnswer (failure
+     cue) instead of a countdown and takes no photo; room_vacated resets
+  6. button hammering: a re-trigger mid-countdown supersedes the run and
      replaces the pending capture — exactly one photo per completed countdown
-  4. stop_effect mid-countdown cancels the pending capture — no photo
-  5. MonkeyBusiness: gold fanfare hit right at start, MEGA flash on the 1.56s
+  7. stop_effect mid-countdown cancels the pending capture — no photo
+  8. MonkeyBusiness: gold fanfare hit right at start, MEGA flash on the 1.56s
      stinger, shrine audio delivered to the room's client
-  6. /api/photobomb/photos lists and serves the photos
+  9. /api/photobomb/photos lists and serves the photos
 
 Run with the sim venv: sim/.venv/bin/python sim/tools/photobooth_test.py [host]
 """
 import asyncio
 import json
+import os
 import re
 import sys
+import tempfile
 import time
 import urllib.request
 
 HOST = sys.argv[1] if len(sys.argv) > 1 else 'localhost'
 API = f'http://{HOST}:5000'
 FAILS = []
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # fixture channel bases (0-indexed into the 352ch universe), from light_config.json
 PB_PAR, PB_SPOT = 80, 88     # Photo Bomb Room @81 / @89
 MK_PAR, MK_SPOT = 120, 128   # Monkey Room @121 / @129
+
+# PhotoBomb-Shot timeline (effects/photobomb_shot.py)
+BEEPS = (0.75, 1.5, 2.25)
+FLASH = 3.0
+SHOT_ROOM = 'Photo Bomb Room'
 
 
 def check(name, ok, detail=''):
@@ -52,6 +65,11 @@ def post(path, data, timeout=30):
 
 async def post_bg(path, data):
     return asyncio.create_task(asyncio.to_thread(post, path, data))
+
+
+def booth_reset():
+    """Node reports the room empty -> fresh shot budget."""
+    post('/api/room_vacated', {'room': SHOT_ROOM})
 
 
 async def collect_timed_frames(seconds, out, t0):
@@ -103,6 +121,29 @@ async def audio_listener(room, hits):
                 hits.append(msg)
 
 
+async def watermark_unit_check():
+    """Two synthetic captures, watermark on/off — the lower-right corner must
+    differ (the stamp) and the stamped filename must be a valid timestamp."""
+    sys.path.insert(0, REPO)
+    from PIL import Image
+    from camera_manager import CameraManager
+
+    corners = {}
+    with tempfile.TemporaryDirectory() as td:
+        for mark in (False, True):
+            cfg = os.path.join(td, f'cam-{mark}.json')
+            with open(cfg, 'w') as f:
+                json.dump({'backend': 'synthetic', 'watermark': mark,
+                           'photos_dir': os.path.join(td, f'photos-{mark}')}, f)
+            cam = CameraManager(config_file=cfg)
+            path = await cam.capture()
+            with Image.open(path) as im:
+                w, h = im.size
+                corners[mark] = list(im.convert('L').crop((w // 2, h - h // 8, w, h)).getdata())
+        diff = sum(1 for a, b in zip(corners[False], corners[True]) if abs(a - b) > 40)
+        check('watermark stamps the lower-right corner', diff > 50, f'({diff} px changed)')
+
+
 async def main():
     post('/api/set_theme', {'theme_name': 'notheme'})
     post('/api/stop_effect', {})
@@ -110,72 +151,125 @@ async def main():
 
     print("1) effects registered")
     _, effects = get('/api/effects_list')
-    check('PhotoBomb-Shot registered', 'PhotoBomb-Shot' in effects)
-    check('MonkeyBusiness registered', 'MonkeyBusiness' in effects)
+    for name in ('PhotoBomb-Shot', 'PhotoBomb-BG', 'MonkeyBusiness'):
+        check(f'{name} registered', name in effects)
 
-    print("2) PhotoBomb-Shot: lights timeline + audio + photo")
+    print("2) watermark (direct, synthetic backend)")
+    await watermark_unit_check()
+
+    print("3) PhotoBomb-Shot: lights timeline + photo + victory cue")
+    booth_reset()
     before = {p['filename'] for p in list_photos()['photos']}
     audio_hits = []
-    listener = asyncio.create_task(audio_listener('Photo Bomb Room', audio_hits))
+    listener = asyncio.create_task(audio_listener(SHOT_ROOM, audio_hits))
     await asyncio.sleep(1.0)
 
     frames, t_start, status, body = await run_effect_with_frames(
-        'Photo Bomb Room', 'PhotoBomb-Shot', 8.0)
+        SHOT_ROOM, 'PhotoBomb-Shot', 6.0)
     check('run_effect accepted', status == 200, body.get('message', ''))
-    # countdown pops on both fixtures at 1/2/3s after effect start
-    for beep in (1.0, 2.0, 3.0):
-        pk = peak_near(frames, PB_PAR, t_start + beep)
-        check(f'countdown pop @{beep:.0f}s', pk >= 200, f'(par total_dim peak {pk})')
-    flash_par = peak_near(frames, PB_PAR, t_start + 4.0, 0.3)
-    flash_w = peak_near(frames, PB_PAR, t_start + 4.0, 0.3, chan=4)
-    flash_spot = peak_near(frames, PB_SPOT, t_start + 4.0, 0.3)
-    check('FLASH @4s par', flash_par == 255 and flash_w >= 250, f'(total {flash_par}, w {flash_w})')
-    check('FLASH @4s uking spot', flash_spot == 255, f'(total {flash_spot})')
-    dip = peak_near(frames, PB_PAR, t_start + 3.85, 0.08)
+    for beep in BEEPS:
+        pk = peak_near(frames, PB_PAR, t_start + beep, 0.25)
+        check(f'countdown pop @{beep}s', pk >= 200, f'(par total_dim peak {pk})')
+    flash_par = peak_near(frames, PB_PAR, t_start + FLASH, 0.3)
+    flash_w = peak_near(frames, PB_PAR, t_start + FLASH, 0.3, chan=4)
+    flash_spot = peak_near(frames, PB_SPOT, t_start + FLASH, 0.3)
+    check(f'FLASH @{FLASH}s par', flash_par == 255 and flash_w >= 250,
+          f'(total {flash_par}, w {flash_w})')
+    check(f'FLASH @{FLASH}s uking spot', flash_spot == 255, f'(total {flash_spot})')
+    dip = peak_near(frames, PB_PAR, t_start + FLASH - 0.15, 0.07)
     check('anticipation dip before flash', dip < 100, f'(total {dip})')
 
-    check('countdown audio delivered',
-          any(h['data']['file_name'] == 'photobomb-countdown.mp3' for h in audio_hits),
-          f"({[h['data']['file_name'] for h in audio_hits]})")
-
+    await asyncio.sleep(2.5)  # capture at +3.25s, victory chime ≈ +4.65s
     after = list_photos()
     new = [p for p in after['photos'] if p['filename'] not in before]
     check('exactly one photo captured', len(new) == 1, f'({[p["filename"] for p in new]})')
+    check('victory cue delivered after capture', len(audio_hits) >= 1,
+          f"({[h['data']['file_name'] for h in audio_hits]})")
     if new:
         name = new[0]['filename']
-        check('timestamped filename', bool(re.match(r'photobomb_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(-\d+)?\.jpg', name)), f'({name})')
+        check('timestamped filename', bool(re.match(
+            r'photobomb_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(-\d+)?\.jpg', name)), f'({name})')
         with urllib.request.urlopen(f'{API}/api/photobomb/photos/{name}', timeout=10) as r:
             data = r.read()
         check('photo serves as JPEG', r.status == 200 and data[:3] == b'\xff\xd8\xff',
               f'({len(data)} bytes, backend={after["backend"]})')
     listener.cancel()
 
-    print("3) re-press mid-countdown supersedes: one photo total")
-    before = {p['filename'] for p in list_photos()['photos']}
-    eff1 = await post_bg('/api/run_effect', {'room': 'Photo Bomb Room', 'effect_name': 'PhotoBomb-Shot'})
+    print("4) entry: music bed plays and the budget resets")
+    booth_reset()
+    audio_hits = []
+    listener = asyncio.create_task(audio_listener(SHOT_ROOM, audio_hits))
+    await asyncio.sleep(1.0)
+    bg = await post_bg('/api/run_effect', {'room': SHOT_ROOM, 'effect_name': 'PhotoBomb-BG'})
     await asyncio.sleep(1.5)
-    eff2 = await post_bg('/api/run_effect', {'room': 'Photo Bomb Room', 'effect_name': 'PhotoBomb-Shot'})
+    check('entry music delivered', len(audio_hits) >= 1,
+          f"({[h['data']['file_name'] for h in audio_hits]})")
+    listener.cancel()
+    post('/api/stop_effect', {'room': SHOT_ROOM})
+    await bg
+
+    print("5) booth budget: 5 shots, then failure cue, entry resets")
+    booth_reset()
+    before = {p['filename'] for p in list_photos()['photos']}
+    msgs = []
+    for i in range(6):
+        task = await post_bg('/api/run_effect',
+                             {'room': SHOT_ROOM, 'effect_name': 'PhotoBomb-Shot'})
+        if i < 5:
+            await asyncio.sleep(0.35)  # rapid re-presses supersede each other
+            msgs.append(task)
+        else:
+            status6, body6 = await task
+    for i, t in enumerate(msgs):
+        s, b = await t
+        check(f'press {i + 1} ran the countdown', s == 200 and 'PhotoBomb-Shot' in b.get('message', ''),
+              f"({b.get('message', '')[:50]})")
+    check('press 6 swapped to the failure cue',
+          status6 == 200 and 'WrongAnswer' in body6.get('message', ''),
+          f"({body6.get('message', '')[:60]})")
+    await asyncio.sleep(1.0)
+    new = [p for p in list_photos()['photos'] if p['filename'] not in before]
+    check('failure press takes no photo (burst all superseded)', len(new) == 0, f'({len(new)} new)')
+    _, body7 = post('/api/run_effect', {'room': SHOT_ROOM, 'effect_name': 'PhotoBomb-Shot'})
+    check('press 7 still failing', 'WrongAnswer' in body7.get('message', ''),
+          f"({body7.get('message', '')[:60]})")
+    bg = await post_bg('/api/run_effect', {'room': SHOT_ROOM, 'effect_name': 'PhotoBomb-BG'})
+    await asyncio.sleep(0.4)
+    eff = await post_bg('/api/run_effect', {'room': SHOT_ROOM, 'effect_name': 'PhotoBomb-Shot'})
+    _, body8 = await eff
+    check('entry resets the budget', 'PhotoBomb-Shot' in body8.get('message', ''),
+          f"({body8.get('message', '')[:60]})")
+    await bg
+    await asyncio.sleep(2.0)  # let the reset shot's capture/victory settle
+
+    print("6) re-press mid-countdown supersedes: one photo total")
+    booth_reset()
+    before = {p['filename'] for p in list_photos()['photos']}
+    eff1 = await post_bg('/api/run_effect', {'room': SHOT_ROOM, 'effect_name': 'PhotoBomb-Shot'})
+    await asyncio.sleep(1.2)
+    eff2 = await post_bg('/api/run_effect', {'room': SHOT_ROOM, 'effect_name': 'PhotoBomb-Shot'})
     r1 = await eff1
-    r2 = await eff2
+    await eff2
     await asyncio.sleep(1.0)  # past the second run's capture + margin
     new = [p for p in list_photos()['photos'] if p['filename'] not in before]
     check('superseded run yields no photo', len(new) == 1,
           f'({len(new)} new; first={r1[1].get("message", "")[:40]})')
 
-    print("4) stop mid-countdown cancels the capture: no photo")
+    print("7) stop mid-countdown cancels the capture: no photo")
+    booth_reset()
     before = {p['filename'] for p in list_photos()['photos']}
-    eff = await post_bg('/api/run_effect', {'room': 'Photo Bomb Room', 'effect_name': 'PhotoBomb-Shot'})
-    await asyncio.sleep(1.5)
-    post('/api/stop_effect', {'room': 'Photo Bomb Room'})
+    eff = await post_bg('/api/run_effect', {'room': SHOT_ROOM, 'effect_name': 'PhotoBomb-Shot'})
+    await asyncio.sleep(1.2)
+    post('/api/stop_effect', {'room': SHOT_ROOM})
     try:
         await asyncio.wait_for(eff, timeout=5)
     except Exception:
         pass
-    await asyncio.sleep(3.5)  # would-be shutter time passes
+    await asyncio.sleep(2.8)  # would-be shutter time passes
     new = [p for p in list_photos()['photos'] if p['filename'] not in before]
     check('stopped run yields no photo', len(new) == 0, f'({len(new)} new)')
 
-    print("5) MonkeyBusiness: fanfare + stinger flash + audio")
+    print("8) MonkeyBusiness: fanfare + stinger flash + audio")
     audio_hits = []
     listener = asyncio.create_task(audio_listener('Monkey Room', audio_hits))
     await asyncio.sleep(1.0)
@@ -201,6 +295,7 @@ async def main():
           f"({[h['data']['file_name'] for h in audio_hits]})")
     listener.cancel()
 
+    booth_reset()
     post('/api/stop_effect', {})
     print(f"\n{'ALL PASS' if not FAILS else 'FAILURES: ' + ', '.join(FAILS)}")
     sys.exit(1 if FAILS else 0)

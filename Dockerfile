@@ -3,10 +3,13 @@ FROM python:3.11-slim-bookworm
 WORKDIR /app
 
 # libusb runtime for the FTDI USB-DMX interface (pyftdi);
-# fswebcam grabs Photo Bomb stills from the USB webcam (camera_manager.py)
+# fswebcam grabs Photo Bomb stills from the USB webcam (camera_manager.py);
+# dejavu + tzdata for the photos' Pacific-time corner watermark
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0 \
     fswebcam \
+    fonts-dejavu-core \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

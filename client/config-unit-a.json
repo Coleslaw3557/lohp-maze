@@ -60,7 +60,7 @@
         },
         "data": {
           "room": "Photo Bomb Room",
-          "effect_name": "PhotoBomb-Spot"
+          "effect_name": "PhotoBomb-BG"
         }
       }
     },

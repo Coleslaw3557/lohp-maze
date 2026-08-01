@@ -44,7 +44,7 @@
       "room": "Photo Bomb Room",
       "action": {
         "data": {
-          "effect_name": "PhotoBomb-Spot",
+          "effect_name": "PhotoBomb-BG",
           "room": "Photo Bomb Room"
         },
         "method": "POST",

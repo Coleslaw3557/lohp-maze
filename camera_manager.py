@@ -21,6 +21,7 @@ import os
 import shutil
 import subprocess
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,17 @@ DEFAULT_CONFIG = {
     # shutter sound people actually hear
     "shutter_latency_compensation": 0.25,
     "backend": "auto",   # auto | fswebcam | ffmpeg | synthetic
+    # filenames and the corner watermark both use this zone, independent of the
+    # Pi's system timezone (the RTC keeps the clock honest off-grid)
+    "timezone": "America/Los_Angeles",
+    "watermark": True,
 }
+
+# small date/time stamp in the photo's lower-right corner
+_FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+]
 
 # SMPTE bars, 640x360 — written by the synthetic backend when no camera exists
 _PLACEHOLDER_JPEG = base64.b64decode("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")
@@ -54,6 +65,12 @@ class CameraManager:
         self.photos_dir = os.path.abspath(self.config['photos_dir'])
         os.makedirs(self.photos_dir, exist_ok=True)
         self._pending = None  # asyncio.Task of the scheduled capture, if any
+        self.on_captured = None  # optional fn(room, path), called after a successful capture
+        try:
+            self._tz = ZoneInfo(self.config['timezone'])
+        except Exception as e:
+            logger.error(f"Bad timezone {self.config['timezone']!r} ({e}); using system local time")
+            self._tz = None
         self.backend = self._pick_backend()
         logger.info(f"CameraManager ready: backend={self.backend} device={self.config['device']} "
                     f"photos_dir={self.photos_dir}")
@@ -73,12 +90,12 @@ class CameraManager:
 
     # ---- scheduling (called from effect hooks; event-loop thread only) ----
 
-    def schedule_capture(self, delay_s):
+    def schedule_capture(self, delay_s, room=None):
         """(Re)schedule a capture ``delay_s`` after now — the effect's shutter
         moment. A button re-press restarts the countdown (the effect task is
         superseded), so any pending capture is replaced, never doubled."""
         self.cancel_pending()
-        self._pending = asyncio.create_task(self._capture_later(delay_s))
+        self._pending = asyncio.create_task(self._capture_later(delay_s, room))
 
     def cancel_pending(self):
         """Drop the scheduled capture (countdown was cancelled/superseded)."""
@@ -87,7 +104,7 @@ class CameraManager:
             logger.info("Pending photo capture cancelled")
         self._pending = None
 
-    async def _capture_later(self, delay_s):
+    async def _capture_later(self, delay_s, room=None):
         lead = self.config['capture_lead_time'] if self.backend != 'synthetic' else 0.0
         await asyncio.sleep(max(0.0, delay_s + self.config['shutter_latency_compensation'] - lead))
         try:
@@ -95,12 +112,18 @@ class CameraManager:
             logger.info(f"Photo captured: {path}")
         except Exception as e:
             logger.error(f"Photo capture failed: {e}")
+            return
+        if self.on_captured:
+            try:
+                self.on_captured(room, path)
+            except Exception as e:
+                logger.error(f"on_captured callback failed: {e}", exc_info=True)
 
     # ---- capture ----
 
     async def capture(self):
         """Grab one frame to a timestamped file; returns the path."""
-        ts = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        ts = datetime.now(self._tz).strftime('%Y-%m-%d_%H-%M-%S')
         path = os.path.join(self.photos_dir, f'photobomb_{ts}.jpg')
         seq = 1
         while os.path.exists(path):  # burst within the same second
@@ -121,10 +144,43 @@ class CameraManager:
         else:
             with open(path, 'wb') as f:
                 f.write(_PLACEHOLDER_JPEG)
+            self._watermark(path)
             return
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
         if result.returncode != 0 or not os.path.exists(path):
             raise RuntimeError(f"{self.backend} capture failed: {result.stderr.strip()[:300]}")
+        self._watermark(path)
+
+    def _watermark(self, path):
+        """Stamp the capture time (small, lower-right corner) onto the photo."""
+        if not self.config.get('watermark', True):
+            return
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+        except ImportError:
+            logger.warning("Pillow not installed; photos are not watermarked")
+            return
+        try:
+            text = datetime.now(self._tz).strftime('%Y-%m-%d %I:%M %p %Z')
+            with Image.open(path) as im:
+                im = im.convert('RGB')
+                size = max(11, im.height // 45)
+                font = None
+                for candidate in _FONT_CANDIDATES:
+                    if os.path.exists(candidate):
+                        font = ImageFont.truetype(candidate, size)
+                        break
+                if font is None:
+                    font = ImageFont.load_default()
+                draw = ImageDraw.Draw(im)
+                left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+                margin = max(8, size // 2)
+                xy = (im.width - (right - left) - margin, im.height - (bottom - top) - margin)
+                draw.text(xy, text, font=font, fill=(255, 255, 255),
+                          stroke_width=max(1, size // 12), stroke_fill=(0, 0, 0))
+                im.save(path, quality=92)
+        except Exception as e:
+            logger.error(f"Watermark failed for {path}: {e}")
 
     # ---- listing (for /api/photobomb/photos) ----
 
