@@ -7,8 +7,11 @@ and hold the last frame through WiFi blips, so this sends on CHANGE plus a 1s
 per-node heartbeat (late joiners / a dropped final packet converge within 1s)
 instead of streaming 44Hz all the time — keeps the AP clear for room audio.
 
-Hostname resolution is lazy and cached: a node that is down or unresolvable
-never blocks the frame loop for the others, and a failed target re-resolves
+Hostname resolution is lazy, cached, and runs on a background thread per
+attempt: a node that is down or unresolvable never blocks the frame loop for
+the others (a dead .local name costs ~5s of avahi timeout per attempt, which
+in-loop starved every other node's 1s heartbeat past the sign bridge's 3s
+amber-fallback window — bench, 2026-08-01), and a failed target re-resolves
 with backoff so a DHCP re-lease heals on its own.
 """
 import json
@@ -36,24 +39,34 @@ class _Target:
         self.next_resolve = 0.0
         self.last_sent = 0.0
         self.warned = False
+        self._resolving = False
 
     def resolve(self, now):
-        if now < self.next_resolve:
+        """Kick a background resolve if one is due — never blocks the caller."""
+        if now < self.next_resolve or self._resolving:
             return
+        self._resolving = True
+        threading.Thread(target=self._resolve_blocking, daemon=True,
+                         name=f"artnet-resolve-{self.room}").start()
+
+    def _resolve_blocking(self):
         try:
-            self.addr = (socket.getaddrinfo(self.host, self.port, socket.AF_INET,
-                                            socket.SOCK_DGRAM)[0][4])
-            self.next_resolve = now + RERESOLVE_OK
+            addr = socket.getaddrinfo(self.host, self.port, socket.AF_INET,
+                                      socket.SOCK_DGRAM)[0][4]
+            self.addr = addr
+            self.next_resolve = time.monotonic() + RERESOLVE_OK
             if self.warned:
-                logger.info(f"Art-Net node {self.room} ({self.host}) resolved: {self.addr[0]}")
+                logger.info(f"Art-Net node {self.room} ({self.host}) resolved: {addr[0]}")
                 self.warned = False
         except OSError as e:
             self.addr = None
-            self.next_resolve = now + RERESOLVE_FAIL
+            self.next_resolve = time.monotonic() + RERESOLVE_FAIL
             if not self.warned:
                 logger.warning(f"Art-Net node {self.room} ({self.host}) unresolvable: {e} "
                                f"(retrying every {RERESOLVE_FAIL}s — container mDNS? use an IP)")
                 self.warned = True
+        finally:
+            self._resolving = False
 
 
 class ArtNetOutputManager(threading.Thread):
@@ -112,16 +125,17 @@ class ArtNetOutputManager(threading.Thread):
             if not (changed or now - t.last_sent >= self.HEARTBEAT):
                 continue
             t.resolve(now)
-            if t.addr is None:
+            addr = t.addr              # local copy: the resolver thread may swap it
+            if addr is None:
                 continue
             if packet is None:                    # build once, first needed
                 self.sequence = self.sequence % 255 + 1
                 packet = build_artdmx(self.sequence, self.universe, frame)
             try:
-                self.sock.sendto(packet, t.addr)
+                self.sock.sendto(packet, addr)
                 t.last_sent = now
             except OSError as e:
-                logger.warning(f"Art-Net send to {t.room} ({t.addr[0]}) failed: {e}")
+                logger.warning(f"Art-Net send to {t.room} ({addr[0]}) failed: {e}")
                 t.addr = None                     # force re-resolve
                 t.next_resolve = now + RERESOLVE_FAIL
 

@@ -3,8 +3,10 @@
 > Companion docs: `../cad-items/camp-sign.svg` (the elevation this implements —
 > 28.35 SVG units = 1 ft), `../sim/README.md` (sim now renders the sign live),
 > `../light_config.json` (the zone map is production config, not this doc).
-> Status: **plan + software DONE, sim-verified 2026-07-19** — server, config and
-> sim all drive the 24 zones today; hardware is not bought/cut yet.
+> Status: **plan + software DONE, sim-verified 2026-07-19; bridge firmware
+> LANDED + bench-verified on the real box 2026-08-01** (`../firmware/sign/` —
+> ArtDMX frame-exact @161-345, storm button 200/429 loop, OTA) — server,
+> config and sim all drive the 24 zones today; strips are not cut yet.
 
 ## What it is
 
@@ -99,10 +101,13 @@ ever get backlights: 4 zones @353–384, `NUM_FIXTURES 44→48`.
 **Board: XIAO ESP32-S3** — fleet standard, already stocked for room audio,
 with enough RMT TX channels for the 3 pixel outputs (the C3 has only 2).
 
-**Firmware is net-new** — a custom IDF/Arduino sketch: ArtDMX-over-UDP receive
-(trivial — mirror the parser in `sim/esphome/components/artnet_dmx/`, the room
-nodes' component) + FastLED on 4 RMT outputs. DMX *input* only exists on the
-Dfi fallback path: that's where [`esp_dmx`](https://github.com/someweisguy/esp_dmx)
+**Firmware: `../firmware/sign/` (landed 2026-08-01)** — arduino-cli sketch,
+`esp32:esp32:XIAO_ESP32S3`, FastLED 3.10 on RMT5; `./build.sh flash|ota|monitor`
+(OTA reaches it as `lohp-sign-bridge.local` once mounted). Serial `?` lists the
+bench commands: `z` zone dump, `1/2/3` red per chain, `w` full white, `s`
+simulated storm press. ArtDMX-over-UDP receive (mirrors the parser in
+`sim/esphome/components/artnet_dmx/`, the room nodes' component) + FastLED on
+3 RMT outputs. DMX *input* only exists on the Dfi fallback path: that's where [`esp_dmx`](https://github.com/someweisguy/esp_dmx)
 comes in ([`ESP32S3DMX`](https://github.com/TimRosener/ESP32S3DMX) is an
 S3-specific RX alternative if esp_dmx fights Arduino Core 3.x on bench day) —
 leave it out of the build unless the tower WiFi test fails. It is deliberately
@@ -131,9 +136,12 @@ dumb — all show logic stays on the Pi:
 4. **DMX-loss fallback**: no valid frame for 3 s → slow amber breathe (the camp
    sign shouldn't go black because the Pi rebooted); resume on the next frame.
    An all-zero frame is NOT loss — a deliberate blackout stays a blackout.
-5. **The storm button** (2026-07-29): an arcade push button on the sign
-   scaffolding, 2-wire run to the box's BTN pigtail → **D3 (GPIO4)
-   INPUT_PULLUP + GND**. Debounce ~50 ms; on press, POST `/api/sign_storm`
+5. **The storm button** (2026-07-29; lamp powered 2026-07-31): a lit 30 mm
+   arcade button (games-stock EG Starts kit, 5V LED + microswitch) on the
+   sign scaffolding, **3-wire run** to the box's BTN pigtail — switch NO →
+   **D3 (GPIO4) INPUT_PULLUP**, lamp+ ← buck 5V (**always lit**, no GPIO —
+   the game rooms' rule), switch COM + lamp− share the GND lead.
+   Debounce ~50 ms; on press, POST `/api/sign_storm`
    (empty JSON body) — the server fires **Lightning + its thunder in every
    room and on every speaker at once** (the existing all-rooms broadcast
    path). **The server owns the cooldown**: `SIGN_STORM_COOLDOWN_S = 30` in
@@ -147,15 +155,16 @@ dumb — all show logic stays on the Pi:
    entrance tower).
 
 ```text
-12V PSU ── buck 12→5V 3A ──► XIAO S3 + 74AHCT125 (+ Dfi RX if its barrel takes 5V)
+12V PSU ── buck 12→5V 3A ──► XIAO S3 + 74AHCT125 + storm lamp (+ Dfi RX if its barrel takes 5V)
               └── S3 3V3 pin ──► RS485→TTL module VCC (3.3V feed = 3.3V RO, S3-safe;
                                  a 5V-fed module would put 5V on the S3 UART pin)
 Dfi RX XLR out ── female pigtail: pin3 Data+ → A · pin2 Data− → B · pin1 → G
                   120Ω across A-B at the module (the RX stub is its own tiny bus;
                   the wired maze chain keeps its own 120Ω at its last fixture)
 S3 D4 (GPIO5)  ◄── RS485→TTL RO
-S3 D0..D3 (GPIO1-4) ──► 74AHCT125 ──► 33-100Ω ──► data 1..4 (5V, matches 12V WS2811 logic)
-grounds: PSU− = strip− = buck− = S3 GND = RX stub G (single common)
+S3 D0..D2 (GPIO1-3) ──► 74AHCT125 ──► 33-100Ω ──► data 1..3 (5V, matches 12V WS2811 logic)
+S3 D3 (GPIO4, pullup) ◄── BTN pigtail: switch NO · lamp+ ← buck 5V · COM+lamp− → GND
+grounds: PSU− = strip− = buck− = S3 GND = BTN GND = RX stub G (single common)
 ```
 
 The on-hand **TXS0108E modules are not a substitute** for the AHCT here
@@ -186,6 +195,10 @@ pixels as installed, 1 pixel = one 3-LED WS2811 group ≈ 2 in):
 | 2 | 12 | ◉ logo disc | _ | _ |
 | 3 | 13–23 | H i d d e n · P l a y a | _ | _ |
 
+The working table lives in `../firmware/sign/sign_config.h` (`OUT*_RUNS`),
+seeded with the plan estimates — 14 px big letter / 6 px small / 56 px logo
+(128+56+154) — until the installed counts replace them.
+
 ## Enclosure — the sign node box (2026-07-29)
 
 The bridge electronics get the **sign variant of the universal room-node
@@ -209,7 +222,7 @@ Everything plugs INTO the box; nothing sign-side is soldered in the field:
 | D1–D3 (back wall) | 3 × Ø7 | BTF 3-pin pigtail connectors — each chain's data lead plugs in. The wall etches each hole's chain under it: **LEGENDS OF THE (e) · LOGO · HIDDEN PLAYA (H)** | data → its AHCT output's 33–100Ω, white → common GND; **red +12V lead CUT/dead** — chain power comes from the pillar fuse blocks, never through this box |
 | DMX (left wall) | Ø24 XLR | Dfi RX's male stick plugs straight in (fallback); antenna hangs clear outside | Devinal XLR3-F jack, cups bench-soldered: pin 3 → A, pin 2 → B, pin 1 → GND + **120Ω across A–B** |
 | USB (right wall) | slot | flash/debug cable | XIAO's own USB-C noses into the slot |
-| BTN (right wall) | Ø7 | BTF 2-pin pigtail — the storm button's 2-wire run from the scaffolding plugs in ("STORM" etched under the hole) | signal → XIAO D3 (GPIO4, INPUT_PULLUP) · other lead → common GND |
+| BTN (right wall) | Ø7 | BTF **3-pin** pigtail (2026-07-31, was 2-pin — adds the lamp feed; Ø7 passes 3-pin same as D1–D3, no re-cut) — the storm button's 3-wire run from the scaffolding plugs in ("STORM" etched under the hole) | green signal → XIAO D3 (GPIO4, INPUT_PULLUP) · red +5V → buck OUT+ (lamp, always lit) · white → common GND |
 
 Pigtail spec (2026-07-29): the 12V, D1–D3 and BTN pigtails keep **~10 cm of
 slack tail outside the wall** — connectors dangle and mate hand-to-hand on
@@ -311,13 +324,13 @@ Electronics to buy — essentials only, listings verified via browser
 | BTF WS2811 12V 60/m **IP65** 5 m reels (`dp/B01CNL6LLA`, 4.4★ ×1,685) | 4 | $22.99 ea |
 | XIAO ESP32-S3 (pull from fleet order) | 1 | — |
 | Devinal XLR3 female jack (pull from the room-box jack packs, `dp/B07S6J8WVD` — 15 rooms + this box = 16 jacks total) | 1 | — |
-| Arcade push button, storm trigger (pull from the room-games button stock — verify the order covers one more than the games' 24) | 1 | — |
+| Arcade push button, storm trigger (pull from the room-games button stock — verify the order covers one more than the games' 24; its 5V lamp IS wired, see the BTN port) | 1 | — |
 | Donner Dfi 2.4G wireless DMX, 1 TX + 1 RX (`dp/B00URFIZZA`, 4.3★ ×348) | 1 kit | $50.99 |
 | HiLetgo TTL↔RS485 5-pack, fed 3.3V (`dp/B082Y19KV9`, 4.4★) | 1 pack | $7.39 |
 | SN74AHCT125N 10-pack (`dp/B08R6BCSYC`, 4.7★) | 1 pack | $7.99 |
 | DIANN 12V→5V 3A buck (`dp/B0BPRV1K6Q`, 4.5★) | 1 | $5.99 |
 | MAYWILLA XLR female pigtail (`dp/B0FFMY896F`) — now SPARE: the box's panel jack replaced the pigtail link (2026-07-29); keep packed | 1 | $9.99 |
-| BTF 3-pin pigtail pairs (`dp/B01LCV8LGA`, 4.6★) | 1 pack | $9.99 |
+| BTF 3-pin pigtail pairs (`dp/B01LCV8LGA`, 4.6★) — D1–D3 + the BTN port (3-wire since 2026-07-31) | 1 pack | $9.99 |
 | BTF 2-pin 18AWG pigtail pairs (`dp/B01LCV97AY`, 4.5★) | 2 packs | $12.99 ea |
 
 New spend ≈ **$197**.
@@ -334,6 +347,9 @@ is 3mm-ply stock too — cut `../enclosure/node-enclosure-sign.svg`.
    module with the Dfi pair inline (TX on the bench chain behind a par, RX →
    stub) → verify frame reception at @161+ (same bench flow as the C3 node
    bring-up). Bench the same TX placement you'll rig (Y-stub vs chain end).
+   **WiFi path DONE 2026-08-01** — box flashed, ArtDMX @161-345 frame-exact
+   from the sim server, storm 200/429, OTA reflash; the Dfi/RS485 leg is
+   still unbenched (needs the Dfi pair on a live DMX chain).
 2. Install tape letter by letter; **count pixels per letter into the firmware
    table as you go**.
 3. Wire groups center-out, power stubs at their word-boundary entries

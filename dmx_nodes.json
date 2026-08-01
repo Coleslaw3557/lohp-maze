@@ -19,6 +19,6 @@
     "Monkey Room":          {"host": "lohp-node-monkey.local",               "enabled": true},
     "Bike Lock Room":       {"host": "lohp-node-bike-lock.local",            "enabled": true},
     "Vertical Moop March":  {"host": "lohp-node-vertical-moop-march.local",  "enabled": true},
-    "Camp Sign":            {"host": "lohp-sign-bridge.local",               "enabled": true}
+    "Camp Sign":            {"host": "lohp-sign-bridge.local",               "enabled": true, "hardware": true}
   }
 }

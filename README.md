@@ -224,7 +224,8 @@ sharing the same radar — is specced in
 - `dmx_state_manager.py` / `dmx_interface.py` — DMX channel state and the 44Hz FTDI output thread
 - `artnet_output_manager.py` / `artnet.py` / `dmx_nodes.json` — Art-Net unicast to the room
   nodes' DMX ports (`wiring-guides/dmx-over-wifi.md`); node firmware in
-  `sim/esphome/components/artnet_dmx/`
+  `sim/esphome/components/artnet_dmx/`; the camp-sign pixel bridge (same packets
+  rendered as WS2811 zones + the storm button) in `firmware/sign/`
 - `remote_host_manager.py` — audio command fan-out: WebSocket to every claiming client, mirrored
   to ESP32 nodes via `node_audio_manager.py` (ESPHome native API: firmware cues + streamed music)
 - `audio_manager.py` — audio catalog from `audio_config.json`, served to clients over HTTP

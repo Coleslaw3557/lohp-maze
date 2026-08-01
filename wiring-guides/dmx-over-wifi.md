@@ -223,8 +223,9 @@ order:
    fixtures off it with a standard DMX cable. The room lights the moment the
    node joins.
 3. **Sign:** per `camp-sign-plan.md` — Art-Net over WiFi is its primary feed
-   (same packets, ch 161–352); the Dfi TX/RX pair is fallback, bought/kept
-   only if the entrance-tower WiFi fails its on-site test.
+   (same packets, ch 161–352); bridge firmware in `firmware/sign/`,
+   bench-verified on the built box 2026-08-01. The Dfi TX/RX pair is fallback,
+   bought/kept only if the entrance-tower WiFi fails its on-site test.
 4. **Fallback if ever needed:** `"ftdi": true` + the compose `devices:` line
    restore the wired chain; fixtures never re-dial either way.
 

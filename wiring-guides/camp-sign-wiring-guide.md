@@ -12,9 +12,9 @@
 | 35A MAXI main fuse | LEFT pillar, ≤18 in of 8 AWG from PSU V+ |
 | LEFT fuse block (+ neg bus) | LEFT pillar, beside PSU |
 | RIGHT fuse block (+ neg bus) | RIGHT pillar, fed by the cross-arch trunk |
-| Sign node box (cut `../enclosure/node-enclosure-sign.svg`): XIAO S3, 74AHCT125, buck, MAX485 | Behind the removable logo disc (band center), floor screwed to the cavity wood, lid up. Ports: 12V in + DMX XLR (left wall), D1–D4 data out (back), USB (right) — see the plan's Enclosure section |
+| Sign node box (cut `../enclosure/node-enclosure-sign.svg`): XIAO S3, 74AHCT125, buck, MAX485 | Behind the removable logo disc (band center), floor screwed to the cavity wood, lid up. Ports: 12V in + DMX XLR (left wall), D1–D3 data out (back), USB + BTN (right) — see the plan's Enclosure section |
 | Dfi RX (fallback only) | OUTSIDE the box, its male XLR plugged into the box's DMX jack, antenna clear of steel |
-| Storm arcade button | On the sign scaffolding at reachable height; its 2-wire run plugs into the box's BTN pigtail (right wall, "STORM" etch) |
+| Storm arcade button (lit) | On the sign scaffolding at reachable height; its 3-wire run (switch + always-lit lamp, 2026-07-31) plugs into the box's BTN pigtail (right wall, "STORM" etch) |
 | Dfi TX | Plugged into the LAST maze fixture's DMX OUT (female); wall-wart on that fixture's AC run |
 | Strip groups (pixel 0 always at band center; regrouped 2026-07-29) | 1 "Legends of the" (lands at 'e') · 2 logo disc · 3 "Hidden Playa" (lands at 'H') |
 
@@ -54,18 +54,19 @@ logo ≈ 3.6A · RIGHT C1 ≈ 9.2A).
 
 | S3 pin | GPIO | Connection |
 |---|---|---|
-| 5V | — | Buck OUT+ (5V). Unplug before flashing over USB |
+| 5V | — | Buck OUT+ (5V); the storm-button lamp taps this rail at the BTN pigtail. Unplug before flashing over USB |
 | GND | — | Common (buck OUT−, AHCT pin 7, MAX485 GND, XLR pin 1) |
 | 3V3 | — | MAX485 VCC (3.3V feed = 3.3V RO output, S3-safe) |
 | D0 | GPIO1 | AHCT pin 2 (1A) → D1 "Legends of the" data |
 | D1 | GPIO2 | AHCT pin 5 (2A) → D2 logo-field data |
 | D2 | GPIO3 | AHCT pin 9 (3A) → D3 "Hidden Playa" data |
-| D3 | GPIO4 | Storm button via the BTN pigtail: button shorts to GND, INPUT_PULLUP, ~50 ms debounce → POST /api/sign_storm (server owns the 30 s cooldown) |
+| D3 | GPIO4 | Storm button via the BTN pigtail (3-wire): microswitch NO shorts it to GND, INPUT_PULLUP, ~50 ms debounce → POST /api/sign_storm (server owns the 30 s cooldown); the lamp rides the same pigtail (its own section below) |
 | D4 | GPIO5 | MAX485 RO (UART1 RX, DMX in) |
 | D5–D10, TX/RX | — | Not used |
 
-Buck: IN+ ← LEFT C3 (12V) · IN− ← common · OUT+ 5V → S3 5V pin (+ Dfi RX if
-it's a 5V unit — check its adapter before wiring). Orientation at the etched
+Buck: IN+ ← LEFT C3 (12V) · IN− ← common · OUT+ 5V → S3 5V pin + the BTN
+pigtail's red lamp lead (+ Dfi RX if it's a 5V unit — check its adapter
+before wiring). Orientation at the etched
 BUCK zone: **12V-IN terminal end toward the left wall** (straight shot from
 the 12V hole), 5V-OUT end toward the XIAO; the terminal blocks overhang the
 etched body outline at both ends, wire entries low.
@@ -88,6 +89,22 @@ AHCT zone, its outputs going straight out the D1–D3 back-wall holes on BTF
 cut**; group power is fuse-block business). Data leads run along the band
 to each group's pixel 0 (longest: ~4 ft to 'P'). On-hand TXS0108E is NOT a
 sub here.
+
+## Storm button (BTN pigtail, right wall — 3-wire since 2026-07-31)
+
+EG Starts 30 mm illuminated button (5V kit LED, resistor built in — see
+room-games-plan.md), the 25th button of the games order. Bench-make the
+button tail so the scaffold end just plugs in; the lamp is always lit — no
+GPIO spent, the game rooms' rule:
+
+| BTF 3-pin lead | Button end | Box end (inside the wall) |
+|---|---|---|
+| green (signal) | Microswitch NO | S3 D3 (GPIO4, INPUT_PULLUP) |
+| red (+5V) | Lamp + | Buck OUT+ |
+| white (GND) | Microswitch COM + lamp − spliced | Common GND |
+
+Red on THIS pigtail carries live 5V for the lamp — unlike the D1–D3 data
+pigtails, whose red +12V lead stays cut.
 
 ## DMX link (Dfi 2.4G)
 
@@ -127,9 +144,16 @@ the band, screw clips; logo = serpentine field behind the disc + diffuser.
 
 ## Bring-up checklist
 
-1. Flash S3 on the bench BEFORE connecting the buck (USB and 5V-pin feed not together).
+1. Flash S3 on the bench BEFORE connecting the buck (USB and 5V-pin feed not
+   together). *Done 2026-08-01 over USB (`firmware/sign/build.sh flash`);
+   reflash from here on = `build.sh ota` (lohp-sign-bridge.local).*
 2. Set Dfi TX+RX to the same ID group; verify frames at @161 with a bench par chain.
 3. Polarity-check every 2-pin power drop before inserting its fuse.
-4. Red-only test per output, then full white: 12V ≥ 11.5V at every group's far pixel — if low, add a second entry from the nearest block AT A WORD BOUNDARY.
-5. Press the storm button: the whole maze AND the sign flash Lightning with thunder on every speaker at once; a second press inside 30 s must come back 429 (the server cooldown — nothing to configure on the node).
-5. Re-check fuse sizes against measured strip meters (×1.2A rule).
+4. Red-only test per output, then full white: 12V ≥ 11.5V at every group's far
+   pixel — if low, add a second entry from the nearest block AT A WORD BOUNDARY.
+   (Serial console drives this without the Pi: `1`/`2`/`3` = red on that chain
+   alone, `w` = full white, `0` = back to DMX. First red test also confirms the
+   reel's color order — if red shows another color, flip `SIGN_COLOR_ORDER` in
+   `firmware/sign/sign_config.h`.)
+5. Press the storm button (its lamp should already be lit — it rides the buck rail): the whole maze AND the sign flash Lightning with thunder on every speaker at once; a second press inside 30 s must come back 429 (the server cooldown — nothing to configure on the node). *The POST loop is already proven from this box (2026-08-01, serial `s`): 200 "Storm fired maze-wide", re-press 429 — the scaffold button only adds the physical switch on D3.*
+6. Re-check fuse sizes against measured strip meters (×1.2A rule).

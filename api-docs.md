@@ -249,6 +249,30 @@ curl -X POST http://localhost:5000/api/run_effect_all_rooms \
      }'
 ```
 
+### 11b. Sign Storm
+
+The camp-sign arcade button: fires **Lightning in every room and on the sign
+at once, with thunder on every speaker** (the same all-rooms broadcast as
+`/run_effect_all_rooms` with Lightning). The sign bridge firmware
+(`firmware/sign/`) POSTs this on a button press; anything else may call it too.
+
+**The server owns the cooldown** (`SIGN_STORM_COOLDOWN_S = 30` in `main.py`,
+one shared timer for every source). Presses inside it get **429** with
+`retry_after_s`; a failed strike does not burn the cooldown. The 200 returns
+only after the ~3.5 s strike completes, so short-timeout fire-and-forget
+callers (the node) may drop the response — the strike still runs.
+
+- **URL:** `/sign_storm`
+- **Method:** `POST`
+- **Data Params:** none (empty JSON body)
+
+#### Example
+```bash
+curl -X POST http://localhost:5000/api/sign_storm \
+     -H "Content-Type: application/json" \
+     -d '{}'
+```
+
 ### 12. Stop Effect
 
 Stops the currently running effect in a specific room or all rooms.
