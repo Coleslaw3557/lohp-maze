@@ -215,10 +215,12 @@ data_words = ["LEGENDS OF THE (e)", "LOGO",
                              //  LEGENDS OF THE (e) ~30 wide: gaps to
                              //  LOGO ~6, LOGO to HIDDEN PLAYA ~8, ok
 btn_hole = 7;                // storm-button pigtail exit, RIGHT wall: a
-btn_cx = 45; btn_cz = t + 10;//  BTF 2-pin threads out to the arcade
+btn_cx = 45; btn_cz = t + 10;//  BTF 3-pin threads out to the LIT arcade
                              //  button on the sign scaffolding; inside,
-                             //  signal -> XIAO D3 (GPIO4, INPUT_PULLUP)
-                             //  + GND — the XIAO sits against this wall.
+                             //  signal -> XIAO D3 (GPIO4, INPUT_PULLUP),
+                             //  red +5V (buck) -> lamp always lit, white
+                             //  -> shared GND (lamp- + switch COM). The
+                             //  XIAO sits against this wall.
                              //  Press = POST /api/sign_storm (maze-wide
                              //  Lightning + thunder everywhere at once);
                              //  the SERVER owns the 30s cooldown
@@ -246,12 +248,17 @@ jack_z = 6;                  // floor -> DAC jack barrel center (PCB + barrel
                              //  a pre-CUT hole (07-22): caliper the real
                              //  barrel height before burning a sheet; Ø9
                              //  vs the ~Ø8 plug sleeve leaves only ±0.5
-jack_hole = 7;               // frames the DAC jack's barrel (~Ø6.75 — Tim
-                             //  07-22: the port is ~75% of the old Ø9,
-                             //  which over-cut). The plug's Ø3.5 shank
-                             //  goes INSIDE the barrel; its molded boot
-                             //  stops on the wall face — the plug body
-                             //  never needs to pass the hole
+jack_hole = 9;               // AUX opened 7->9 (Tim 2026-08-01): clears the
+                             //  ~Ø8 molded plug sleeve instead of framing
+                             //  the Ø6.75 barrel (the 07-22 Ø7 rev), so the
+                             //  plug body may enter the wall. No longer a
+                             //  snug barrel frame — the etched floor
+                             //  footprint locates the board now. NB the fab
+                             //  master for the BASE room box is
+                             //  node-enclosure-jen.svg (Jen's Illustrator
+                             //  redraw, already edited to Ø9); this file
+                             //  still renders the -sign/-cuddle variants —
+                             //  keep the two in sync
 // ---- left-wall ports: DB9 A (field IO) + the XLR DMX out ---------------
 // ANMBEST B09WD2V37T calipered 2026-07-22: socket opening 16.5x7.92 (outer
 // D shell = standard ~19.3x10.9), screwlock posts protrude 6.3 past the
@@ -483,13 +490,13 @@ module panel_right() difference() {              // x runs front->back
   panel_side();
   // USB + AUX are CUTS (07-22, was etch + bench-drill). The boards behind
   // register themselves: the XIAO's USB-C noses into the slot (PCB flush
-  // on the wall), the DAC's own jack barrel fills AUX. Both sit over a
+  // on the wall), the DAC's jack barrel centers in AUX. Both sit over a
   // floor-mortise notch. The 07-24 boot-sized USB slot would leave a
   // 0.2mm bridge over its notch — kerf dust — so it deliberately merges
   // with the notch instead: one keyhole opening, and the glued floor
   // tab's top edge becomes the slot's bottom sill (13 wide inside the
-  // 20 tab, so the sill is solid tab). AUX keeps its ~2.5 bridge at Ø7 —
-  // handle that one gently until the floor glues in
+  // 20 tab, so the sill is solid tab). AUX keeps a ~1.5 bridge at Ø9
+  // (was ~2.5 at Ø7) — handle that one gently until the floor glues in
   translate([t + xiao_cy - usb_w/2, t - 0.5])
     square([usb_w, usb_z + usb_h/2 + 0.5]);
   if (!sign)                                     // no DAC on the sign box

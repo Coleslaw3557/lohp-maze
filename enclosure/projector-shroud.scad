@@ -1,10 +1,17 @@
-// LoHP maze — Cuddle projector SHROUD + MOUNT, laser-cut edition (2026-07-29)
+// LoHP maze — Cuddle projector SHROUD + MOUNT, laser-cut edition
+// (2026-08-01 REAL-DIMS rev; supersedes 2026-07-29)
 // ===========================================================================
 // The LS625X hangs NOSE-DOWN at the hex NE corner throwing SW down the deck
-// diagonal (stand-off position 2026-07-29: lens plumb 220 mm from the corner
-// ON the corner-to-corner string line, window 1525 mm above deck — numbers +
-// on-site calibration in wiring-guides/cuddle-projector-mount.md; the sim's
-// Mount button draws this hardware to scale).
+// diagonal. 2026-08-01: chassis re-sized to the OFFICIAL ViewSonic figures
+// (user guide p.56: 383.7 w x 291.5 d x 147.7 h, net 6.2 kg; ceiling bosses
+// 4x M4 on a 223.0 x 150.0 pattern) — the earlier 293 x 221.5 x 114.6 body
+// was a bad source, ~0.76x in every axis. The taller nose-down body forces
+// the window DOWN: 1455 mm above deck (0.49 x 2969 mm image), body top
+// 1746.5, shroud top 6 mm under the 1760 roof soffit. Lens plumb 250 mm
+// from the corner ON the string line (coverage 90.2%, rear corners 25 mm
+// clear of the rail tube worst-case). Numbers + on-site calibration in
+// wiring-guides/cuddle-projector-mount.md; the sim's Mount button draws
+// this hardware to scale.
 //
 // WHY THIS SHAPE (the corner is hostile to flat plates): the two frame
 // planes meet at 120 deg, only 30 deg off any plate facing the corner, and
@@ -15,10 +22,11 @@
 // stays >= 65 mm inboard of the corner where no steel lives.
 //
 // Assemblies (3mm ply, t = 2.9 caliper-gated node-box stock; ply is
-// STRUCTURAL here — glue every joint, Titebond III):
+// STRUCTURAL here — glue every joint, Titebond III; the REAL unit is
+// 6.2 kg, so no dry joints and all 4 hose clamps):
 //
 //  SHROUD — 5-sided finger-jointed sleeve around the nose-down chassis
-//    (293 x 114.6 plan, 221.5 tall): OPEN BOTTOM (beam + dust exit; rim
+//    (383.7 x 147.7 plan, 291.5 tall): OPEN BOTTOM (beam + dust exit; rim
 //    flush with the projection window), vent windows both sides (filter
 //    cloth stapled OUTSIDE, staple ring etched), rear wall = beam
 //    pass-through + 16 mm cable exit. Top panel rides ~6 mm under the roof
@@ -28,7 +36,10 @@
 //  BEAM — 100 x 45 box beam on the CORNER BISECTOR (60.0 deg to each frame
 //    face), threading the 77 mm header-to-rail gap. Its SIDE PLATES extend
 //    at the corner end into a tall back frame (245 mm) carrying the cradle
-//    ribs; top/bottom plates carry the +-80 mm carriage slots.
+//    ribs; top/bottom plates carry the +-80 mm carriage slots (2026-08-01:
+//    slots re-centered on the carriage's actual bolt line ~139 mm from the
+//    corner — the 07-29 sheet had them at the far inboard end where the
+//    carriage can never ride).
 //
 //  CRADLE RIBS x4 — horizontal plates at the four clamp heights (two bands:
 //    ~1530-1560 above deck, below the legs' brace studs; ~1745-1775, above
@@ -38,13 +49,19 @@
 //    tube, and pulls the cradle onto the leg. Ribs tenon through mortises
 //    in the side-plate back frames (glued cross-lap).
 //
-//  CARRIAGE — vertical plate x3 laminations (drill the LS625X ceiling-boss
-//    pattern ON THE BENCH from the unit; 10 mm grid etched as drill guide;
-//    3x M4 into the chassis bosses) + top flange (x3, tongue into the mid
-//    lamination) bolting UP into the beam slots: 2x M6, nuts + fender
-//    washers inside the open beam end. Slack the bolts -> the carriage
-//    (plate + chassis + shroud) slides +-80 mm along the beam = the on-site
-//    radial trim. Shroud rear wall screws to the plate face (etched pilots).
+//  CARRIAGE — vertical plate x3 laminations, 260 x 240 with a beam notch:
+//    the real 223 x 150 boss pattern is WIDER than the beam and its top row
+//    rides ABOVE the beam underside, so the plate ears rise beside the beam
+//    (PI shape) and the notch floor sits at the beam bottom. Drill the boss
+//    pattern ON THE BENCH from the unit (10 mm grid etched as drill guide;
+//    4x M4x16 + fender washers into the chassis bosses — verify boss depth,
+//    do NOT bottom out; center the LENS on the string line, not the
+//    chassis — the lens sits off-center in the 383.7 width). Top flange
+//    (x3, tongue into the mid lamination at the notch floor) bolting UP
+//    into the beam slots: 2x M6, nuts + fender washers inside the open beam
+//    end. Slack the bolts -> the carriage (plate + chassis + shroud) slides
+//    +-80 mm along the beam = the on-site radial trim. Shroud rear wall
+//    screws to the plate face (etched pilots).
 //
 // Load path: chassis bosses -> plate -> flange -> M6 -> beam -> side plates
 // -> cradle ribs -> 4 hose clamps -> paired corner legs. Add a safety
@@ -58,29 +75,35 @@ part = "3d";     // 3d | sheet | sheet_etch | front|rear|side|top|
 t = 2.9;         // ply thickness, caliper-gated
 finger = 18;     // finger/socket pitch — literal everywhere so mates align
 
-// ---- chassis + clearances (LS625X 293 x 221.5 x 114.6, nose-down)
-cw = 293;  cd = 114.6;  ch = 221.5;
+// ---- chassis + clearances (LS625X official, guide p.56: 383.7 x 291.5 x
+//      147.7 normal orientation; nose-down the DEPTH hangs vertical)
+cw = 383.7;  cd = 147.7;  ch = 291.5;
 gap = 4;
-iw = cw + 2*gap;        // 301 inner width  (lateral)
-id = cd + 2*gap + 0.4;  // 123 inner depth  (along the throw)
-ih = ch + 4.5;          // 226 inner height
+iw = cw + 2*gap;        // 391.7 inner width  (lateral)
+id = cd + 2*gap + 0.4;  // 156.1 inner depth  (along the throw)
+ih = ch + 4.5;          // 296 inner height
 ow = iw + 2*t;
 od = id + 2*t;
 
 // ---- rear-wall openings
 beam_w = 100; beam_h = 45;
 pass_w = beam_w + 4;  pass_h = beam_h + 4;
-pass_cy = 132.5;                    // pass center above the bottom rim
+pass_cy = 203;                      // pass center above the bottom rim
+                                    //  (beam axis 1658 - window 1455)
 cable_d = 16;
-vent_w = 70; vent_h = 90;
+vent_w = 90; vent_h = 160;          // sized to the real side fan grilles
 
 // ---- beam + back frame + ribs (heights in mm ABOVE THE DECK for sanity;
-//      beam axis 1658 = mid rail-header gap; window 1525)
+//      beam axis 1658 = mid rail-header gap; window 1455)
 beam_len = 320;                     // beam FRONT end lands 40 mm shy of the
-                                    //  corner; carriage rides the other end
+                                    //  corner (scad x = beam_len end);
+                                    //  x = 0 is the inboard/deck end
 adj = 80;  m6 = 6.5;
 adj_slot_len = 2*adj + m6;
-slot_x0 = 24;
+slot_x0 = 136;                      // slot start from the inboard end —
+                                    //  centers the +-80 travel on the
+                                    //  carriage bolt line ~139 mm from the
+                                    //  corner (nominal plumb 250)
 bolt_dx = 28;
 web_h = beam_h - 2*t;               // 39.2 — the beam-band web height
 ext_d = 80;                         // back-frame depth (along the bisector)
@@ -99,8 +122,12 @@ tube_z = 102; tube_dx = 22.5;       // nominal leg centers (pair varies —
 tube_d = 44;                        //  cradles are open, clamps close them)
 cslot_w = 16; cslot_h = 5;          // hose-clamp slots (1/2" band)
 cslot_z = 82;
-// carriage
-plate_w = 150; plate_h = 170;
+// carriage (2026-08-01: sized to the real 223 x 150 boss pattern)
+plate_w = 260; plate_h = 240;
+notch_w = pass_w;                   // beam notch through all 3 laminations
+notch_y0 = 175.5;                   // notch floor = beam underside
+                                    //  (plate bottom rides 3 mm above the
+                                    //  window rim: 178.5 - 3)
 flange_d = 60;
 
 // =========================================================================
@@ -198,11 +225,21 @@ module cradle_rib() {
 }
 
 // ---- CARRIAGE -----------------------------------------------------------
-module plate_vert() square([plate_w, plate_h]);
-module plate_mid() {
+// PI-shaped plate: full width below the beam underside, ears rising beside
+// the beam so the 223 x 150 boss pattern's top row (which sits above the
+// beam bottom on the 291.5 mm boss face) still lands on ply
+module plate_vert() {
   difference() {
     square([plate_w, plate_h]);
-    translate([plate_w/2 - beam_w/2, plate_h - t]) square([beam_w, t]);
+    translate([plate_w/2 - notch_w/2, notch_y0])
+      square([notch_w, plate_h - notch_y0]);
+  }
+}
+module plate_mid() {
+  difference() {
+    plate_vert();
+    // flange tongue slot at the notch floor
+    translate([plate_w/2 - beam_w/2, notch_y0 - t]) square([beam_w, t]);
   }
 }
 module flange() {
@@ -218,18 +255,18 @@ module flange() {
 
 // ---- sheet nesting ------------------------------------------------------
 P_front  = [   0,   0];
-P_rear   = [ 330,   0];
-P_sideL  = [ 660,   0];
-P_sideR  = [ 800,   0];
-P_top    = [   0, 270];
-P_sp     = [[330, 300], [330, 570]];      // side plates (245 tall each)
-P_ribsC  = [[660, 270], [830, 270], [660, 410], [830, 410]];
-P_beamT  = [   0, 430];
-P_beamB  = [   0, 560];
-P_beamR  = [[0, 690], [110, 690]];
-P_plateM = [ 660, 560];
-P_plateV = [[830, 560], [1000, 560]];
-P_flange = [[1000, 270], [1000, 340], [1000, 410]];
+P_rear   = [ 420,   0];
+P_sideL  = [ 850,   0];
+P_sideR  = [1040,   0];
+P_top    = [   0, 320];
+P_sp     = [[420, 320], [420, 545]];      // side plates
+P_ribsC  = [[760, 320], [930, 320], [760, 460], [930, 460]];
+P_beamT  = [   0, 500];
+P_beamB  = [   0, 620];
+P_beamR  = [[0, 740], [110, 740]];
+P_plateM = [ 760, 600];
+P_plateV = [[1040, 600], [1090, 320]];
+P_flange = [[420, 780], [530, 780], [640, 780]];
 
 module sheet_cut() {
   translate(P_front) shroud_front();
@@ -248,6 +285,16 @@ module sheet_cut() {
 }
 
 // ---- etch layer ---------------------------------------------------------
+// carriage drill grid: full-width rows below the notch floor, ear columns
+// beside the notch above it — covers the whole 223 x 150 boss-pattern zone
+module plate_grid() {
+  for (gy = [20 : 10 : notch_y0 - 8])
+    translate([15, gy - 0.2]) square([plate_w - 30, 0.4]);
+  for (gx = [15 : 10 : plate_w - 15]) {
+    ear = (gx < plate_w/2 - notch_w/2 - 4) || (gx > plate_w/2 + notch_w/2 + 4);
+    translate([gx - 0.2, 20]) square([0.4, (ear ? plate_h - 10 : notch_y0 - 8) - 20]);
+  }
+}
 module etch_sheet() {
   translate(P_front) translate([10, ih - 16]) text("FRONT (throw side)", size = 7);
   translate(P_rear) {
@@ -268,10 +315,12 @@ module etch_sheet() {
   translate(P_beamT) translate([30, beam_w/2 - 3])
     text("BEAM TOP   <- -80 to corner    +80 to deck ->", size = 5);
   translate(P_plateV[0]) {
-    for (gx = [15 : 10 : plate_w - 15]) translate([gx - 0.2, 20]) square([0.4, plate_h - 40]);
-    for (gy = [20 : 10 : plate_h - 20]) translate([15, gy - 0.2]) square([plate_w - 30, 0.4]);
-    translate([8, 6]) text("drill LS625X boss pattern from the unit", size = 5);
+    plate_grid();
+    translate([8, 12]) text("LS625X bosses 223 x 150 - drill from the unit", size = 5);
+    translate([8, 4]) text("4x M4x16 +washers (don't bottom) - LENS on the line", size = 5);
   }
+  translate(P_plateV[1]) plate_grid();
+  translate(P_plateM) plate_grid();
 }
 
 // ---- 3D preview ---------------------------------------------------------
@@ -298,8 +347,8 @@ module preview3d() {
   // leg pair ghost
   for (sx = [-1, 1]) %translate([sx*tube_dx, id/2 - 30 + beam_len - ext_off - mort_len - wing_y0 + tube_z, yb - ext_dn - 30])
     cylinder(h = ext_up + ext_dn + 60, d = 43, $fn = 24);
-  color("sienna") translate([-plate_w/2, id/2 + t + 1, pass_cy - beam_h/2 - 110])
-    rotate([90, 0, 0]) linear_extrude(3*t) square([plate_w, plate_h]);
+  color("sienna") translate([-plate_w/2, id/2 + t + 1 + 3*t, 3])
+    rotate([90, 0, 0]) linear_extrude(3*t) plate_vert();
 }
 
 // ---- part switch --------------------------------------------------------
