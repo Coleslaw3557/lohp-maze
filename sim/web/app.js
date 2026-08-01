@@ -46,10 +46,14 @@ const S = {
   prev2: { x: 11.7, z: 4.5 },
   yaw: 0, pitch: 0,
   pointerLocked: false,
-  audio: { on: false, ws: null, ctx: null, rooms: new Map(), beds: new Map(), music: null, buffers: new Map() },
+  audio: { on: false, ws: null, ctx: null, rooms: new Map(), beds: new Map(), music: null, buffers: new Map(), earRoom: null },
   dmxWs: null,
   teleporting: false,
 };
+// Headless test hooks: module scope hides these from playwright-driven
+// checks (sim tests, bench verification) otherwise.
+window.S = S;
+window.setMode = setMode;
 window.SIM = S; // debug handle: inspect live sim state from the console
 
 const $ = (id) => document.getElementById(id);
@@ -786,7 +790,7 @@ function buildHexCenter(L) {
     levelGroups[0].add(slab);
     const xs = pts.map(p => p[0]);
     const c = new THREE.Vector3((Math.min(...xs) + Math.max(...xs)) / 2, 1.0, cz);
-    S.roomsMeshes[room] = { slab, center: c, level: 0, room: L.rooms[room] };
+    S.roomsMeshes[room] = { slab, center: c, level: 0, room: L.rooms[room], poly: pts };
     // label above the half's angled street frame
     const sf = room === H.rooms.ground_east ? [V[0], V[1]] : [V[1], V[2]];
     const lbl = makeLabel(room, 0.24);
@@ -803,6 +807,7 @@ function buildHexCenter(L) {
   levelGroups[1].add(upSlab);
   S.roomsMeshes[H.rooms.upper] = {
     slab: upSlab, center: new THREE.Vector3(cx, LH + 1, cz), level: 1, room: L.rooms[H.rooms.upper],
+    poly: deck,
   };
   const upLbl = makeLabel(H.rooms.upper, 0.24);
   upLbl.position.set(cx, LH + CH + 0.14, V[1][1] + 0.12);
@@ -2161,7 +2166,7 @@ function buildProjection(cfg) {
   // projector body + mount arm back to its frame; yaw_deg spins the rig
   // (0 = throws +z; -90 = throws -x as on the old rear-leg mount; -120 =
   // throws SW down the long diagonal from the NE corner arm)
-  const [bw, bh, bd] = P.projector.body || [0.37, 0.11, 0.29];
+  const [bw, bh, bd] = P.projector.body || [0.3837, 0.2915, 0.1477];
   const yaw = (P.projector.yaw_deg || 0) * Math.PI / 180;
   const fwd = [Math.sin(yaw), Math.cos(yaw)];
   const yProj = P.level * LH + 0.14 + (P.projector.h || 0.6);
@@ -2202,11 +2207,14 @@ function buildProjection(cfg) {
              y: (dx * fwd[0] + dz * fwd[1] + P.image.d / 2) * ppm };
   };
 
-  // the projection window (bottom face, lens ~28 mm behind the nose) — beam
-  // linework draws below, after the deck outline exists to clip against
-  const win = new THREE.Vector3(P.projector.pos[0] + fwd[0] * (bd / 2 - 0.03),
+  // the projection window (bottom face; lens assumed CENTERED along-throw
+  // on the real 147.7 mm face — MEASURE from the unit, guide gives no lens
+  // offsets) — beam linework draws below, after the deck outline exists to
+  // clip against
+  const lensAhead = 0;   // lens center ahead of body center, along-throw (m)
+  const win = new THREE.Vector3(P.projector.pos[0] + fwd[0] * lensAhead,
     yProj - bh / 2,
-    P.projector.pos[1] + fwd[1] * (bd / 2 - 0.03));
+    P.projector.pos[1] + fwd[1] * lensAhead);
 
   // LD2450 tracker wedge — faint blue, just under the LD2410 trigger wedge
   const T = P.tracker;
@@ -2342,7 +2350,8 @@ function buildProjection(cfg) {
       asm.add(m);
     };
     // shroud sleeve: 4 walls + top, OPEN bottom (beam and dust both exit)
-    const iw = 0.301, id = 0.123, t = 0.006;
+    // (2026-08-01: inner cavity re-sized to the official 383.7 x 147.7 plan)
+    const iw = 0.3917, id = 0.1561, t = 0.006;
     boxAt(iw + 2 * t, bh + 0.006, t, 0, 0.0015, -(id / 2 + t / 2), matShroud);
     boxAt(iw + 2 * t, bh + 0.006, t, 0, 0.0015, id / 2 + t / 2, matShroud);
     for (const sx of [-1, 1]) boxAt(t, bh + 0.006, id + 2 * t, sx * (iw / 2 + t / 2), 0.0015, 0, matShroud);
@@ -2353,7 +2362,10 @@ function buildProjection(cfg) {
     // (front end 40 mm shy of the vertex), side plates rising into the
     // back frames (they stop 65 mm inboard — where the rail/header ends
     // live), and the horizontal cradle ribs that actually grab the legs
-    boxAt(0.14, 0.16, 0.009, 0, armY - yProj, bd / 2 + 0.0075, matPly);
+    // PI-shaped carriage plate spans the real 223 x 150 boss pattern —
+    // 260 x 240, centered 80 mm below the beam axis (ears rise beside the
+    // beam; drawn as its bounding slab)
+    boxAt(0.26, 0.24, 0.009, 0, armY - yProj - 0.08, bd / 2 + 0.0075, matPly);
     boxAt(0.1, 0.045, zCorner - 0.06, 0, armY - yProj, (zCorner - 0.04 + 0.02) / 2, matPly);
     for (const sx of [-1, 1])
       boxAt(0.006, 0.245, 0.08, sx * 0.047, legTop - 0.1375 - yProj, zCorner - 0.105, matPly);
@@ -3506,8 +3518,9 @@ async function playEffectAudio(room, file, volume, loop, effectName) {
     const src = a.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = !!loop;
+    const vol = volume == null ? 0.8 : volume;
     const gain = a.ctx.createGain();
-    gain.gain.value = volume == null ? 0.8 : volume;
+    gain.gain.value = earCanHear(room || '__all__') ? vol : 0;
     const rm = room && S.roomsMeshes[room];
     if (rm) {
       const p = new PannerNode(a.ctx, {
@@ -3521,7 +3534,7 @@ async function playEffectAudio(room, file, volume, loop, effectName) {
     }
     src.connect(gain);
     src.start();
-    a.rooms.set(room || '__all__', { src, gain });
+    a.rooms.set(room || '__all__', { src, gain, vol });
     log('info', `♪ ${effectName || ''} ${file}${room ? ' @ ' + room : ''}`);
   } catch (e) {
     log('err', `audio play failed: ${e.message}`);
@@ -3550,8 +3563,9 @@ async function playRoomAmbience(room, file, volume, effectName) {
     const src = a.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = true;
+    const vol = volume == null ? 0.5 : volume;
     const gain = a.ctx.createGain();
-    gain.gain.value = volume == null ? 0.5 : volume;
+    gain.gain.value = earCanHear(room || '__all__') ? vol : 0;
     const rm = room && S.roomsMeshes[room];
     if (rm) {
       const p = new PannerNode(a.ctx, {
@@ -3565,7 +3579,7 @@ async function playRoomAmbience(room, file, volume, effectName) {
     }
     src.connect(gain);
     src.start();
-    a.beds.set(room || '__all__', { src, gain });
+    a.beds.set(room || '__all__', { src, gain, vol });
     log('info', `≈ bed ${effectName || ''} ${file}${room ? ' @ ' + room : ''}`);
   } catch (e) {
     log('err', `ambience play failed: ${e.message}`);
@@ -3595,7 +3609,7 @@ async function playMusic(file) {
     gain.gain.value = 0.4;
     src.connect(gain).connect(a.ctx.destination);
     src.start();
-    a.music = { src, gain };
+    a.music = { src, gain, vol: 0.4 };
     log('info', `♫ background music: ${file}`);
   } catch (e) {
     log('err', `music failed: ${e.message}`);
@@ -3622,6 +3636,66 @@ function updateListener() {
   } else {
     l.setPosition(p.x, p.y, p.z);
     l.setOrientation(dir.x, dir.y, dir.z, 0, 1, 0);
+  }
+}
+
+// ------------------------------------------------- who can hear what (2026-08-01)
+// Real speakers sit in their rooms, so in first-person you only hear the room
+// you are standing in (Tim). Fly-around modes (top/street) keep hearing
+// everything — that's the operator view, and its panners already fade with
+// distance. '__all__' = a broadcast to every speaker: wherever you stand, the
+// local one plays it.
+function pointInPoly(x, z, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, zi] = pts[i], [xj, zj] = pts[j];
+    if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+// The room the first-person ear is inside, or null (scaffold between rooms).
+// Hex rooms carry their exact footprint polygons (Exit/Entrance halves, the
+// Cuddle deck); wing rooms are their layout rects; 'both' rooms (the climb
+// shafts) match either level.
+function roomAtEar() {
+  if (S.mode !== 'first') return null;
+  const x = S.pos.x, z = S.pos.z;
+  let rectHit = null;
+  for (const [name, rm] of Object.entries(S.roomsMeshes)) {
+    if (rm.poly) {
+      if (rm.level === S.level && pointInPoly(x, z, rm.poly)) return name;
+    } else if (!rectHit) {
+      const r = rm.room;
+      const levelOk = r.floor === 'both' || (r.floor || 0) === S.level;
+      if (levelOk && x >= r.x && x <= r.x + r.w && z >= r.z && z <= r.z + r.d) rectHit = name;
+    }
+  }
+  return rectHit;
+}
+
+function earCanHear(key) {
+  return S.mode !== 'first' || key === '__all__' || key === S.audio.earRoom;
+}
+
+function updateAudioGating() {
+  const a = S.audio;
+  if (!a.ctx) return;
+  const room = roomAtEar();
+  if (room !== a.earRoom) {
+    a.earRoom = room;
+    if (S.mode === 'first') log('info', `ear: ${room || 'between rooms'}`);
+  }
+  const t = a.ctx.currentTime;
+  const set = (g, vol) => g.gain.setTargetAtTime(vol, t, 0.08);
+  for (const [key, v] of a.rooms) set(v.gain, earCanHear(key) ? v.vol : 0);
+  for (const [key, v] of a.beds) set(v.gain, earCanHear(key) ? v.vol : 0);
+  if (a.music) {
+    // A room's own background bed mutes the maze music on that speaker (the
+    // same rule the real units apply); everywhere else the local speaker
+    // carries the music, so it stays audible between rooms too.
+    const bedHere = S.mode === 'first' && a.earRoom && a.beds.has(a.earRoom);
+    set(a.music.gain, bedHere ? 0 : a.music.vol);
   }
 }
 
@@ -3998,6 +4072,7 @@ function animate() {
   updateCampSign(t);
   updateInteractHint();
   updateListener();
+  updateAudioGating();
 
   if (avatarMarker) {
     avatarMarker.position.set(S.pos.x, S.level * S.levelHeight, S.pos.z);

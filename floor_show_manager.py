@@ -8,21 +8,27 @@ the server's half of that story, for the one room the projector lights:
     also picks the room's light palette — effects_manager.set_floor_theme()
     recolours the entry swell and the maze theme's ambient wash for the room
   * a looping ambience BED under the room for as long as the show is up
-    (LAVA: Tim's lava.wav, 2026-07-30). Beds ride their own audio channel, so
-    an effect taking the room over never cuts them and accents mix on top
+    (LAVA: Tim's lava.wav 2026-07-30, JUNGLE: junglenight.wav, TEMPLE: the
+    altar torch's brazier crackle, WATER: drips — both 2026-08-01).
+    Beds ride their own audio channel, so an effect taking the room over
+    never cuts them and accents mix on top
+  * AMBIENT one-shots at random intervals while the show is up (Tim,
+    2026-08-01) — audio only, no lights: birdsong over the jungle bed, wind
+    and ravens for the temple. Each theme sets its own interval range; the
+    file comes from the theme's ambient pool with the usual anti-repeat
   * occasional ACCENT hits fired by the engine's own events — a stone going
     under a walker, Kukulkan surfacing. Each accent is a real room effect: a
     capped ember flare on the two pars plus one file from the theme's accent
     pool, picked by the usual anti-repeat pool logic.
 
 The renderer POSTs /api/floor_event every couple of seconds and whenever
-events happen. `active` in that payload is the authority for the bed, so a
-renderer that dies or a show that times out just goes quiet (WATCHDOG_S)
-instead of leaving the deck rumbling to an empty room.
+events happen. `active` in that payload is the authority for the bed and the
+ambient timer, so a renderer that dies or a show that times out just goes
+quiet (WATCHDOG_S) instead of leaving the deck rumbling to an empty room.
 
-Only LAVA has sounds today. The other four themes light correctly and stay
-silent until their pools land — a theme with no `bed`/`accents` entry is a
-supported state, not a broken one.
+All five themes have sounds today (CHAMBER landed last, 2026-08-01: a
+mysterious-perc bed and the trap doors' merged MGS hit). A theme with no
+`bed`/`ambient`/`accents` entry is still a supported state, not a broken one.
 """
 import asyncio
 import logging
@@ -41,15 +47,19 @@ ROOM = "Cuddle Cross"
 # this room could not follow anyway.
 KNOWN_THEMES = frozenset(THEME_PALETTES)
 
-# Per floor theme: the looping bed pool, plus the engine events that earn an
-# accent. `p` = chance of firing, `cooldown` = seconds since the last accent
-# from the SAME effect (so a pop only speaks up in a genuinely quiet stretch,
-# while a breach can still land right after its own approach swell), `rank` =
-# which event wins when a batch carries several.
-# Event names come from projection_engine.py's _emit calls.
+# Per floor theme: the looping bed pool, an `ambient` pool fired on its own
+# random timer (audio only — uniform delay in [min_s, max_s] between shots),
+# plus the engine events that earn an accent. For accents: `p` = chance of
+# firing, `cooldown` = seconds since the last accent from the SAME effect (so
+# a pop only speaks up in a genuinely quiet stretch, while a breach can still
+# land right after its own approach swell), `rank` = which event wins when a
+# batch carries several. Event names come from projection_engine.py's _emit
+# calls.
 THEME_SHOWS = {
     'lava': {
         'bed': 'Cuddle-Lava-Bed',
+        # sparse: the engine events already voice the deck when people move
+        'ambient': {'effect': 'Cuddle-Lava-Ambient', 'min_s': 20.0, 'max_s': 50.0},
         'accents': {
             # Kukulkan: the approach under the crust, then the head breaking out
             'monster_breach': {'effect': 'Cuddle-Lava-Breach', 'p': 1.0, 'cooldown': 3.0, 'rank': 50},
@@ -60,6 +70,31 @@ THEME_SHOWS = {
             # bubbles burst constantly (~0.6 Hz) — rare and heavily spaced, or
             # the room turns into a drum machine
             'pop': {'effect': 'Cuddle-Lava-Hit', 'p': 0.05, 'cooldown': 24.0, 'rank': 10},
+        },
+    },
+    'jungle': {
+        'bed': 'Cuddle-Jungle-Bed',
+        # lively canopy: mostly birdsong (16 of the 24 files), the odd beast
+        'ambient': {'effect': 'Cuddle-Jungle-Ambient', 'min_s': 7.0, 'max_s': 22.0},
+    },
+    'temple': {
+        # the altar torch: Tim's "projection with the torch" (2026-08-01)
+        'bed': 'Cuddle-Temple-Bed',
+        'ambient': {'effect': 'Cuddle-Temple-Ambient', 'min_s': 10.0, 'max_s': 35.0},
+    },
+    'water': {
+        'bed': 'Cuddle-Water-Bed',
+        # sparse like lava: drips changing pattern, a winter wind through the ford
+        'ambient': {'effect': 'Cuddle-Water-Ambient', 'min_s': 12.0, 'max_s': 35.0},
+    },
+    'chamber': {
+        # one of the sixteen mysterious percs per bed start (Tim 2026-08-01)
+        'bed': 'Cuddle-Chamber-Bed',
+        'accents': {
+            # a trap door taking someone's step — linger-open or sprint-slam
+            # both emit trap_open; 2s cooldown so two doors close together
+            # don't double-hit
+            'trap_open': {'effect': 'Cuddle-Chamber-Trap', 'p': 1.0, 'cooldown': 2.0, 'rank': 50},
         },
     },
 }
@@ -92,11 +127,13 @@ class FloorShowManager:
         self.theme = None
         self.active = False
         self.bed = None            # ambience pool currently playing, or None
+        self.ambient = None        # ambient one-shot pool currently armed, or None
         self.last_report = 0.0     # monotonic; 0 = the renderer has never reported
         self._last_fire = {}       # accent effect name -> monotonic
         self._rng = rng or random.SystemRandom()
         self._lock = asyncio.Lock()
         self._watchdog = None
+        self._ambient_task = None
 
     # --- state ---
 
@@ -106,6 +143,7 @@ class FloorShowManager:
             'theme': self.theme,
             'active': self.active,
             'bed': self.bed,
+            'ambient': self.ambient,
             'has_sounds': self.theme in THEME_SHOWS,
             'age_s': (round(time.monotonic() - self.last_report, 1)
                       if self.last_report else None),
@@ -143,6 +181,7 @@ class FloorShowManager:
             if active is not None:
                 self.active = bool(active)
             await self._reconcile_bed()
+            self._reconcile_ambient()
             accent = self._pick_accent(events or [])
         if accent:
             asyncio.create_task(self._run_accent(*accent))
@@ -156,16 +195,18 @@ class FloorShowManager:
             if not self._adopt_theme(theme):
                 return False
             await self._reconcile_bed()
+            self._reconcile_ambient()
         logger.info(f"Floor show theme -> {theme} (relayed)")
         return True
 
     async def stop(self):
-        """Silence the room's bed (a maze-wide stop, or shutdown). The next
-        report from a running show starts it again — the projector is the
-        authority on whether the deck has a show on it."""
+        """Silence the room's bed and ambient timer (a maze-wide stop, or
+        shutdown). The next report from a running show starts them again — the
+        projector is the authority on whether the deck has a show on it."""
         async with self._lock:
             self.active = False
             await self._reconcile_bed()
+            self._reconcile_ambient()
 
     # --- internals ---
 
@@ -191,6 +232,57 @@ class FloorShowManager:
         self.bed = want if started else None
         if started:
             logger.info(f"Floor bed '{want}' looping in {self.room} ({started})")
+
+    def bed_for_room(self, room):
+        """The bed a just-registered audio client should be playing for `room`,
+        or None. remote_host_manager asks on every client register, so a
+        reloaded sim tab (or a rebooted unit) rejoins a live show's bed instead
+        of staying silent until the next theme change."""
+        return self.bed if room == self.room else None
+
+    def _reconcile_ambient(self):
+        """Caller holds the lock. Arms/refreshes/cancels the random-interval
+        ambient one-shot timer to match the active theme. Unlike the bed there
+        is nothing to stop on a client — each shot is a one-and-done file — so
+        this only manages the server-side timer task."""
+        show = THEME_SHOWS.get(self.theme) or {}
+        rule = show.get('ambient') if self.active else None
+        want = rule['effect'] if rule else None
+        if want == self.ambient:
+            return
+        task, self._ambient_task = self._ambient_task, None
+        if task is not None:
+            task.cancel()
+        self.ambient = want
+        if rule:
+            self._ambient_task = asyncio.create_task(self._ambient_loop(rule))
+            logger.info(f"Floor ambient pool '{want}' armed in {self.room} "
+                        f"(every {rule['min_s']:.0f}-{rule['max_s']:.0f}s)")
+
+    async def _ambient_loop(self, rule):
+        """One theme's ambient timer: sleep a random stretch, fire one file
+        from the pool (audio only — no lights), repeat. The pool's volume and
+        anti-repeat selection come from audio_config via play_effect_audio."""
+        effect = rule['effect']
+        try:
+            while True:
+                await asyncio.sleep(self._rng.uniform(rule['min_s'], rule['max_s']))
+                async with self._lock:
+                    if not self.active or self.ambient != effect:
+                        return
+                    # Nobody to play it (unit down, node not built): skip this
+                    # beat quietly, exactly like the bed does, and try again
+                    # after the next interval.
+                    if not self.remote_host_manager.has_audio_client(self.room):
+                        continue
+                ok = await self.remote_host_manager.play_effect_audio(
+                    effect, rooms=[self.room])
+                if ok:
+                    logger.info(f"Floor ambient {effect} in {self.room}")
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.error(f"Floor ambient loop for {effect} died: {e}", exc_info=True)
 
     def _pick_accent(self, events):
         """Caller holds the lock. At most ONE accent per batch: the highest
@@ -238,11 +330,12 @@ class FloorShowManager:
         while True:
             await asyncio.sleep(WATCHDOG_TICK_S)
             async with self._lock:
-                if self.bed is None and not self.active:
+                if self.bed is None and self.ambient is None and not self.active:
                     return
                 if time.monotonic() - self.last_report > WATCHDOG_S:
                     logger.warning(f"No floor report for {WATCHDOG_S:.0f}s — "
                                    f"stopping the bed in {self.room}")
                     self.active = False
                     await self._reconcile_bed()
+                    self._reconcile_ambient()
                     return

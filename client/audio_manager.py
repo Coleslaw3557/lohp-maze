@@ -135,6 +135,10 @@ class AudioManager:
         self.background_music_volume = 0.5
         self.last_music_change_time = 0
         self.music_change_cooldown = 5  # seconds
+        # The maze-wide music track that SHOULD be playing (None = music mode
+        # off). Zones with a room background bed skip it — the bed overrides
+        # the maze music in that room — and rejoin it here when the bed stops.
+        self.current_music_file = None
 
         zones_config = config.get('zones') or {
             'default': {'rooms': config.get('associated_rooms', []), 'alsa_device': None}
@@ -233,6 +237,12 @@ class AudioManager:
             except Exception as e:
                 logger.error(f"Zone '{zone.name}': failed to start ambience {file_name}: {e}",
                              exc_info=True)
+                continue
+            # A room's own background overrides the maze-wide music on its
+            # speaker (it comes back in stop_room_ambience when the bed ends).
+            if zone.background_player:
+                zone.stop_music()
+                logger.info(f"Zone '{zone.name}': room background overrides maze music")
         if not started:
             return False
         logger.info(f"Ambience '{file_name}' (volume {volume}, loop {loop}) "
@@ -243,8 +253,25 @@ class AudioManager:
         key = (room or '__all__').lower()
         for zone in self.zones_for_room(room):
             zone.stop_ambience(key if room else None)
+            self._resume_music_if_due(zone)
         logger.info(f"Stopped ambience ({'room ' + room if room else 'all zones'})")
         return True
+
+    def _resume_music_if_due(self, zone):
+        """A bed just ended in this zone: if music mode is on and no other room
+        bed holds the zone, the maze-wide music takes the speaker back."""
+        if not self.current_music_file or zone.ambience_players:
+            return
+        if zone.vlc_instance is None or zone.background_player:
+            return
+        full_path = self.preloaded_audio.get(self.current_music_file)
+        if not full_path:
+            return
+        try:
+            zone.start_music(full_path, self.background_music_volume)
+            logger.info(f"Zone '{zone.name}': maze music resumes after the room background")
+        except Exception as e:
+            logger.error(f"Zone '{zone.name}': failed to resume music: {e}", exc_info=True)
 
     async def start_background_music(self, music_file):
         current_time = time.time()
@@ -257,18 +284,27 @@ class AudioManager:
             return False
 
         logger.info(f"Starting background music: {music_file}")
+        self.current_music_file = music_file
         started_zones = []
+        deferred = []
         for zone in self.zones.values():
             if zone.vlc_instance is None:
                 logger.warning(f"Zone '{zone.name}' has no audio output; skipping background music")
+                continue
+            if zone.ambience_players:
+                # The room's own background owns this speaker; it picks up the
+                # maze music (current_music_file) when its bed stops.
+                deferred.append(zone.name)
                 continue
             try:
                 zone.start_music(full_path, self.background_music_volume)
                 started_zones.append(zone)
             except Exception as e:
                 logger.error(f"Zone '{zone.name}': failed to start background music: {e}", exc_info=True)
+        if deferred:
+            logger.info(f"Maze music deferred to room backgrounds in zones: {deferred}")
         if not started_zones:
-            return False
+            return bool(deferred)
         self.last_music_change_time = current_time
         asyncio.create_task(self._confirm_music_playback(music_file, started_zones))
         return True

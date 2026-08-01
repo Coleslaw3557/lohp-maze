@@ -63,6 +63,10 @@ class _NodeConn:
         self.client = None
         self.media_key = None
         self._fail_ts = 0.0
+        # The room's own background bed owns the media pipeline while True:
+        # maze-wide music commands must not touch it (bed and music share the
+        # node's single media pipeline — last command wins).
+        self.bed_active = False
 
     async def _ensure_connected(self):
         if self.client is not None:
@@ -154,6 +158,7 @@ class NodeAudioManager:
         self.server_host = None
         self.server_port = 5000
         self.rooms = {}          # room name (lower) -> _NodeConn
+        self.music_file = None   # maze-wide music track, None = music mode off
         self._tasks = set()      # keep fire-and-forget tasks referenced
         self._conn_factory = conn_factory or _NodeConn
         self._load(config_file)
@@ -192,6 +197,10 @@ class NodeAudioManager:
     def enabled_for(self, room):
         return room is not None and room.lower() in self.rooms
 
+    def enabled_rooms(self):
+        """Room names with a speaker node configured, original casing."""
+        return [c.room for c in self.rooms.values()]
+
     def music_url(self, music_file):
         return (f"http://{self.server_host}:{self.server_port}"
                 f"/api/audio/{quote(music_file)}")
@@ -204,6 +213,12 @@ class NodeAudioManager:
         """Mirror a WS audio command onto the node(s). room=None means every
         node room (matching the WS broadcast semantics). Fire-and-forget:
         returns True if it was dispatched to at least one node."""
+        # Track music mode here (even with zero nodes configured): bed stops
+        # hand the freed pipeline back to this track in _command_coro.
+        if command == 'start_background_music':
+            self.music_file = (data or {}).get('music_file')
+        elif command == 'stop_background_music':
+            self.music_file = None
         if room is None:
             conns = list(self.rooms.values())
         elif self.enabled_for(room):
@@ -228,20 +243,31 @@ class NodeAudioManager:
             return conn.play_announcement(self.cue_url(data['file_name']))
         if command == 'play_room_ambience':
             # A bed belongs on the media pipeline, so effect cues duck it as
-            # announcements instead of replacing it. Two caveats on a real node,
-            # both live until a Cuddle box exists (nothing in node_audio_config
-            # needs a bed yet): ESPHome's media player has no repeat, so the bed
-            # plays through once, and it shares the pipeline with the maze's
-            # background music — last command wins.
+            # announcements instead of replacing it. The pipeline is single —
+            # while bed_active, music commands leave it alone (the bed
+            # overrides maze music in its room). Remaining caveat until a
+            # bed-room node exists: ESPHome's media player has no repeat, so
+            # the bed streams through once instead of looping.
+            conn.bed_active = True
             logger.warning(f"Node audio [{conn.room}]: ambience "
                            f"{data.get('file_name')} streams once — the node media "
-                           f"player has no repeat, and it displaces background music")
+                           f"player has no repeat")
             return conn.play_url(self.music_url(data['file_name']))
         if command == 'stop_room_ambience':
+            conn.bed_active = False
+            if self.music_file:
+                # Music mode is on: the freed pipeline goes back to the maze music
+                return conn.play_url(self.music_url(self.music_file))
             return conn.stop(announcement=False)
         if command == 'start_background_music':
+            if conn.bed_active:
+                logger.debug(f"Node audio [{conn.room}]: maze music deferred — "
+                             "the room's own background owns the pipeline")
+                return None
             return conn.play_url(self.music_url(data['music_file']))
         if command == 'stop_background_music':
+            if conn.bed_active:
+                return None  # the pipeline is playing the room's bed, not music
             return conn.stop(announcement=False)
         if command == 'audio_stop':
             return conn.stop(announcement=True)

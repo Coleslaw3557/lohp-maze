@@ -62,10 +62,38 @@ EFFECT_BY_PATH = {'/api/sign_storm': 'Lightning'}
 FLOOR_POOLS = {
     'Cuddle Cross': [
         ('Cuddle-Lava-Bed', 'LAVA theme: looping bed while the show is up'),
+        ('Cuddle-Lava-Ambient', 'LAVA theme: ambient one-shots on a random timer'),
         ('Cuddle-Lava-Hit', 'LAVA theme: a stone sinking, a bubble bursting'),
         ('Cuddle-Lava-Breach', 'LAVA theme: Kukulkan surfacing'),
+        ('Cuddle-Jungle-Bed', 'JUNGLE theme: looping night-jungle bed'),
+        ('Cuddle-Jungle-Ambient', 'JUNGLE theme: birdies/beasties on a random timer'),
+        ('Cuddle-Temple-Bed', 'TEMPLE theme: looping altar-brazier bed'),
+        ('Cuddle-Temple-Ambient', 'TEMPLE theme: wind/ravens on a random timer'),
+        ('Cuddle-Water-Bed', 'WATER theme: looping drips bed'),
+        ('Cuddle-Water-Ambient', 'WATER theme: drips/winter wind on a random timer'),
+        ('Cuddle-Chamber-Bed', 'CHAMBER theme: looping mysterious-perc bed (one of 16)'),
+        ('Cuddle-Chamber-Trap', 'CHAMBER theme: a trap door taking a step'),
     ],
 }
+# Pools fired once as a room's last visitor leaves (/api/room_vacated ->
+# audio_config `room_leave_sounds`).
+LEAVE_POOLS = {
+    'Cop Dodge': [
+        ('CopDodge-Leave', 'last visitor leaves the room'),
+    ],
+    'Sparkle Pony Room': [
+        ('SparklePonyRoom-Leave', 'last visitor leaves the room'),
+    ],
+}
+# Pools the ambient one-shot engine fires (maze_ambient_manager.py,
+# audio_config `ambient_oneshots`) — same idea as FLOOR_POOLS: no trigger row
+# names them, but they belong on the room's card.
+AMBIENT_POOLS = {
+    'Entrance': [
+        ('Entrance-Ambient', 'ambient one-shot timer over the hallowloop bed'),
+    ],
+}
+MAZE_AMBIENT_EFFECT = 'MazeAmbient'
 
 # Actions that the runtime can fire even though no single trigger row names
 # them directly. Keep these visible on the room cards so sound prep covers the
@@ -366,8 +394,32 @@ def build_state():
                        'route': None})
             used_by.setdefault(name, []).append({'room': room, 'trigger': label})
 
+    for room, pools in AMBIENT_POOLS.items():
+        for name, label in pools:
+            by_room.setdefault(room, {}).setdefault(
+                name, {'effect': name, 'kind': 'ambient', 'triggers': [label],
+                       'route': None})
+            used_by.setdefault(name, []).append({'room': room, 'trigger': label})
+
+    for room, pools in LEAVE_POOLS.items():
+        for name, label in pools:
+            by_room.setdefault(room, {}).setdefault(
+                name, {'effect': name, 'kind': 'leave', 'triggers': [label],
+                       'route': None})
+            used_by.setdefault(name, []).append({'room': room, 'trigger': label})
+
     route = route_rooms()
     global_actions = []
+    maze_ambient_label = 'random room, random timer (POST /api/ambient to audition)'
+    used_by.setdefault(MAZE_AMBIENT_EFFECT, []).append(
+        {'room': 'Maze-wide', 'trigger': maze_ambient_label})
+    global_actions.append({
+        'effect': MAZE_AMBIENT_EFFECT,
+        'kind': 'ambient',
+        'triggers': [maze_ambient_label],
+        'route': None,
+        'testable': False,
+    })
     if route:
         label = 'going backwards through the route'
         used_by.setdefault(BACKTRACK_EFFECT, []).append({'room': 'Maze route', 'trigger': label})

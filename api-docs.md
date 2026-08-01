@@ -133,7 +133,11 @@ curl http://localhost:5000/api/themes
 
 ### 7. Start Background Music
 
-Starts playing background music on all connected clients.
+Starts playing background music on all connected clients ("music mode": one
+rotating track from `music/`, broadcast maze-wide, new pick every 5 minutes).
+Rooms with their own background sound (a floor-show bed in Cuddle Cross, or a
+`room_backgrounds` room) keep playing that instead — the maze music skips
+their speaker and takes it back when the room's background stops.
 
 - **URL:** `/start_music`
 - **Method:** `POST`
@@ -146,6 +150,7 @@ curl -X POST http://localhost:5000/api/start_music
 ### 8. Stop Background Music
 
 Stops the currently playing background music on all connected clients.
+Per-room background sounds are a separate feature and keep playing.
 
 - **URL:** `/stop_music`
 - **Method:** `POST`
@@ -153,6 +158,34 @@ Stops the currently playing background music on all connected clients.
 #### Example
 ```bash
 curl -X POST http://localhost:5000/api/stop_music
+```
+
+### 8b. Room Backgrounds (always-on per-room background sound)
+
+A room opted in here loops one random pick from its pool on the room's
+ambience channel whenever anything can play audio there — independent of
+music mode, and muting the maze-wide music in that room while it plays.
+Persistent opt-in lives in `audio_config.json` top-level `room_backgrounds`
+(room name → effects entry); the POST here is a runtime override for
+auditioning and is not persisted. Cuddle Cross is refused (its background
+follows the floor projection).
+
+- **URL:** `/room_backgrounds`
+- **Method:** `GET` (state: `configured` + `playing`) / `POST`
+- **Data Params (POST):**
+  ```json
+  {
+    "room": "No Friends Monday",
+    "effect": "NoFriendsMonday-Background"
+  }
+  ```
+  `"effect": null` opts the room back out and stops its bed.
+
+#### Example
+```bash
+curl -X POST http://localhost:5000/api/room_backgrounds \
+  -H 'Content-Type: application/json' \
+  -d '{"room": "No Friends Monday", "effect": "NoFriendsMonday-Background"}'
 ```
 
 ### 9. Run Test
@@ -419,7 +452,7 @@ curl http://localhost:5000/api/light_models
 | GET | `/api/audio_files_to_download` | Lists effect/music audio files clients should cache |
 | GET | `/api/audio/<filename>` | Serves an audio file (music or effect clip) |
 | POST | `/api/reload_audio_config` | Re-reads `audio_config.json` without a restart, so pool edits from the audio console (`tools/audio_console.py`) go live. Returns `{"pools": {"<effect>": <file count>}}` |
-| GET | `/api/floor_state` | What the server believes the Cuddle floor show is doing: `theme`, `active`, the `bed` pool playing, `has_sounds`, and `age_s` since the renderer last reported (`null` = never) |
+| GET | `/api/floor_state` | What the server believes the Cuddle floor show is doing: `theme`, `active`, the `bed` pool playing, the `ambient` one-shot pool armed, `has_sounds`, and `age_s` since the renderer last reported (`null` = never) |
 | POST | `/api/next_floor_theme` | Switches the projector's floor theme through the renderer's control port (`FLOOR_CTL_URL`, default `:5002`) and recolours the room to match. Body `{"theme": "lava"}` picks one; an empty body cycles |
 | GET | `/api/photobomb/photos` | Photo booth captures, newest first (`photos_dir`, capture `backend`, and per-photo filename/size/timestamp) |
 | GET | `/api/photobomb/photos/<filename>` | Serves one captured photo (JPEG) |

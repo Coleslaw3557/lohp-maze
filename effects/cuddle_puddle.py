@@ -147,6 +147,32 @@ def create_cuddle_lava_hit_effect():
     return effect
 
 
+def create_cuddle_chamber_trap_effect():
+    """CHAMBER accent: a trap door taking someone's step (projection_engine
+    trap_open, linger-open and sprint-slam alike). The room light falls away
+    with the slab, then the pit's amber glow flares and settles — 3.0 s,
+    sized to the merged MGS trap hit (2.7 s)."""
+    primary = THEME_PALETTES['chamber']['primary']
+    secondary = THEME_PALETTES['chamber']['secondary']
+    steps = [
+        _step(0.0, 14, *primary),
+        _step(0.18, 6, *secondary),      # the slab drops — light falls into the pit
+        _step(0.55, 62, 230, 140, 40),   # grind/slam flare, amber pit-glow
+        _step(1.1, 48, 230, 140, 40),
+        _step(1.7, 34, 200, 110, 30),    # the eyes settling to a glow
+        _step(2.4, 18, *primary),
+        _step(3.0, 0, 0, 0, 0),
+    ]
+    effect = {
+        "duration": 3.0,
+        "description": "Cuddle Cross CHAMBER accent: trap door opening under a "
+                       "step — dip, then amber pit flare (capped at 75, no white)",
+        "steps": steps,
+    }
+    logger.info(f"Cuddle chamber trap effect created with {len(steps)} steps over {effect['duration']} seconds")
+    return effect
+
+
 def create_cuddle_lava_breach_effect():
     """LAVA accent: Kukulkan. The approach glow under the crust, the head
     breaking the surface, then the long sink back down — 5.4 s, covering both

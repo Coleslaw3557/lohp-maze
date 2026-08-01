@@ -262,7 +262,10 @@ renderer through `ServerReporter`), and the server gives Cuddle Cross:
 - a **looping bed** while the show is up, on an audio channel of its own so
   effects mix over it instead of cutting it (`play_room_ambience` /
   `stop_room_ambience`, handled by the Pi client, the sim's browser audio unit,
-  and the node path). LAVA runs Tim's `lava.wav`;
+  and the node path). LAVA runs Tim's `lava.wav`, JUNGLE the night loop,
+  TEMPLE the altar-torch brazier, WATER the drips (2026-08-01);
+- **ambient one-shots** on a per-theme random timer while the show is up
+  (audio only — birdsong over the jungle, wind and ravens for the temple);
 - **accents** on the engine's own moments — a stone sinking, Kukulkan
   surfacing — each one file from the theme's pool plus a capped ember flare on
   the pars, gated by probability and cooldown so they stay occasional;
@@ -271,9 +274,24 @@ renderer through `ServerReporter`), and the server gives Cuddle Cross:
   and tinted to the theme (`theme_manager.ROOM_LIGHT_PROFILES`) — un-capped it
   runs to 255 and drowns the projection.
 
-`sim/tools/floor_audio_test.py` covers the whole path headless. Only LAVA has
-sounds; the other four light correctly and stay silent. `GET /api/floor_state`
-shows what the server currently believes.
+`sim/tools/floor_audio_test.py` covers the whole path headless. Four themes
+have sounds (lava/jungle/temple/water); CHAMBER lights correctly and stays
+silent until its pools land. `GET /api/floor_state` shows what the server
+currently believes.
+
+**You only hear the room you're in** (2026-08-01). In first-person mode the
+browser page hard-gates room-scoped audio by where the avatar stands — beds,
+room one-shots and room effect audio are silent unless you're inside that
+room's footprint (exact hex-half/deck polygons for the center rooms, layout
+rects for the wings; the log prints `ear: <room>` as you cross doorways). A
+room's own bed also mutes the maze-wide music while you stand in it, the same
+rule the real per-room speakers apply. Top and street views stay ungated —
+that's the operator ear, and their distance panners already fade things out.
+Maze-wide broadcasts (the storm's thunder) play in every mode: whichever
+speaker you're standing next to carries them. Same-day: always-on room
+background beds (`room_backgrounds`, 6 rooms) + the roaming ambient one-shot
+engine (`ambient_oneshots`: per-room pools + a maze-wide scatter pool;
+audition with `POST /api/ambient`); `sim/tools/ambient_test.py` covers both.
 
 ## Rig geometry: Cuddle Cross floor projection (sim preview, 2026-07-18)
 
@@ -315,13 +333,18 @@ corner-to-corner string line (= the throw axis and the corner bisector, 60°
 to each frame face) and the deck surface. **Stand-off revision, same day:**
 the frames' top rail (75 mm below the leg tops) and full-width header
 (190 mm down) run right through where the body's rear corners used to
-overhang — a real collision the roof-cap math missed — so the whole rig sits
-**120 mm further down the diagonal**: lens plumb 220 mm in from the corner on
-the line, window 1525 mm above deck (= the 0.49 throw ratio × 3112 mm image —
-height IS the mapping), body top 1745 mm, rear face 135 mm off the corner,
-image near/far edges 640 / 2974 mm from the corner as deck verification
-marks. Nominal lit coverage 88.1%, recoverable ~1–2 pt on-site via the
-carriage slot. The sim draws the actual mount hardware: box beam threading
+overhang — a real collision the roof-cap math missed — so the rig sits well
+down the diagonal. **Real-dims + offset correction (2026-08-01):** the body
+now carries the official LS625X figures (383.7 × 291.5 × 147.7 mm, user
+guide p.56 — the earlier 293 × 221.5 × 114.6 was a bad source), and the
+lens-offset convention is fixed per the guide's p.13 throw table (near edge
+= 8.95% of image height from the lens axis, not the 18% the July math
+used). Current numbers: lens plumb 250 mm in from the corner on the line,
+window 1455 mm above deck (= the 0.49 throw ratio × 2969 mm image — height
+IS the mapping), body top 1746 mm (~14 mm under the 1760 soffit), image
+near/far edges 449 / 2676 mm from the corner as deck verification marks.
+Nominal lit coverage 90.2% (the corrected offset re-centers the smaller
+image — up from the misread-offset 88.1%). The sim draws the actual mount hardware: box beam threading
 the 77 mm rail–header gap, side-plate back frames stopping 65 mm inboard,
 cradle ribs grabbing the leg pair at the two member-free clamp bands
 (~1540 / ~1755 above deck), and the ply shroud sleeve. The overlay is

@@ -17,6 +17,14 @@ class RemoteHostManager:
         self._rng = rng or random.SystemRandom()
         self.background_music_task = None
         self.music_lock = asyncio.Lock()  # serializes background music start/stop
+        # room -> ambience pool that should be looping there right now, asked
+        # of each registered provider (the floor show, the room-background
+        # runner) whenever a client registers: a reloaded sim tab or a
+        # rebooted unit rejoins live beds instead of waiting for a restart.
+        self.bed_providers = []
+        # called with the client's room list when a client disconnects (the
+        # room-background runner un-marks beds that just lost their player)
+        self.client_gone_hooks = []
 
     async def update_client_rooms(self, unit_name, client_ip, rooms, websocket):
         self.clients[websocket] = {"name": unit_name, "rooms": rooms, "ip": client_ip}
@@ -25,11 +33,34 @@ class RemoteHostManager:
             "type": "audio_files_to_download",
             "data": self.audio_manager.get_audio_files_to_download(),
         })
+        await self._resend_beds(websocket, rooms)
+
+    async def _resend_beds(self, websocket, rooms):
+        """Hand a just-registered client every bed its rooms should already be
+        playing. Sent to this ONE socket — clients already looping the bed
+        must not have it restarted under them."""
+        for room in rooms:
+            for provider in self.bed_providers:
+                effect_name = provider(room)
+                if not effect_name:
+                    continue
+                data = self._ambience_payload(effect_name)
+                if data is None:
+                    continue
+                if await self._send(websocket, {"type": "play_room_ambience",
+                                                "room": room, "data": data}):
+                    logger.info(f"Bed '{effect_name}' re-sent to the new client for {room}")
+                break
 
     def remove_client_by_websocket(self, websocket):
         client = self.clients.pop(websocket, None)
         if client:
             logger.info(f"Removed disconnected client {client['name']} ({client['ip']})")
+            for hook in self.client_gone_hooks:
+                try:
+                    hook(client["rooms"])
+                except Exception as e:
+                    logger.error(f"client_gone hook failed: {e}", exc_info=True)
 
     def get_connected_clients_info(self):
         return [{'ip': client['ip'], 'rooms': client['rooms'], 'name': client['name']}
@@ -68,6 +99,16 @@ class RemoteHostManager:
         if self.get_websockets_by_room(room, warn_if_empty=False):
             return True
         return bool(self.node_audio) and self.node_audio.enabled_for(room)
+
+    def audio_rooms(self):
+        """Every room something could play audio in right now: any room a
+        connected client covers, plus the rooms with a speaker node. Names
+        come back in whatever casing they registered with (the maze ambient
+        scatter picks its random room from this)."""
+        rooms = {r for client in self.clients.values() for r in client["rooms"]}
+        if self.node_audio:
+            rooms.update(self.node_audio.enabled_rooms())
+        return sorted(rooms)
 
     async def _send(self, websocket, message):
         client = self.clients.get(websocket)
@@ -130,6 +171,24 @@ class RemoteHostManager:
 
     # --- Room ambience (looping beds) ---
 
+    def _ambience_payload(self, effect_name, audio_params=None):
+        """The play_room_ambience payload for one pool pick, or None if the
+        pool is empty. Shared by room-wide starts and single-socket resends."""
+        audio_params = audio_params or {}
+        audio_file = audio_params.get('file') or self.audio_manager.get_random_audio_file(effect_name)
+        if not audio_file:
+            return None
+        volume = audio_params.get('volume')
+        if volume is None:  # an explicit 0 must stay 0, so no `or` fallback
+            volume = self.audio_manager.get_audio_config(effect_name).get(
+                'volume', self.audio_manager.audio_config.get('default_volume', 0.7))
+        return {
+            'effect_name': effect_name,
+            'file_name': audio_file,
+            'volume': volume,
+            'loop': audio_params.get('loop', True),
+        }
+
     async def start_room_ambience(self, room, effect_name, audio_params=None):
         """Start a looping bed in one room, on a channel of its own.
 
@@ -139,23 +198,12 @@ class RemoteHostManager:
         instead of replacing it. Only `stop_room_ambience` ends it.
         Returns the file that was started, or None when nothing was.
         """
-        audio_params = audio_params or {}
-        audio_file = audio_params.get('file') or self.audio_manager.get_random_audio_file(effect_name)
-        if not audio_file:
+        data = self._ambience_payload(effect_name, audio_params)
+        if data is None:
             logger.info(f"No ambience audio configured for {effect_name}")
             return None
-        volume = audio_params.get('volume')
-        if volume is None:  # an explicit 0 must stay 0, so no `or` fallback
-            volume = self.audio_manager.get_audio_config(effect_name).get(
-                'volume', self.audio_manager.audio_config.get('default_volume', 0.7))
-        data = {
-            'effect_name': effect_name,
-            'file_name': audio_file,
-            'volume': volume,
-            'loop': audio_params.get('loop', True),
-        }
         ok = await self.send_audio_command(room, 'play_room_ambience', data)
-        return audio_file if ok else None
+        return data['file_name'] if ok else None
 
     async def stop_room_ambience(self, room):
         return await self.send_audio_command(room, 'stop_room_ambience', {})

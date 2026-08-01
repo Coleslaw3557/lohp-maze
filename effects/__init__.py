@@ -11,7 +11,8 @@ from .spark_pony import create_spark_pony_effect
 from .porto_standby import create_porto_standby_effect
 from .porto_hit import create_porto_hit_effect
 from .cuddle_puddle import (create_cuddle_puddle_effect, create_cuddle_lava_hit_effect,
-                            create_cuddle_lava_breach_effect, palette_for)
+                            create_cuddle_lava_breach_effect,
+                            create_cuddle_chamber_trap_effect, palette_for)
 from .photobomb_bg import create_photobomb_bg_effect
 from .photobomb_spot import create_photobomb_spot_effect
 from .photobomb_shot import create_photobomb_shot_effect

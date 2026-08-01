@@ -12,17 +12,29 @@ Exercises the contract the Pi renderer uses (projection_renderer.ServerReporter
   5. the maze theme's wash in the projection room stays under the projector cap
      with zero white, while an ordinary room is free to go bright
   6. the show going away stops the bed
+  7. the JUNGLE theme swaps the bed to the night loop and arms its ambient pool
+  8. an audio client registering mid-show is handed the live bed on register
+  9. ambient one-shots fire from the theme's pool on their own random timer
+ 10. TEMPLE swaps straight to the brazier bed (no stop between beds) and
+     arms its wind/raven pool; WATER swaps to the drips bed + its pool;
+     CHAMBER swaps to a mysterious-perc bed (no ambient pool) and its
+     trap_open event fires the merged MGS trap accent
+ 11. the show going away disarms the ambient timer
 
 The sim's own floor engine reports too (sim_ui._floor_loop), so the test first
 cues its show: both reporters then agree the deck is live, exactly as on the
-playa. That cue outlives the test — the bed stops by itself when the deck's
-presence times out (~60 s), or immediately on the next theme with no sounds.
+playa (theme swaps go through the :5002 renderer-control stand-in for the same
+reason). That cue outlives the test — beds and ambient timers stop by
+themselves when the deck's presence times out (~60 s), or immediately on the
+next theme with no sounds.
 
 Run with the sim venv: sim/.venv/bin/python sim/tools/floor_audio_test.py [host]
 """
 import asyncio
 import json
+import os
 import sys
+import time
 import urllib.request
 
 HOST = sys.argv[1] if len(sys.argv) > 1 else 'localhost'
@@ -31,6 +43,10 @@ ROOM = 'Cuddle Cross'
 CAP = 48          # theme_manager.ROOM_LIGHT_PROFILES ceiling (lava tightens to 44)
 EFFECT_PEAK = 75  # effects.cuddle_puddle.PEAK
 BREACH_POOL = {'lava2.wav', 'lava4.wav', 'lava5.wav'}
+# The event accents (light flare + sound); the -Ambient pools are audio-only
+# one-shots on their own timer and must not count as accent contamination.
+ACCENTS = {'Cuddle-Lava-Hit', 'Cuddle-Lava-Breach'}
+JUNGLE_PREFIXES = ('junglebirdie', 'junglebeastie', 'jungleevent')
 FAILS = []
 
 
@@ -56,6 +72,16 @@ def report(active=True, events=(), theme='lava'):
     """Stand in for one of the renderer's reports."""
     return post('/api/floor_event',
                 {'theme': theme, 'active': active, 'events': list(events)})[1]
+
+
+def ctl_theme(name):
+    """Switch the sim engine's own theme via the :5002 renderer-control
+    stand-in, so the engine's reports and this test's reports agree on the
+    theme instead of flapping the bed back and forth."""
+    req = urllib.request.Request(f'http://{HOST}:5002/theme/{name}',
+                                 data=b'', method='POST')
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return r.status
 
 
 async def cue_sim_show():
@@ -135,7 +161,8 @@ async def main():
         check('bed started', bool(beds),
               f"(file={d.get('file_name')}, loop={d.get('loop')}, vol={d.get('volume')})")
         check('bed is the lava loop, looping',
-              d.get('file_name') == 'lava.wav' and d.get('loop') is True)
+              os.path.basename(d.get('file_name') or '') == 'lava.wav'
+              and d.get('loop') is True)
         check('bed reported in state',
               body.get('bed') == 'Cuddle-Lava-Bed' and body.get('theme') == 'lava',
               f"({body.get('theme')}/{body.get('bed')})")
@@ -168,9 +195,18 @@ async def main():
               f"(accent={body.get('accent')})")
         await collector
         await asyncio.sleep(0.2)
-        files = [m['data'].get('file_name') for m in spy.take('play_effect_audio')]
+        msgs = [m for m in spy.take('play_effect_audio')
+                if m['data'].get('effect_name') in ACCENTS]
+        files = [os.path.basename(m['data'].get('file_name') or '') for m in msgs]
+        # the engine's own events (a bubble pop) can earn a Hit accent inside
+        # this window — attribute files by effect, don't blame the breach
+        breach_files = [os.path.basename(m['data'].get('file_name') or '')
+                        for m in msgs
+                        if m['data'].get('effect_name') == 'Cuddle-Lava-Breach']
         check('accent audio sent to the room', bool(files), f'({files})')
-        check('accent came from the breach pool', set(files) <= BREACH_POOL, f'({files})')
+        check('breach accent came from the breach pool',
+              bool(breach_files) and set(breach_files) <= BREACH_POOL,
+              f'(breach={breach_files}, all={files})')
         totals = {fixture(f, cuddle[0])[0] for f in frames}
         whites = {fixture(f, cuddle[0])[4] for f in frames}
         check('pars flared for the accent', len(totals) > 1, f'({len(totals)} distinct levels)')
@@ -183,18 +219,27 @@ async def main():
         check('cooldown holds', body.get('accent') is None, f"(accent={body.get('accent')})")
 
         print("5) maze theme wash is capped in the projection room")
-        # the accent flare must be off the fixtures first, or its 75 is what
-        # we would be measuring instead of the theme's wash
-        post('/api/stop_effect', {'room': ROOM})
-        await asyncio.sleep(0.5)
         post('/api/set_theme', {'theme_name': 'NeonNightlife'})
+
+        def accent_landed():
+            return [m for m in spy.take('play_effect_audio')
+                    if m['data'].get('effect_name') in ACCENTS]
+
         for attempt in range(3):
+            # any accent flare must be off the fixtures first, or its 75 is
+            # what we would be measuring instead of the theme's wash — the
+            # breach flare runs 5.4s, long enough for section 3's accent (or
+            # a fresh engine one) to bleed into this window, so stop per
+            # attempt and let the wash re-assert.
+            post('/api/stop_effect', {'room': ROOM})
+            await asyncio.sleep(1.0)
             # the sim's own show is live, so a real event can flare the pars
             # mid-measurement; that window measures the accent, not the wash
-            spy.take('play_effect_audio')
+            # (ambient one-shots are audio-only and can't disturb the frames)
+            accent_landed()
             frames = []
             await collect_frames(3.0, frames)
-            if not spy.take('play_effect_audio'):
+            if not accent_landed():
                 break
             print(f"     (an accent landed mid-window; re-measuring, attempt {attempt + 2})")
         post('/api/set_theme', {'theme_name': 'notheme'})
@@ -216,9 +261,111 @@ async def main():
         check('stop_room_ambience sent', bool(spy.take('stop_room_ambience')))
         check('bed cleared in state', body.get('bed') is None, f"(bed={body.get('bed')})")
 
+        print("7) JUNGLE -> night bed + ambient timer armed")
+        ctl_theme('jungle')
+        await cue_sim_show()  # keep the engine's presence live past its ~60s window
+        body = report(active=True, theme='jungle')
+        await asyncio.sleep(0.5)
+        beds = spy.take('play_room_ambience')
+        d = beds[-1]['data'] if beds else {}
+        check('jungle bed started', bool(beds),
+              f"(file={d.get('file_name')}, loop={d.get('loop')}, vol={d.get('volume')})")
+        check('bed is the night jungle, looping',
+              os.path.basename(d.get('file_name') or '') == 'junglenight.wav'
+              and d.get('loop') is True)
+        check('jungle bed + ambient pool in state',
+              body.get('bed') == 'Cuddle-Jungle-Bed'
+              and body.get('ambient') == 'Cuddle-Jungle-Ambient',
+              f"({body.get('bed')}/{body.get('ambient')})")
+
+        print("8) a client registering mid-show is handed the live bed")
+        async with AudioSpy() as late:
+            beds = late.take('play_room_ambience')
+            d = beds[-1]['data'] if beds else {}
+            check('late client got the bed on register', bool(beds),
+                  f"(file={d.get('file_name')})")
+            check('and it is the jungle bed',
+                  os.path.basename(d.get('file_name') or '') == 'junglenight.wav')
+
+        print("9) ambient one-shots fire on their own random timer (7-22s)...")
+        heard = []
+        deadline = time.monotonic() + 32.0
+        while time.monotonic() < deadline and not heard:
+            report(active=True, theme='jungle')
+            await asyncio.sleep(2.0)
+            heard = [m for m in spy.take('play_effect_audio')
+                     if m['data'].get('effect_name') == 'Cuddle-Jungle-Ambient']
+        files = [os.path.basename(m['data'].get('file_name') or '') for m in heard]
+        check('an ambient one-shot arrived', bool(heard), f'({files})')
+        check('it came from the jungle pool',
+              bool(files) and all(f.startswith(JUNGLE_PREFIXES) for f in files),
+              f'({files})')
+
+        print("10) TEMPLE -> brazier bed replaces jungle, wind/raven timer armed")
+        ctl_theme('temple')
+        body = report(active=True, theme='temple')
+        await asyncio.sleep(0.5)
+        beds = spy.take('play_room_ambience')
+        d = beds[-1]['data'] if beds else {}
+        check('temple bed replaced the jungle bed', bool(beds),
+              f"(file={d.get('file_name')})")
+        check('bed is the altar brazier, looping',
+              os.path.basename(d.get('file_name') or '') == 'medieval_brazier.wav'
+              and d.get('loop') is True)
+        check('temple bed + ambient in state',
+              body.get('bed') == 'Cuddle-Temple-Bed'
+              and body.get('ambient') == 'Cuddle-Temple-Ambient',
+              f"({body.get('bed')}/{body.get('ambient')})")
+
+        print("10b) WATER -> drips bed, drip/winter-wind timer armed")
+        ctl_theme('water')
+        body = report(active=True, theme='water')
+        await asyncio.sleep(0.5)
+        beds = spy.take('play_room_ambience')
+        d = beds[-1]['data'] if beds else {}
+        check('water bed started', bool(beds), f"(file={d.get('file_name')})")
+        check('bed is drips1, looping',
+              os.path.basename(d.get('file_name') or '') == 'drips1.wav'
+              and d.get('loop') is True)
+        check('water bed + ambient in state',
+              body.get('bed') == 'Cuddle-Water-Bed'
+              and body.get('ambient') == 'Cuddle-Water-Ambient',
+              f"({body.get('bed')}/{body.get('ambient')})")
+
+        print("10c) CHAMBER -> mysterious-perc bed, no ambient, trap accent")
+        ctl_theme('chamber')
+        body = report(active=True, theme='chamber')
+        await asyncio.sleep(0.5)
+        beds = spy.take('play_room_ambience')
+        d = beds[-1]['data'] if beds else {}
+        check('chamber bed started', bool(beds), f"(file={d.get('file_name')})")
+        check('bed is one of the mysterious percs, looping',
+              os.path.basename(d.get('file_name') or '').startswith('mysterious_perc_')
+              and d.get('loop') is True)
+        check('chamber bed in state, no ambient pool',
+              body.get('bed') == 'Cuddle-Chamber-Bed' and body.get('ambient') is None,
+              f"({body.get('bed')}/{body.get('ambient')})")
+        spy.take('play_effect_audio')  # clear any stragglers before the accent
+        body = report(active=True, theme='chamber',
+                      events=[{'e': 'trap_open', 'id': 0, 'slam': 0, 'x': 1.0, 'y': 1.0}])
+        check('trap_open fired the trap accent',
+              body.get('accent') == 'Cuddle-Chamber-Trap', f"({body.get('accent')})")
+        await asyncio.sleep(1.0)
+        hits = [m for m in spy.take('play_effect_audio')
+                if m['data'].get('effect_name') == 'Cuddle-Chamber-Trap']
+        files = [os.path.basename(m['data'].get('file_name') or '') for m in hits]
+        check('trap audio is the merged MGS hit',
+              files == ['trap_0xBB_0xBA.wav'], f'({files})')
+
+        print("11) show over -> ambient timer disarmed")
+        body = report(active=False, theme='chamber')
+        check('ambient cleared in state', body.get('ambient') is None,
+              f"(ambient={body.get('ambient')})")
+        ctl_theme('lava')  # leave the deck the way we found it
+
     post('/api/stop_effect', {})
     print("\nnote: the sim's floor show is still cued, so its next report starts "
-          "the bed again — it goes quiet on its own once presence times out.")
+          "the lava bed again — it goes quiet on its own once presence times out.")
     print(f"{'ALL PASS' if not FAILS else 'FAILURES: ' + ', '.join(FAILS)}")
     sys.exit(1 if FAILS else 0)
 

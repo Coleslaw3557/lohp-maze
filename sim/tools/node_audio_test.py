@@ -7,9 +7,12 @@ RemoteHostManager integration. No server or hardware needed:
      music -> stream URL (percent-encoded), audio_stop -> announcement-only
      stop (music survives), stop_background_music -> media stop
   3. room=None broadcasts to every node room; unmapped rooms are untouched
-  4. per-node FIFO lock keeps rapid-fire cues in dispatch order
-  5. a dead node fails quietly (returns False, never raises, never blocks)
-  6. RemoteHostManager: a node-only room (no WS client) reports success
+  4. a room's own background bed owns the shared media pipeline: maze music
+     commands (start AND stop) leave a bed-active node alone, and the pipeline
+     goes back to the current music track when the bed stops
+  5. per-node FIFO lock keeps rapid-fire cues in dispatch order
+  6. a dead node fails quietly (returns False, never raises, never blocks)
+  7. RemoteHostManager: a node-only room (no WS client) reports success
 
 Run: sim/.venv/bin/python sim/tools/node_audio_test.py   (from the repo root)
 """
@@ -118,6 +121,43 @@ async def run(tmp_path):
           ('media', MediaPlayerCommand.STOP, None, True) in monkey.calls
           and ('media', MediaPlayerCommand.STOP, None, False) in monkey.calls
           and ('media', MediaPlayerCommand.STOP, None, True) not in temple.calls)
+
+    # bed vs music on the node's ONE media pipeline: the room background
+    # overrides maze music for its node, music start/stop never steal the
+    # pipeline from a bed, and the current track resumes when the bed stops
+    monkey.calls.clear()
+    temple.calls.clear()
+    base = "http://10.0.0.2:5000/api/audio/"
+    m.handle_command(None, "start_background_music", {"music_file": "song.mp3"})
+    m.handle_command("Monkey Room", "play_room_ambience", {"file_name": "bed.wav"})
+    m.handle_command(None, "start_background_music", {"music_file": "next.mp3"})
+    m.handle_command(None, "stop_background_music", {})
+    m.handle_command(None, "start_background_music", {"music_file": "song2.mp3"})
+    m.handle_command("Monkey Room", "stop_room_ambience", {})
+    await drain(m)
+    check("bed-active node: music rotation and stop never touch the pipeline",
+          monkey.calls[:2] == [('media', None, base + "song.mp3", False),
+                               ('media', None, base + "bed.wav", False)]
+          and monkey.calls[2] == ('media', None, base + "song2.mp3", False),
+          f"({monkey.calls})")
+    check("bed stop hands the pipeline back to the current music track",
+          len(monkey.calls) == 3 and not monkey.bed_active)
+    check("bed-free node keeps following music commands",
+          temple.calls == [('media', None, base + "song.mp3", False),
+                           ('media', None, base + "next.mp3", False),
+                           ('media', MediaPlayerCommand.STOP, None, False),
+                           ('media', None, base + "song2.mp3", False)],
+          f"({temple.calls})")
+
+    # with music OFF, a bed stop stops the pipeline instead of resuming music
+    monkey.calls.clear()
+    m.handle_command(None, "stop_background_music", {})
+    m.handle_command("Monkey Room", "play_room_ambience", {"file_name": "bed.wav"})
+    m.handle_command("Monkey Room", "stop_room_ambience", {})
+    await drain(m)
+    check("bed stop with music off -> media stop, no phantom resume",
+          monkey.calls[-1] == ('media', MediaPlayerCommand.STOP, None, False),
+          f"({monkey.calls})")
 
     # rapid-fire ordering through the per-node lock
     monkey.calls.clear()

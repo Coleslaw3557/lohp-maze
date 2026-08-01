@@ -21,8 +21,11 @@ from remote_host_manager import RemoteHostManager
 from audio_manager import AudioManager
 from node_audio_manager import NodeAudioManager
 from floor_show_manager import FloorShowManager, read_saved_theme
+from room_background_manager import RoomBackgroundManager
+from maze_ambient_manager import MazeAmbientManager
 from camera_manager import CameraManager
-from effects.photobomb_shot import SHUTTER_OFFSET
+from effects.photobomb_shot import SHUTTER_OFFSET, DURATION as PHOTOBOMB_SHOT_DURATION
+from photobooth import PhotoBoothSession
 from room_answer_pools import answer_pool_name
 
 # Configuration
@@ -48,6 +51,16 @@ BACKTRACK_BLIND_REVERSE_ENTRY_ROOMS = {"Entrance"}
 DEEP_PLAYA_ROOM = "Deep Playa Handshake"
 DEEP_PLAYA_ENTRY_EFFECT = "DeepPlaya-BG"
 DEEP_PLAYA_STALE_ENTRY_EFFECT = "DeepPlaya-Hit"
+PHOTOBOMB_ROOM = "Photo Bomb Room"
+PHOTOBOMB_SHOT_EFFECT = "PhotoBomb-Shot"
+PHOTOBOMB_ENTRY_EFFECT = "PhotoBomb-BG"
+# Victory/failure ride the shared answer cues: the audio layer swaps in the
+# room-local PhotoBombRoom-RightAnswer / -WrongAnswer pools once the console
+# assigns them files, and falls back to the shared chime/fail sounds until then.
+PHOTOBOMB_VICTORY_EFFECT = "CorrectAnswer"
+PHOTOBOMB_FAIL_EFFECT = "WrongAnswer"
+# the capture lands ~SHUTTER_OFFSET+0.25s in; the chime waits out the outro
+PHOTOBOMB_VICTORY_DELAY_S = round(PHOTOBOMB_SHOT_DURATION - SHUTTER_OFFSET, 2)
 MOOP_ROOM = "Vertical Moop March"
 MOOP_BUTTON_EFFECT = "CorrectAnswer"
 MOOP_RIGHT_EFFECT = answer_pool_name(MOOP_ROOM, "CorrectAnswer")
@@ -257,14 +270,62 @@ camera_manager = CameraManager()
 floor_show_manager = FloorShowManager(effects_manager, remote_host_manager)
 floor_show_manager.prime_theme(read_saved_theme(os.path.dirname(os.path.abspath(__file__))))
 
+# Always-on per-room background sound (audio_config.json `room_backgrounds`,
+# room_background_manager.py) — a room keeping its own loop regardless of the
+# maze-wide music mode, and muting the maze music on its speaker while it
+# plays. Cuddle Cross is reserved: its bed follows the projection instead.
+room_background_manager = RoomBackgroundManager(
+    audio_manager, remote_host_manager, reserved_room=floor_show_manager.room)
+# Roaming ambient one-shots (audio_config.json `ambient_oneshots`,
+# maze_ambient_manager.py) — random files on random timers: per-room pools
+# (the Entrance's hallow murmurs) plus a maze-wide pool that lands one crow/
+# owl/wolf in a different random room each firing. Cuddle Cross is reserved
+# here too — the floor show owns that room's ambience.
+maze_ambient_manager = MazeAmbientManager(
+    audio_manager, remote_host_manager, reserved_room=floor_show_manager.room)
+# Reconnecting audio clients (a reloaded sim tab, a rebooted unit) ask these
+# for the beds their rooms should already be playing.
+remote_host_manager.bed_providers += [floor_show_manager.bed_for_room,
+                                      room_background_manager.bed_for_room]
+remote_host_manager.client_gone_hooks.append(room_background_manager.client_gone)
+
 # Photo Bomb camera: every PhotoBomb-Shot run schedules a webcam capture at the
 # flash; a superseded/stopped run (button re-press restarts the countdown)
 # cancels it so exactly one photo comes out of the last full countdown.
 effects_manager.register_effect_hooks(
-    'PhotoBomb-Shot',
-    on_start=lambda room: camera_manager.schedule_capture(SHUTTER_OFFSET),
+    PHOTOBOMB_SHOT_EFFECT,
+    on_start=lambda room: camera_manager.schedule_capture(SHUTTER_OFFSET, room),
     on_cancel=lambda room: camera_manager.cancel_pending(),
 )
+
+# Photo Bomb game state: entry starts the music bed, MAX_SHOTS shots per
+# visitor, then presses fail until the room turns over (photobooth.py).
+photobooth = PhotoBoothSession()
+_photobomb_victory_task = None
+
+
+def _cancel_photobomb_victory():
+    global _photobomb_victory_task
+    if _photobomb_victory_task and not _photobomb_victory_task.done():
+        _photobomb_victory_task.cancel()
+    _photobomb_victory_task = None
+
+
+def _on_photobomb_captured(room, path):
+    """A photo actually landed on disk = the room objective. Chime the victory
+    cue once the shot effect's outro settles; a new press before it fires
+    cancels it (the run_effect intercept), so back-to-back shots chime once."""
+    global _photobomb_victory_task
+    _cancel_photobomb_victory()
+
+    async def victory():
+        await asyncio.sleep(PHOTOBOMB_VICTORY_DELAY_S)
+        await effects_manager.apply_effect_to_room(room or PHOTOBOMB_ROOM,
+                                                   PHOTOBOMB_VICTORY_EFFECT)
+    _photobomb_victory_task = asyncio.create_task(victory())
+
+
+camera_manager.on_captured = _on_photobomb_captured
 
 
 def _load_maze_route_tracking():
@@ -597,6 +658,19 @@ async def run_effect():
         elif route_action in ('same', 'new'):
             _clear_room_backtrack_block(room)
 
+        # Photo Bomb booth: entries reset the shot budget; presses past it get
+        # the failure cue instead of a countdown. Runs after the backtrack
+        # rewrites so reverse travel neither counts shots nor resets sessions.
+        if room == PHOTOBOMB_ROOM:
+            if effect_name == PHOTOBOMB_ENTRY_EFFECT:
+                photobooth.entered()
+            elif effect_name == PHOTOBOMB_SHOT_EFFECT:
+                _cancel_photobomb_victory()
+                if not photobooth.press():
+                    logger.info(f"Photo Bomb budget blown "
+                                f"({photobooth.max_shots} shots); firing failure cue")
+                    effect_name = PHOTOBOMB_FAIL_EFFECT
+
         effect_data = effects_manager.get_effect(effect_name)
         if not effect_data:
             return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
@@ -687,6 +761,17 @@ async def stop_effect():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+def _room_leave_effect(room):
+    """The opt-in leave-sound pool for a room (audio_config
+    `room_leave_sounds`), or None. Case-insensitive on the room name and read
+    per call, so /api/reload_audio_config picks up edits."""
+    sounds = audio_manager.audio_config.get('room_leave_sounds') or {}
+    for name, effect in sounds.items():
+        if not name.startswith('_') and name.lower() == room.lower():
+            return effect
+    return None
+
+
 @app.route('/api/room_vacated', methods=['POST'])
 async def room_vacated():
     """A room node reporting that its radar lost the last visitor — the
@@ -704,6 +789,9 @@ async def room_vacated():
         return jsonify({'status': 'error', 'message': 'Room is required'}), 400
     try:
         logger.info(f"Room vacated: {room}")
+        if room == PHOTOBOMB_ROOM:
+            photobooth.vacated()
+            _cancel_photobomb_victory()
         blind_backtrack_room = _route_room_vacated(room)
         if blind_backtrack_room:
             _set_room_backtrack_block(room)
@@ -714,6 +802,15 @@ async def room_vacated():
             return jsonify({'status': 'success',
                             'message': f'Room {room} vacated; {BACKTRACK_EFFECT_NAME} fired'})
         await effects_manager.stop_effect_in_room(room)
+        # Opt-in send-off: a room can name a one-shot pool to fire as its last
+        # visitor leaves (audio_config `room_leave_sounds` — Cop Dodge and
+        # Sparkle Pony, Tim 2026-08-01). After the stop above so nothing cuts
+        # it; the backtrack branch above skips it deliberately — the wrong-way
+        # audio owns that exit.
+        leave_effect = _room_leave_effect(room)
+        if leave_effect:
+            await remote_host_manager.play_effect_audio(leave_effect, rooms=[room])
+            logger.info(f"Leave sound {leave_effect} fired in {room}")
         return jsonify({'status': 'success', 'message': f'Room {room} vacated'})
     except Exception as e:
         logger.error(f"Error handling vacate for room {room}: {e}", exc_info=True)
@@ -913,6 +1010,46 @@ async def floor_state():
     return jsonify(floor_show_manager.state())
 
 
+@app.route('/api/room_backgrounds', methods=['GET'])
+async def get_room_backgrounds():
+    """Which rooms keep their own always-on background, and what's playing."""
+    return jsonify(room_background_manager.state())
+
+
+@app.route('/api/room_backgrounds', methods=['POST'])
+async def set_room_background():
+    """Runtime opt-in/out for auditioning: {"room": ..., "effect": ...|null}.
+    Not persisted — a keeper goes in audio_config.json `room_backgrounds`."""
+    data = await request.json
+    room = data.get('room')
+    if not room:
+        return jsonify({'status': 'error', 'message': 'Room is required'}), 400
+    ok, message = room_background_manager.set_room(room, data.get('effect'))
+    if not ok:
+        return jsonify({'status': 'error', 'message': message}), 400
+    await room_background_manager.apply_now()
+    return jsonify({'status': 'success', 'message': message,
+                    **room_background_manager.state()})
+
+
+@app.route('/api/ambient', methods=['GET'])
+async def get_ambient():
+    """The armed ambient one-shot timers (audio_config `ambient_oneshots`)."""
+    return jsonify(maze_ambient_manager.state())
+
+
+@app.route('/api/ambient', methods=['POST'])
+async def fire_ambient():
+    """Fire one ambient one-shot NOW, skipping the random interval —
+    auditioning. {"maze": true} lands a maze-pool file in a random room;
+    {"room": <name>} fires that room's own pool."""
+    data = await request.get_json() or {}
+    ok, message = await maze_ambient_manager.fire_now(
+        room=data.get('room'), maze=bool(data.get('maze')))
+    return (jsonify({'status': 'success' if ok else 'error',
+                     'message': message}), 200 if ok else 400)
+
+
 @app.route('/api/toggle_music', methods=['POST'])
 async def toggle_music():
     try:
@@ -1046,6 +1183,8 @@ if __name__ == '__main__':
     async def run_server():
         try:
             websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
+            room_background_manager.ensure_running()
+            maze_ambient_manager.ensure_running()
             await asyncio.gather(websocket_server.wait_closed(), serve(app, config))
         except Exception as e:
             log_and_exit(f"Server crashed: {e}")

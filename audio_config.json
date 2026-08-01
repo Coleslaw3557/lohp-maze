@@ -1,22 +1,35 @@
 {
     "effects": {
         "Lightning": {
+            "_comment": "Storm crack pool (Tim 2026-08-01): TF2 sawmill + DeGroot thunders join the original zap. Also fired maze-wide by the camp sign storm button.",
             "audio_files": [
-                "lightning1.mp3"
+                "lightning1.mp3",
+                "uploads/Thunder/medieval_thunder2.wav",
+                "uploads/Thunder/medieval_thunder3.wav",
+                "uploads/Thunder/medieval_thunder4.wav",
+                "uploads/Thunder/thunder2.wav",
+                "uploads/Thunder/thunder3.wav",
+                "uploads/Thunder/thunder4.wav"
             ],
             "volume": 1.0
         },
         "PoliceLights": {
+            "_comment": "Cop Dodge entry (the room laser fires this). TF2 duel challenge/event added to the rotation 2026-08-01 (Tim) — you have been challenged, now dodge.",
             "audio_files": [
                 "rooms/Cop Dodge/mixes/11_escalation_detected_to_checkpoint.wav",
                 "rooms/Cop Dodge/mixes/12_dispatch_chase_bed.wav",
                 "rooms/Cop Dodge/mixes/13_rapid_spotted_checkpoint.wav",
-                "rooms/Cop Dodge/mixes/14_overwatch_hunt_closing_in.wav"
+                "rooms/Cop Dodge/mixes/14_overwatch_hunt_closing_in.wav",
+                "rooms/Cop Dodge/uploads/duel_challenge.wav",
+                "rooms/Cop Dodge/uploads/duel_event.wav",
+                "rooms/Cop Dodge/uploads/0x53.wav",
+                "rooms/Cop Dodge/uploads/0x82.wav",
+                "rooms/Cop Dodge/uploads/0x83.wav"
             ],
             "volume": 0.8
         },
         "GateInspection": {
-            "_comment": "Tim 2026-07: the two legacy tickets-please stay in rotation alongside the Gate pack mixes",
+            "_comment": "Tim 2026-07: the two legacy tickets-please stay in rotation alongside the Gate pack mixes. Medic taunts joined as Gate entrance lines 2026-08-01 (this is the effect the Gate laser fires on walk-in; GateGreeters is only the console/test fixture).",
             "audio_files": [
                 "fallout-ticketsplease.mp3",
                 "jones-ticketsplease.mp3",
@@ -24,99 +37,175 @@
                 "rooms/Gate/mixes/12_tickets_please_comedy_sequence.wav",
                 "rooms/Gate/mixes/13_strict_checkpoint.wav",
                 "rooms/Gate/mixes/14_aperture_gate_processing.wav",
-                "rooms/Gate/mixes/15_border_shift_loop.wav"
+                "rooms/Gate/mixes/15_border_shift_loop.wav",
+                "rooms/Gate/uploads/medic_taunts04.mp3",
+                "rooms/Gate/uploads/medic_taunts10.mp3"
             ],
             "volume": 0.7
         },
         "GateGreeters": {
-            "audio_files": [],
+            "audio_files": [
+                "uploads/Bowsers_Greeting.wav"
+            ],
             "volume": 0.7
         },
         "WrongAnswer": {
+            "_comment": "Shared maze-wide failure pool. TF2 bomb_warning added 2026-08-01 (Tim).",
             "audio_files": [
                 "fail.mp3",
                 "growl1.mp3",
                 "growl2.mp3",
-                "dinorar.mp3"
+                "dinorar.mp3",
+                "uploads/Wario3.wav",
+                "uploads/bomb_warning.wav",
+                "uploads/0x23.wav"
             ],
             "volume": 0.8
         },
         "Backtrack": {
-            "_comment": "Played instead of the room's normal entry audio when a visitor enters an earlier room in the canonical maze route.",
+            "_comment": "Played instead of the room's normal entry audio when a visitor enters an earlier room in the canonical maze route. TF2 coach 'look here' added 2026-08-01 (Tim).",
             "audio_files": [
                 "uploads/Broke_the_ever_loving_shit_out_of_it.mp3",
-                "uploads/You_ve_been_splooged_you_took_a_good_old_gulp_too.mp3"
+                "uploads/You_ve_been_splooged_you_took_a_good_old_gulp_too.mp3",
+                "uploads/coach_look_here.wav"
             ],
             "volume": 0.9
         },
         "CorrectAnswer": {
-            "_comment": "Shared maze-wide victory chime (room-games plan); MechWarrior Betty lines removed 2026-07-29 (Tim)",
+            "_comment": "Shared maze-wide victory chime (room-games plan); MechWarrior Betty lines removed 2026-07-29 (Tim). 2026-08-01 (Tim): TF2 affirmatives for single actions (a moop button pressed but the round not done, and rooms like it) — pumpkin drop/pickup, regenerate, spawn_item, talk, rendercomplete — plus the bigger railroad_bells and coach 'attack here' victory shots.",
             "audio_files": [
                 "rooms/Bike Lock Room/rapid/button_responses/01_button_1_quake.wav",
                 "rooms/Bike Lock Room/clips/20_quake_button_2.wav",
                 "rooms/Bike Lock Room/clips/21_quake_button_3.wav",
-                "rooms/Bike Lock Room/clips/22_quake_button_4.wav"
+                "rooms/Bike Lock Room/clips/22_quake_button_4.wav",
+                "uploads/pumpkin_drop.wav",
+                "uploads/pumpkin_pickup.wav",
+                "uploads/regenerate.wav",
+                "uploads/spawn_item.wav",
+                "uploads/talk.wav",
+                "uploads/rendercomplete.wav",
+                "uploads/railroad_bells.wav",
+                "uploads/coach_attack_here.wav",
+                "uploads/0x16.wav"
             ],
             "volume": 0.8
         },
         "VerticalMoopMarch-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
         "BikeLockRoom-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
         "CampSign-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
         "CopDodge-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
             "audio_files": [],
+            "volume": 0.6
+        },
+        "CopDodge-Leave": {
+            "_comment": "Fired once when Cop Dodge reports its last visitor gone (/api/room_vacated -> top-level room_leave_sounds). MGS sample01 escape stings (Tim 2026-08-01). Skipped when the vacate is a backtrack — the wrong-way audio owns that moment.",
+            "audio_files": [
+                "rooms/Cop Dodge/uploads/0x84.wav",
+                "rooms/Cop Dodge/uploads/0x85.wav"
+            ],
+            "volume": 0.8
+        },
+        "DeepPlayaHandshake-Background": {
+            "_comment": "Always-on Deep Playa bed, opted in under room_backgrounds: ONE of these picked at random per bed start and looped (Tim 2026-08-01 — the TF2 ConTracker chase track and the old distant-dance gag now share the pool; anti-repeat alternates picks across restarts). The DeepPlaya-BG doorway effect is lights-only since 08-01 evening — its dance-distance audio moved here so the room never runs two musics at once.",
+            "audio_files": [
+                "rooms/Deep Playa Handshake/uploads/cyoa_musicfasterthanaspeedingbullet.mp3",
+                "dance-distance-muffled.mp3"
+            ],
             "volume": 0.6
         },
         "Entrance-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
-            "audio_files": [],
+            "_comment": "Always-on Entrance bed (Tim 2026-08-01): TF2 hallowloop, opted in under room_backgrounds — the maze breathes spooky from the first step. Its one-shot murmurs live in Entrance-Ambient (ambient_oneshots).",
+            "audio_files": [
+                "uploads/Hallow/hallowloop.wav"
+            ],
             "volume": 0.6
         },
+        "Entrance-Ambient": {
+            "_comment": "Entrance random-interval one-shots over the hallowloop bed (ambient_oneshots -> maze_ambient_manager.py, Tim 2026-08-01): the eight hallow murmurs plus the occasional lightson power-up mixed in.",
+            "audio_files": [
+                "uploads/Hallow/hallow01.wav",
+                "uploads/Hallow/hallow02.wav",
+                "uploads/Hallow/hallow03.wav",
+                "uploads/Hallow/hallow04.wav",
+                "uploads/Hallow/hallow05.wav",
+                "uploads/Hallow/hallow06.wav",
+                "uploads/Hallow/hallow07.wav",
+                "uploads/Hallow/hallow08.wav",
+                "uploads/Hallow/lightson.wav"
+            ],
+            "volume": 0.55
+        },
         "Exit-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
-            "audio_files": [],
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
+            "audio_files": [
+                "uploads/First_Place_Finish.wav"
+            ],
             "volume": 0.6
         },
         "Gate-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
         "GuyLineClimb-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
-            "audio_files": [],
+            "_comment": "Always-on Guy Line Climb bed (Tim 2026-08-01): TF2 forest cliff/high-wind/life loops, opted in under room_backgrounds — one random pick loops until the room's bed restarts, so the forest shifts between visits.",
+            "audio_files": [
+                "rooms/Guy Line Climb/uploads/forest_cliff.wav",
+                "rooms/Guy Line Climb/uploads/forest_high_wind.wav",
+                "rooms/Guy Line Climb/uploads/forest_life.wav"
+            ],
             "volume": 0.6
         },
         "MonkeyRoom-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
-            "audio_files": [],
+            "_comment": "Always-on Monkey Room bed (Tim 2026-08-01): the ConTracker pipebomb dirge, opted in under room_backgrounds. carousel_of_curses removed entirely same day (Tim).",
+            "audio_files": [
+                "rooms/Monkey Room/uploads/cyoa_musicdrunkenpipebomb.mp3"
+            ],
             "volume": 0.6
         },
         "NoFriendsMonday-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "_comment": "Always-on No Friends Monday bed (Tim 2026-08-01): taunt_bongos only, opted in under room_backgrounds. Final_Lap.wav CUT 2026-08-01 (Tim): beds loop their pick, and a 3.7s one-shot jingle looping is noise, not a bed — only put loopable material in -Background pools.",
+            "audio_files": [
+                "rooms/No Friends Monday/uploads/taunt_bongos.wav"
+            ],
+            "volume": 0.6
+        },
+        "PortoRoom-Background": {
+            "_comment": "Porto Room background pool — EMPTY since 2026-08-01 (Tim cut bump_in_the_night entirely, same day it landed). Drop a file in and re-add 'Porto Room': 'PortoRoom-Background' under room_backgrounds to loop it always-on again.",
             "audio_files": [],
             "volume": 0.6
         },
         "SparklePonyRoom-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
+        "SparklePonyRoom-Leave": {
+            "_comment": "Fired once when Sparkle Pony Room reports its last visitor gone (/api/room_vacated -> top-level room_leave_sounds). MGS door stings 0x43/0x44 (Tim 2026-08-01: 'exit sound'). Skipped when the vacate is a backtrack.",
+            "audio_files": [
+                "rooms/Sparkle Pony Room/uploads/0x43.wav",
+                "rooms/Sparkle Pony Room/uploads/0x44.wav"
+            ],
+            "volume": 0.8
+        },
         "TempleRoom-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; wire a room action/ambience runner when the room needs it live.",
-            "audio_files": [],
+            "_comment": "Always-on Temple Room bed (Tim 2026-08-01): MGS 0x3A on repeat, opted in under room_backgrounds. NOTE this is the TEMPLE ROOM (the maze room) — the Cuddle temple PROJECTION's sounds live in Cuddle-Temple-Bed/-Ambient.",
+            "audio_files": [
+                "rooms/Temple Room/uploads/0x3A.wav"
+            ],
             "volume": 0.6
         },
         "VerticalMoopMarch-RightAnswer": {
@@ -124,7 +213,8 @@
             "audio_files": [
                 "rooms/Bike Lock Room/clips/28_diablo_quest_complete_1.wav",
                 "ff9-victory.mp3",
-                "rooms/Porto Room/sensor_responses/victory/03_zelda_chime_door_opens.wav"
+                "rooms/Porto Room/sensor_responses/victory/03_zelda_chime_door_opens.wav",
+                "uploads/1-Up.wav"
             ],
             "volume": 0.8
         },
@@ -138,14 +228,17 @@
             "audio_files": [
                 "rooms/Bike Lock Room/rapid/victory/01_doom_secret_unlock.wav",
                 "rooms/Bike Lock Room/rapid/victory/02_diablo_quest_unlock.wav",
-                "rooms/Bike Lock Room/rapid/victory/03_diablo_quest_unlock_alt1.wav"
+                "rooms/Bike Lock Room/rapid/victory/03_diablo_quest_unlock_alt1.wav",
+                "uploads/1-Up.wav"
             ],
-            "audio_weights": [5, 4, 3],
+            "audio_weights": [5, 4, 3, 1],
             "volume": 0.8
         },
         "BikeLockRoom-WrongAnswer": {
             "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Weights = Bike Lock Room TRIGGER_MAP.csv wrong_pair.",
-            "audio_files": [],
+            "audio_files": [
+                "growl1.mp3"
+            ],
             "volume": 0.8
         },
         "CampSign-RightAnswer": {
@@ -213,7 +306,8 @@
             "audio_files": [
                 "rooms/Gate/clips/07_portal_proceed_to_chamberlock.wav",
                 "rooms/Gate/clips/09_papers_please_passport_stamp.wav",
-                "rooms/Gate/clips/10_papers_please_gate_open_close.wav"
+                "rooms/Gate/clips/10_papers_please_gate_open_close.wav",
+                "uploads/1-Up.wav"
             ],
             "volume": 0.8
         },
@@ -260,21 +354,26 @@
             "volume": 0.8
         },
         "PhotoBombRoom-RightAnswer": {
-            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Seeded from Photo Bomb photo-trigger approval clips. Weights = Photo Bomb TRIGGER_MAP.csv minus the Mean Girls failure beat.",
+            "_comment": "Photo Bomb VICTORY sound: plays after every captured photo (booth game, main.py) — the say-cheese payoff. TF2 camera shutters assigned 2026-08-01 (Tim). STILL WANTED: 'Prepotente scream (better).mp3' — not on this box (searched home + tf-master 2026-08-01); drop it in rooms/Photo Bomb Room/uploads/ and add it here.",
             "audio_files": [
-                "rooms/Photo Bomb Room/photo_triggers/19_pokemon_snap_wonderful.wav",
-                "rooms/Photo Bomb Room/photo_triggers/20_austin_powers_approval.wav",
-                "rooms/Photo Bomb Room/photo_triggers/21_dead_rising_fantastic.wav",
-                "rooms/Photo Bomb Room/photo_triggers/22_kris_amazing_sweetie.wav"
+                "rooms/Photo Bomb Room/uploads/tf_camera_01.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_02.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_03.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_04.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_05.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_06.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_07.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_08.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_09.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_10.wav",
+                "rooms/Photo Bomb Room/uploads/tf_camera_11.wav",
+                "rooms/Photo Bomb Room/uploads/0x11.wav"
             ],
-            "audio_weights": [3, 2, 3, 1],
             "volume": 0.8
         },
         "PhotoBombRoom-WrongAnswer": {
-            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Seeded from the Photo Bomb Mean Girls rejection beat.",
-            "audio_files": [
-                "rooms/Photo Bomb Room/clips/08_mean_girls_she_doesnt_go_here.wav"
-            ],
+            "_comment": "Photo Bomb FAILURE sound (get out of the room): plays on every press past the 5-shot budget (booth game, photobooth.py). Assign files here; until then the shared WrongAnswer pool plays.",
+            "audio_files": [],
             "volume": 0.8
         },
         "PortoRoom-RightAnswer": {
@@ -284,7 +383,8 @@
                 "rooms/Porto Room/sensor_responses/victory/02_tf2_well_done_mate.wav",
                 "rooms/Porto Room/sensor_responses/victory/03_zelda_chime_door_opens.wav",
                 "rooms/Porto Room/sensor_responses/victory/04_mario_64_star_get.wav",
-                "rooms/Porto Room/sensor_responses/victory/05_sonic_checkpoint.wav"
+                "rooms/Porto Room/sensor_responses/victory/05_sonic_checkpoint.wav",
+                "uploads/1-Up.wav"
             ],
             "volume": 0.9
         },
@@ -299,9 +399,11 @@
                 "rooms/Porto Room/sensor_responses/occupied/06_tf2_where_learn_to_push.wav",
                 "rooms/Porto Room/sensor_responses/occupied/07_duke_warning_door_rattle.wav",
                 "rooms/Porto Room/sensor_responses/occupied/09_no_response_silence.wav",
-                "rooms/Porto Room/sensor_responses/occupied/10_locked_handle_jiggle.wav"
+                "rooms/Porto Room/sensor_responses/occupied/10_locked_handle_jiggle.wav",
+                "uploads/moo.wav",
+                "rooms/Porto Room/uploads/cow3.wav"
             ],
-            "audio_weights": [5, 3, 3, 2, 3, 3, 2, 2, 3],
+            "audio_weights": [5, 3, 3, 2, 3, 3, 2, 2, 3, 1, 1],
             "volume": 0.9
         },
         "SparklePonyRoom-RightAnswer": {
@@ -311,7 +413,9 @@
                 "rooms/Sparkle Pony Room/clips/04_glados_load_bearing_well_done.wav",
                 "rooms/Sparkle Pony Room/clips/06_glados_congratulations_worth_it.wav",
                 "rooms/Sparkle Pony Room/clips/11_tf2_barely_a_challenge.wav",
-                "rooms/Sparkle Pony Room/clips/12_tf2_well_done_mate.wav"
+                "rooms/Sparkle Pony Room/clips/12_tf2_well_done_mate.wav",
+                "rooms/Sparkle Pony Room/uploads/medieval_dooropenlower.wav",
+                "rooms/Sparkle Pony Room/uploads/medieval_dooropenraise.wav"
             ],
             "volume": 0.8
         },
@@ -337,19 +441,32 @@
             "volume": 0.8
         },
         "Entrance": {
+            "_comment": "Walk-in pool for the Entrance ToF. TF2 announcer 'the game begins' added 2026-08-01 (Tim).",
             "audio_files": [
                 "pornhub.mp3",
                 "rooms/Entrance/uploads/Helllllooooo_crawlers.mp3",
                 "rooms/Entrance/uploads/Let_chaos_rain.mp3",
                 "rooms/Entrance/uploads/Welcome_to_the_arena.mp3",
-                "rooms/Entrance/uploads/Good_luck_van_damme.mp3"
+                "rooms/Entrance/uploads/Good_luck_van_damme.mp3",
+                "rooms/Entrance/uploads/announcer_am_gamestarting04.mp3"
             ],
             "volume": 0.9
         },
         "Exit": {
-            "_comment": "FINISH-arch payoff, fired by the Exit ToF on entry. Pool of one so far (Tim's upload 2026-07-30); drop more send-off lines in beside it — no pack authored for Exit yet",
+            "_comment": "FINISH-arch payoff, fired by the Exit ToF on entry. TF2 send-off set added 2026-08-01 (Tim): achievement earned, the birthday party, and both team-won calls.",
             "audio_files": [
-                "uploads/Do_you_know_how_many_of_these_achievements.mp3"
+                "uploads/Do_you_know_how_many_of_these_achievements.mp3",
+                "rooms/Exit/uploads/achievement_earned.wav",
+                "rooms/Exit/uploads/happy_birthday.wav",
+                "rooms/Exit/uploads/happy_birthday_tf_01.wav",
+                "rooms/Exit/uploads/happy_birthday_tf_04.wav",
+                "rooms/Exit/uploads/happy_birthday_tf_15.wav",
+                "rooms/Exit/uploads/happy_birthday_tf_21.wav",
+                "rooms/Exit/uploads/happy_birthday_tf_23.wav",
+                "rooms/Exit/uploads/happy_birthday_tf_25.wav",
+                "rooms/Exit/uploads/your_team_won.mp3",
+                "rooms/Exit/uploads/your_team_won.wav",
+                "rooms/Exit/uploads/0x0F.wav"
             ],
             "volume": 0.9
         },
@@ -366,9 +483,7 @@
             "audio_files": [
                 "rooms/Porto Room/ambience/16_crash_temple_walk.wav",
                 "rooms/Porto Room/ambience/17_dkc_temple_passage.wav",
-                "rooms/Porto Room/ambience/18_lost_woods_doorway.wav",
-                "rooms/Porto Room/ambience/19_mellow_playa_firelight.wav",
-                "rooms/Porto Room/ambience/20_playful_playa_stroll.wav"
+                "rooms/Porto Room/ambience/19_mellow_playa_firelight.wav"
             ],
             "volume": 0.6
         },
@@ -420,28 +535,191 @@
             "audio_weights": [4, 4, 2],
             "volume": 0.8
         },
-        "PhotoBomb-BG": {
-            "_comment": "Weights = pack TRIGGER_MAP.csv",
+        "Cuddle-Lava-Ambient": {
+            "_comment": "LAVA floor theme: ambient one-shots at random intervals while the show is up (floor_show_manager THEME_SHOWS ambient, Tim 2026-08-01) — texture between the engine-event accents above, so same pool but quieter and uniform. Evening add (Tim): TF2 volcano_rumble + the seven hell rumbles deepen the low end.",
             "audio_files": [
-                "rooms/Photo Bomb Room/background/13_selfie_influencer_presence.wav",
+                "uploads/Lava/lava1.wav",
+                "uploads/Lava/lava2.wav",
+                "uploads/Lava/lava3.wav",
+                "uploads/Lava/lava4.wav",
+                "uploads/Lava/lava5.wav",
+                "uploads/Lava/volcano_rumble.wav",
+                "uploads/Lava/hell_rumbles_01.wav",
+                "uploads/Lava/hell_rumbles_02.wav",
+                "uploads/Lava/hell_rumbles_03.wav",
+                "uploads/Lava/hell_rumbles_04.wav",
+                "uploads/Lava/hell_rumbles_05.wav",
+                "uploads/Lava/hell_rumbles_06.wav",
+                "uploads/Lava/hell_rumbles_07.wav"
+            ],
+            "volume": 0.55
+        },
+        "Cuddle-Jungle-Bed": {
+            "_comment": "JUNGLE floor theme: the room's looping night-jungle bed, on the ambience channel like the lava bed (Tim 2026-08-01)",
+            "audio_files": [
+                "uploads/Jungle/junglenight.wav"
+            ],
+            "volume": 0.45
+        },
+        "Cuddle-Jungle-Ambient": {
+            "_comment": "JUNGLE floor theme: ambient one-shots at random intervals — 16 birdies + 4 beasties + 4 events, uniform pick, so the canopy is mostly birdsong with the odd beast (Tim 2026-08-01). 0x1a = MGS 'snake dying' cry (Tim, same evening) — he named no room for it, and jungle is the snake projection; move it if that read was wrong.",
+            "audio_files": [
+                "uploads/Jungle/junglebirdie1.wav",
+                "uploads/Jungle/junglebirdie2.wav",
+                "uploads/Jungle/junglebirdie3.wav",
+                "uploads/Jungle/junglebirdie4.wav",
+                "uploads/Jungle/junglebirdie5.wav",
+                "uploads/Jungle/junglebirdie6.wav",
+                "uploads/Jungle/junglebirdie7.wav",
+                "uploads/Jungle/junglebirdie8.wav",
+                "uploads/Jungle/junglebirdie9.wav",
+                "uploads/Jungle/junglebirdie10.wav",
+                "uploads/Jungle/junglebirdie11.wav",
+                "uploads/Jungle/junglebirdie12.wav",
+                "uploads/Jungle/junglebirdie13.wav",
+                "uploads/Jungle/junglebirdie14.wav",
+                "uploads/Jungle/junglebirdie15.wav",
+                "uploads/Jungle/junglebirdie16.wav",
+                "uploads/Jungle/junglebeastie1.wav",
+                "uploads/Jungle/junglebeastie2.wav",
+                "uploads/Jungle/junglebeastie3.wav",
+                "uploads/Jungle/junglebeastie4.wav",
+                "uploads/Jungle/jungleevent1.wav",
+                "uploads/Jungle/jungleevent2.wav",
+                "uploads/Jungle/jungleevent3.wav",
+                "uploads/Jungle/jungleevent4.wav",
+                "uploads/Jungle/0x1a.wav"
+            ],
+            "volume": 0.6
+        },
+        "Cuddle-Temple-Bed": {
+            "_comment": "TEMPLE floor theme: the room's looping bed — the torch brazier crackling (Tim 2026-08-01: 'the projection with the torch'; the torch is TempleShow's altar torch, projection_engine.py). 4s crackle loop on the ambience channel like the other beds.",
+            "audio_files": [
+                "uploads/Temple/medieval_brazier.wav"
+            ],
+            "volume": 0.45
+        },
+        "Cuddle-Temple-Ambient": {
+            "_comment": "TEMPLE floor theme: ambient one-shots at random intervals — 9 winds + 5 ravens, uniform pick = mostly wind with the odd raven, over the brazier bed above.",
+            "audio_files": [
+                "uploads/Temple/wind1.wav",
+                "uploads/Temple/wind2.wav",
+                "uploads/Temple/wind3.wav",
+                "uploads/Temple/wind4.wav",
+                "uploads/Temple/wind5.wav",
+                "uploads/Temple/wind6.wav",
+                "uploads/Temple/wind7.wav",
+                "uploads/Temple/wind8.wav",
+                "uploads/Temple/wind9.wav",
+                "uploads/Temple/raven1.wav",
+                "uploads/Temple/raven2.wav",
+                "uploads/Temple/raven3.wav",
+                "uploads/Temple/raven4.wav",
+                "uploads/Temple/raven5.wav"
+            ],
+            "volume": 0.55
+        },
+        "Cuddle-Water-Bed": {
+            "_comment": "WATER floor theme: the room's looping bed — drips1 under the ford (Tim 2026-08-01), on the ambience channel like the other beds.",
+            "audio_files": [
+                "uploads/Water/drips1.wav"
+            ],
+            "volume": 0.45
+        },
+        "Cuddle-Water-Ambient": {
+            "_comment": "WATER floor theme: ambient one-shots at random intervals — the other two drip patterns plus the two winter winds rolling through (Tim 2026-08-01).",
+            "audio_files": [
+                "uploads/Water/drips2.wav",
+                "uploads/Water/drips3.wav",
+                "uploads/Water/windwinter.wav",
+                "uploads/Water/windwinterinside.wav"
+            ],
+            "volume": 0.55
+        },
+        "Cuddle-Chamber-Bed": {
+            "_comment": "CHAMBER floor theme: the room's looping bed — ONE of the sixteen TF2 halloween mysterious percs per bed start (Tim 2026-08-01), so the chamber broods differently every show.",
+            "audio_files": [
+                "uploads/Chamber/mysterious_perc_01.wav",
+                "uploads/Chamber/mysterious_perc_02.wav",
+                "uploads/Chamber/mysterious_perc_03.wav",
+                "uploads/Chamber/mysterious_perc_04.wav",
+                "uploads/Chamber/mysterious_perc_05.wav",
+                "uploads/Chamber/mysterious_perc_06.wav",
+                "uploads/Chamber/mysterious_perc_07.wav",
+                "uploads/Chamber/mysterious_perc_08.wav",
+                "uploads/Chamber/mysterious_perc_09.wav",
+                "uploads/Chamber/mysterious_perc_10.wav",
+                "uploads/Chamber/mysterious_perc_11.wav",
+                "uploads/Chamber/mysterious_perc_12.wav",
+                "uploads/Chamber/mysterious_perc_13.wav",
+                "uploads/Chamber/mysterious_perc_14.wav",
+                "uploads/Chamber/mysterious_perc_15.wav",
+                "uploads/Chamber/mysterious_perc_16.wav"
+            ],
+            "volume": 0.45
+        },
+        "Cuddle-Chamber-Trap": {
+            "_comment": "CHAMBER accent: a trap door taking someone's step (projection trap_open — linger-open and sprint-slam alike). One file: MGS sample0f 0xBB+0xBA concatenated (Tim 2026-08-01, 'merge them'; tools: ffmpeg concat).",
+            "audio_files": [
+                "uploads/Chamber/trap_0xBB_0xBA.wav"
+            ],
+            "volume": 0.8
+        },
+        "MazeAmbient": {
+            "_comment": "Maze-wide roaming one-shots (ambient_oneshots -> maze_ambient_manager.py, Tim 2026-08-01): each firing lands ONE of these in ONE random room with a working speaker — crows, dogs, forest birds, desert air, owls, a wolf, rain, a gust. Cuddle Cross is excluded (the floor show owns its ambience).",
+            "audio_files": [
+                "uploads/Ambient/crow1.wav",
+                "uploads/Ambient/crow2.wav",
+                "uploads/Ambient/crow3.wav",
+                "uploads/Ambient/crow4.wav",
+                "uploads/Ambient/dog1.wav",
+                "uploads/Ambient/dog2.wav",
+                "uploads/Ambient/dog3.wav",
+                "uploads/Ambient/dog4.wav",
+                "uploads/Ambient/dog5.wav",
+                "uploads/Ambient/dog6.wav",
+                "uploads/Ambient/forest_bird1.wav",
+                "uploads/Ambient/forest_bird2.wav",
+                "uploads/Ambient/forest_bird3.wav",
+                "uploads/Ambient/forest_bird4.wav",
+                "uploads/Ambient/forest_bird5.wav",
+                "uploads/Ambient/forest_bird6.wav",
+                "uploads/Ambient/forest_bird7.wav",
+                "uploads/Ambient/forest_bird8.wav",
+                "uploads/Ambient/forest_bird9.wav",
+                "uploads/Ambient/desert_indoors.wav",
+                "uploads/Ambient/desert_life.wav",
+                "uploads/Ambient/desert_wind.wav",
+                "uploads/Ambient/desert_wind_high.wav",
+                "uploads/Ambient/desert_wind_low.wav",
+                "uploads/Ambient/owl1.wav",
+                "uploads/Ambient/owl2.wav",
+                "uploads/Ambient/owl3.wav",
+                "uploads/Ambient/owl4.wav",
+                "uploads/Ambient/wolf_howl_01.wav",
+                "uploads/Ambient/wolf_howl_02.wav",
+                "uploads/Ambient/wolf_howl_03.wav",
+                "uploads/Ambient/rain.wav",
+                "uploads/Ambient/wind_gust1.wav",
+                "uploads/Ambient/wind_gust2.wav",
+                "uploads/Ambient/0x8A.wav"
+            ],
+            "volume": 0.5
+        },
+        "PhotoBomb-BG": {
+            "_comment": "Room BACKGROUND MUSIC, played on entry (the doorway sensor fires this since 2026-08-01). Assign the bed here.",
+            "audio_files": [
                 "uploads/PhotoBomb-BG/Make_way_for_the_bigshot_-_boosted.mp3"
             ],
             "volume": 0.6
         },
         "PhotoBomb-Spot": {
-            "_comment": "Pack's photo-button reaction sequences, played on the entry laser instead — the shutter button must stay PhotoBomb-Shot's camera-synced countdown (capture at 4.0s). Weights = pack TRIGGER_MAP.csv",
-            "audio_files": [
-                "rooms/Photo Bomb Room/photo_triggers/18_selfie_then_mean_girls.wav",
-                "rooms/Photo Bomb Room/photo_triggers/19_pokemon_snap_wonderful.wav",
-                "rooms/Photo Bomb Room/photo_triggers/20_austin_powers_approval.wav",
-                "rooms/Photo Bomb Room/photo_triggers/21_dead_rising_fantastic.wav",
-                "rooms/Photo Bomb Room/photo_triggers/22_kris_amazing_sweetie.wav"
-            ],
-            "audio_weights": [4, 3, 2, 3, 1],
+            "_comment": "UNTRIGGERED since 2026-08-01: the entry sensor now plays PhotoBomb-BG (music bed) instead. Effect stays registered for the console/manual runs.",
+            "audio_files": [],
             "volume": 0.8
         },
         "PhotoBomb-Shot": {
-            "_comment": "Camera sequence: power-up, 3-2-1 countdown, shutter at 4.0s (tools/make_photobomb_audio.py)",
+            "_comment": "Photo Bomb TRIGGER sound (shutter button): press -> 3 seconds to pose -> shutter/flash at 3.0s, when the photo is taken. Assign a ~3s countdown-style sound here; lights count down even while this is empty. Synthesized fallback: tools/make_photobomb_audio.py.",
             "audio_files": [],
             "volume": 0.9
         },
@@ -453,9 +731,8 @@
             "volume": 1.0
         },
         "DeepPlaya-BG": {
-            "audio_files": [
-                "dance-distance-muffled.mp3"
-            ],
+            "_comment": "Doorway entry swell — LIGHTS ONLY since 2026-08-01 evening (Tim): dance-distance-muffled moved into the DeepPlayaHandshake-Background pool so entries never lay a second music over the always-on bed.",
+            "audio_files": [],
             "volume": 0.8
         },
         "DeepPlaya-Hit": {
@@ -490,14 +767,46 @@
             "volume": 0.8
         },
         "NoFriendsMonday": {
+            "_comment": "No Friends Monday entry pool (the room ToF fires this). TF2 spy high-five lines added as entrance sounds 2026-08-01 (Tim).",
             "audio_files": [
                 "biggerboat.mp3",
                 "excuses.mp3",
                 "iwillsurvive.mp3",
-                "rooms/No Friends Monday/uploads/bbbbboss_battle.mp3"
+                "rooms/No Friends Monday/uploads/bbbbboss_battle.mp3",
+                "rooms/No Friends Monday/uploads/spy_highfive05.mp3",
+                "rooms/No Friends Monday/uploads/spy_highfive08.mp3"
             ],
             "volume": 0.8
         }
     },
-    "default_volume": 0.7
+    "default_volume": 0.7,
+    "room_backgrounds": {
+        "_comment": "OPT-IN always-on per-room background sound: room name -> an effects entry above (usually the room's -Background pool). room_background_manager.py keeps one random pick from the pool LOOPING in that room whenever anything can play audio there — independent of maze-wide music mode, and while it plays, that room's speaker mutes the maze-wide background music instead of mixing with it. Cuddle Cross must NOT go here: the floor show owns its bed (per projection theme, floor_show_manager.py). Keys starting with _ are ignored.",
+        "Deep Playa Handshake": "DeepPlayaHandshake-Background",
+        "Entrance": "Entrance-Background",
+        "Guy Line Climb": "GuyLineClimb-Background",
+        "Monkey Room": "MonkeyRoom-Background",
+        "No Friends Monday": "NoFriendsMonday-Background",
+        "Temple Room": "TempleRoom-Background"
+    },
+    "room_leave_sounds": {
+        "_comment": "OPT-IN one-shot when a room reports its last visitor gone (room name -> effects entry; fired by /api/room_vacated AFTER the room's effects stop, so nothing cuts it). Skipped when the vacate triggers the backtrack effect — the wrong-way audio owns that moment. Keys starting with _ are ignored.",
+        "Cop Dodge": "CopDodge-Leave",
+        "Sparkle Pony Room": "SparklePonyRoom-Leave"
+    },
+    "ambient_oneshots": {
+        "_comment": "Random-interval ambient one-shots outside the floor show (maze_ambient_manager.py, Tim 2026-08-01). `maze`: one timer, each firing drops one file from its pool into ONE random room that can play audio right now (the floor-show room is excluded). `rooms`: room name -> its own pool and timer, fired in that room only. Intervals are uniform seconds in [min_s, max_s]. Audition without waiting: POST /api/ambient {\"maze\": true} or {\"room\": \"Entrance\"}. Keys starting with _ are ignored.",
+        "maze": {
+            "effect": "MazeAmbient",
+            "min_s": 45,
+            "max_s": 120
+        },
+        "rooms": {
+            "Entrance": {
+                "effect": "Entrance-Ambient",
+                "min_s": 25,
+                "max_s": 75
+            }
+        }
+    }
 }

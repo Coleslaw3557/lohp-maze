@@ -31,7 +31,7 @@ ROOM_BACKGROUND_POOLS = {
     "Camp Sign": "CampSign-Background",
     "Cop Dodge": "CopDodge-Background",
     "Cuddle Cross": "Cuddle-Lava-Bed",
-    "Deep Playa Handshake": "DeepPlaya-BG",
+    "Deep Playa Handshake": "DeepPlayaHandshake-Background",
     "Entrance": "Entrance-Background",
     "Exit": "Exit-Background",
     "Gate": "Gate-Background",
@@ -39,7 +39,7 @@ ROOM_BACKGROUND_POOLS = {
     "Monkey Room": "MonkeyRoom-Background",
     "No Friends Monday": "NoFriendsMonday-Background",
     "Photo Bomb Room": "PhotoBomb-BG",
-    "Porto Room": "PortoStandBy",
+    "Porto Room": "PortoRoom-Background",
     "Sparkle Pony Room": "SparklePonyRoom-Background",
     "Temple Room": "TempleRoom-Background",
 }
