@@ -55,6 +55,7 @@ async function savePool(pool, changes = {}) {
   const body = {
     files: pool.files.map((f) => ({ path: f.path, weight: f.weight })),
     volume: pool.volume,
+    base: pool.loaded,  // what this page loaded — a stale tab's save gets a 409, not a silent clobber
     ...changes,
   };
   await api(`/api/pools/${encodeURIComponent(pool.name)}`, {
@@ -71,6 +72,9 @@ async function mutate(pool, changes, message) {
     await load();
   } catch (e) {
     toast(e.message, 'err');
+    // resync this tab to what's really on disk (a refused stale save, a file
+    // retired elsewhere) instead of leaving the edit looking applied
+    try { await load(); } catch (e2) { /* keep the original error toast */ }
   }
 }
 
@@ -527,8 +531,20 @@ dropZone($('library-wrap'), toLibrary);
 $('lib-search').oninput = renderLibrary;
 $('lib-unused').onchange = renderLibrary;
 
+function stampLoadedPools() {
+  // Remember each pool's file list AS LOADED: savePool sends it as `base` so
+  // the server can refuse a save built on a view another tab has outdated.
+  const pools = [...(STATE.orphan_pools || [])];
+  for (const action of STATE.global_actions || []) if (action.pool) pools.push(action.pool);
+  for (const room of STATE.rooms || []) {
+    for (const action of room.actions || []) if (action.pool) pools.push(action.pool);
+  }
+  for (const pool of pools) pool.loaded = pool.files.map((f) => f.path);
+}
+
 async function load() {
   STATE = await api('/api/state');
+  stampLoadedPools();
   render();
 }
 

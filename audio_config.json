@@ -149,10 +149,8 @@
             "volume": 0.55
         },
         "Exit-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
-            "audio_files": [
-                "uploads/First_Place_Finish.wav"
-            ],
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing). Deliberately EMPTY (Tim 2026-08-01): the Exit has no background music — its send-off sounds are one-shots in the Exit entry pool (First_Place_Finish moved there; a 6.5s jingle must not loop as a bed).",
+            "audio_files": [],
             "volume": 0.6
         },
         "Gate-Background": {
@@ -202,7 +200,12 @@
             "volume": 0.8
         },
         "TempleRoom-Background": {
-            "_comment": "Always-on Temple Room bed (Tim 2026-08-01): MGS 0x3A on repeat, opted in under room_backgrounds. NOTE this is the TEMPLE ROOM (the maze room) — the Cuddle temple PROJECTION's sounds live in Cuddle-Temple-Bed/-Ambient.",
+            "_comment": "Room-local background-sounds pool placeholder — EMPTY on purpose (Tim's 10s rule, 2026-08-01): the 1.4s MGS 0x3A blip is a sound effect, not a loop, so it moved to TempleRoom-Ambient (occasional one-shot via ambient_oneshots.rooms) and the room_backgrounds opt-in came out. Fill this with a real >10s loop to give the room a bed again. NOTE this is the TEMPLE ROOM (the maze room) — the Cuddle temple PROJECTION's sounds live in Cuddle-Temple-Bed/-Ambient.",
+            "audio_files": [],
+            "volume": 0.6
+        },
+        "TempleRoom-Ambient": {
+            "_comment": "Temple Room occasional one-shot (ambient_oneshots.rooms): the MGS 0x3A blip that was briefly the room's looping bed — a 1.4s sound plays as texture on a random timer instead (Tim's 10s rule, 2026-08-01).",
             "audio_files": [
                 "rooms/Temple Room/uploads/0x3A.wav"
             ],
@@ -211,10 +214,8 @@
         "VerticalMoopMarch-RightAnswer": {
             "_comment": "Final Vertical Moop March success pool: the server fires this only after all four unique moop buttons are pressed within 60s. Individual moop button presses still use the shared CorrectAnswer pool.",
             "audio_files": [
-                "rooms/Bike Lock Room/clips/28_diablo_quest_complete_1.wav",
                 "ff9-victory.mp3",
-                "rooms/Porto Room/sensor_responses/victory/03_zelda_chime_door_opens.wav",
-                "uploads/1-Up.wav"
+                "rooms/Porto Room/sensor_responses/victory/03_zelda_chime_door_opens.wav"
             ],
             "volume": 0.8
         },
@@ -228,10 +229,9 @@
             "audio_files": [
                 "rooms/Bike Lock Room/rapid/victory/01_doom_secret_unlock.wav",
                 "rooms/Bike Lock Room/rapid/victory/02_diablo_quest_unlock.wav",
-                "rooms/Bike Lock Room/rapid/victory/03_diablo_quest_unlock_alt1.wav",
                 "uploads/1-Up.wav"
             ],
-            "audio_weights": [5, 4, 3, 1],
+            "audio_weights": [5, 4, 1],
             "volume": 0.8
         },
         "BikeLockRoom-WrongAnswer": {
@@ -396,14 +396,11 @@
                 "rooms/Porto Room/sensor_responses/occupied/03_mgs_alert_denied.wav",
                 "rooms/Porto Room/sensor_responses/occupied/04_portal_nice_job_hero.wav",
                 "rooms/Porto Room/sensor_responses/occupied/05_starfox_cant_let_you_do_that.wav",
-                "rooms/Porto Room/sensor_responses/occupied/06_tf2_where_learn_to_push.wav",
                 "rooms/Porto Room/sensor_responses/occupied/07_duke_warning_door_rattle.wav",
-                "rooms/Porto Room/sensor_responses/occupied/09_no_response_silence.wav",
-                "rooms/Porto Room/sensor_responses/occupied/10_locked_handle_jiggle.wav",
                 "uploads/moo.wav",
                 "rooms/Porto Room/uploads/cow3.wav"
             ],
-            "audio_weights": [5, 3, 3, 2, 3, 3, 2, 2, 3, 1, 1],
+            "audio_weights": [5, 3, 3, 2, 3, 2, 1, 1],
             "volume": 0.9
         },
         "SparklePonyRoom-RightAnswer": {
@@ -465,8 +462,8 @@
                 "rooms/Exit/uploads/happy_birthday_tf_23.wav",
                 "rooms/Exit/uploads/happy_birthday_tf_25.wav",
                 "rooms/Exit/uploads/your_team_won.mp3",
-                "rooms/Exit/uploads/your_team_won.wav",
-                "rooms/Exit/uploads/0x0F.wav"
+                "rooms/Exit/uploads/0x0F.wav",
+                "uploads/First_Place_Finish.wav"
             ],
             "volume": 0.9
         },
@@ -495,12 +492,8 @@
                 "rooms/Porto Room/sensor_responses/occupied/03_mgs_alert_denied.wav",
                 "rooms/Porto Room/sensor_responses/occupied/04_portal_nice_job_hero.wav",
                 "rooms/Porto Room/sensor_responses/occupied/05_starfox_cant_let_you_do_that.wav",
-                "rooms/Porto Room/sensor_responses/occupied/06_tf2_where_learn_to_push.wav",
-                "rooms/Porto Room/sensor_responses/occupied/07_duke_warning_door_rattle.wav",
-                "rooms/Porto Room/sensor_responses/occupied/09_no_response_silence.wav",
                 "rooms/Porto Room/sensor_responses/occupied/10_locked_handle_jiggle.wav"
             ],
-            "audio_weights": [5, 3, 3, 2, 3, 3, 2, 2, 3],
             "volume": 0.9
         },
         "CuddlePuddle": {
@@ -509,9 +502,10 @@
             "volume": 0.7
         },
         "Cuddle-Lava-Bed": {
-            "_comment": "LAVA floor theme: the room's looping bed, on the ambience channel (survives effect audio_stop, accents mix over it). Tim's Lava pool, 2026-07-30. 8.2s loop — the seam steps up in level slightly, so if it pulses on the deck, crossfade a longer master rather than raising the volume",
+            "_comment": "LAVA floor theme: the room's looping bed, on the ambience channel (survives effect audio_stop, accents mix over it). Tim's Lava pool, 2026-07-30. lava.wav = 8.2s loop — the seam steps up in level slightly, so if it pulses on the deck, crossfade a longer master rather than raising the volume. volcano_rumble (21.9s) joined from the ambient pool 2026-08-01 per Tim's 10s rule: over 10s = ambiance, so it's a bed alternate (one picked per bed start), not a one-shot over the bed.",
             "audio_files": [
-                "uploads/Lava/lava.wav"
+                "uploads/Lava/lava.wav",
+                "uploads/Lava/volcano_rumble.wav"
             ],
             "volume": 0.45
         },
@@ -536,14 +530,13 @@
             "volume": 0.8
         },
         "Cuddle-Lava-Ambient": {
-            "_comment": "LAVA floor theme: ambient one-shots at random intervals while the show is up (floor_show_manager THEME_SHOWS ambient, Tim 2026-08-01) — texture between the engine-event accents above, so same pool but quieter and uniform. Evening add (Tim): TF2 volcano_rumble + the seven hell rumbles deepen the low end.",
+            "_comment": "LAVA floor theme: ambient one-shots at random intervals while the show is up (floor_show_manager THEME_SHOWS ambient, Tim 2026-08-01) — texture between the engine-event accents above, so same pool but quieter and uniform. Evening add (Tim): the seven hell rumbles deepen the low end (volcano_rumble moved to the BED pool 2026-08-01 — 21.9s is ambiance, not a one-shot).",
             "audio_files": [
                 "uploads/Lava/lava1.wav",
                 "uploads/Lava/lava2.wav",
                 "uploads/Lava/lava3.wav",
                 "uploads/Lava/lava4.wav",
                 "uploads/Lava/lava5.wav",
-                "uploads/Lava/volcano_rumble.wav",
                 "uploads/Lava/hell_rumbles_01.wav",
                 "uploads/Lava/hell_rumbles_02.wav",
                 "uploads/Lava/hell_rumbles_03.wav",
@@ -666,7 +659,7 @@
             "volume": 0.8
         },
         "MazeAmbient": {
-            "_comment": "Maze-wide roaming one-shots (ambient_oneshots -> maze_ambient_manager.py, Tim 2026-08-01): each firing lands ONE of these in ONE random room with a working speaker — crows, dogs, forest birds, desert air, owls, a wolf, rain, a gust. Cuddle Cross is excluded (the floor show owns its ambience).",
+            "_comment": "Maze-wide roaming one-shots (ambient_oneshots -> maze_ambient_manager.py, Tim 2026-08-01): each firing lands ONE of these in ONE random room with a working speaker — crows, dogs, forest birds, desert air, owls, a wolf, rain, a gust. Cuddle Cross is excluded (the floor show owns its ambience). desert_life + desert_wind_high pulled 2026-08-01 (Tim's 10s rule: over 10s reads as ambiance, not a roaming effect) — unassigned in the library, candidates for a future desert bed.",
             "audio_files": [
                 "uploads/Ambient/crow1.wav",
                 "uploads/Ambient/crow2.wav",
@@ -688,9 +681,7 @@
                 "uploads/Ambient/forest_bird8.wav",
                 "uploads/Ambient/forest_bird9.wav",
                 "uploads/Ambient/desert_indoors.wav",
-                "uploads/Ambient/desert_life.wav",
                 "uploads/Ambient/desert_wind.wav",
-                "uploads/Ambient/desert_wind_high.wav",
                 "uploads/Ambient/desert_wind_low.wav",
                 "uploads/Ambient/owl1.wav",
                 "uploads/Ambient/owl2.wav",
@@ -786,8 +777,7 @@
         "Entrance": "Entrance-Background",
         "Guy Line Climb": "GuyLineClimb-Background",
         "Monkey Room": "MonkeyRoom-Background",
-        "No Friends Monday": "NoFriendsMonday-Background",
-        "Temple Room": "TempleRoom-Background"
+        "No Friends Monday": "NoFriendsMonday-Background"
     },
     "room_leave_sounds": {
         "_comment": "OPT-IN one-shot when a room reports its last visitor gone (room name -> effects entry; fired by /api/room_vacated AFTER the room's effects stop, so nothing cuts it). Skipped when the vacate triggers the backtrack effect — the wrong-way audio owns that moment. Keys starting with _ are ignored.",
@@ -806,6 +796,11 @@
                 "effect": "Entrance-Ambient",
                 "min_s": 25,
                 "max_s": 75
+            },
+            "Temple Room": {
+                "effect": "TempleRoom-Ambient",
+                "min_s": 40,
+                "max_s": 110
             }
         }
     }

@@ -18,6 +18,7 @@ regenerated from here too.
     python3 tools/audio_console.py --port 8080 --server http://lohp-server.local:5000
 """
 import argparse
+import asyncio
 import json
 import logging
 import os
@@ -524,6 +525,25 @@ def build_state():
 
 # --- the show server -----------------------------------------------------
 
+def _push_config_to_server():
+    """Best-effort: tell the running show server to re-read audio_config.json.
+    Called after every pool edit so a removed sound stops playing NOW — not
+    after someone remembers the apply button. Failure only logs: the console
+    must keep editing even with the maze down."""
+    try:
+        status, _ = server_call('/api/reload_audio_config', {})
+        if status != 200:
+            logger.warning(f"show server config reload after edit: HTTP {status}")
+    except Exception as e:
+        logger.warning(f"show server config reload after edit failed ({e}) — "
+                       "the maze plays its old pools until it reloads")
+
+
+def push_config_to_server_soon():
+    """Fire-and-forget reload off the request path."""
+    asyncio.ensure_future(asyncio.to_thread(_push_config_to_server))
+
+
 def server_call(path, payload=None, timeout=3.0):
     url = SERVER_URL.rstrip('/') + path
     data = json.dumps(payload).encode() if payload is not None else None
@@ -603,12 +623,23 @@ async def api_save_bike_answers():
 @app.route('/api/pools/<name>', methods=['PUT'])
 async def api_save_pool(name):
     """Replace one pool wholesale: file list (order = display order), per-file
-    weights and the effect volume. One write, so a half-applied pool is impossible."""
+    weights and the effect volume. One write, so a half-applied pool is impossible.
+
+    `base` = the file list the page LOADED for this pool. A save whose base no
+    longer matches the pool on disk is REFUSED (409): a second tab or device
+    holding an older view must never write its stale list back — that is how
+    files someone just removed used to come back from the dead."""
     body = await request.json
     config = load_json(CONFIG_PATH)
     effects = config.setdefault('effects', {})
     if name not in effects:
         return jsonify({'status': 'error', 'message': f'no pool named {name}'}), 404
+
+    base = body.get('base')
+    if base is not None and list(base) != list(effects[name].get('audio_files', [])):
+        return jsonify({'status': 'error', 'message':
+                        f'{name} changed since this page loaded it (another tab or device '
+                        'saved in between) — refreshing to the current pool; redo the edit'}), 409
 
     paths, weights, seen = [], [], set()
     for item in body.get('files', []):
@@ -641,6 +672,7 @@ async def api_save_pool(name):
         except (TypeError, ValueError):
             pass
     save_config(config)
+    push_config_to_server_soon()
     return jsonify({'status': 'success', 'pool': name, 'files': len(paths)})
 
 
@@ -708,6 +740,7 @@ async def api_upload():
         return jsonify({'status': 'error', 'message': '; '.join(skipped) or 'no files'}), 400
     if pool_name:
         save_config(config)
+        push_config_to_server_soon()
     return jsonify({'status': 'success', 'saved': saved, 'renamed': renamed,
                     'skipped': skipped, 'pool': pool_name or None})
 
@@ -742,6 +775,7 @@ async def api_retire():
         dest = dest.with_name(unique_basename(dest.name))
     shutil.move(str(source), str(dest))
     save_config(config)
+    push_config_to_server_soon()
     return jsonify({'status': 'success', 'moved_to': str(dest.relative_to(AUDIO_DIR)),
                     'removed_from': dropped})
 
