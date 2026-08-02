@@ -16,7 +16,7 @@ from effects import (
     create_cuddle_chamber_trap_effect, palette_for
 )
 from theme_manager import ThemeManager
-from effect_utils import get_effect_step_values
+from effect_utils import get_effect_step_values, palette_clamp_frame
 from interrupt_handler import InterruptHandler
 from room_answer_pools import ANSWER_EFFECTS, ROOM_ANSWER_POOL_PREFIXES, answer_pool_name
 
@@ -69,11 +69,49 @@ class EffectsManager:
             "Cuddle-Chamber-Trap": create_cuddle_chamber_trap_effect(),
         }
         self._register_room_answer_effects()
+        self._enforce_effect_palette()
         # effect_name -> {'start': fn(room), 'cancel': fn(room)} side-channel for
         # non-lighting actions tied to an effect run (the Photo Bomb camera)
         self.effect_hooks = {}
         self.floor_theme = None
         logger.info(f"Initialized {len(self.effects)} effects")
+
+    # Effects that genuinely need bright white throughout. Camera effects use
+    # narrow `palette_exempt_windows` instead, so their countdowns and afterglows
+    # still obey the no-white/no-yellow palette rule.
+    PALETTE_EXEMPT = {"Lightning", "LightningStorm"}
+
+    def _palette_exempt_at(self, effect, t):
+        if effect.get("palette_exempt"):
+            return True
+        for start, end in effect.get("palette_exempt_windows", ()):
+            if start <= t <= end:
+                return True
+        return False
+
+    def _enforce_effect_palette(self):
+        """Clamp every non-exempt effect step at registration: white capped
+        low, yellow pulled to orange, pale near-white resaturated toward its
+        dominant colour. Entry/interaction effects keep their choreography
+        but wear the maze palette — enforced here so no individual effect
+        file can drift bright again."""
+        for name, effect in self.effects.items():
+            if name in self.PALETTE_EXEMPT:
+                effect["palette_exempt"] = True  # playback guard passes these through
+                continue
+            for step in effect.get("steps", []):
+                if self._palette_exempt_at(effect, step.get("time", 0)):
+                    continue
+                ch = step["channels"]
+                ch["w_dimming"] = min(ch.get("w_dimming", 0), 45)
+                r = ch.get("r_dimming", 0); g = ch.get("g_dimming", 0); b = ch.get("b_dimming", 0)
+                if r > 150 and g > 0.55 * r and b < 80:
+                    ch["g_dimming"] = g = int(r * 0.42)  # yellow -> orange
+                hi = max(r, g, b)
+                if hi > 150 and min(r, g, b) > 0.62 * hi:  # pale wash -> saturate
+                    for key, v in (("r_dimming", r), ("g_dimming", g), ("b_dimming", b)):
+                        if v != hi:
+                            ch[key] = int(v * 0.4)
 
     def _register_room_answer_effects(self):
         """Room-local answer pools reuse the shared answer light effects.
@@ -138,8 +176,15 @@ class EffectsManager:
         return {name: data.get('description', 'No description available')
                 for name, data in self.effects.items()}
 
-    def _room_fixture_ids(self, room):
+    def _room_fixture_ids(self, room, role=None):
+        """Fixture ids for a room. With `role`, only the fixtures tagged that
+        role in light_config.json — and when a room has none tagged (every
+        one-par room), all of them, so reactions still land everywhere."""
         lights = self.light_config_manager.get_room_layout().get(room, [])
+        if role:
+            tagged = [light for light in lights if light.get('role') == role]
+            if tagged:
+                lights = tagged
         return [(light['start_address'] - 1) // 8 for light in lights]
 
     async def apply_effect_to_room(self, room, effect_name, effect_data=None):
@@ -148,17 +193,25 @@ class EffectsManager:
         if not effect_data:
             return False, f"{effect_name} effect not found"
 
-        fixture_ids = self._room_fixture_ids(room)
+        fixture_ids = self._room_fixture_ids(room, effect_data.get('fixture_role'))
         if not fixture_ids:
             return False, f"No lights found for room: {room}"
+        # An effect that owns only SOME of the room's fixtures (an answer chirp
+        # on the accent par) leaves the theme running: the theme already skips
+        # interrupted fixtures, so the ambient par keeps breathing underneath
+        # while the accent one reacts — the ebb and flow is the point.
+        whole_room = len(fixture_ids) >= len(self._room_fixture_ids(room))
 
-        logger.info(f"Applying effect '{effect_name}' to room '{room}'")
+        logger.info(f"Applying effect '{effect_name}' to room '{room}'"
+                    + ('' if whole_room else f" (accent fixtures only: {fixture_ids})"))
         # The lock makes the takeover atomic: cancel whatever is running, then
         # register the new task before anyone else can touch this room.
         async with self.room_locks[room]:
             await self._cancel_effect_in_room(room)
-            self.theme_manager.pause_theme_for_room(room)
-            effect_task = asyncio.create_task(self._run_effect(room, fixture_ids, effect_data, effect_name))
+            if whole_room:
+                self.theme_manager.pause_theme_for_room(room)
+            effect_task = asyncio.create_task(self._run_effect(
+                room, fixture_ids, effect_data, effect_name, manage_theme=whole_room))
             self.effect_tasks[room] = effect_task
 
         try:
@@ -173,9 +226,11 @@ class EffectsManager:
             return False, str(e)
         return True, f"{effect_name} effect applied to room {room}"
 
-    async def _run_effect(self, room, fixture_ids, effect_data, effect_name, send_audio=True):
+    async def _run_effect(self, room, fixture_ids, effect_data, effect_name, send_audio=True,
+                          manage_theme=True):
         """The per-room effect task. Owns its cleanup: only the task still registered
-        for the room resumes the theme, so a takeover can never unbalance pause/resume."""
+        for the room resumes the theme, so a takeover can never unbalance pause/resume.
+        manage_theme=False for accent-fixture effects, which never paused it."""
         hooks = self.effect_hooks.get(effect_name) or {}
         completed = False
         try:
@@ -205,7 +260,8 @@ class EffectsManager:
                 # with no theme stays stuck white after the effect completes).
                 for fixture_id in fixture_ids:
                     self.dmx_state_manager.reset_fixture(fixture_id)
-                self.theme_manager.resume_theme_for_room(room)
+                if manage_theme:
+                    self.theme_manager.resume_theme_for_room(room)
 
     async def _cancel_effect_in_room(self, room):
         """Cancel and await the room's running effect, then stop its audio.
@@ -225,10 +281,20 @@ class EffectsManager:
         return True
 
     async def _run_lights(self, fixture_ids, effect_data):
-        # One interpolator per fixture: each keeps its own monotonic step cursor
+        # One interpolator per fixture: each keeps its own monotonic step cursor.
+        # Non-exempt effects play through the continuous palette clamp — the
+        # step data can be clean while a cross-fade between hues still passes
+        # through cream/yellow; guarding the PLAYED frame closes that for
+        # every effect, including runtime-rebuilt ones (CuddlePuddle).
+        def frame_fn(fn):
+            if effect_data.get('palette_exempt'):
+                return fn
+            return lambda t: (list(fn(t)) if self._palette_exempt_at(effect_data, t)
+                              else palette_clamp_frame(list(fn(t))))
+
         await asyncio.gather(*(
             self.interrupt_handler.interrupt_fixture(fixture_id, effect_data['duration'],
-                                                     get_effect_step_values(effect_data))
+                                                     frame_fn(get_effect_step_values(effect_data)))
             for fixture_id in fixture_ids
         ))
 
@@ -297,7 +363,7 @@ class EffectsManager:
             # costs nothing and can never unbalance a pause.
             self.theme_manager.resume_theme_for_room(room)
 
-    # --- Theme / music passthroughs used by the API ---
+    # --- Theme / audio passthroughs used by the API ---
 
     def set_master_brightness(self, brightness):
         self.theme_manager.set_master_brightness(brightness)
@@ -319,12 +385,3 @@ class EffectsManager:
 
     async def update_theme_value(self, control_id, value):
         return await self.theme_manager.update_theme_value(control_id, value)
-
-    async def start_music(self):
-        return await self.remote_host_manager.start_background_music()
-
-    async def stop_music(self):
-        return await self.remote_host_manager.stop_background_music()
-
-    async def toggle_music(self):
-        return await self.remote_host_manager.toggle_background_music()

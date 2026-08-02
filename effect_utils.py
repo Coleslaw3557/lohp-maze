@@ -1,5 +1,42 @@
+import colorsys
 import math
 import random
+
+# Shared warm accents for the effect files (Tim's palette rule, 2026-08-01):
+# torchlight ORANGE-COPPER, never yellow (keep g well under r, b near zero,
+# or drop the value), and NO white outside effects that truly need it:
+# camera flashes and lightning.
+EMBER = (255, 95, 10)      # torch flame
+COPPER = (230, 80, 20)     # old fittings, bike lock
+JADE = (0, 255, 80)        # victory green
+
+OFF_CHANNELS = {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0,
+                "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}
+
+
+def create_flash_effect(description, rgb, flashes=3, period=0.5, hold=0.25,
+                        duration=None, fixture_role=None):
+    """N sharp colour pops with blackouts between — the shared shape of the
+    answer/action chirps. fixture_role='accent' keeps the chirp on the room's
+    reaction par so the ambient par plays on underneath (rooms without a
+    tagged accent fixture play it on everything, as before)."""
+    r, g, b = rgb
+    steps = []
+    for i in range(flashes):
+        t = round(i * period, 3)
+        steps.append({"time": t, "channels": {
+            "total_dimming": 255, "r_dimming": r, "g_dimming": g, "b_dimming": b,
+            "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}})
+        steps.append({"time": round(t + hold, 3), "channels": dict(OFF_CHANNELS)})
+    effect = {
+        "duration": duration if duration is not None else round(flashes * period, 3),
+        "description": description,
+        "steps": steps,
+    }
+    if fixture_role:
+        effect["fixture_role"] = fixture_role
+    return effect
+
 
 def hsv_to_rgb(h, s, v):
     if s == 0.0:
@@ -92,10 +129,13 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
         saturation = max(saturation_min, min(saturation_max, saturation + nebula * 0.3 + twinkle * 0.1))
         value = max(value_min, min(value_max, value * twinkle + nebula * 0.2))
 
-    # Add some randomness to prevent static patterns
-    hue = (hue + random.uniform(-0.03, 0.03)) % 1
-    saturation = max(saturation_min, min(saturation_max, saturation + random.uniform(-0.05, 0.05)))
-    value = max(value_min, min(value_max, value + random.uniform(-0.05, 0.05)))
+    # Add some randomness to prevent static patterns. `jitter` scales it:
+    # the mossy attract themes run ~0.15 — at 10 Hz full jitter reads as
+    # flicker on a real par, not texture.
+    jit = theme_data.get('jitter', 1.0)
+    hue = (hue + random.uniform(-0.03, 0.03) * jit) % 1
+    saturation = max(saturation_min, min(saturation_max, saturation + random.uniform(-0.05, 0.05) * jit))
+    value = max(value_min, min(value_max, value + random.uniform(-0.05, 0.05) * jit))
 
     # Generate complementary and analogous colors for more vibrant mixtures
     complementary_hue = (hue + 0.5) % 1
@@ -129,6 +169,31 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
     channels['w_dimming'] = 0  # Remove white component to avoid creating white light
 
     return channels
+
+def palette_clamp_frame(vals, sat_floor=0.5):
+    """Continuous no-white/no-yellow clamp on ONE interpolated effect frame
+    ([total,r,g,b,w,strobe,fsel,fspeed]) at the point of playback — stored
+    steps can be clean while the CROSS-FADE between two differently-hued
+    steps still transits cream/yellow; clamping the played frame closes that
+    hole for every effect that is not palette-exempt."""
+    vals[0] = min(vals[0], 200)   # effects peak UNDER full blast: a 255-total
+    vals[4] = min(vals[4], 45)    # hit over the ~170 ambient reads as a white
+    r, g, b = vals[1] / 255.0, vals[2] / 255.0, vals[3] / 255.0  # blowout
+    if max(r, g, b) <= 0.01:
+        return vals
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    changed = False
+    if s < sat_floor:
+        s = sat_floor
+        changed = True
+    if 0.09 <= h <= 0.19:
+        h = 0.075 if h < 0.1425 else 0.205
+        changed = True
+    if changed:
+        r2, g2, b2 = colorsys.hsv_to_rgb(h, s, v)
+        vals[1], vals[2], vals[3] = int(r2 * 255), int(g2 * 255), int(b2 * 255)
+    return vals
+
 
 EFFECT_CHANNELS = ['total_dimming', 'r_dimming', 'g_dimming', 'b_dimming',
                    'w_dimming', 'total_strobe', 'function_selection', 'function_speed']

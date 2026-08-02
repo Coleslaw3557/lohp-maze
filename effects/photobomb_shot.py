@@ -72,6 +72,8 @@ def create_photobomb_shot_effect():
                        "pose countdown, white FLASH at the shutter (photo "
                        "taken), sparkle outro",
         "steps": steps,
+        "palette_exempt_windows": [(SHUTTER_OFFSET - 0.05,
+                                    SHUTTER_OFFSET + 0.18)],
     }
     logger.info(f"PhotoBomb-Shot effect created with {len(steps)} steps over {DURATION} seconds")
     return effect

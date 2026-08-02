@@ -33,7 +33,7 @@ def create_photobomb_spot_effect():
     for t in FLASH_TIMES:
         steps.append(_step(round(t - 0.04, 2), 70, *WASH))
         steps.append(_step(t, 255, 255, 255, 255, 255))
-        steps.append(_step(round(t + 0.09, 2), 200, *AFTER, w=140))
+        steps.append(_step(round(t + 0.09, 2), 200, *AFTER, w=0))
         steps.append(_step(round(t + 0.28, 2), 70, *WASH))
 
     steps.append(_step(12.6, 60, *WASH))
@@ -44,6 +44,8 @@ def create_photobomb_spot_effect():
         "description": "Photo Bomb spotted: magenta glamour wash under an "
                        "accelerating hail of paparazzi camera flashes",
         "steps": steps,
+        "palette_exempt_windows": [(round(t - 0.04, 2), round(t + 0.06, 2))
+                                   for t in FLASH_TIMES],
     }
     logger.info(f"PhotoBomb-Spot effect created with {len(steps)} steps over {effect['duration']} seconds")
     return effect

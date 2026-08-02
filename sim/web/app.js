@@ -46,7 +46,7 @@ const S = {
   prev2: { x: 11.7, z: 4.5 },
   yaw: 0, pitch: 0,
   pointerLocked: false,
-  audio: { on: false, ws: null, ctx: null, rooms: new Map(), beds: new Map(), music: null, buffers: new Map(), earRoom: null },
+  audio: { on: false, ws: null, ctx: null, rooms: new Map(), beds: new Map(), maze: null, buffers: new Map(), earRoom: null },
   dmxWs: null,
   teleporting: false,
 };
@@ -1526,15 +1526,16 @@ function updateCampSign(t) {
   const cells = t - signGridTimer >= 0.2;
   if (cells) signGridTimer = t;
   for (const z of S.sign.zones) {
-    const { R, G, B } = z.addr ? decodeFixture(z, t) : { R: 0, G: 0, B: 0 };
+    const { R, G, B, lum } = z.addr ? decodeFixture(z, t) : { R: 0, G: 0, B: 0, lum: 0 };
+    const litR = R * lum, litG = G * lum, litB = B * lum;
     // faint idle floor so the sign stays findable when dark; the LED color
     // rides the halo behind each raised letter (additive) or glows through
     // the logo's gap mask (emissive) — the wood itself never lights up
-    const fR = Math.max(R, SIGN_UNLIT * 0.4), fG = Math.max(G, SIGN_UNLIT * 0.35), fB = Math.max(B, SIGN_UNLIT * 0.3);
+    const fR = Math.max(litR, SIGN_UNLIT * 0.4), fG = Math.max(litG, SIGN_UNLIT * 0.35), fB = Math.max(litB, SIGN_UNLIT * 0.3);
     if (z.isLogo) z.mat.emissive.setRGB(fR, fG, fB);
     else z.mat.color.setRGB(fR, fG, fB);
     if (cells && z.cell) {
-      z.cell.style.background = `rgb(${(R * 255) | 0},${(G * 255) | 0},${(B * 255) | 0})`;
+      z.cell.style.background = `rgb(${(litR * 255) | 0},${(litG * 255) | 0},${(litB * 255) | 0})`;
       if (z.addr) {
         const a2 = z.addr - 1;
         z.cell.title = `Camp Sign "${z.label}" @${z.addr}\nraw: ${Array.from(S.frame.slice(a2, a2 + 8)).join(' ')}`;
@@ -1656,14 +1657,19 @@ function decodeFixture(fx, t) {
   const w = (v('w_dimming') !== null ? v('w_dimming') : v('white')) || 0;
   const strobe = v('total_strobe') || 0;
 
-  let R = Math.min(1, (r + w * 0.92) / 255) * master;
-  let G = Math.min(1, (g + w * 0.92) / 255) * master;
-  let B = Math.min(1, (b + w * 0.85) / 255) * master;
+  const rawR = r + w * 0.92;
+  const rawG = g + w * 0.92;
+  const rawB = b + w * 0.85;
+  const rawMax = Math.max(rawR, rawG, rawB);
+  let lum = rawMax > 0 ? Math.min(1, rawMax / 255) * master : 0;
+  let R = rawMax > 0 ? rawR / rawMax : 0;
+  let G = rawMax > 0 ? rawG / rawMax : 0;
+  let B = rawMax > 0 ? rawB / rawMax : 0;
   if (strobe > 5) {
     const hz = 1 + (strobe / 255) * 11;
-    if ((t * hz) % 1 > 0.5) { R = G = B = 0; }
+    if ((t * hz) % 1 > 0.5) { R = G = B = lum = 0; }
   }
-  return { R, G, B, lum: Math.max(R, G, B) };
+  return { R, G, B, lum };
 }
 
 const roomTint = new Map();
@@ -1671,14 +1677,15 @@ function updateFixtures(t) {
   roomTint.clear();
   for (const fx of S.fixtures) {
     const { R, G, B, lum } = decodeFixture(fx, t);
+    const litR = R * lum, litG = G * lum, litB = B * lum;
     fx.light.color.setRGB(R, G, B);
-    fx.light.intensity = lum * (fx.isSpot ? 18 : 11);
+    fx.light.intensity = lum * (fx.isSpot ? 12 : 7);  // 11/18 blew lit surfaces past tone-map clip: saturated orange rendered YELLOW-white
     // faint idle glow so every fixture is visible even when dark
-    fx.lens.material.color.setRGB(Math.min(1, R * 1.6 + 0.07), Math.min(1, G * 1.6 + 0.07), Math.min(1, B * 1.6 + 0.09));
+    fx.lens.material.color.setRGB(Math.min(1, litR * 1.6 + 0.07), Math.min(1, litG * 1.6 + 0.07), Math.min(1, litB * 1.6 + 0.09));
     fx.cone.material.color.setRGB(R, G, B);
     fx.cone.material.opacity = 0.05 + lum * 0.22;
     const acc = roomTint.get(fx.room) || [0, 0, 0, 0];
-    acc[0] += R; acc[1] += G; acc[2] += B; acc[3] += 1;
+    acc[0] += litR; acc[1] += litG; acc[2] += litB; acc[3] += 1;
     roomTint.set(fx.room, acc);
   }
   for (const [room, rm] of Object.entries(S.roomsMeshes)) {
@@ -1700,8 +1707,8 @@ function updateFixtureGrid(t) {
   if (t - gridTimer < 0.2) return;
   gridTimer = t;
   for (const fx of S.fixtures) {
-    const { R, G, B } = decodeFixture(fx, t);
-    fx.cell.style.background = `rgb(${(R * 255) | 0},${(G * 255) | 0},${(B * 255) | 0})`;
+    const { R, G, B, lum } = decodeFixture(fx, t);
+    fx.cell.style.background = `rgb(${(R * lum * 255) | 0},${(G * lum * 255) | 0},${(B * lum * 255) | 0})`;
     const a = fx.addr - 1;
     fx.cell.title = `${fx.model} @${fx.addr}${fx.isSpot ? ' [SPOTLIGHT]' : ''} (${fx.level ? 'upper' : 'ground'} floor)\nraw: ${Array.from(S.frame.slice(a, a + 8)).join(' ')}`;
   }
@@ -3177,7 +3184,7 @@ function drawProjection(pr, dt, now) {
 // Real panel is a 47 mm (1.8") disc; drawn bigger here so the face reads
 // across the deck. Layout `eye` key drives it; the Eye button toggles it.
 // Touching the real orb opens a carved five-wedge action menu (firmware
-// menu_olmec.h: lights / music / storm-hold-to-charge / floor theme / calm —
+// menu_olmec.h: lights / ambience / storm-hold-to-charge / floor theme / calm —
 // the orb IS the Cuddle control surface, no wall buttons there) that hits
 // the REST API directly — see wiring-guides/cuddle-orb-plan.md. The sim
 // preview shows the idle face only; preview the menu art with
@@ -3455,11 +3462,13 @@ function connectAudio() {
       case 'stop_room_ambience':
         stopRoomAmbience('room' in msg ? msg.room : null);
         break;
-      case 'start_background_music':
-        playMusic((msg.data || {}).music_file);
+      case 'start_maze_ambience': {
+        const d = msg.data || {};
+        playMazeAmbience(d.file_name, d.volume);
         break;
-      case 'stop_background_music':
-        stopMusic();
+      }
+      case 'stop_maze_ambience':
+        stopMazeAmbience();
         break;
       case 'connection_response':
       case 'status_update_response':
@@ -3514,7 +3523,6 @@ async function playEffectAudio(room, file, volume, loop, effectName) {
   if (!a.ctx || !file) return;
   try {
     const buf = await getBuffer(file);
-    stopEffectAudio(room);
     const src = a.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = !!loop;
@@ -3534,7 +3542,18 @@ async function playEffectAudio(room, file, volume, loop, effectName) {
     }
     src.connect(gain);
     src.start();
-    a.rooms.set(room || '__all__', { src, gain, vol });
+    const key = room || '__all__';
+    const bucket = a.rooms.get(key) || [];
+    const rec = { src, gain, vol };
+    src.onended = () => {
+      const items = a.rooms.get(key);
+      if (!items) return;
+      const ix = items.indexOf(rec);
+      if (ix >= 0) items.splice(ix, 1);
+      if (!items.length) a.rooms.delete(key);
+    };
+    bucket.push(rec);
+    a.rooms.set(key, bucket);
     log('info', `♪ ${effectName || ''} ${file}${room ? ' @ ' + room : ''}`);
   } catch (e) {
     log('err', `audio play failed: ${e.message}`);
@@ -3544,8 +3563,11 @@ async function playEffectAudio(room, file, volume, loop, effectName) {
 function stopEffectAudio(room) {
   const a = S.audio;
   const stopOne = (key) => {
-    const v = a.rooms.get(key);
-    if (v) { try { v.src.stop(); } catch (e) { /* already stopped */ } a.rooms.delete(key); }
+    const items = a.rooms.get(key) || [];
+    for (const v of items) {
+      try { v.src.stop(); } catch (e) { /* already stopped */ }
+    }
+    a.rooms.delete(key);
   };
   if (room == null) { for (const key of Array.from(a.rooms.keys())) stopOne(key); }
   else stopOne(room);
@@ -3596,29 +3618,30 @@ function stopRoomAmbience(room) {
   else stopOne(room);
 }
 
-async function playMusic(file) {
+async function playMazeAmbience(file, volume) {
   const a = S.audio;
   if (!a.ctx || !file) return;
   try {
     const buf = await getBuffer(file);
-    stopMusic();
+    stopMazeAmbience();
     const src = a.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = true;
     const gain = a.ctx.createGain();
-    gain.gain.value = 0.4;
+    const vol = volume == null ? 0.5 : volume;
+    gain.gain.value = vol;
     src.connect(gain).connect(a.ctx.destination);
     src.start();
-    a.music = { src, gain, vol: 0.4 };
-    log('info', `♫ background music: ${file}`);
+    a.maze = { src, gain, vol };
+    log('info', `≈ maze ambience: ${file}`);
   } catch (e) {
-    log('err', `music failed: ${e.message}`);
+    log('err', `maze ambience failed: ${e.message}`);
   }
 }
 
-function stopMusic() {
+function stopMazeAmbience() {
   const a = S.audio;
-  if (a.music) { try { a.music.src.stop(); } catch (e) { /* noop */ } a.music = null; }
+  if (a.maze) { try { a.maze.src.stop(); } catch (e) { /* noop */ } a.maze = null; }
 }
 
 function updateListener() {
@@ -3688,14 +3711,14 @@ function updateAudioGating() {
   }
   const t = a.ctx.currentTime;
   const set = (g, vol) => g.gain.setTargetAtTime(vol, t, 0.08);
-  for (const [key, v] of a.rooms) set(v.gain, earCanHear(key) ? v.vol : 0);
+  for (const [key, items] of a.rooms) for (const v of items) set(v.gain, earCanHear(key) ? v.vol : 0);
   for (const [key, v] of a.beds) set(v.gain, earCanHear(key) ? v.vol : 0);
-  if (a.music) {
-    // A room's own background bed mutes the maze music on that speaker (the
+  if (a.maze) {
+    // A room's own background bed mutes the maze ambience on that speaker (the
     // same rule the real units apply); everywhere else the local speaker
-    // carries the music, so it stays audible between rooms too.
+    // carries the maze bed, so it stays audible between rooms too.
     const bedHere = S.mode === 'first' && a.earRoom && a.beds.has(a.earRoom);
-    set(a.music.gain, bedHere ? 0 : a.music.vol);
+    set(a.maze.gain, bedHere ? 0 : a.maze.vol);
   }
 }
 
@@ -3993,8 +4016,8 @@ async function wireUi(cfg) {
   $('btn-effect-stop').onclick = () => post('/api/stop_effect', { room: $('room-select').value });
   $('btn-effect-stopall').onclick = () => post('/api/stop_effect', {});
 
-  $('btn-music-start').onclick = () => post('/api/start_music', {});
-  $('btn-music-stop').onclick = () => post('/api/stop_music', {});
+  $('btn-maze-ambience-start').onclick = () => post('/api/start_maze_ambience', {});
+  $('btn-maze-ambience-stop').onclick = () => post('/api/stop_maze_ambience', {});
 }
 
 // ---------------------------------------------------------------- boot
