@@ -127,6 +127,11 @@ class FloorShowManager:
         self.theme = None
         self.active = False
         self.bed = None            # ambience pool currently playing, or None
+        self.bed_file = None       # concrete selected file, for reconnect resends
+        self.bed_loop = None
+        self.bed_duration_s = None
+        self.bed_play_for_s = None
+        self.bed_started_at = None
         self.ambient = None        # ambient one-shot pool currently armed, or None
         self.last_report = 0.0     # monotonic; 0 = the renderer has never reported
         self._last_fire = {}       # accent effect name -> monotonic
@@ -143,6 +148,10 @@ class FloorShowManager:
             'theme': self.theme,
             'active': self.active,
             'bed': self.bed,
+            'bed_file': self.bed_file,
+            'bed_loop': self.bed_loop,
+            'bed_duration_s': self.bed_duration_s,
+            'bed_play_for_s': self.bed_play_for_s,
             'ambient': self.ambient,
             'has_sounds': self.theme in THEME_SHOWS,
             'age_s': (round(time.monotonic() - self.last_report, 1)
@@ -214,12 +223,17 @@ class FloorShowManager:
         """Caller holds the lock. One place decides what should be playing."""
         show = THEME_SHOWS.get(self.theme) or {}
         want = show.get('bed') if self.active else None
-        if want == self.bed:
+        expired = (
+            self.bed_started_at is not None
+            and self.bed_play_for_s is not None
+            and time.monotonic() - self.bed_started_at >= self.bed_play_for_s
+        )
+        if want == self.bed and not expired:
             return
         if want is None:
             await self.remote_host_manager.stop_room_ambience(self.room)
             logger.info(f"Floor bed stopped in {self.room}")
-            self.bed = None
+            self._clear_bed()
             return
         # With nothing to play it (unit down, node not built yet) there is no
         # point failing loudly on every report all night — the next one tries
@@ -229,16 +243,39 @@ class FloorShowManager:
         # A theme swap replaces the running bed: the client's ambience channel
         # is per room, so starting the new one ends the old one.
         started = await self.remote_host_manager.start_room_ambience(self.room, want)
-        self.bed = want if started else None
         if started:
-            logger.info(f"Floor bed '{want}' looping in {self.room} ({started})")
+            self._set_bed(want, started)
+        else:
+            self._clear_bed()
+        if started:
+            mode = 'looping' if self.bed_loop else 'once'
+            logger.info(f"Floor bed '{want}' {mode} in {self.room} ({self.bed_file}) "
+                        f"for {self.bed_play_for_s:.1f}s")
 
     def bed_for_room(self, room):
         """The bed a just-registered audio client should be playing for `room`,
         or None. remote_host_manager asks on every client register, so a
         reloaded sim tab (or a rebooted unit) rejoins a live show's bed instead
         of staying silent until the next theme change."""
-        return self.bed if room == self.room else None
+        if room != self.room or not self.bed or not self.bed_file:
+            return None
+        return self.bed, self.bed_file
+
+    def _set_bed(self, effect, payload):
+        self.bed = effect
+        self.bed_file = payload['file_name']
+        self.bed_loop = payload.get('loop')
+        self.bed_duration_s = payload.get('duration_s')
+        self.bed_play_for_s = payload.get('play_for_s')
+        self.bed_started_at = time.monotonic()
+
+    def _clear_bed(self):
+        self.bed = None
+        self.bed_file = None
+        self.bed_loop = None
+        self.bed_duration_s = None
+        self.bed_play_for_s = None
+        self.bed_started_at = None
 
     def _reconcile_ambient(self):
         """Caller holds the lock. Arms/refreshes/cancels the random-interval

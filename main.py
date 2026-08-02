@@ -23,6 +23,7 @@ from node_audio_manager import NodeAudioManager
 from floor_show_manager import FloorShowManager, read_saved_theme
 from room_background_manager import RoomBackgroundManager
 from maze_ambient_manager import MazeAmbientManager
+from maze_ambience_manager import MazeAmbienceManager
 from camera_manager import CameraManager
 from effects.photobomb_shot import SHUTTER_OFFSET, DURATION as PHOTOBOMB_SHOT_DURATION
 from photobooth import PhotoBoothSession
@@ -270,10 +271,12 @@ camera_manager = CameraManager()
 floor_show_manager = FloorShowManager(effects_manager, remote_host_manager)
 floor_show_manager.prime_theme(read_saved_theme(os.path.dirname(os.path.abspath(__file__))))
 
-# Always-on per-room background sound (audio_config.json `room_backgrounds`,
+# Always-on maze-wide ambience bed (audio_config.json `maze_ambience`), followed
+# by always-on per-room background sound (audio_config.json `room_backgrounds`,
 # room_background_manager.py) — a room keeping its own loop regardless of the
-# maze-wide music mode, and muting the maze music on its speaker while it
-# plays. Cuddle Cross is reserved: its bed follows the projection instead.
+# maze-wide ambience bed, and overriding the maze ambience on its speaker while
+# it plays. Cuddle Cross is reserved: its bed follows the projection instead.
+maze_ambience_manager = MazeAmbienceManager(audio_manager, remote_host_manager)
 room_background_manager = RoomBackgroundManager(
     audio_manager, remote_host_manager, reserved_room=floor_show_manager.room)
 # Roaming ambient one-shots (audio_config.json `ambient_oneshots`,
@@ -285,6 +288,7 @@ maze_ambient_manager = MazeAmbientManager(
     audio_manager, remote_host_manager, reserved_room=floor_show_manager.room)
 # Reconnecting audio clients (a reloaded sim tab, a rebooted unit) ask these
 # for the beds their rooms should already be playing.
+remote_host_manager.maze_bed_providers.append(maze_ambience_manager.bed)
 remote_host_manager.bed_providers += [floor_show_manager.bed_for_room,
                                       room_background_manager.bed_for_room]
 remote_host_manager.client_gone_hooks.append(room_background_manager.client_gone)
@@ -298,7 +302,7 @@ effects_manager.register_effect_hooks(
     on_cancel=lambda room: camera_manager.cancel_pending(),
 )
 
-# Photo Bomb game state: entry starts the music bed, MAX_SHOTS shots per
+# Photo Bomb game state: entry starts the room bed, MAX_SHOTS shots per
 # visitor, then presses fail until the room turns over (photobooth.py).
 photobooth = PhotoBoothSession()
 _photobomb_victory_task = None
@@ -591,6 +595,24 @@ async def set_master_brightness():
     return jsonify({"status": "success", "master_brightness": brightness})
 
 
+@app.route('/api/attract', methods=['GET'])
+async def get_attract():
+    """The maze's self-running look rotation: enabled, dwell, theme list,
+    seconds to the next change."""
+    return jsonify(effects_manager.theme_manager.attract_state())
+
+
+@app.route('/api/attract', methods=['POST'])
+async def post_attract():
+    """{"on": bool, "dwell_s": secs?, "themes": [...]?} — attract mode keeps
+    rotating after manual /api/set_theme calls (they just restart the dwell);
+    "on": false hands the stage back to whoever is driving."""
+    data = await request.json or {}
+    await effects_manager.theme_manager.set_attract(
+        data.get('on', True), data.get('dwell_s'), data.get('themes'))
+    return jsonify({'status': 'success', **effects_manager.theme_manager.attract_state()})
+
+
 @app.route('/api/set_theme', methods=['POST'])
 async def set_theme():
     data = await request.json
@@ -780,9 +802,9 @@ async def room_vacated():
     Same work as a per-room /api/stop_effect (cancel anything still running,
     silence lingering effect audio, hand the room back to the theme), but it is
     the room reporting a fact rather than an operator issuing a stop, and it
-    reads as one in the log when something misbehaves at the maze. Background
-    music is deliberately untouched: it never stopped, and effect audio mixes
-    over it rather than replacing it."""
+    reads as one in the log when something misbehaves at the maze. Maze
+    ambience is deliberately untouched: it never stopped, and effect audio
+    mixes over it rather than replacing it."""
     data = await request.json
     room = data.get('room')
     if not room:
@@ -918,26 +940,55 @@ async def update_theme_value():
     return jsonify({'status': 'error', 'message': 'Failed to update theme value'}), 500
 
 
-@app.route('/api/start_music', methods=['POST'])
-async def start_music():
+@app.route('/api/maze_ambience', methods=['GET'])
+async def get_maze_ambience():
+    """The configured always-on maze-wide ambience bed."""
+    return jsonify(maze_ambience_manager.state())
+
+
+@app.route('/api/maze_ambience', methods=['POST'])
+async def set_maze_ambience():
+    """Runtime opt-in/out for auditioning: {"effect": ...|null}.
+    Not persisted — a keeper goes in audio_config.json `maze_ambience`."""
+    data = await request.get_json() or {}
+    ok, message = maze_ambience_manager.set_effect(data.get('effect'))
+    if not ok:
+        return jsonify({'status': 'error', 'message': message}), 400
+    await maze_ambience_manager.apply_now()
+    return jsonify({'status': 'success', 'message': message,
+                    **maze_ambience_manager.state()})
+
+
+@app.route('/api/start_maze_ambience', methods=['POST'])
+async def start_maze_ambience():
     try:
-        if await effects_manager.start_music():
-            return jsonify({"status": "success", "message": "Background music started"})
-        return jsonify({"status": "error", "message": "Failed to start background music"}), 500
+        if not maze_ambience_manager.effect:
+            ok, message = maze_ambience_manager.set_effect(
+                maze_ambience_manager.default_effect)
+            if not ok:
+                return jsonify({"status": "error", "message": message}), 500
+        await maze_ambience_manager.apply_now(force=True)
+        if maze_ambience_manager.playing:
+            return jsonify({"status": "success", "message": "Maze ambience started",
+                            **maze_ambience_manager.state()})
+        return jsonify({"status": "error", "message": "Failed to start maze ambience"}), 500
     except Exception as e:
-        logger.error(f"Error starting background music: {e}", exc_info=True)
+        logger.error(f"Error starting maze ambience: {e}", exc_info=True)
         return jsonify({"status": "error", "message": f"Internal server error: {e}"}), 500
 
 
-@app.route('/api/stop_music', methods=['POST'])
-async def stop_music():
+@app.route('/api/stop_maze_ambience', methods=['POST'])
+async def stop_maze_ambience():
     try:
-        if await effects_manager.stop_music():
-            return jsonify({"status": "success", "message": "Background music stopped"})
-        return jsonify({"status": "error", "message": "Failed to stop background music"}), 500
+        maze_ambience_manager.set_effect(None)
+        maze_ambience_manager._clear_playing()
+        await remote_host_manager.stop_maze_ambience()
+        return jsonify({"status": "success", "message": "Maze ambience stopped"})
     except Exception as e:
-        logger.error(f"Error stopping background music: {e}")
+        logger.error(f"Error stopping maze ambience: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
 
 
 # Cuddle floor-projection theme control (projection_renderer.py ThemeControl):
@@ -1050,17 +1101,34 @@ async def fire_ambient():
                      'message': message}), 200 if ok else 400)
 
 
-@app.route('/api/toggle_music', methods=['POST'])
-async def toggle_music():
+@app.route('/api/toggle_maze_ambience', methods=['POST'])
+async def toggle_maze_ambience():
     try:
-        success, playing = await effects_manager.toggle_music()
+        if maze_ambience_manager.playing:
+            maze_ambience_manager.set_effect(None)
+            maze_ambience_manager._clear_playing()
+            await remote_host_manager.stop_maze_ambience()
+            success = True
+            playing = False
+        else:
+            if not maze_ambience_manager.effect:
+                ok, message = maze_ambience_manager.set_effect(
+                    maze_ambience_manager.default_effect)
+                if not ok:
+                    return jsonify({"status": "error", "message": message}), 500
+            await maze_ambience_manager.apply_now(force=True)
+            success = bool(maze_ambience_manager.playing)
+            playing = success
         if success:
             return jsonify({"status": "success",
-                            "message": f"Background music {'started' if playing else 'stopped'}"})
-        return jsonify({"status": "error", "message": "Failed to toggle background music"}), 500
+                            "message": f"Maze ambience {'started' if playing else 'stopped'}",
+                            **maze_ambience_manager.state()})
+        return jsonify({"status": "error", "message": "Failed to toggle maze ambience"}), 500
     except Exception as e:
-        logger.error(f"Error toggling background music: {e}", exc_info=True)
+        logger.error(f"Error toggling maze ambience: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
 
 
 @app.route('/api/shutdown', methods=['POST'])
@@ -1154,14 +1222,11 @@ async def health():
 @app.route('/api/audio/<path:filename>')
 async def serve_audio(filename):
     base_dir = os.path.dirname(__file__)
-    is_bare_name = os.path.basename(filename) == filename
-    music_path = os.path.join(base_dir, 'music', filename) if is_bare_name else None
-    audio_dir = os.path.join(
-        base_dir,
-        'music' if music_path and os.path.exists(music_path) else 'audio_files')
+    audio_dir = os.path.join(base_dir, 'audio_files')
     # Older clients can still ask by bare basename, even though new play
     # commands preserve the selected pool member's relative path.
-    if audio_dir.endswith('audio_files') and not os.path.exists(os.path.join(audio_dir, filename)):
+    if (os.path.basename(filename) == filename
+            and not os.path.exists(os.path.join(audio_dir, filename))):
         matches = glob.glob(os.path.join(audio_dir, '**', os.path.basename(filename)),
                             recursive=True)
         if matches:
@@ -1183,7 +1248,10 @@ if __name__ == '__main__':
     async def run_server():
         try:
             websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
+            maze_ambience_manager.ensure_running()
             room_background_manager.ensure_running()
+            # the maze lights itself: attract rotation from boot (Tim 2026-08-01)
+            await effects_manager.theme_manager.set_attract(True)
             maze_ambient_manager.ensure_running()
             await asyncio.gather(websocket_server.wait_closed(), serve(app, config))
         except Exception as e:

@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""Ambient one-shots + always-on room backgrounds (headless).
+"""Ambient one-shots + global maze ambience (headless).
 
-Exercises maze_ambient_manager.py and the room_backgrounds opt-ins added
-2026-08-01 (Tim's TF2/D2 sound pass):
+Exercises maze_ambient_manager.py and the global maze ambience bed:
 
   1. GET /api/ambient reports the armed timers from audio_config
      `ambient_oneshots` (maze pool + the Entrance room pool)
-  2. the room_backgrounds opt-ins are loaded (6 rooms incl. Entrance/Porto)
-  3. a client covering Entrance ends up looping the hallowloop bed —
-     handed on register or started by the reconciler (POST forces a tick)
+  2. room_backgrounds is intentionally empty; ambience is global except Cuddle
+  3. a client covering Entrance/Gate receives the global maze ambience bed
   4. POST /api/ambient {"room": "Entrance"} lands one hallow/lightson
-     one-shot in Entrance, over the bed, without stopping it
+     one-shot in Entrance, over the global bed, without stopping it
   5. POST /api/ambient {"maze": true} lands a MazeAmbient file in some
      room that can play audio; within a few firings one lands on this
      test's rooms and the file is from the crow/dog/owl/... pool
@@ -31,6 +29,15 @@ SPY_ROOMS = ['Entrance', 'Gate']
 ENTRANCE_POOL = {f'hallow0{i}.wav' for i in range(1, 9)} | {'lightson.wav'}
 MAZE_PREFIXES = ('crow', 'dog', 'forest_bird', 'desert_', 'owl',
                  'wolf_howl', 'rain', 'wind_gust')
+GLOBAL_BED_BASENAMES = {
+    *(f'The 7th Continent Soundscape - Area {roman}.mp3'
+      for roman in ('I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X')),
+    'rainstorm.mp3',
+    'hallowloop.wav',
+    'forest_cliff.wav',
+    'forest_high_wind.wav',
+    'forest_life.wav',
+}
 FAILS = []
 
 
@@ -101,26 +108,28 @@ async def main():
           (rooms.get('Entrance') or {}).get('effect') == 'Entrance-Ambient',
           f"({sorted(rooms)})")
 
-    print("2) room_backgrounds opt-ins loaded")
+    print("2) room_backgrounds intentionally empty")
     status, bg = get('/api/room_backgrounds')
     configured = bg.get('configured') or {}
-    check('six rooms opted in', len(configured) >= 6, f"({sorted(configured)})")
-    check('Entrance/Temple/Guy Line among them',
-          {'Entrance', 'Temple Room', 'Guy Line Climb'} <= set(configured))
+    check('no per-room backgrounds opted in', not configured, f"({sorted(configured)})")
+    check('Temple Room is one-shots, not a bed',
+          (rooms.get('Temple Room') or {}).get('effect') == 'TempleRoom-Ambient')
 
     async with AudioSpy(SPY_ROOMS) as spy:
-        print("3) Entrance hallowloop bed reaches a client")
-        # Re-POST the same opt-in: idempotent, and apply_now() saves waiting
-        # out the reconciler tick when no client had covered the room yet.
-        status, body = post('/api/room_backgrounds',
-                            {'room': 'Entrance', 'effect': 'Entrance-Background'})
-        check('opt-in POST ok', status == 200, f"({body.get('message')})")
+        print("3) global maze ambience bed reaches a client")
+        status, body = post('/api/start_maze_ambience', {})
+        check('start maze ambience POST ok', status == 200, f"({body.get('message')})")
         await asyncio.sleep(1.0)
-        beds = [m for m in spy.take('play_room_ambience')
-                if os.path.basename(m['data'].get('file_name') or '') == 'hallowloop.wav']
+        beds = spy.take('start_maze_ambience')
         d = beds[-1]['data'] if beds else {}
-        check('hallowloop bed looping in Entrance', bool(beds) and d.get('loop') is True,
-              f"(file={d.get('file_name')}, loop={d.get('loop')})")
+        base = os.path.basename(d.get('file_name') or '')
+        duration = d.get('duration_s')
+        expected_loop = duration is not None and duration <= 45
+        check('global bed started', bool(beds), f"(file={d.get('file_name')})")
+        check('global bed came from the ambience pool', base in GLOBAL_BED_BASENAMES, f"({base})")
+        check('loop flag follows duration policy',
+              bool(beds) and d.get('loop') is expected_loop,
+              f"(duration={duration}, loop={d.get('loop')})")
 
         print("4) Entrance ambient one-shot on demand")
         status, body = post('/api/ambient', {'room': 'Entrance'})
@@ -132,7 +141,7 @@ async def main():
         check('one-shot arrived in Entrance', bool(shots), f'({files})')
         check('from the hallow/lightson pool',
               bool(files) and all(f in ENTRANCE_POOL for f in files), f'({files})')
-        check('bed NOT stopped by the one-shot', not spy.take('stop_room_ambience'))
+        check('global bed NOT stopped by the one-shot', not spy.take('stop_maze_ambience'))
 
         print("5) maze-wide scatter")
         landed_here = []
@@ -155,6 +164,7 @@ async def main():
               bool(files) and all(f.startswith(MAZE_PREFIXES) for f in files),
               f'({files})')
         check('never in the floor-show room', 'Cuddle Cross' not in in_rooms)
+        post('/api/stop_maze_ambience', {})
 
     print("6) bad audition requests")
     status, _ = post('/api/ambient', {})

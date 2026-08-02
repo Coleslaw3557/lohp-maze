@@ -150,6 +150,12 @@ async def main():
     other = [light['start_address'] for light in layout['Entrance']]
     check('room layout read', status == 200 and len(cuddle) == 2,
           f'({ROOM} fixtures @{cuddle})')
+    # Pin the engine to LAVA before anything else: its theme persists in
+    # .floor_theme across sim restarts, and an engine left on another theme
+    # by an interrupted run reports that theme every 2s — ping-ponging the
+    # bed against this test's lava reports (seen live 2026-08-01: engine on
+    # chamber flapped section 2's "bed not restarted" check).
+    ctl_theme('lava')
     await cue_sim_show()
 
     async with AudioSpy() as spy:
@@ -160,9 +166,11 @@ async def main():
         d = beds[-1]['data'] if beds else {}
         check('bed started', bool(beds),
               f"(file={d.get('file_name')}, loop={d.get('loop')}, vol={d.get('volume')})")
-        check('bed is the lava loop, looping',
-              os.path.basename(d.get('file_name') or '') == 'lava.wav'
-              and d.get('loop') is True)
+        lava_base = os.path.basename(d.get('file_name') or '')
+        check('bed is from the lava bed pool with duration policy',
+              lava_base in ('lava.wav', 'volcano_rumble.wav')
+              and d.get('loop') is (lava_base == 'lava.wav'),
+              f"(file={lava_base}, loop={d.get('loop')})")
         check('bed reported in state',
               body.get('bed') == 'Cuddle-Lava-Bed' and body.get('theme') == 'lava',
               f"({body.get('theme')}/{body.get('bed')})")
@@ -219,7 +227,7 @@ async def main():
         check('cooldown holds', body.get('accent') is None, f"(accent={body.get('accent')})")
 
         print("5) maze theme wash is capped in the projection room")
-        post('/api/set_theme', {'theme_name': 'NeonNightlife'})
+        post('/api/set_theme', {'theme_name': 'DeepCanopy'})
 
         def accent_landed():
             return [m for m in spy.take('play_effect_audio')
@@ -339,9 +347,9 @@ async def main():
         beds = spy.take('play_room_ambience')
         d = beds[-1]['data'] if beds else {}
         check('chamber bed started', bool(beds), f"(file={d.get('file_name')})")
-        check('bed is one of the mysterious percs, looping',
+        check('bed is one of the mysterious percs, non-looping',
               os.path.basename(d.get('file_name') or '').startswith('mysterious_perc_')
-              and d.get('loop') is True)
+              and d.get('loop') is False)
         check('chamber bed in state, no ambient pool',
               body.get('bed') == 'Cuddle-Chamber-Bed' and body.get('ambient') is None,
               f"({body.get('bed')}/{body.get('ambient')})")

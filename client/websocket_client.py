@@ -88,8 +88,8 @@ class WebSocketClient:
             'audio_stop': self.handle_audio_stop,
             'play_room_ambience': self.handle_play_room_ambience,
             'stop_room_ambience': self.handle_stop_room_ambience,
-            'start_background_music': self.handle_start_background_music,
-            'stop_background_music': self.handle_stop_background_music,
+            'start_maze_ambience': self.handle_start_maze_ambience,
+            'stop_maze_ambience': self.handle_stop_maze_ambience,
             'connection_response': self.handle_ack,
             'status_update_response': self.handle_ack,
         }
@@ -169,15 +169,17 @@ class WebSocketClient:
         logger.info("Server sent list of audio files to download")
         await self.audio_manager.download_audio_files()
 
-    async def handle_start_background_music(self, message):
-        music_file = message.get('data', {}).get('music_file')
-        if music_file:
-            await self.audio_manager.start_background_music(music_file)
+    async def handle_start_maze_ambience(self, message):
+        data = message.get('data', {})
+        file_name = data.get('file_name')
+        if file_name:
+            await self.audio_manager.start_maze_ambience(
+                file_name, data.get('volume'), data.get('loop', True))
         else:
-            logger.error("Received start_background_music without a music file")
+            logger.error("Received start_maze_ambience without a file")
 
-    async def handle_stop_background_music(self, message):
-        await self.audio_manager.stop_background_music()
+    async def handle_stop_maze_ambience(self, message):
+        await self.audio_manager.stop_maze_ambience()
 
     async def handle_shutdown(self, message):
         logger.info("Received shutdown command from server")

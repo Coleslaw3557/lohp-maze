@@ -100,29 +100,29 @@ def generate_theme_values(theme_data, current_time, master_brightness, room_inde
     value = value_min + (value_max - value_min) * ((wave_fast + room_wave) * 0.25 + 0.5) * overall_brightness
 
     # Apply theme-specific effects
-    if 'neon_pulse' in theme_data:  # NeonNightlife theme
+    if 'neon_pulse' in theme_data:
         neon_pulse = (math.sin(time_factor_fast * 3 + room_offset) * 0.5 + 0.5) * theme_data.get('neon_pulse', 0.9)
         strobe = (math.sin(time_factor_very_fast * 10 + room_offset) * 0.5 + 0.5) * theme_data.get('strobe_frequency', 0.3)
         hue = (hue + neon_pulse * 0.2) % 1
         value = max(value_min, min(value_max, value + neon_pulse * 0.3 + strobe * 0.2))
-    elif 'wave_effect' in theme_data:  # TropicalParadise theme
+    elif 'wave_effect' in theme_data:
         wave = math.sin(time_factor_medium * 1.5 + room_offset) * theme_data.get('wave_effect', 0.7)
         sunset = (math.sin(time_factor_slow * 0.5 + room_offset) * 0.5 + 0.5) * theme_data.get('sunset_glow', 0.8)
         hue = (hue + sunset * 0.1 + wave * 0.05) % 1
         saturation = max(saturation_min, min(saturation_max, saturation + wave * 0.2))
         value = max(value_min, min(value_max, value + sunset * 0.3 + wave * 0.1))
-    elif 'neon_flicker' in theme_data:  # CyberPunk theme
+    elif 'neon_flicker' in theme_data:
         flicker = random.uniform(0.8, 1.0) * theme_data.get('neon_flicker', 0.8)
         data_stream = (math.sin(time_factor_very_fast * 5 + room_offset) * 0.5 + 0.5) * theme_data.get('data_stream', 0.7)
         hue = (hue + data_stream * 0.3) % 1
         value = max(value_min, min(value_max, value * flicker + data_stream * 0.2))
-    elif 'fairy_lights' in theme_data:  # EnchantedForest theme
+    elif 'fairy_lights' in theme_data:
         fairy_lights = (math.sin(time_factor_fast * 4 + room_offset) * 0.5 + 0.5) * theme_data.get('fairy_lights', 0.6)
         moonbeam = (math.sin(time_factor_slow * 0.3 + room_offset) * 0.5 + 0.5) * theme_data.get('moonbeam', 0.5)
         hue = (hue + moonbeam * 0.1 + fairy_lights * 0.05) % 1
         saturation = max(saturation_min, min(saturation_max, saturation - moonbeam * 0.3 + fairy_lights * 0.2))
         value = max(value_min, min(value_max, value + fairy_lights * 0.4 + moonbeam * 0.2))
-    elif 'starfield_twinkle' in theme_data:  # CosmicVoyage theme
+    elif 'starfield_twinkle' in theme_data:
         twinkle = random.uniform(0.7, 1.0) * theme_data.get('starfield_twinkle', 0.8)
         nebula = (math.sin(time_factor_medium * 0.7 + room_offset) * 0.5 + 0.5) * theme_data.get('nebula_swirl', 0.7)
         hue = (hue + nebula * 0.2 + twinkle * 0.05) % 1

@@ -13,9 +13,9 @@ needs, which the effect-duration timeout used to do by accident:
      or long audio outlives the lighting) and still leaves it on the theme —
      the resume is unconditional for exactly this case
   4. leave with no visitor and leave twice are both harmless
-  5. a whole visit never touches background music: effect audio MIXES over it
-     rather than replacing it, so the music playing before someone walked in is
-     still playing after they leave
+  5. a whole visit never touches maze ambience: effect audio MIXES over it
+     rather than replacing it, so the maze bed playing before someone walked
+     in is still playing after they leave
   6. a leave with no room is rejected
 
 Run with the sim running: sim/.venv/bin/python sim/tools/occupancy_test.py [host]
@@ -76,7 +76,7 @@ class FakeUnit:
 
     def __init__(self, rooms):
         self.rooms = rooms
-        self.messages = []  # (type, room-or-None)
+        self.messages = []  # (type, room-or-None, effect-or-None)
         self.task = None
 
     async def _run(self):
@@ -89,8 +89,9 @@ class FakeUnit:
             while True:
                 msg = json.loads(await ws.recv())
                 if msg.get('type') in ('play_effect_audio', 'audio_stop',
-                                       'start_background_music', 'stop_background_music'):
-                    self.messages.append((msg['type'], msg.get('room')))
+                                       'start_maze_ambience', 'stop_maze_ambience'):
+                    data = msg.get('data') or {}
+                    self.messages.append((msg['type'], msg.get('room'), data.get('effect_name')))
 
     def start(self):
         self.task = asyncio.create_task(self._run())
@@ -103,7 +104,7 @@ class FakeUnit:
             pass
 
     def for_room(self, room):
-        return [(t, r) for t, r in self.messages if r == room or r is None]
+            return [(t, r, e) for t, r, e in self.messages if r == room or r is None]
 
 
 def room_channel(room):
@@ -143,7 +144,7 @@ async def main():
     unit.start()
     await asyncio.sleep(1.0)  # let the room claims register
 
-    status, body = post('/api/set_theme', {'theme_name': 'NeonNightlife'})
+    status, body = post('/api/set_theme', {'theme_name': 'DeepCanopy'})
     check('theme running for the test', status == 200, body.get('message', ''))
     await asyncio.sleep(1.0)
 
@@ -153,7 +154,7 @@ async def main():
     await asyncio.sleep(1.0)
     seq = unit.for_room(ROOM)
     check('unit heard the effect audio',
-          any(t == 'play_effect_audio' for t, _ in seq), f'({seq})')
+          any(t == 'play_effect_audio' for t, _, _ in seq), f'({seq})')
 
     print("2) leave DURING the effect cancels it and restores the theme")
     status, body = post('/api/room_vacated', {'room': ROOM})
@@ -163,8 +164,12 @@ async def main():
           f"({enter_status} {enter_body.get('message', '')})")
     await asyncio.sleep(0.5)
     seq = unit.for_room(ROOM)
-    check('room silenced on leave (last command is audio_stop)',
-          bool(seq) and seq[-1][0] == 'audio_stop', f'(last={seq[-1] if seq else None})')
+    entry_play_idx = next((i for i, (t, _, e) in enumerate(seq)
+                           if t == 'play_effect_audio' and e == effect), None)
+    stop_idx = next((i for i, (t, _, _) in enumerate(seq)
+                     if t == 'audio_stop' and entry_play_idx is not None and i > entry_play_idx), None)
+    check('entry audio stopped on leave',
+          stop_idx is not None, f'({seq})')
     distinct = await theme_animates(channel)
     check('theme animates the room again after leave', distinct > 1,
           f'({distinct} distinct values on ch {channel + 1})')
@@ -180,7 +185,7 @@ async def main():
     await asyncio.sleep(0.5)
     seq = unit.for_room(ROOM)
     check('lingering audio still stopped',
-          any(t == 'audio_stop' for t, _ in seq), f'({seq})')
+          any(t == 'audio_stop' for t, _, _ in seq), f'({seq})')
     distinct = await theme_animates(channel)
     check('room still on the theme', distinct > 1,
           f'({distinct} distinct values on ch {channel + 1})')
@@ -193,11 +198,11 @@ async def main():
     distinct = await theme_animates(channel)
     check('theme survives repeated leaves', distinct > 1, f'({distinct} distinct values)')
 
-    print("5) a visit never touches background music")
-    status, body = post('/api/start_music', {})
-    music_started = status == 200 and 'error' not in str(body.get('status', ''))
-    if not music_started:
-        print(f"  SKIP  no background music available ({body.get('message', '')})")
+    print("5) a visit never touches maze ambience")
+    status, body = post('/api/start_maze_ambience', {})
+    ambience_started = status == 200 and 'error' not in str(body.get('status', ''))
+    if not ambience_started:
+        print(f"  SKIP  no maze ambience available ({body.get('message', '')})")
     else:
         await asyncio.sleep(0.5)
         unit.messages.clear()
@@ -206,10 +211,10 @@ async def main():
         post('/api/room_vacated', {'room': ROOM})
         await asyncio.wait_for(visit, 60)
         await asyncio.sleep(0.5)
-        stops = [t for t, _ in unit.messages if t == 'stop_background_music']
-        check('music untouched by enter+leave (effects mix over it)', not stops,
-              f'({len(stops)} stop_background_music during the visit)')
-        post('/api/stop_music', {})
+        stops = [t for t, _, _ in unit.messages if t == 'stop_maze_ambience']
+        check('maze ambience untouched by enter+leave (effects mix over it)', not stops,
+              f'({len(stops)} stop_maze_ambience during the visit)')
+        post('/api/stop_maze_ambience', {})
 
     print("6) malformed leave")
     status, body = post('/api/room_vacated', {})

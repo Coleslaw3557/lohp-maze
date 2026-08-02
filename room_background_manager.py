@@ -1,28 +1,24 @@
-"""Always-on per-room background sound (Tim, 2026-08-01).
+"""Optional per-room background sound.
 
-Rooms opted in through audio_config.json's top-level `room_backgrounds` map
-(room name -> an effects entry, usually the room's -Background pool) get one
-random pick from that pool LOOPING on the room's ambience channel whenever
-anything can play audio there. This is a different feature from maze-wide
-background music (/api/start_music, the `music/` directory): that one is a
-single rotating track broadcast to every speaker, this one is a room keeping
-its own sound. The two meet in the clients: a room with an active background
-bed mutes the maze-wide music on its speaker instead of mixing with it, and
-the music comes back when the bed stops (client/audio_manager.py zones,
-node_audio_manager.py nodes). Music mode on or off never touches these —
-they are on whenever the room has a working speaker.
+The standing maze setup keeps ambience global through `maze_ambience`; Cuddle
+Cross is the normal exception and is owned by floor_show_manager.py. This
+manager remains for runtime auditions or deliberate future opt-ins through
+audio_config.json's top-level `room_backgrounds` map (room name -> effects
+entry). A room with an active background bed overrides the maze-wide ambience on
+its speaker instead of mixing with it, and the maze ambience comes back when the
+bed stops (client/audio_manager.py zones, node_audio_manager.py nodes).
 
 A reconcile loop (TICK_S) starts beds as clients appear; a room's bed is
 marked lost when the last client covering it disconnects, so the next tick
 restarts it for whoever reconnects. Stop-alls deliberately do NOT reach in
-here — "always on" means a maze-wide silence lasts one tick for these rooms.
+here — a runtime room bed is an ambience layer, not an effect.
 
 Cuddle Cross never belongs in `room_backgrounds`: its bed follows the floor
 projection theme and is owned by floor_show_manager.py. The reconciler
 refuses the floor-show room outright rather than fighting over the channel.
 
-Runtime opt-in/out for auditioning (not persisted — edit audio_config.json,
-or use the audio console, to keep one): POST /api/room_backgrounds
+Runtime opt-in/out for auditioning (not persisted — edit audio_config.json to
+keep one): POST /api/room_backgrounds
 {"room": ..., "effect": ...|null}.
 """
 import asyncio
@@ -83,7 +79,7 @@ class RoomBackgroundManager:
         contract as the floor show's bed_for_room)."""
         for known, effect in self.pools.items():
             if known.lower() == room.lower() and known in self.playing:
-                return effect
+                return effect, self.playing[known]
         return None
 
     def client_gone(self, rooms):
@@ -131,5 +127,7 @@ class RoomBackgroundManager:
                 continue  # nothing to play it yet; next tick tries again
             started = await self.remote_host_manager.start_room_ambience(room, effect)
             if started:
-                self.playing[room] = started
-                logger.info(f"Room background '{effect}' looping in {room} ({started})")
+                self.playing[room] = started['file_name']
+                mode = 'looping' if started.get('loop') else 'once'
+                logger.info(f"Room background '{effect}' {mode} in {room} "
+                            f"({started['file_name']}) for {started.get('play_for_s')}s")

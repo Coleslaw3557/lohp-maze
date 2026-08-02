@@ -3456,7 +3456,7 @@ function connectAudio() {
         break;
       case 'play_room_ambience': {
         const d = msg.data || {};
-        playRoomAmbience(msg.room, d.file_name, d.volume, d.effect_name);
+        playRoomAmbience(msg.room, d.file_name, d.volume, d.effect_name, d.loop);
         break;
       }
       case 'stop_room_ambience':
@@ -3464,7 +3464,7 @@ function connectAudio() {
         break;
       case 'start_maze_ambience': {
         const d = msg.data || {};
-        playMazeAmbience(d.file_name, d.volume);
+        playMazeAmbience(d.file_name, d.volume, d.loop);
         break;
       }
       case 'stop_maze_ambience':
@@ -3576,7 +3576,7 @@ function stopEffectAudio(room) {
 // Looping room bed (the Cuddle floor show's lava rumble). Kept in its own map
 // so effect audio plays OVER it and audio_stop never cuts it — the same split
 // the Pi client makes between effect players and ambience players.
-async function playRoomAmbience(room, file, volume, effectName) {
+async function playRoomAmbience(room, file, volume, effectName, loop = true) {
   const a = S.audio;
   if (!a.ctx || !file) return;
   try {
@@ -3584,7 +3584,7 @@ async function playRoomAmbience(room, file, volume, effectName) {
     stopRoomAmbience(room);
     const src = a.ctx.createBufferSource();
     src.buffer = buf;
-    src.loop = true;
+    src.loop = loop !== false;
     const vol = volume == null ? 0.5 : volume;
     const gain = a.ctx.createGain();
     gain.gain.value = earCanHear(room || '__all__') ? vol : 0;
@@ -3618,7 +3618,7 @@ function stopRoomAmbience(room) {
   else stopOne(room);
 }
 
-async function playMazeAmbience(file, volume) {
+async function playMazeAmbience(file, volume, loop = true) {
   const a = S.audio;
   if (!a.ctx || !file) return;
   try {
@@ -3626,7 +3626,7 @@ async function playMazeAmbience(file, volume) {
     stopMazeAmbience();
     const src = a.ctx.createBufferSource();
     src.buffer = buf;
-    src.loop = true;
+    src.loop = loop !== false;
     const gain = a.ctx.createGain();
     const vol = volume == null ? 0.5 : volume;
     gain.gain.value = vol;
@@ -3714,9 +3714,8 @@ function updateAudioGating() {
   for (const [key, items] of a.rooms) for (const v of items) set(v.gain, earCanHear(key) ? v.vol : 0);
   for (const [key, v] of a.beds) set(v.gain, earCanHear(key) ? v.vol : 0);
   if (a.maze) {
-    // A room's own background bed mutes the maze ambience on that speaker (the
-    // same rule the real units apply); everywhere else the local speaker
-    // carries the maze bed, so it stays audible between rooms too.
+    // The maze bed is global. A local bed, normally Cuddle's floor-show bed,
+    // owns that speaker while active; everywhere else the maze bed stays up.
     const bedHere = S.mode === 'first' && a.earRoom && a.beds.has(a.earRoom);
     set(a.maze.gain, bedHere ? 0 : a.maze.vol);
   }

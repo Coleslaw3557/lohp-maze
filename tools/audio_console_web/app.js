@@ -431,10 +431,10 @@ function libraryRow(file) {
   picker.onchange = () => addToPool(picker.value, file.name);
 
   const bgPicker = el('select', { className: 'bg-add' },
-    el('option', { value: '' }, 'Add to background…'));
+    el('option', { value: '' }, 'Add to bed…'));
   for (const bg of STATE.background_pools || []) {
     if (!file.pools.includes(bg.name)) {
-      bgPicker.append(el('option', { value: bg.name }, `${bg.room} background`));
+      bgPicker.append(el('option', { value: bg.name }, bg.label || `${bg.room} bed`));
     }
   }
   bgPicker.onchange = () => addToPool(bgPicker.value, file.name);

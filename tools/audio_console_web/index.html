@@ -12,7 +12,7 @@
 <header id="top">
   <div class="bar">
     <h1>Audio pools</h1>
-    <span class="sub">every action plays one sound picked at random from its pool</span>
+    <span class="sub">actions, ambient one-shots, and beds all pick from anti-repeat pools</span>
     <span class="spacer"></span>
     <span id="server-dot" class="dot">server ?</span>
     <label class="chk" title="Rebuild the volume-baked WAVs the ESP32 speaker nodes stream (needs ffmpeg)">
@@ -27,7 +27,7 @@
   <section id="inbox">
     <div id="dropzone" tabindex="0" role="button" aria-label="Add sounds to the library">
       <b>Drop sound files here</b>
-      <span>or click to choose — they land in the library unassigned, ready to attach to a room action whenever you want</span>
+      <span>or click to choose — they land in the library unassigned, ready to attach to an action, one-shot, or bed</span>
     </div>
     <input type="file" id="inbox-input" multiple accept="audio/*" hidden>
     <div id="inbox-list"></div>

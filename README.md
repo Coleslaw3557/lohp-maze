@@ -19,7 +19,7 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   per-room sequences that interrupt the theme).
 - **Room nodes** (`sim/esphome/`): battery/AC-powered XIAO ESP32-S3 node boxes, one per room,
   on the maze WiFi. Sensors (mmWave radar in 13 rooms, ToF at Entrance/Exit, buttons, piezos) fire effects by POSTing to the
-  server's REST API; each node's speaker plays effect cues and streamed music, commanded by the
+	  server's REST API; each node's speaker plays effect cues and streamed ambience, commanded by the
   server over the ESPHome native API (`node_audio_manager.py` + `node_audio_config.json`).
 - **Floor projection** (`projection_engine.py` + `projection_renderer.py`): the Cuddle Cross
   floor show, five themes on one engine — **lava** (a Mayan stepping-stone crossing with
@@ -86,7 +86,7 @@ not deployed, red = unreachable.
 
 ```bash
 # Set a theme
-curl -X POST http://localhost:5000/api/set_theme -H "Content-Type: application/json" -d '{"theme_name": "NeonNightlife"}'
+curl -X POST http://localhost:5000/api/set_theme -H "Content-Type: application/json" -d '{"theme_name": "DeepCanopy"}'
 
 # Run an effect in a room
 curl -X POST http://localhost:5000/api/run_effect -H "Content-Type: application/json" -d '{"room": "Entrance", "effect_name": "Lightning"}'
@@ -227,7 +227,7 @@ sharing the same radar — is specced in
   `sim/esphome/components/artnet_dmx/`; the camp-sign pixel bridge (same packets
   rendered as WS2811 zones + the storm button) in `firmware/sign/`
 - `remote_host_manager.py` — audio command fan-out: WebSocket to every claiming client, mirrored
-  to ESP32 nodes via `node_audio_manager.py` (ESPHome native API: firmware cues + streamed music)
+	  to ESP32 nodes via `node_audio_manager.py` (ESPHome native API: firmware cues + streamed ambience)
 - `audio_manager.py` — audio catalog from `audio_config.json`, served to clients over HTTP
 - `camera_manager.py` — Photo Bomb webcam capture scheduling (synthetic backend without hardware)
 - `projection_engine.py` — the Cuddle lava floor show: stones, mischief, Kukulkan (shared by

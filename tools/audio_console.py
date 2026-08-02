@@ -53,26 +53,29 @@ PLAYABLE = {'.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'}
 # Left out of the library view: generated node cues, undelivered pack zips, retired files.
 LIBRARY_SKIP = {'cues', 'codex-prepped', 'rejected'}
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024
-# Triggers that POST a server route instead of naming an effect (main.py fires
-# Lightning maze-wide for the camp sign's storm button).
+# Triggers that POST a server route instead of naming an effect.
 EFFECT_BY_PATH = {'/api/sign_storm': 'Lightning'}
+GLOBAL_ROUTE_EFFECTS = {
+    '/api/sign_storm': ('Lightning', 'strike',
+                        'camp sign storm button: all-room lightning strike'),
+}
 # Pools the FLOOR SHOW fires rather than a sensor (floor_show_manager.py): the
 # Cuddle projection's own events pick these, so triggers.json has nothing to
 # say about them — but they belong on the room's card, not in the no-trigger
 # list. One entry per pool: (pool name, what sets it off).
 FLOOR_POOLS = {
     'Cuddle Cross': [
-        ('Cuddle-Lava-Bed', 'LAVA theme: looping bed while the show is up'),
+        ('Cuddle-Lava-Bed', 'LAVA theme: bed while the show is up'),
         ('Cuddle-Lava-Ambient', 'LAVA theme: ambient one-shots on a random timer'),
         ('Cuddle-Lava-Hit', 'LAVA theme: a stone sinking, a bubble bursting'),
         ('Cuddle-Lava-Breach', 'LAVA theme: Kukulkan surfacing'),
-        ('Cuddle-Jungle-Bed', 'JUNGLE theme: looping night-jungle bed'),
+        ('Cuddle-Jungle-Bed', 'JUNGLE theme: night-jungle bed'),
         ('Cuddle-Jungle-Ambient', 'JUNGLE theme: birdies/beasties on a random timer'),
-        ('Cuddle-Temple-Bed', 'TEMPLE theme: looping altar-brazier bed'),
+        ('Cuddle-Temple-Bed', 'TEMPLE theme: altar-brazier bed'),
         ('Cuddle-Temple-Ambient', 'TEMPLE theme: wind/ravens on a random timer'),
-        ('Cuddle-Water-Bed', 'WATER theme: looping drips bed'),
+        ('Cuddle-Water-Bed', 'WATER theme: drips bed'),
         ('Cuddle-Water-Ambient', 'WATER theme: drips/winter wind on a random timer'),
-        ('Cuddle-Chamber-Bed', 'CHAMBER theme: looping mysterious-perc bed (one of 16)'),
+        ('Cuddle-Chamber-Bed', 'CHAMBER theme: mysterious-perc bed (one of 16)'),
         ('Cuddle-Chamber-Trap', 'CHAMBER theme: a trap door taking a step'),
     ],
 }
@@ -91,10 +94,14 @@ LEAVE_POOLS = {
 # names them, but they belong on the room's card.
 AMBIENT_POOLS = {
     'Entrance': [
-        ('Entrance-Ambient', 'ambient one-shot timer over the hallowloop bed'),
+        ('Entrance-Ambient', 'ambient one-shot timer over the global bed'),
     ],
 }
+MAZE_AMBIENCE_EFFECT = 'MazeAmbience-Bed'
 MAZE_AMBIENT_EFFECT = 'MazeAmbient'
+GLOBAL_RUNTIME_POOLS = [
+    ('LightningStorm', 'storm', 'orb storm hold: 10-minute all-room lightning storm'),
+]
 
 # Actions that the runtime can fire even though no single trigger row names
 # them directly. Keep these visible on the room cards so sound prep covers the
@@ -376,10 +383,23 @@ def build_state():
     # room -> effect -> the triggers that fire it
     by_room = {}
     used_by = {}
+    global_route_actions = []
     for trigger in triggers:
         room = trigger.get('room')
         data = trigger.get('action', {}).get('data', {})
         path = trigger.get('action', {}).get('path', '')
+        if path in GLOBAL_ROUTE_EFFECTS:
+            effect, kind, description = GLOBAL_ROUTE_EFFECTS[path]
+            label = trigger_label(trigger) or description
+            global_route_actions.append({
+                'effect': effect,
+                'kind': kind,
+                'triggers': [label],
+                'route': path,
+                'testable': False,
+            })
+            used_by.setdefault(effect, []).append({'room': 'Maze-wide', 'trigger': label})
+            continue
         effect = trigger_pool_effect(trigger, data.get('effect_name') or EFFECT_BY_PATH.get(path))
         entry = by_room.setdefault(room, {}).setdefault(
             effect, {'effect': effect, 'kind': trigger_action_kind(trigger), 'triggers': [],
@@ -411,6 +431,17 @@ def build_state():
 
     route = route_rooms()
     global_actions = []
+    maze_bed = config.get('maze_ambience') or MAZE_AMBIENCE_EFFECT
+    maze_bed_label = 'global ambience bed; long tracks play once, short loops rotate'
+    used_by.setdefault(maze_bed, []).append(
+        {'room': 'Maze-wide', 'trigger': maze_bed_label})
+    global_actions.append({
+        'effect': maze_bed,
+        'kind': 'bed',
+        'triggers': [maze_bed_label],
+        'route': None,
+        'testable': False,
+    })
     maze_ambient_label = 'random room, random timer (POST /api/ambient to audition)'
     used_by.setdefault(MAZE_AMBIENT_EFFECT, []).append(
         {'room': 'Maze-wide', 'trigger': maze_ambient_label})
@@ -421,6 +452,18 @@ def build_state():
         'route': None,
         'testable': False,
     })
+    global_actions.extend(global_route_actions)
+    for effect, kind, label in GLOBAL_RUNTIME_POOLS:
+        if effect not in effects:
+            continue
+        used_by.setdefault(effect, []).append({'room': 'Maze-wide', 'trigger': label})
+        global_actions.append({
+            'effect': effect,
+            'kind': kind,
+            'triggers': [label],
+            'route': None,
+            'testable': False,
+        })
     if route:
         label = 'going backwards through the route'
         used_by.setdefault(BACKTRACK_EFFECT, []).append({'room': 'Maze route', 'trigger': label})
@@ -450,7 +493,7 @@ def build_state():
 
     for room in ROOM_BACKGROUND_POOLS:
         name = background_pool_name(room)
-        label = 'background sounds'
+        label = 'manual room bed (normally unused; global ambience is the default)'
         by_room.setdefault(room, {}).setdefault(
             name, {'effect': name, 'kind': 'background', 'triggers': [label],
                    'route': None, 'testable': False})
@@ -503,11 +546,21 @@ def build_state():
                                                  if rel in c.get('audio_files', [])))
                for rel in library_files()]
 
-    background_pools = [
-        {'room': room, 'name': background_pool_name(room)}
-        for room in room_order
-        if background_pool_name(room) in effects
-    ]
+    bed_pools = [{'room': 'Maze-wide', 'name': maze_bed,
+                  'label': 'Global maze ambience'}]
+    seen_bed_pools = {maze_bed}
+    for room, pools in FLOOR_POOLS.items():
+        for name, _ in pools:
+            if name.endswith('-Bed') and name in effects and name not in seen_bed_pools:
+                bed_pools.append({'room': room, 'name': name,
+                                  'label': f'{room} floor bed'})
+                seen_bed_pools.add(name)
+    for room in room_order:
+        name = background_pool_name(room)
+        if name in effects and name not in seen_bed_pools:
+            bed_pools.append({'room': room, 'name': name,
+                              'label': f'{room} manual room bed'})
+            seen_bed_pools.add(name)
 
     return {
         'global_actions': global_actions,
@@ -516,7 +569,7 @@ def build_state():
         'library': library,
         'unused_count': sum(1 for f in library if not f['pools']),
         'pool_names': sorted(effects),
-        'background_pools': background_pools,
+        'background_pools': bed_pools,
         'default_volume': config.get('default_volume', 0.7),
         'server': server_status(),
         'in_pools': len(in_pools),

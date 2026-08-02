@@ -28,28 +28,29 @@ logger = logging.getLogger(__name__)
 # its own bridge-side looks, not the maze wash.
 ROOM_LIGHT_PROFILES = {
     "Cuddle Cross": {"cap": 48, "rgb": (255, 60, 110), "mix": 0.75},
-    "Entrance": {"cap": 235, "rgb": (110, 30, 200), "mix": 0.45, "rate": 0.7},
-    "Gate": {"cap": 235, "rgb": (255, 90, 0), "mix": 0.45, "rate": 0.9},
-    "Cop Dodge": {"cap": 240, "rgb": (30, 80, 255), "mix": 0.45, "rate": 1.3},
-    "Photo Bomb Room": {"cap": 235, "rgb": (255, 40, 170), "mix": 0.45, "rate": 1.1},
-    "Porto Room": {"cap": 230, "rgb": (60, 220, 50), "mix": 0.45, "rate": 0.8},
-    "Bike Lock Room": {"cap": 235, "rgb": (230, 80, 20), "mix": 0.45, "rate": 1.0},
-    "Guy Line Climb": {"cap": 225, "rgb": (30, 180, 90), "mix": 0.5, "rate": 0.6},
-    "Monkey Room": {"cap": 235, "rgb": (190, 50, 230), "mix": 0.45, "rate": 1.2},
-    "No Friends Monday": {"cap": 245, "rgb": (255, 60, 120), "mix": 0.4, "rate": 1.1},
-    "Sparkle Pony Room": {"cap": 235, "rgb": (255, 70, 200), "mix": 0.45, "rate": 1.0},
-    "Vertical Moop March": {"cap": 235, "rgb": (90, 210, 60), "mix": 0.45, "rate": 0.9},
-    "Deep Playa Handshake": {"cap": 240, "rgb": (200, 30, 255), "mix": 0.45, "rate": 1.4},
-    "Temple Room": {"cap": 230, "rgb": (40, 160, 140), "mix": 0.5, "rate": 0.7},
-    "Exit": {"cap": 240, "rgb": (60, 230, 90), "mix": 0.4, "rate": 1.0},
+    "Entrance": {"cap": 170, "rgb": (105, 35, 190), "mix": 0.32, "rate": 0.65},
+    "Gate": {"cap": 165, "rgb": (225, 70, 10), "mix": 0.32, "rate": 0.72},
+    "Cop Dodge": {"cap": 175, "rgb": (35, 75, 230), "mix": 0.34, "rate": 0.95},
+    "Photo Bomb Room": {"cap": 170, "rgb": (235, 35, 155), "mix": 0.32, "rate": 0.85},
+    "Porto Room": {"cap": 155, "rgb": (45, 195, 65), "mix": 0.35, "rate": 0.62},
+    "Bike Lock Room": {"cap": 165, "rgb": (210, 65, 20), "mix": 0.34, "rate": 0.78},
+    "Guy Line Climb": {"cap": 150, "rgb": (25, 165, 85), "mix": 0.36, "rate": 0.55},
+    "Monkey Room": {"cap": 170, "rgb": (175, 45, 220), "mix": 0.33, "rate": 0.92},
+    "No Friends Monday": {"cap": 175, "rgb": (235, 50, 115), "mix": 0.3, "rate": 0.86},
+    "Sparkle Pony Room": {"cap": 170, "rgb": (235, 60, 190), "mix": 0.32, "rate": 0.8},
+    "Vertical Moop March": {"cap": 160, "rgb": (70, 195, 65), "mix": 0.34, "rate": 0.7},
+    "Deep Playa Handshake": {"cap": 175, "rgb": (185, 35, 235), "mix": 0.32, "rate": 1.0},
+    "Temple Room": {"cap": 155, "rgb": (35, 145, 130), "mix": 0.36, "rate": 0.58},
+    "Exit": {"cap": 175, "rgb": (55, 215, 85), "mix": 0.3, "rate": 0.8},
 }
 
-# Attract mode (Tim 2026-08-01): with nobody driving, the maze runs these
-# mossy/Mayan looks on its own and rolls to the next every ATTRACT_DWELL_S.
+# Attract mode: with nobody driving, the maze runs these slow dark looks on
+# its own and rolls to the next every ATTRACT_DWELL_S.
 # A manual /api/set_theme keeps rotation alive but restarts the dwell clock —
 # the maze never gets stuck on one look because someone tapped the orb.
-ATTRACT_THEMES = ["MossyTemple", "JungleCanopy", "TorchlitRuin", "CenoteNight"]
-ATTRACT_DWELL_S = 15 * 60
+ATTRACT_THEMES = ["DeepCanopy", "EmberUndercroft", "CenoteDrift",
+                  "UltravioletVines", "MoonlitStone", "RitualAurora"]
+ATTRACT_DWELL_S = 7 * 60
 ATTRACT_TICK_S = 20
 # After a deliberate stop the maze stays dark this long, then attract
 # relights it — long enough that a stop reads as intentional (and stays out
@@ -77,7 +78,7 @@ class ThemeManager:
         self.smoothing_factor = 0.2  # Adjust this value to control smoothing (0.0 to 1.0)
         self.load_themes()  # Load themes when initializing
         self.temporary_theme_values = {}  # Store temporary theme values
-        # Attract mode: rotate through the mossy looks on a dwell clock.
+        # Attract mode: rotate through the dark looks on a dwell clock.
         self.attract_enabled = False
         self.attract_themes = list(ATTRACT_THEMES)
         self.attract_dwell_s = ATTRACT_DWELL_S
@@ -86,194 +87,121 @@ class ThemeManager:
         self._band_side = {}  # per-room yellow-band snap hysteresis
 
     def load_themes(self):
-        # Load themes with more dynamic and vibrant settings
+        # Slow, dark looks for an open-faced night maze. Keep these in bounded
+        # hue bands, with no random jitter or strobe/twinkle controls: the
+        # result should breathe and travel, not flash.
         self.themes = {
-            "NeonNightlife": {
-                "duration": 3600,  # 1 hour
-                "transition_speed": 0.1,
-                "color_variation": 1.0,
-                "intensity_fluctuation": 0.8,
-                "overall_brightness": 0.9,
-                "room_transition_speed": 0.05,
-                "color_wheel_speed": 0.2,
-                "neon_pulse": 0.9,
-                "strobe_frequency": 0.3,
-                "color_shift": 0.7,
-                "base_hue": 0.8,  # Purple
-                "hue_range": 1.0,  # Full spectrum
-                "saturation_min": 0.7,
-                "saturation_max": 1.0,
-                "value_min": 0.6,
-                "value_max": 1.0
-            },
-            "TropicalParadise": {
-                "duration": 3600,  # 1 hour
-                "transition_speed": 0.08,
-                "color_variation": 0.9,
-                "intensity_fluctuation": 0.6,
-                "overall_brightness": 0.85,
-                "room_transition_speed": 0.04,
-                "color_wheel_speed": 0.15,
-                "wave_effect": 0.7,
-                "sunset_glow": 0.8,
-                "palm_shadow": 0.5,
-                "base_hue": 0.1,  # Orange
-                "hue_range": 0.3,  # Orange to Green
-                "saturation_min": 0.6,
-                "saturation_max": 1.0,
-                "value_min": 0.7,
-                "value_max": 0.95
-            },
-            "CyberPunk": {
-                "duration": 3600,  # 1 hour
-                "transition_speed": 0.12,
-                "color_variation": 1.0,
-                "intensity_fluctuation": 0.9,
-                "overall_brightness": 0.95,
-                "room_transition_speed": 0.06,
-                "color_wheel_speed": 0.25,
-                "neon_flicker": 0.8,
-                "data_stream": 0.7,
-                "hologram_effect": 0.6,
-                "base_hue": 0.6,  # Blue
-                "hue_range": 0.8,  # Blue to Pink
-                "saturation_min": 0.8,
-                "saturation_max": 1.0,
-                "value_min": 0.7,
-                "value_max": 1.0
-            },
-            "EnchantedForest": {
-                "duration": 3600,  # 1 hour
-                "transition_speed": 0.06,
-                "color_variation": 0.8,
-                "intensity_fluctuation": 0.7,
-                "overall_brightness": 0.8,
-                "room_transition_speed": 0.03,
-                "color_wheel_speed": 0.1,
-                "fairy_lights": 0.6,
-                "moonbeam": 0.5,
-                "firefly_effect": 0.7,
-                "base_hue": 0.3,  # Green
-                "hue_range": 0.4,  # Green to Purple
-                "saturation_min": 0.5,
-                "saturation_max": 0.9,
-                "value_min": 0.6,
-                "value_max": 0.9
-            },
-            "CosmicVoyage": {
-                "duration": 3600,  # 1 hour
-                "transition_speed": 0.15,
-                "color_variation": 1.0,
-                "intensity_fluctuation": 0.9,
-                "overall_brightness": 0.9,
-                "room_transition_speed": 0.07,
-                "color_wheel_speed": 0.3,
-                "starfield_twinkle": 0.8,
-                "nebula_swirl": 0.7,
-                "wormhole_effect": 0.6,
-                "base_hue": 0.7,  # Indigo
-                "hue_range": 1.0,  # Full spectrum
-                "saturation_min": 0.7,
-                "saturation_max": 1.0,
-                "value_min": 0.5,
-                "value_max": 1.0
-            },
-            "BladeRunner": {
-                "duration": 3600,  # 1 hour
-                "transition_speed": 0.08,
-                "color_variation": 0.7,
-                "intensity_fluctuation": 0.6,
-                "overall_brightness": 0.7,
-                "room_transition_speed": 0.05,
-                "color_wheel_speed": 0.1,
-                "neon_flicker": 0.4,
-                "rain_effect": 0.6,
-                "smog_effect": 0.5,
-                "base_hue": 0.6,  # Blue
-                "hue_range": 0.3,  # Blue to Purple
-                "saturation_min": 0.6,
-                "saturation_max": 0.9,
-                "value_min": 0.3,
-                "value_max": 0.9
-            },
-            # --- The attract-mode set (Tim 2026-08-01): the maze's own mossy
-            # Mayan looks. All four hold color_wheel_speed at 0 so the hue
-            # stays inside its palette band instead of touring the wheel, and
-            # keep value low — the room profiles then colour each room to its
-            # own sound over these. Motion reuses the generator's existing
-            # branches: neon_flicker = torch flicker, fairy_lights =
-            # fireflies, wave_effect = water.
-            "MossyTemple": {
+            "DeepCanopy": {
                 "duration": 3600,
-                "transition_speed": 0.4,
-                "color_variation": 0.6,
-                "intensity_fluctuation": 0.7,
-                "overall_brightness": 0.9,
+                "transition_speed": 0.13,
+                "color_variation": 0.45,
+                "intensity_fluctuation": 0.42,
+                "overall_brightness": 0.78,
                 "room_transition_speed": 0.03,
                 "color_wheel_speed": 0.0,
-                "jitter": 0.15,
-                "base_hue": 0.38,  # moss green (floor raised: wobble was dipping into yellow)
-                "hue_range": 0.10,  # green to teal
-                "saturation_min": 0.75,
+                "fairy_lights": 0.18,
+                "moonbeam": 0.08,
+                "jitter": 0.0,
+                "base_hue": 0.30,  # shadow leaf
+                "hue_range": 0.16,  # leaf to teal
+                "saturation_min": 0.78,
                 "saturation_max": 1.0,
-                "value_min": 0.3,
-                "value_max": 0.9
+                "value_min": 0.18,
+                "value_max": 0.62
             },
-            "JungleCanopy": {
+            "EmberUndercroft": {
                 "duration": 3600,
-                "transition_speed": 0.5,
-                "color_variation": 0.7,
-                "intensity_fluctuation": 0.6,
-                "overall_brightness": 0.9,
-                "room_transition_speed": 0.04,
+                "transition_speed": 0.11,
+                "color_variation": 0.38,
+                "intensity_fluctuation": 0.48,
+                "overall_brightness": 0.72,
+                "room_transition_speed": 0.025,
                 "color_wheel_speed": 0.0,
-                "fairy_lights": 0.5,   # fireflies through the leaves
-                "moonbeam": 0.3,
-                "firefly_effect": 0.6,
-                "jitter": 0.15,
-                "base_hue": 0.34,  # leaf green (floor raised: wobble was dipping into yellow)
-                "hue_range": 0.10,
-                "saturation_min": 0.7,
-                "saturation_max": 1.0,
-                "value_min": 0.3,
-                "value_max": 0.9
-            },
-            "TorchlitRuin": {
-                "duration": 3600,
-                "transition_speed": 0.45,
-                "color_variation": 0.5,
-                "intensity_fluctuation": 0.6,
-                "overall_brightness": 0.85,
-                "room_transition_speed": 0.03,
-                "color_wheel_speed": 0.0,
-                "neon_flicker": 0.9,   # generator MULTIPLIES value by this — 0.9 = bright with a gutter; 0.35 crushed it to a third
-                "data_stream": 0.15,
-                "jitter": 0.15,
-                "base_hue": 0.045,  # ember copper — value stays low so it
-                "hue_range": 0.05,  # reads torchlight, never bright yellow
+                "wave_effect": 0.18,
+                "sunset_glow": 0.0,
+                "palm_shadow": 0.0,
+                "jitter": 0.0,
+                "base_hue": 0.00,  # coal red
+                "hue_range": 0.08,  # red to copper, clamped away from yellow
                 "saturation_min": 0.9,
                 "saturation_max": 1.0,
-                "value_min": 0.25,
-                "value_max": 0.75
+                "value_min": 0.16,
+                "value_max": 0.58
             },
-            "CenoteNight": {
+            "CenoteDrift": {
                 "duration": 3600,
-                "transition_speed": 0.45,
-                "color_variation": 0.6,
-                "intensity_fluctuation": 0.7,
-                "overall_brightness": 0.9,
+                "transition_speed": 0.12,
+                "color_variation": 0.42,
+                "intensity_fluctuation": 0.46,
+                "overall_brightness": 0.78,
                 "room_transition_speed": 0.03,
                 "color_wheel_speed": 0.0,
-                "wave_effect": 0.5,    # water lapping the cave wall
-                "sunset_glow": 0.15,
+                "wave_effect": 0.34,
+                "sunset_glow": 0.04,
                 "palm_shadow": 0.0,
-                "jitter": 0.15,
-                "base_hue": 0.5,   # cenote teal
-                "hue_range": 0.1,
-                "saturation_min": 0.8,
+                "jitter": 0.0,
+                "base_hue": 0.47,  # blue-green water
+                "hue_range": 0.14,  # teal to blue
+                "saturation_min": 0.82,
                 "saturation_max": 1.0,
-                "value_min": 0.28,
-                "value_max": 0.8
+                "value_min": 0.18,
+                "value_max": 0.64
+            },
+            "UltravioletVines": {
+                "duration": 3600,
+                "transition_speed": 0.105,
+                "color_variation": 0.4,
+                "intensity_fluctuation": 0.4,
+                "overall_brightness": 0.76,
+                "room_transition_speed": 0.028,
+                "color_wheel_speed": 0.0,
+                "fairy_lights": 0.14,
+                "moonbeam": 0.06,
+                "jitter": 0.0,
+                "base_hue": 0.70,  # indigo
+                "hue_range": 0.18,  # violet to magenta
+                "saturation_min": 0.82,
+                "saturation_max": 1.0,
+                "value_min": 0.17,
+                "value_max": 0.6
+            },
+            "MoonlitStone": {
+                "duration": 3600,
+                "transition_speed": 0.09,
+                "color_variation": 0.34,
+                "intensity_fluctuation": 0.34,
+                "overall_brightness": 0.68,
+                "room_transition_speed": 0.03,
+                "color_wheel_speed": 0.0,
+                "wave_effect": 0.18,
+                "sunset_glow": 0.0,
+                "palm_shadow": 0.0,
+                "jitter": 0.0,
+                "base_hue": 0.57,  # moon blue
+                "hue_range": 0.16,  # cyan-blue to indigo
+                "saturation_min": 0.8,
+                "saturation_max": 0.96,
+                "value_min": 0.14,
+                "value_max": 0.5
+            },
+            "RitualAurora": {
+                "duration": 3600,
+                "transition_speed": 0.145,
+                "color_variation": 0.5,
+                "intensity_fluctuation": 0.5,
+                "overall_brightness": 0.82,
+                "room_transition_speed": 0.04,
+                "color_wheel_speed": 0.0,
+                "wave_effect": 0.24,
+                "sunset_glow": 0.02,
+                "palm_shadow": 0.0,
+                "jitter": 0.0,
+                "base_hue": 0.52,  # cyan
+                "hue_range": 0.24,  # cyan through blue toward violet
+                "saturation_min": 0.82,
+                "saturation_max": 1.0,
+                "value_min": 0.2,
+                "value_max": 0.72
             }
         }
         self.theme_list = list(self.themes.keys())
@@ -323,12 +251,13 @@ class ThemeManager:
     # --- Attract mode -----------------------------------------------------
 
     def attract_state(self):
+        threshold = ATTRACT_RELIGHT_S if self.current_theme is None else self.attract_dwell_s
         return {
             'enabled': self.attract_enabled,
             'dwell_s': self.attract_dwell_s,
             'themes': list(self.attract_themes),
             'current_theme': self.current_theme,
-            'next_change_in_s': (max(0, round(self.attract_dwell_s -
+            'next_change_in_s': (max(0, round(threshold -
                                               (time.monotonic() - self._last_theme_change)))
                                  if self.attract_enabled else None),
         }

@@ -59,7 +59,7 @@ def post_success(path, payload):
 
 
 def test_set_theme():
-    post_success('set_theme', {"theme_name": "NeonNightlife"})
+    post_success('set_theme', {"theme_name": "DeepCanopy"})
 
 
 def test_run_effect():

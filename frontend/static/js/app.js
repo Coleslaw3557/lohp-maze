@@ -83,17 +83,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Start Music
-    apiControls.appendChild(createControl('Start Music', async () => {
-        const response = await api.startMusic();
+    // Start Maze Ambience
+    apiControls.appendChild(createControl('Start Maze Ambience', async () => {
+        const response = await api.startMazeAmbience();
         return JSON.stringify(response);
-    }, () => generateCurlCommand('POST', 'start_music')));
+    }, () => generateCurlCommand('POST', 'start_maze_ambience')));
 
-    // Stop Music
-    apiControls.appendChild(createControl('Stop Music', async () => {
-        const response = await api.stopMusic();
+    // Stop Maze Ambience
+    apiControls.appendChild(createControl('Stop Maze Ambience', async () => {
+        const response = await api.stopMazeAmbience();
         return JSON.stringify(response);
-    }, () => generateCurlCommand('POST', 'stop_music')));
+    }, () => generateCurlCommand('POST', 'stop_maze_ambience')));
 
     // Light Fixtures Table
     const showLightFixturesControl = createControl('Show Light Fixtures', async () => {

@@ -60,15 +60,15 @@ const api = {
         return response.json();
     },
 
-    async startMusic() {
-        const response = await fetch(`${API_BASE_URL}/start_music`, {
+    async startMazeAmbience() {
+        const response = await fetch(`${API_BASE_URL}/start_maze_ambience`, {
             method: 'POST',
         });
         return response.json();
     },
 
-    async stopMusic() {
-        const response = await fetch(`${API_BASE_URL}/stop_music`, {
+    async stopMazeAmbience() {
+        const response = await fetch(`${API_BASE_URL}/stop_maze_ambience`, {
             method: 'POST',
         });
         return response.json();

@@ -13,6 +13,13 @@
             ],
             "volume": 1.0
         },
+        "LightningStorm": {
+            "_comment": "Long orb storm bed: the orb's STORM wedge runs the 10-minute LightningStorm lighting effect maze-wide. rainstorm.mp3 is a long track, so it plays once rather than looping.",
+            "audio_files": [
+                "ambience/rainstorm.mp3"
+            ],
+            "volume": 0.65
+        },
         "PoliceLights": {
             "_comment": "Cop Dodge entry (the room laser fires this). TF2 duel challenge/event added to the rotation 2026-08-01 (Tim) — you have been challenged, now dodge.",
             "audio_files": [
@@ -91,22 +98,22 @@
             "volume": 0.8
         },
         "VerticalMoopMarch-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also overrides maze ambience in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
         "BikeLockRoom-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also overrides maze ambience in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
         "CampSign-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also overrides maze ambience in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
         "CopDodge-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also overrides maze ambience in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
@@ -119,7 +126,7 @@
             "volume": 0.8
         },
         "DeepPlayaHandshake-Background": {
-            "_comment": "Always-on Deep Playa bed, opted in under room_backgrounds: ONE of these picked at random per bed start and looped (Tim 2026-08-01 — the TF2 ConTracker chase track and the old distant-dance gag now share the pool; anti-repeat alternates picks across restarts). The DeepPlaya-BG doorway effect is lights-only since 08-01 evening — its dance-distance audio moved here so the room never runs two musics at once.",
+            "_comment": "Deep Playa room-background pool, not opted in by default now that ambience is global. If enabled manually under room_backgrounds, one pick is selected with anti-repeat and follows the ambience bed playback policy.",
             "audio_files": [
                 "rooms/Deep Playa Handshake/uploads/cyoa_musicfasterthanaspeedingbullet.mp3",
                 "dance-distance-muffled.mp3"
@@ -127,14 +134,14 @@
             "volume": 0.6
         },
         "Entrance-Background": {
-            "_comment": "Always-on Entrance bed (Tim 2026-08-01): TF2 hallowloop, opted in under room_backgrounds — the maze breathes spooky from the first step. Its one-shot murmurs live in Entrance-Ambient (ambient_oneshots).",
+            "_comment": "Entrance background loop. Not room-opted by default; hallowloop also lives in the global MazeAmbience-Bed pool. One-shot murmurs live in Entrance-Ambient (ambient_oneshots).",
             "audio_files": [
                 "uploads/Hallow/hallowloop.wav"
             ],
             "volume": 0.6
         },
         "Entrance-Ambient": {
-            "_comment": "Entrance random-interval one-shots over the hallowloop bed (ambient_oneshots -> maze_ambient_manager.py, Tim 2026-08-01): the eight hallow murmurs plus the occasional lightson power-up mixed in.",
+            "_comment": "Entrance random-interval one-shots over the global ambience bed (ambient_oneshots -> maze_ambient_manager.py): the eight hallow murmurs plus the occasional lightson power-up mixed in.",
             "audio_files": [
                 "uploads/Hallow/hallow01.wav",
                 "uploads/Hallow/hallow02.wav",
@@ -149,17 +156,17 @@
             "volume": 0.55
         },
         "Exit-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing). Deliberately EMPTY (Tim 2026-08-01): the Exit has no background music — its send-off sounds are one-shots in the Exit entry pool (First_Place_Finish moved there; a 6.5s jingle must not loop as a bed).",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also overrides maze ambience in that room while playing). Deliberately EMPTY (Tim 2026-08-01): the Exit has no maze ambience — its send-off sounds are one-shots in the Exit entry pool (First_Place_Finish moved there; a 6.5s jingle must not loop as a bed).",
             "audio_files": [],
             "volume": 0.6
         },
         "Gate-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also overrides maze ambience in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
         "GuyLineClimb-Background": {
-            "_comment": "Always-on Guy Line Climb bed (Tim 2026-08-01): TF2 forest cliff/high-wind/life loops, opted in under room_backgrounds — one random pick loops until the room's bed restarts, so the forest shifts between visits.",
+            "_comment": "Guy Line Climb forest loops. Not room-opted by default; these natural beds also live in the global MazeAmbience-Bed pool and rotate there.",
             "audio_files": [
                 "rooms/Guy Line Climb/uploads/forest_cliff.wav",
                 "rooms/Guy Line Climb/uploads/forest_high_wind.wav",
@@ -168,26 +175,26 @@
             "volume": 0.6
         },
         "MonkeyRoom-Background": {
-            "_comment": "Always-on Monkey Room bed (Tim 2026-08-01): the ConTracker pipebomb dirge, opted in under room_backgrounds. carousel_of_curses removed entirely same day (Tim).",
+            "_comment": "Monkey Room background pool, not opted in by default now that ambience is global. carousel_of_curses removed entirely same day (Tim).",
             "audio_files": [
                 "rooms/Monkey Room/uploads/cyoa_musicdrunkenpipebomb.mp3"
             ],
             "volume": 0.6
         },
         "NoFriendsMonday-Background": {
-            "_comment": "Always-on No Friends Monday bed (Tim 2026-08-01): taunt_bongos only, opted in under room_backgrounds. Final_Lap.wav CUT 2026-08-01 (Tim): beds loop their pick, and a 3.7s one-shot jingle looping is noise, not a bed — only put loopable material in -Background pools.",
+            "_comment": "No Friends Monday background pool, not opted in by default now that ambience is global. Final_Lap.wav CUT 2026-08-01 (Tim): beds loop their pick, and a 3.7s one-shot jingle looping is noise, not a bed — only put loopable material in -Background pools.",
             "audio_files": [
                 "rooms/No Friends Monday/uploads/taunt_bongos.wav"
             ],
             "volume": 0.6
         },
         "PortoRoom-Background": {
-            "_comment": "Porto Room background pool — EMPTY since 2026-08-01 (Tim cut bump_in_the_night entirely, same day it landed). Drop a file in and re-add 'Porto Room': 'PortoRoom-Background' under room_backgrounds to loop it always-on again.",
+            "_comment": "Porto Room background pool — EMPTY since 2026-08-01 (Tim cut bump_in_the_night entirely, same day it landed). Drop a file in and opt the room into room_backgrounds only if it should override global ambience locally.",
             "audio_files": [],
             "volume": 0.6
         },
         "SparklePonyRoom-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also mutes maze music in that room while playing).",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also overrides maze ambience in that room while playing).",
             "audio_files": [],
             "volume": 0.6
         },
@@ -200,7 +207,7 @@
             "volume": 0.8
         },
         "TempleRoom-Background": {
-            "_comment": "Room-local background-sounds pool placeholder — EMPTY on purpose (Tim's 10s rule, 2026-08-01): the 1.4s MGS 0x3A blip is a sound effect, not a loop, so it moved to TempleRoom-Ambient (occasional one-shot via ambient_oneshots.rooms) and the room_backgrounds opt-in came out. Fill this with a real >10s loop to give the room a bed again. NOTE this is the TEMPLE ROOM (the maze room) — the Cuddle temple PROJECTION's sounds live in Cuddle-Temple-Bed/-Ambient.",
+            "_comment": "Room-local background-sounds pool placeholder — EMPTY on purpose (Tim's 10s rule, 2026-08-01): the 1.4s MGS 0x3A blip is a sound effect, not a loop, so it moved to TempleRoom-Ambient (occasional one-shot via ambient_oneshots.rooms). NOTE this is the TEMPLE ROOM (the maze room) — the Cuddle temple PROJECTION's sounds live in Cuddle-Temple-Bed/-Ambient.",
             "audio_files": [],
             "volume": 0.6
         },
@@ -507,7 +514,12 @@
                 "uploads/Lava/lava.wav",
                 "uploads/Lava/volcano_rumble.wav"
             ],
-            "volume": 0.45
+            "volume": 0.45,
+            "ambience_playback": {
+                "loop_under_s": 12,
+                "loop_for_s": 120,
+                "once_pad_s": 2
+            }
         },
         "Cuddle-Lava-Hit": {
             "_comment": "LAVA accents for the small stuff — a stepping stone going under, a bubble bursting (projection_engine sink/rise/pop). Weights favour the fast lava1 spit over the slower gurgles",
@@ -649,7 +661,11 @@
                 "uploads/Chamber/mysterious_perc_15.wav",
                 "uploads/Chamber/mysterious_perc_16.wav"
             ],
-            "volume": 0.45
+            "volume": 0.45,
+            "ambience_playback": {
+                "loop_under_s": 0,
+                "once_pad_s": 10
+            }
         },
         "Cuddle-Chamber-Trap": {
             "_comment": "CHAMBER accent: a trap door taking someone's step (projection trap_open — linger-open and sprint-slam alike). One file: MGS sample0f 0xBB+0xBA concatenated (Tim 2026-08-01, 'merge them'; tools: ffmpeg concat).",
@@ -657,6 +673,32 @@
                 "uploads/Chamber/trap_0xBB_0xBA.wav"
             ],
             "volume": 0.8
+        },
+        "MazeAmbience-Bed": {
+            "_comment": "Global maze ambience bed. Cuddle Cross is the exception: the floor show owns its local bed. Long soundscape tracks play once and rotate; short loop assets repeat for the configured window before a fresh anti-repeat pick.",
+            "audio_files": [
+                "ambience/The 7th Continent Soundscape - Area I.mp3",
+                "ambience/The 7th Continent Soundscape - Area II.mp3",
+                "ambience/The 7th Continent Soundscape - Area III.mp3",
+                "ambience/The 7th Continent Soundscape - Area IV.mp3",
+                "ambience/The 7th Continent Soundscape - Area V.mp3",
+                "ambience/The 7th Continent Soundscape - Area VI.mp3",
+                "ambience/The 7th Continent Soundscape - Area VII.mp3",
+                "ambience/The 7th Continent Soundscape - Area VIII.mp3",
+                "ambience/The 7th Continent Soundscape - Area IX.mp3",
+                "ambience/The 7th Continent Soundscape - Area X.mp3",
+                "ambience/rainstorm.mp3",
+                "uploads/Hallow/hallowloop.wav",
+                "rooms/Guy Line Climb/uploads/forest_cliff.wav",
+                "rooms/Guy Line Climb/uploads/forest_high_wind.wav",
+                "rooms/Guy Line Climb/uploads/forest_life.wav"
+            ],
+            "volume": 0.45,
+            "ambience_playback": {
+                "loop_under_s": 45,
+                "loop_for_s": 240,
+                "once_pad_s": 2
+            }
         },
         "MazeAmbient": {
             "_comment": "Maze-wide roaming one-shots (ambient_oneshots -> maze_ambient_manager.py, Tim 2026-08-01): each firing lands ONE of these in ONE random room with a working speaker — crows, dogs, forest birds, desert air, owls, a wolf, rain, a gust. Cuddle Cross is excluded (the floor show owns its ambience). desert_life + desert_wind_high pulled 2026-08-01 (Tim's 10s rule: over 10s reads as ambiance, not a roaming effect) — unassigned in the library, candidates for a future desert bed.",
@@ -698,14 +740,14 @@
             "volume": 0.5
         },
         "PhotoBomb-BG": {
-            "_comment": "Room BACKGROUND MUSIC, played on entry (the doorway sensor fires this since 2026-08-01). Assign the bed here.",
+            "_comment": "Room background bed, played on entry (the doorway sensor fires this since 2026-08-01). Assign the bed here.",
             "audio_files": [
                 "uploads/PhotoBomb-BG/Make_way_for_the_bigshot_-_boosted.mp3"
             ],
             "volume": 0.6
         },
         "PhotoBomb-Spot": {
-            "_comment": "UNTRIGGERED since 2026-08-01: the entry sensor now plays PhotoBomb-BG (music bed) instead. Effect stays registered for the console/manual runs.",
+            "_comment": "UNTRIGGERED since 2026-08-01: the entry sensor now plays PhotoBomb-BG (room bed) instead. Effect stays registered for the console/manual runs.",
             "audio_files": [],
             "volume": 0.8
         },
@@ -722,7 +764,7 @@
             "volume": 1.0
         },
         "DeepPlaya-BG": {
-            "_comment": "Doorway entry swell — LIGHTS ONLY since 2026-08-01 evening (Tim): dance-distance-muffled moved into the DeepPlayaHandshake-Background pool so entries never lay a second music over the always-on bed.",
+            "_comment": "Doorway entry swell — LIGHTS ONLY since 2026-08-01 evening (Tim): dance-distance-muffled moved into the DeepPlayaHandshake-Background pool so entries never lay a second bed over the always-on bed.",
             "audio_files": [],
             "volume": 0.8
         },
@@ -771,13 +813,16 @@
         }
     },
     "default_volume": 0.7,
+    "ambience_playback": {
+        "_comment": "Default bed playback policy. Files at or under loop_under_s loop for loop_for_s, then the server rotates to a fresh anti-repeat pick. Longer files play once, then rotate after duration + once_pad_s.",
+        "loop_under_s": 45,
+        "loop_for_s": 180,
+        "once_pad_s": 2,
+        "unknown_loop": true
+    },
+    "maze_ambience": "MazeAmbience-Bed",
     "room_backgrounds": {
-        "_comment": "OPT-IN always-on per-room background sound: room name -> an effects entry above (usually the room's -Background pool). room_background_manager.py keeps one random pick from the pool LOOPING in that room whenever anything can play audio there — independent of maze-wide music mode, and while it plays, that room's speaker mutes the maze-wide background music instead of mixing with it. Cuddle Cross must NOT go here: the floor show owns its bed (per projection theme, floor_show_manager.py). Keys starting with _ are ignored.",
-        "Deep Playa Handshake": "DeepPlayaHandshake-Background",
-        "Entrance": "Entrance-Background",
-        "Guy Line Climb": "GuyLineClimb-Background",
-        "Monkey Room": "MonkeyRoom-Background",
-        "No Friends Monday": "NoFriendsMonday-Background"
+        "_comment": "Intentionally empty: ambience is global maze-wide, not per room. Cuddle Cross is the exception and is owned by floor_show_manager.py per projection theme. Keys starting with _ are ignored."
     },
     "room_leave_sounds": {
         "_comment": "OPT-IN one-shot when a room reports its last visitor gone (room name -> effects entry; fired by /api/room_vacated AFTER the room's effects stop, so nothing cuts it). Skipped when the vacate triggers the backtrack effect — the wrong-way audio owns that moment. Keys starting with _ are ignored.",

@@ -193,7 +193,7 @@ shows comes from **production configs and code**, with one sim-only exception:
 | Effect timing/colors per room | `../effects/*.py` (+ register in `../effects_manager.py`) | **REAL** — this is the production effect engine |
 | Ambient themes | `../theme_manager.py` | **REAL** |
 | Which sound an effect plays, volumes | `../audio_config.json` | **REAL** |
-| Sound/music files | `../audio_files/`, `../music/` | **REAL** |
+| Sound and ambience files | `../audio_files/` | **REAL** |
 | Which effect a sensor/room triggers | `../triggers.json` (the canonical trigger map) and `esphome/rooms/*.yaml` (ESP32 nodes) | **REAL** — sim reads `triggers.json` live |
 | Fixtures: rooms, models, DMX addresses | `../light_config.json` | **REAL** |
 | Buttons (what the 4 arcade buttons do) | `../triggers.json` (the hex-station `adc` entries) | **REAL** |
@@ -280,18 +280,17 @@ silent until its pools land. `GET /api/floor_state` shows what the server
 currently believes.
 
 **You only hear the room you're in** (2026-08-01). In first-person mode the
-browser page hard-gates room-scoped audio by where the avatar stands — beds,
-room one-shots and room effect audio are silent unless you're inside that
-room's footprint (exact hex-half/deck polygons for the center rooms, layout
-rects for the wings; the log prints `ear: <room>` as you cross doorways). A
-room's own bed also mutes the maze-wide music while you stand in it, the same
-rule the real per-room speakers apply. Top and street views stay ungated —
+browser page hard-gates room-scoped audio by where the avatar stands — room
+one-shots, Cuddle's floor-show bed, and room effect audio are silent unless
+you're inside that room's footprint (exact hex-half/deck polygons for the
+center rooms, layout rects for the wings; the log prints `ear: <room>` as you
+cross doorways). The normal ambience bed is global maze-wide; Cuddle is the
+exception while the floor show is active. Top and street views stay ungated —
 that's the operator ear, and their distance panners already fade things out.
 Maze-wide broadcasts (the storm's thunder) play in every mode: whichever
-speaker you're standing next to carries them. Same-day: always-on room
-background beds (`room_backgrounds`, 6 rooms) + the roaming ambient one-shot
-engine (`ambient_oneshots`: per-room pools + a maze-wide scatter pool;
-audition with `POST /api/ambient`); `sim/tools/ambient_test.py` covers both.
+speaker you're standing next to carries them. The ambient one-shot engine
+(`ambient_oneshots`: per-room pools + a maze-wide scatter pool; audition with
+`POST /api/ambient`) is covered by `sim/tools/ambient_test.py`.
 
 ## Rig geometry: Cuddle Cross floor projection (sim preview, 2026-07-18)
 

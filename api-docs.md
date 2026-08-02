@@ -37,7 +37,7 @@ Sets the current lighting theme for all rooms.
 ```bash
 curl -X POST http://localhost:5000/api/set_theme \
      -H "Content-Type: application/json" \
-     -d '{"theme_name": "NeonNightlife"}'
+     -d '{"theme_name": "DeepCanopy"}'
 ```
 
 To set the next theme:
@@ -131,44 +131,43 @@ Retrieves the list of available themes.
 curl http://localhost:5000/api/themes
 ```
 
-### 7. Start Background Music
+### 7. Start Maze Ambience
 
-Starts playing background music on all connected clients ("music mode": one
-rotating track from `music/`, broadcast maze-wide, new pick every 5 minutes).
-Rooms with their own background sound (a floor-show bed in Cuddle Cross, or a
-`room_backgrounds` room) keep playing that instead — the maze music skips
-their speaker and takes it back when the room's background stops.
+Starts the configured maze-wide ambience bed on all connected clients. The
+standing configuration is global: Cuddle Cross is the normal exception because
+the floor show owns its local bed. Long bed files play once; short loop assets
+repeat for a bounded window before the server rotates to a fresh anti-repeat
+pick.
 
-- **URL:** `/start_music`
+- **URL:** `/start_maze_ambience`
 - **Method:** `POST`
 
 #### Example
 ```bash
-curl -X POST http://localhost:5000/api/start_music
+curl -X POST http://localhost:5000/api/start_maze_ambience
 ```
 
-### 8. Stop Background Music
+### 8. Stop Maze Ambience
 
-Stops the currently playing background music on all connected clients.
-Per-room background sounds are a separate feature and keep playing.
+Stops the currently playing maze-wide ambience bed on all connected clients.
+Cuddle's floor-show bed is separate and keeps playing while the show is active.
 
-- **URL:** `/stop_music`
+- **URL:** `/stop_maze_ambience`
 - **Method:** `POST`
 
 #### Example
 ```bash
-curl -X POST http://localhost:5000/api/stop_music
+curl -X POST http://localhost:5000/api/stop_maze_ambience
 ```
 
-### 8b. Room Backgrounds (always-on per-room background sound)
+### 8b. Room Backgrounds (manual per-room background sound)
 
-A room opted in here loops one random pick from its pool on the room's
-ambience channel whenever anything can play audio there — independent of
-music mode, and muting the maze-wide music in that room while it plays.
-Persistent opt-in lives in `audio_config.json` top-level `room_backgrounds`
-(room name → effects entry); the POST here is a runtime override for
-auditioning and is not persisted. Cuddle Cross is refused (its background
-follows the floor projection).
+The normal maze ambience is global, so `audio_config.json` leaves
+`room_backgrounds` empty. This endpoint still exists for runtime auditions: a
+room opted in here plays one random bed pick on that room's ambience channel,
+overriding the maze-wide ambience on that speaker while it plays. The POST is
+not persisted. Cuddle Cross is refused because its background follows the floor
+projection.
 
 - **URL:** `/room_backgrounds`
 - **Method:** `GET` (state: `configured` + `playing`) / `POST`
@@ -344,8 +343,8 @@ once a ToF room triggers, its routine finishes normally.
 The server cancels anything still running in the room, silences lingering effect
 audio, and hands the room's fixtures back to the current theme. The resume is
 unconditional, so a room vacated long after its entry effect already finished
-still ends up on ambient. **Background music is deliberately untouched** — it
-never stopped, because effect audio mixes over it rather than replacing it.
+still ends up on ambient. Maze ambience is deliberately untouched; if a room
+bed was active, stopping it hands that speaker back to the maze ambience bed.
 
 Functionally the same work as a per-room `/stop_effect`; it exists as its own
 route because the room is reporting a fact rather than an operator issuing a
@@ -449,9 +448,11 @@ curl http://localhost:5000/api/light_models
 | POST | `/api/terminate_client` | Close a unit's WebSocket. Body: `{"ip": "<client-ip>"}` |
 | POST | `/api/update_theme_value` | Live-tune the running theme. Body: `{"control_id": "color-variation", "value": 0.5}`. Control IDs read by themes: `transition-speed`, `color-variation`, `intensity-fluctuation`, `color-wheel-speed`, `wave-effect` (unknown IDs are accepted and stored but never read) |
 | GET | `/api/light_fixtures` | Plain-text fixture listing (ROBCO terminal style) |
-| GET | `/api/audio_files_to_download` | Lists effect/music audio files clients should cache |
-| GET | `/api/audio/<filename>` | Serves an audio file (music or effect clip) |
+| GET | `/api/audio_files_to_download` | Lists configured effect/ambience audio files clients should cache |
+| GET | `/api/audio/<filename>` | Serves an audio file |
 | POST | `/api/reload_audio_config` | Re-reads `audio_config.json` without a restart, so pool edits from the audio console (`tools/audio_console.py`) go live. Returns `{"pools": {"<effect>": <file count>}}` |
+| GET | `/api/attract` | The maze's self-running look rotation: `enabled`, `dwell_s`, the dark `themes` cycle, `current_theme`, `next_change_in_s` |
+| POST | `/api/attract` | `{"on": bool, "dwell_s"?, "themes"?}` — attract survives manual `/api/set_theme` calls (they restart the dwell); after a theme stop the maze relights itself in ~3 min |
 | GET | `/api/floor_state` | What the server believes the Cuddle floor show is doing: `theme`, `active`, the `bed` pool playing, the `ambient` one-shot pool armed, `has_sounds`, and `age_s` since the renderer last reported (`null` = never) |
 | POST | `/api/next_floor_theme` | Switches the projector's floor theme through the renderer's control port (`FLOOR_CTL_URL`, default `:5002`) and recolours the room to match. Body `{"theme": "lava"}` picks one; an empty body cycles |
 | GET | `/api/photobomb/photos` | Photo booth captures, newest first (`photos_dir`, capture `backend`, and per-photo filename/size/timestamp) |
@@ -487,4 +488,4 @@ In addition to the RESTful API, the system communicates with the room units via 
 ws://<server-ip>:8765
 ```
 
-Clients send `client_connected` (with `unit_name` and `associated_rooms`) and `status_update`. (`trigger_event` is accepted but legacy/unused — nothing sends it; all triggering is the REST API.) The server sends `connection_response`, `status_update_response`, `audio_files_to_download`, `play_effect_audio`, `audio_stop`, `start_background_music`, `stop_background_music`, and `shutdown`. See `client/websocket_client.py` for the message shapes.
+Clients send `client_connected` (with `unit_name` and `associated_rooms`) and `status_update`. (`trigger_event` is accepted but legacy/unused — nothing sends it; all triggering is the REST API.) The server sends `connection_response`, `status_update_response`, `audio_files_to_download`, `play_effect_audio`, `audio_stop`, `start_maze_ambience`, `stop_maze_ambience`, room ambience commands, and `shutdown`. See `client/websocket_client.py` for the message shapes.

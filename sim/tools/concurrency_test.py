@@ -11,9 +11,9 @@ once, and checks the invariants that used to break:
      interrupt claim, no unbalanced theme pause)
   3. all-rooms effect racing single-room triggers: all succeed, server recovers
   4. explicit stop during an effect ends with audio_stop as the last command
-  5. concurrent start_music hammering leaves the server healthy, and
-     toggle_music (the orb's swipe gesture) tracks playing state across both
-     the toggle and the plain start/stop routes
+  5. concurrent start_maze_ambience hammering leaves the server healthy, and
+     toggle_maze_ambience tracks state across both the toggle and the plain
+     start/stop routes
   6. the sign's storm button fires the all-rooms strike once, and its
      server-side cooldown 429s the immediate re-press
 
@@ -83,7 +83,7 @@ class FakeUnit:
             while True:
                 msg = json.loads(await ws.recv())
                 if msg.get('type') in ('play_effect_audio', 'audio_stop',
-                                       'start_background_music', 'stop_background_music'):
+                                       'start_maze_ambience', 'stop_maze_ambience'):
                     self.messages.append((msg['type'], msg.get('room')))
 
     def start(self):
@@ -124,7 +124,7 @@ async def main():
           bool(seq) and seq[-1][0] == 'play_effect_audio', f'(last={seq[-1] if seq else None})')
 
     print("2) theme recovers the stormed room's fixture")
-    status, body = post('/api/set_theme', {'theme_name': 'NeonNightlife'})
+    status, body = post('/api/set_theme', {'theme_name': 'DeepCanopy'})
     check('set_theme accepted', status == 200, body.get('message', ''))
     await asyncio.sleep(4.0)  # let the last storm effect finish and theme resume
     frames = []
@@ -176,38 +176,38 @@ async def main():
     check('per-room stop reaches an idle room (audio may outlive lights)',
           ('audio_stop', 'Gate') in unit.messages, f'({unit.messages})')
 
-    print("5) concurrent start_music hammering")
+    print("5) concurrent start_maze_ambience hammering")
     unit.messages.clear()
-    music_reqs = [await post_bg('/api/start_music', {}) for _ in range(5)]
-    results = await asyncio.gather(*(asyncio.wait_for(r, 30) for r in music_reqs))
-    check('all start_music succeed', all(s == 200 for s, _ in results),
+    ambience_reqs = [await post_bg('/api/start_maze_ambience', {}) for _ in range(5)]
+    results = await asyncio.gather(*(asyncio.wait_for(r, 30) for r in ambience_reqs))
+    check('all start_maze_ambience succeed', all(s == 200 for s, _ in results),
           f'({[s for s, _ in results]})')
-    status, body = post('/api/stop_music', {})
-    check('stop_music succeeds', status == 200, body.get('message', ''))
+    status, body = post('/api/stop_maze_ambience', {})
+    check('stop_maze_ambience succeeds', status == 200, body.get('message', ''))
     await asyncio.sleep(0.3)
-    starts = sum(1 for t, _ in unit.messages if t == 'start_background_music')
-    stops = sum(1 for t, _ in unit.messages if t == 'stop_background_music')
-    check('music commands arrived in order (starts then one stop)',
-          starts == 5 and stops == 1 and unit.messages[-1][0] == 'stop_background_music',
+    starts = sum(1 for t, _ in unit.messages if t == 'start_maze_ambience')
+    stops = sum(1 for t, _ in unit.messages if t == 'stop_maze_ambience')
+    check('maze ambience commands arrived in order (starts then one stop)',
+          starts == 5 and stops == 1 and unit.messages[-1][0] == 'stop_maze_ambience',
           f'({starts} starts, {stops} stops)')
 
-    print("5b) toggle_music (the orb's swipe) tracks state across both routes")
+    print("5b) toggle_maze_ambience tracks state across both routes")
     unit.messages.clear()
-    status, body = post('/api/toggle_music', {})
-    check('toggle from idle starts music',
+    status, body = post('/api/toggle_maze_ambience', {})
+    check('toggle from idle starts maze ambience',
           status == 200 and 'started' in body.get('message', ''), body.get('message', ''))
-    status, body = post('/api/toggle_music', {})
+    status, body = post('/api/toggle_maze_ambience', {})
     check('toggle again stops it',
           status == 200 and 'stopped' in body.get('message', ''), body.get('message', ''))
-    status, _ = post('/api/start_music', {})
-    status, body = post('/api/toggle_music', {})
-    check('toggle sees state set by plain start_music',
+    status, _ = post('/api/start_maze_ambience', {})
+    status, body = post('/api/toggle_maze_ambience', {})
+    check('toggle sees state set by plain start_maze_ambience',
           status == 200 and 'stopped' in body.get('message', ''), body.get('message', ''))
     await asyncio.sleep(0.3)
     kinds = [t for t, _ in unit.messages]
     check('unit heard start,stop,start,stop',
-          kinds == ['start_background_music', 'stop_background_music',
-                    'start_background_music', 'stop_background_music'], f'({kinds})')
+          kinds == ['start_maze_ambience', 'stop_maze_ambience',
+                    'start_maze_ambience', 'stop_maze_ambience'], f'({kinds})')
 
     print("6) no stuck frame after an effect that ends on a bright hold (no theme)")
     post('/api/set_theme', {'theme_name': 'notheme'})

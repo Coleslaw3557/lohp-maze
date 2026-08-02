@@ -15,12 +15,12 @@ class RemoteHostManager:
         self.audio_manager = audio_manager
         self.node_audio = node_audio  # NodeAudioManager: ESP32 node boxes with speakers
         self._rng = rng or random.SystemRandom()
-        self.background_music_task = None
-        self.music_lock = asyncio.Lock()  # serializes background music start/stop
+        self.maze_ambience_lock = asyncio.Lock()
         # room -> ambience pool that should be looping there right now, asked
         # of each registered provider (the floor show, the room-background
         # runner) whenever a client registers: a reloaded sim tab or a
         # rebooted unit rejoins live beds instead of waiting for a restart.
+        self.maze_bed_providers = []
         self.bed_providers = []
         # called with the client's room list when a client disconnects (the
         # room-background runner un-marks beds that just lost their player)
@@ -33,7 +33,26 @@ class RemoteHostManager:
             "type": "audio_files_to_download",
             "data": self.audio_manager.get_audio_files_to_download(),
         })
+        await self._resend_maze_beds(websocket)
         await self._resend_beds(websocket, rooms)
+
+    async def _resend_maze_beds(self, websocket):
+        """Hand a just-registered client the maze-wide bed if one is live."""
+        for provider in self.maze_bed_providers:
+            provided = provider()
+            if not provided:
+                continue
+            if isinstance(provided, tuple):
+                effect_name, file_name = provided
+                data = self._ambience_payload(effect_name, {'file': file_name})
+            else:
+                effect_name = provided
+                data = self._ambience_payload(effect_name)
+            if data is None:
+                continue
+            if await self._send(websocket, {"type": "start_maze_ambience", "data": data}):
+                logger.info(f"Maze bed '{effect_name}' re-sent to the new client")
+            break
 
     async def _resend_beds(self, websocket, rooms):
         """Hand a just-registered client every bed its rooms should already be
@@ -41,10 +60,15 @@ class RemoteHostManager:
         must not have it restarted under them."""
         for room in rooms:
             for provider in self.bed_providers:
-                effect_name = provider(room)
-                if not effect_name:
+                provided = provider(room)
+                if not provided:
                     continue
-                data = self._ambience_payload(effect_name)
+                if isinstance(provided, tuple):
+                    effect_name, file_name = provided
+                    data = self._ambience_payload(effect_name, {'file': file_name})
+                else:
+                    effect_name = provided
+                    data = self._ambience_payload(effect_name)
                 if data is None:
                     continue
                 if await self._send(websocket, {"type": "play_room_ambience",
@@ -131,7 +155,7 @@ class RemoteHostManager:
         node_handled = bool(self.node_audio) and self.node_audio.handle_command(room, command, data)
         if room is None:
             results = [await self._send(ws, message) for ws in list(self.clients)]
-            return all(results)
+            return bool(node_handled) or (bool(results) and all(results))
         message["room"] = room
         sockets = self.get_websockets_by_room(room, warn_if_empty=not node_handled)
         if not sockets:
@@ -182,19 +206,38 @@ class RemoteHostManager:
         if volume is None:  # an explicit 0 must stay 0, so no `or` fallback
             volume = self.audio_manager.get_audio_config(effect_name).get(
                 'volume', self.audio_manager.audio_config.get('default_volume', 0.7))
+        playback = self.audio_manager.ambience_playback(effect_name, audio_file, audio_params)
         return {
             'effect_name': effect_name,
             'file_name': audio_file,
             'volume': volume,
-            'loop': audio_params.get('loop', True),
+            **playback,
         }
+
+    async def start_maze_ambience(self, effect_name, audio_params=None):
+        """Start the maze-wide ambience bed on its own channel.
+
+        Room-local beds have priority in clients/nodes; effect audio and
+        ambient one-shots mix over the bed.
+        """
+        async with self.maze_ambience_lock:
+            data = self._ambience_payload(effect_name, audio_params)
+            if data is None:
+                logger.info(f"No maze ambience audio configured for {effect_name}")
+                return None
+            ok = await self.send_audio_command(None, 'start_maze_ambience', data)
+            return data if ok else None
+
+    async def stop_maze_ambience(self):
+        async with self.maze_ambience_lock:
+            return await self.send_audio_command(None, 'stop_maze_ambience', {})
 
     async def start_room_ambience(self, room, effect_name, audio_params=None):
         """Start a looping bed in one room, on a channel of its own.
 
         An ambience bed is NOT owned by an effect: a room-scoped `audio_stop`
         (which every effect takeover issues) leaves it running, the same way
-        background music is left alone, so accent effects mix over the bed
+        maze ambience is left alone, so accent effects mix over the bed
         instead of replacing it. Only `stop_room_ambience` ends it.
         Returns the file that was started, or None when nothing was.
         """
@@ -203,67 +246,7 @@ class RemoteHostManager:
             logger.info(f"No ambience audio configured for {effect_name}")
             return None
         ok = await self.send_audio_command(room, 'play_room_ambience', data)
-        return data['file_name'] if ok else None
+        return data if ok else None
 
     async def stop_room_ambience(self, room):
         return await self.send_audio_command(room, 'stop_room_ambience', {})
-
-    # --- Background music ---
-
-    def get_random_music_file(self):
-        music_files = self.audio_manager.get_background_music_files()
-        return self._rng.choice(music_files) if music_files else None
-
-    async def start_background_music(self):
-        async with self.music_lock:
-            return await self._start_background_music_locked()
-
-    async def _start_background_music_locked(self):
-        """Caller must hold music_lock."""
-        await self._cancel_music_rotation()
-        music_file = self.get_random_music_file()
-        if not music_file:
-            logger.error("No music files available for background music")
-            return False
-        success = await self.send_audio_command(None, 'start_background_music',
-                                                {"music_file": music_file})
-        if success:
-            self.background_music_task = asyncio.create_task(self._rotate_background_music())
-        return success
-
-    async def _rotate_background_music(self):
-        while True:
-            await asyncio.sleep(300)  # New track every 5 minutes
-            music_file = self.get_random_music_file()
-            if not music_file:
-                return
-            await self.send_audio_command(None, 'start_background_music', {"music_file": music_file})
-
-    async def _cancel_music_rotation(self):
-        """Caller must hold music_lock."""
-        task, self.background_music_task = self.background_music_task, None
-        if task is None:
-            return
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error(f"Background music rotation ended with error: {e}")
-
-    async def stop_background_music(self):
-        async with self.music_lock:
-            await self._cancel_music_rotation()
-            return await self.send_audio_command(None, 'stop_background_music', {})
-
-    async def toggle_background_music(self):
-        """One-gesture start/stop (the orb's swipe). The playing test and the
-        resulting start/stop happen under one lock hold so a racing web-UI
-        start/stop can't make the toggle double-fire. Returns (success, now_playing)."""
-        async with self.music_lock:
-            if self.background_music_task is not None:
-                await self._cancel_music_rotation()
-                return await self.send_audio_command(None, 'stop_background_music', {}), False
-            success = await self._start_background_music_locked()
-            return success, success

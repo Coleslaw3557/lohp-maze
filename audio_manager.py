@@ -2,18 +2,27 @@ import json
 import logging
 import os
 import random
+import subprocess
 from collections import deque
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_AMBIENCE_PLAYBACK = {
+    "loop_under_s": 45.0,
+    "loop_for_s": 180.0,
+    "once_pad_s": 2.0,
+    "unknown_loop": True,
+}
+
 
 class AudioManager:
-    def __init__(self, config_file='audio_config.json', music_dir='music', rng=None):
+    def __init__(self, config_file='audio_config.json', rng=None):
         self.config_file = config_file
-        self.music_dir = music_dir
+        self.base_dir = os.path.dirname(os.path.abspath(config_file)) or os.getcwd()
         self._rng = rng or random.SystemRandom()
         self.audio_config = self.load_config()
         self._recent = {}  # effect_name -> deque of recently played files (anti-repeat)
+        self._duration_cache = {}
 
     def load_config(self):
         try:
@@ -26,20 +35,13 @@ class AudioManager:
             return {"effects": {}, "default_volume": 0.7}
 
     def get_audio_files_to_download(self):
-        """All audio files (effects and music) a client should cache locally."""
+        """All configured effect/ambience files a client should cache locally."""
         audio_files = []
         for config in self.audio_config['effects'].values():
             audio_files.extend(config.get('audio_files', []))
         return {
             'effects': list(set(audio_files)),
-            'music': self.get_background_music_files()
         }
-
-    def get_background_music_files(self):
-        if os.path.exists(self.music_dir):
-            return [f for f in os.listdir(self.music_dir) if f.endswith('.mp3')]
-        logger.warning(f"Music directory not found: {self.music_dir}")
-        return []
 
     def get_audio_config(self, effect_name):
         config = self.audio_config['effects'].get(effect_name, {})
@@ -85,3 +87,76 @@ class AudioManager:
         if history_len:
             recent.append(picked)
         return picked
+
+    def _audio_path(self, file_name):
+        candidates = [
+            os.path.join(self.base_dir, 'audio_files', file_name),
+            os.path.join(self.base_dir, file_name),
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+        return None
+
+    def get_audio_duration_s(self, file_name):
+        """Duration for a configured audio asset, or None when it cannot be read."""
+        if file_name in self._duration_cache:
+            return self._duration_cache[file_name]
+        path = self._audio_path(file_name)
+        if not path:
+            self._duration_cache[file_name] = None
+            return None
+        try:
+            result = subprocess.run(
+                [
+                    'ffprobe', '-v', 'error',
+                    '-show_entries', 'format=duration',
+                    '-of', 'default=nokey=1:noprint_wrappers=1',
+                    path,
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
+            duration = float(result.stdout.strip())
+        except (OSError, subprocess.SubprocessError, ValueError) as e:
+            logger.warning(f"Could not read audio duration for {file_name}: {e}")
+            duration = None
+        self._duration_cache[file_name] = duration
+        return duration
+
+    def ambience_playback(self, effect_name, file_name, audio_params=None):
+        """Loop/rotation policy for ambience beds.
+
+        Short loopable assets repeat for a bounded window; long tracks play once
+        and the server rotates the bed after the decoded duration.
+        """
+        audio_params = audio_params or {}
+        config = self.get_audio_config(effect_name)
+        policy = dict(DEFAULT_AMBIENCE_PLAYBACK)
+        policy.update(self.audio_config.get('ambience_playback') or {})
+        policy.update(config.get('ambience_playback') or {})
+        duration = self.get_audio_duration_s(file_name)
+
+        explicit_loop = audio_params.get('loop')
+        if explicit_loop is None:
+            if duration is None:
+                loop = bool(policy.get('unknown_loop', True))
+            else:
+                loop = duration <= float(policy.get('loop_under_s', 45.0))
+        else:
+            loop = bool(explicit_loop)
+
+        if loop:
+            play_for = float(policy.get('loop_for_s', 180.0))
+        elif duration is not None:
+            play_for = duration + float(policy.get('once_pad_s', 2.0))
+        else:
+            play_for = float(policy.get('unknown_once_s', policy.get('loop_for_s', 180.0)))
+
+        return {
+            'loop': loop,
+            'duration_s': round(duration, 3) if duration is not None else None,
+            'play_for_s': max(1.0, round(play_for, 3)),
+        }

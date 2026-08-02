@@ -73,7 +73,7 @@ async def main():
     check('fixture @1 responds', len(ch1_values) > 1, f'({len(ch1_values)} distinct values on ch1)')
 
     print("3) theme engine -> continuous frames")
-    status, body = post('/api/set_theme', {'theme_name': 'NeonNightlife'})
+    status, body = post('/api/set_theme', {'theme_name': 'DeepCanopy'})
     check('set_theme accepted', status == 200, body.get('message', ''))
     frames = []
     await collect_frames(2, frames)
