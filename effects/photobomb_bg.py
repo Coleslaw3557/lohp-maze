@@ -28,10 +28,10 @@ def create_photobomb_bg_effect():
     steps = [
         _step(0.0, 0, *CYAN),
         _step(1.0, 90, *CYAN),
-        _step(3.5, 135, *LAVENDER, w=70),    # glint
+        _step(3.5, 135, *LAVENDER, w=40),    # glint
         _step(3.62, 90, *LAVENDER),
         _step(6.0, 90, *PINK),
-        _step(8.5, 135, *MINT, w=70),        # glint
+        _step(8.5, 135, *MINT, w=40),        # glint
         _step(8.62, 90, *MINT),
         _step(11.0, 90, *CREAM),
         _step(12.4, 120, *GLINT, w=50),      # glint

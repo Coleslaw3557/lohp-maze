@@ -5,7 +5,7 @@
 // wedge for press/charge feedback.
 //
 // Wedge order (clockwise from the top), glyphs carved as gold inlay:
-//   0 LIGHTS  sun          1 MUSIC  pan flute   2 STORM  lightning bolt
+//   0 LIGHTS  sun          1 AMBIENCE pan flute 2 STORM  lightning bolt
 //   3 FLOOR   serpent coil 4 CALM   closed eye
 // Hub medallion = stepped pyramid (tap = close). orb.ino owns the action table.
 #pragma once

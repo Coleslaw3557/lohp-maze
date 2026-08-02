@@ -57,7 +57,7 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
 - `packages/hardware_s3.yaml` — **fleet standard**: XIAO ESP32-S3 + PSRAM + WiFi
   + OTA (per-room audio revisit, `wiring-guides/room-node-audio-plan.md`).
 - `packages/audio_s3.yaml` — the speaker chain (I2S → PCM5102A → Pebble):
-  mixer + dual media/announcement pipelines, music ducks 12dB under effect cues.
+  mixer + dual media/announcement pipelines, ambience ducks 12dB under effect cues.
 - `make_node_audio.py` — generates each node's firmware cue assets from
   `node_audio_config.json` + `audio_config.json`: `audio/cues/*.wav` (22.05kHz
   mono, per-effect volume baked in) + `audio/cues-<node>.yaml` (the
@@ -96,10 +96,10 @@ Bring-up order (full checklist: `wiring-guides/room-node-audio-plan.md`):
 3. Drive it the real way: press the button (fires the room effect; the server
    streams the cue to the node as an announcement URL
    `/api/audio/cues/<cue_id>.wav`), or `POST /api/run_effect`;
-   `POST /api/start_music` for the streamed bed — the server's
+   `POST /api/start_maze_ambience` for the streamed bed — the server's
    `node_audio_manager.py` handles both, additively beside the WS/sim path.
 4. Bench checks that gate the 15× buy: cue latency vs the VLC feel, 10× rapid
-   `play_cue` retrigger (ESPHome #15692 regression), 30min music+cue soak on
+   `play_cue` retrigger (ESPHome #15692 regression), 30min ambience+cue soak on
    marginal RF, overnight power-bank hold, radar baseline with audio playing.
 
 ## Hardware-day caveats (learned from the sim)

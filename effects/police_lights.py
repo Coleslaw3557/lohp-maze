@@ -39,7 +39,7 @@ def create_police_lights_effect():
     # Pursuit: rotation doubles speed; every 6th swap a white searchlight pass
     swap = 0
     while t < 11.0:
-        w = 130 if swap % 6 == 0 else 0
+        w = 0  # searchlight pass de-whited (palette rule 2026-08-01)
         steps.append(_step(t, 255, *color, w=w))
         color = BLUE if color == RED else RED
         swap += 1
@@ -50,7 +50,7 @@ def create_police_lights_effect():
         tt = round(11.05 + i * 0.22, 2)
         c = RED if i % 2 == 0 else BLUE
         steps.append(_step(round(tt - 0.04, 2), 40, *c))
-        steps.append(_step(tt, 255, *c, w=200))
+        steps.append(_step(tt, 255, *c))
 
     # Hard stop, one red afterglow breath, out
     steps.append(_step(13.0, 0, 0, 0, 0))

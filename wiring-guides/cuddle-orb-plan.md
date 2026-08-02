@@ -119,7 +119,7 @@ and "speaks" through each POST, like every orb action.
 | Wedge (glyph)          | HTTP call                                                      | Effect            |
 |------------------------|---------------------------------------------------------------|-------------------|
 | **LIGHTS** (sun, top)  | `POST /api/set_theme` `{"next_theme":true}`                    | Next lighting theme |
-| **MUSIC** (pan pipes)  | `POST /api/toggle_music` `{}` — server-side toggle under `music_lock`, orb stays stateless | Music on / off |
+| **AMBIENCE** (pan pipes) | `POST /api/toggle_maze_ambience` `{}` | Maze ambience on / off |
 | **STORM** (bolt) — hold 1 s to charge | `POST /api/run_effect_all_rooms` `{"effect_name":"LightningStorm"}` | Storm all rooms |
 | **FLOOR** (serpent coil) | `POST /api/next_floor_theme` `{}` (or `{"theme":"<name>"}`) — main.py relays to the floor renderer's `:5002` theme control (`POST /theme/next`; the sim serves the identical protocol on the bench, `sim_ui._start_floor_ctl`) | Floor projector theme (lava/jungle/temple) |
 | **CALM** (closed eye)  | `POST /api/stop_effect` `{}` — the menu finally gave calm a home (no dock/charge signal exists on this hardware for the original dock-to-calm idea) | Stop effects everywhere |

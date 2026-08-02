@@ -3,7 +3,7 @@
 # speaker chain (PCM5102A -> Pebble) + S3 platform. This is the node
 # node_audio_config.json maps "Monkey Room" to, so the dev server's real
 # audio commands land here: trigger MonkeyBusiness and the cue plays on the
-# bench speaker while music (POST /api/start_music) streams underneath.
+# bench speaker while maze ambience (POST /api/start_maze_ambience) streams underneath.
 #
 #   server-side prep:  ./make_node_audio.py    (generates audio_files/cues/ WAVs)
 #   flash:            .venv/bin/esphome run bench-xiao-s3.yaml --device /dev/ttyACM0

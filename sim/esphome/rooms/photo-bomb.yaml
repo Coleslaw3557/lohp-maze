@@ -1,5 +1,5 @@
 # Photo Bomb Room sensor node — trigger map from triggers.json
-# Tripwire starts the room's music bed; the shutter BUTTON starts the camera
+# Tripwire starts the room's ambience bed; the shutter BUTTON starts the camera
 # sequence (3s pose countdown -> flash -> the Pi's USB webcam takes the photo).
 # The server owns the game rules (photobooth.py): 5 shots per visitor, then
 # presses fail until the room turns over.

@@ -21,7 +21,7 @@
 // stone action menu (menu_olmec.h) in place of the old blind-gesture
 // vocabulary. Wedges (gold glyphs, clockwise from the top):
 //   LIGHTS  sun         -> POST /api/set_theme {"next_theme": true}
-//   MUSIC   pan pipes   -> POST /api/toggle_music {}
+//   AMBIENCE pan pipes  -> POST /api/toggle_maze_ambience {}
 //   STORM   bolt        -> POST /api/run_effect_all_rooms LightningStorm
 //                          (hold the wedge 1 s to charge — no accidental storms)
 //   FLOOR   serpent coil-> POST /api/next_floor_theme {} (lava/jungle/temple)
@@ -199,7 +199,7 @@ struct MenuAction {
 };
 static const MenuAction MENU_ACTIONS[olmec::MENU_WEDGES] = {
     {"LIGHTS -> next theme", "/api/set_theme", "{\"next_theme\":true}", 0},
-    {"MUSIC -> toggle", "/api/toggle_music", "{}", 0},
+    {"AMBIENCE -> toggle", "/api/toggle_maze_ambience", "{}", 0},
     {"STORM -> all rooms", "/api/run_effect_all_rooms", "{\"effect_name\":\"LightningStorm\"}", 1000},
     {"FLOOR -> next theme", "/api/next_floor_theme", "{}", 0},
     {"CALM -> stop effects", "/api/stop_effect", "{}", 0},

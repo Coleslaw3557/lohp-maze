@@ -21,9 +21,9 @@ Everything below is either one-sided (nothing to align across the gap) or modula
 
 **Node:** Seeed XIAO ESP32-S3 ($7.49) — the fleet standard since the 2026-07-18 audio revisit
 (`wiring-guides/room-node-audio-plan.md`): same footprint and external antenna as the C3, plus
-8MB PSRAM + 8MB flash, which the per-room speaker chain requires (dual media+announcement audio
-pipeline — music bed and effect cues mixed on-device). C3s already on hand stay as bench units
-and spares; a C3 pressed into audio duty can only do effect cues OR music, never both at once.
+	8MB PSRAM + 8MB flash, which the per-room speaker chain requires (dual media+announcement audio
+	pipeline — ambience bed and effect cues mixed on-device). C3s already on hand stay as bench units
+	and spares; a C3 pressed into audio duty can only do effect cues OR an ambience bed, never both at once.
 Pin note: wiring is keyed to XIAO Dx positions; GPIO numbers differ per board (D1 button = GPIO2
 on S3 vs GPIO3 on C3; I2S D8/D9/D10 = GPIO7/8/9 on S3).
 
@@ -186,7 +186,7 @@ AliExpress prices swing 2–3× with sales; Amazon multi-packs are the stable re
 ## Audio: consolidate the three Pis to one (SUPERSEDED 2026-07-18)
 
 > Superseded by **per-room audio on the nodes**: XIAO S3 → PCM5102A line-out →
-> Creative Pebble at every box, effect cues compiled into node firmware, music
+	> Creative Pebble at every box, effect cues compiled into node firmware, ambience
 > streamed from the server's `/api/audio/` — plan in
 > `wiring-guides/room-node-audio-plan.md`, server downlink in
 > `node_audio_manager.py` + `node_audio_config.json`, firmware in

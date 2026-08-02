@@ -9,7 +9,7 @@ Covers:
   3. PhotoBomb-Shot: countdown pops at 0.75/1.5/2.25s, white FLASH at 3s on the
      room's fixtures, a photo written at the shutter moment, and the victory
      cue (CorrectAnswer chime) delivered after the capture
-  4. entry (PhotoBomb-BG) plays the room's music bed and resets the shot budget
+  4. entry (PhotoBomb-BG) plays the room's ambience bed and resets the shot budget
   5. booth budget: 5 shots per visitor — the 6th press runs WrongAnswer (failure
      cue) instead of a countdown and takes no photo; room_vacated resets
   6. button hammering: a re-trigger mid-countdown supersedes the run and
@@ -195,14 +195,14 @@ async def main():
               f'({len(data)} bytes, backend={after["backend"]})')
     listener.cancel()
 
-    print("4) entry: music bed plays and the budget resets")
+    print("4) entry: ambience bed plays and the budget resets")
     booth_reset()
     audio_hits = []
     listener = asyncio.create_task(audio_listener(SHOT_ROOM, audio_hits))
     await asyncio.sleep(1.0)
     bg = await post_bg('/api/run_effect', {'room': SHOT_ROOM, 'effect_name': 'PhotoBomb-BG'})
     await asyncio.sleep(1.5)
-    check('entry music delivered', len(audio_hits) >= 1,
+    check('entry ambience delivered', len(audio_hits) >= 1,
           f"({[h['data']['file_name'] for h in audio_hits]})")
     listener.cancel()
     post('/api/stop_effect', {'room': SHOT_ROOM})

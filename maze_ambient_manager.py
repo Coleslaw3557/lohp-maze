@@ -13,10 +13,9 @@ anti-repeat pool logic (play_effect_audio):
     the Gate, a wolf somewhere past Porto. The next firing rolls a new room.
 
 This is the texture layer between effects: quieter than entry cues, mixing
-over room background beds and maze-wide music alike. Music mode on or off
-never touches these timers, and stop-alls don't reach in here — each shot
-is one-and-done, so a maze-wide stop only silences what is already in the
-air.
+over room beds and the maze-wide ambience bed alike. Stop-alls don't reach in
+here — each shot is one-and-done, so a maze-wide stop only silences what is
+already in the air.
 
 The floor-show room (Cuddle Cross) is excluded from both flavours: its
 ambience follows the projection theme (floor_show_manager.py THEME_SHOWS),

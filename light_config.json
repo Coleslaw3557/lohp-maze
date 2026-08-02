@@ -43,30 +43,30 @@
         "Gate": [{"model": "Par Light - Model ZQ01424", "start_address": 17}],
         "Guy Line Climb": [
             {"model": "Par Light - Model ZQ01424", "start_address": 25},
-            {"model": "Par Light - Model ZQ01424", "start_address": 33}
+            {"model": "Par Light - Model ZQ01424", "start_address": 33, "role": "accent"}
         ],
         "Sparkle Pony Room": [{"model": "Par Light - Model ZQ01424", "start_address": 41}],
         "Porto Room": [{"model": "Par Light - Model ZQ01424", "start_address": 49}],
         "Cuddle Cross": [
             {"model": "Par Light - Model ZQ01424", "start_address": 57},
-            {"model": "Par Light - Model ZQ01424", "start_address": 65}
+            {"model": "Par Light - Model ZQ01424", "start_address": 65, "role": "accent"}
         ],
         "Exit": [{"model": "Par Light - Model ZQ01424", "start_address": 73}],
         "Photo Bomb Room": [
             {"model": "Par Light - Model ZQ01424", "start_address": 81},
-            {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 89}
+            {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 89, "role": "accent"}
         ],
         "Deep Playa Handshake": [{"model": "Par Light - Model ZQ01424", "start_address": 97}],
         "No Friends Monday": [{"model": "Par Light - Model ZQ01424", "start_address": 105}],
         "Temple Room": [{"model": "Par Light - Model ZQ01424", "start_address": 113}],
         "Monkey Room": [
             {"model": "Par Light - Model ZQ01424", "start_address": 121},
-            {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 129}
+            {"model": "U'King LED Par Light - Model ZQ07010/ZQ07011", "start_address": 129, "role": "accent"}
         ],
         "Bike Lock Room": [{"model": "Par Light - Model ZQ01424", "start_address": 137}],
         "Vertical Moop March": [
             {"model": "Par Light - Model ZQ01424", "start_address": 145},
-            {"model": "Par Light - Model ZQ01424", "start_address": 153}
+            {"model": "Par Light - Model ZQ01424", "start_address": 153, "role": "accent"}
         ],
         "Camp Sign": [
             {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 161},

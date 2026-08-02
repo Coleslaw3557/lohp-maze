@@ -6,7 +6,7 @@ compiled into node firmware. This converts every effect mp3 referenced by
 audio_config.json to audio_files/cues/<cue_id>.wav — 22.05kHz mono s16 (the
 announcement-pipeline format in packages/audio_s3.yaml) with the effect's
 per-effect VOLUME BAKED IN, since the node's media_player volume is shared
-with the music bed. node_audio_manager.py streams them to nodes as
+with the ambience bed. node_audio_manager.py streams them to nodes as
 announcement URLs: GET /api/audio/cues/<cue_id>.wav.
 
 Rerun after editing audio_config.json or the mp3s (ffmpeg required):

@@ -1,0 +1,28 @@
+# Lava audio generation prompts (manual, 2026-08-01). One block = one
+# generation. Targets the audio_config.json pools: Cuddle-Lava-Bed / -Hit /
+# -Breach / -Ambient (playback volumes 0.45 / 0.7 / 0.8 / 0.55 are set
+# server-side - deliver at full, matched level). WAV 44.1 kHz, one-shots
+# mono, bed stereo or mono, peaks <= -3 dBFS, every one-shot starts and ends
+# in silence. Tim's 10-second rule: anything over 10 s is a bed alternate,
+# never a one-shot.
+
+## BED (Cuddle-Lava-Bed - loops the whole show on the ambience channel)
+Volcanic lava field ambience bed, 60 seconds, built as a seamless loop: continuous deep sub-bass rumble of a magma lake, slow thick viscous molten-rock movement, soft gas vents, occasional distant muffled underground booms. Constant energy and constant loudness from the first second to the last - no build, no swell, no fade, no climax; the final second must be indistinguishable from the first so the loop point is inaudible. Texture only: no melody, no rhythm, no instruments, no wind, no crackling campfire, no voices.
+
+## HIT 1 of 3 (Cuddle-Lava-Hit - stone sinking/rising, bubble bursting)
+Single one-shot, about 2.5 seconds: a quick molten lava spit - a sharp wet burst of magma with a heavy liquid splash back into the melt and a short sizzle tail. Fast attack, natural decay to silence. No music, no voices.
+
+## HIT 2 of 3
+Single one-shot, about 3 seconds: a thick heavy lava gurgle - viscous molten rock folding and glorping over itself once, deep and wet, decaying to silence. No music, no voices.
+
+## HIT 3 of 3
+Single one-shot, about 2.5 seconds: a large lava bubble swelling and bursting - a deep hollow bloop, a splatter of molten droplets, a brief hiss, decaying to silence. No music, no voices.
+
+## BREACH 1 of 2 (Cuddle-Lava-Breach - the head breaking out of the crust)
+Single one-shot, about 2 seconds: something huge bursting up through the crust of a lava lake - crust cracking, a heavy molten surge and outward splash, a sub-bass impact, quick settle to silence. Fast attack. No roar, no animal voice, no music.
+
+## BREACH 2 of 2 (the underlava approach)
+Single one-shot, about 5 seconds: a massive body moving just under the surface of molten lava - a long rising sub-heavy swell of displaced melt with a wet churning crest, then settling back down to silence. No roar, no animal voice, no music.
+
+## AMBIENT (Cuddle-Lava-Ambient - random one-shot every 20-50 s; make 2-3)
+Single one-shot, 2 to 3 seconds: one distant deep volcanic rumble, sub-heavy, dry and isolated, starting and ending in silence. No music, no voices.

@@ -39,9 +39,9 @@ their packs: `Entrance`, `DeepPlaya-BG`/`DeepPlaya-Hit`, `NoFriendsMonday`
 
 ## Pack layout (upstream convention)
 
-- `clips/` — individual ingredients (dialogue, music, sound effects) for remixing or direct trigger playback.
+- `clips/` — individual ingredients (dialogue, soundscapes, sound effects) for remixing or direct trigger playback.
 - `mixes/` — complete sequences that play as one event.
-- `ambience/`, `background/`, `music/` — room beds to loop or rotate.
+- `ambience/`, `background/` — room beds to loop or rotate.
 - `sensor_responses/`, `photo_triggers/`, `entry/`, … — finished files assigned to particular sensors.
 - `README.md` — playback concept and per-file description. `SOURCES.md` — source and rights documentation.
 - `TRIGGER_MAP.csv` — suggested sensor mapping, selection weight, cooldown (where present).
@@ -73,8 +73,8 @@ survive the delivery chain (all landed 2026-07-29):
 
 **Basenames must stay unique across all rooms and the flat files** — the
 fallback route, the flat client cache, and cue ids all depend on it (verified
-2026-07-29). Also `main.py`: a basename that also exists in `music/` is served
-from `music/` instead — never reuse a music filename.
+2026-07-29). Bare-name compatibility requests resolve to the first matching
+file under `audio_files/`.
 
 Selection (`audio_manager.get_random_audio_file`):
 

@@ -1,6 +1,6 @@
 """Photo Bomb room game state.
 
-The room is a fast-paced photo booth: entering starts the music bed
+The room is a fast-paced photo booth: entering starts the room bed
 (PhotoBomb-BG), and each shutter-button press runs the camera countdown —
 one "shot". A visitor gets MAX_SHOTS shots; presses past the budget are the
 cue to leave, so main.py swaps them to the failure effect instead of a

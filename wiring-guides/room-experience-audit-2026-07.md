@@ -66,7 +66,7 @@ Legend: **DONE** = themed audio pack wired + lights redesigned to it.
   change first — the server relays `/theme/next` to the projection Pi
   without tracking which theme is active, so theme-matched audio has nothing
   to key off yet.
-- Orb = the room's control surface (music toggle, storm, floor theme, calm).
+- Orb = the room's control surface (ambience toggle, storm, floor theme, calm).
 
 ### 8. Photo Bomb Room — upper. Par @81 + U'King spot @89 (1 of only 2 spots in the maze)
 - Laser → `PhotoBomb-Spot`: **DONE** — 5 paparazzi reaction sequences; magenta

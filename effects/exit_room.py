@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-GOLD = (255, 180, 40)
+GOLD = (255, 110, 20)
 TEAL = (0, 190, 170)
 EMBER = (255, 120, 20)
 
@@ -32,7 +32,7 @@ def create_exit_effect():
         _step(0.7, 45, *GOLD),
         _step(1.0, 160, *GOLD),
         _step(1.25, 60, *GOLD),
-        _step(1.5, 255, *GOLD, w=110),
+        _step(1.5, 255, *GOLD, w=0),
         _step(1.9, 190, *GOLD),
         # Teal accents against the gold while the line plays
         _step(2.6, 170, *TEAL),

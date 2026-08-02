@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 EMBER = (255, 120, 20)
-GOLD = (255, 180, 40)
+GOLD = (255, 95, 10)
 TEAL = (0, 190, 170)
 
 
@@ -34,7 +34,7 @@ def create_entrance_effect():
         # Build and reveal
         _step(3.5, 150, *GOLD),
         _step(4.0, 40, *GOLD),
-        _step(4.1, 230, *GOLD, w=60),
+        _step(4.1, 230, *GOLD, w=0),
         _step(4.35, 180, *GOLD),
         # Teal shimmer accents against the gold
         _step(5.0, 160, *TEAL),

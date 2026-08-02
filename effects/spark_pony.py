@@ -6,8 +6,8 @@ ORANGE = (255, 120, 20)
 TEAL = (0, 190, 170)
 PINK = (255, 40, 180)
 VIOLET = (190, 40, 255)
-GOLD = (255, 200, 40)
-WHITE = (255, 255, 255)
+GOLD = (255, 80, 220)
+WHITE = (255, 190, 235)  # pale pink shimmer, not true white (palette rule)
 
 
 def _step(t, total, r, g, b, w=0):
@@ -45,15 +45,15 @@ def create_spark_pony_effect():
     for i in range(12):
         t = round(8.0 + i * 0.4, 2)
         c = colors[i % 4]
-        w = 180 if c == WHITE else 30
+        w = 30
         steps.append(_step(round(t - 0.05, 2), 60, *PINK))
         steps.append(_step(t, 240, *c, w=w))
         steps.append(_step(round(t + 0.15, 2), 120, *PINK))
 
     # Whinny bounce, then out
-    steps.append(_step(12.9, 200, *GOLD, w=60))
+    steps.append(_step(12.9, 200, *GOLD, w=0))
     steps.append(_step(13.15, 90, *GOLD))
-    steps.append(_step(13.4, 230, *GOLD, w=80))
+    steps.append(_step(13.4, 230, *GOLD, w=0))
     steps.append(_step(13.7, 110, *GOLD))
     steps.append(_step(15.0, 0, 0, 0, 0))
 

@@ -7,7 +7,7 @@ the system runs on exactly one Pi (the server). This stack is kept working as th
 audio path**: `config-single-pi.json` on the server box (or any Linux host) with USB sound
 cards, should the S3 audio nodes disappoint.
 
-What it does: plays effect audio and background music on command from the central server
+What it does: plays effect audio and ambience beds on command from the central server
 (WebSocket :8765), and — in the historical unit configs — fired sensor triggers at the
 server's REST API (laser tripwires, ADS1115 buttons, piezo knock sensors).
 
@@ -16,11 +16,11 @@ server's REST API (laser tripwires, ADS1115 buttons, piezo knock sensors).
 - `main.py` — wires everything up, connects to the server, exits on connection loss
   (docker's `restart: always` is the reconnect strategy)
 - `websocket_client.py` — handles server messages: `play_effect_audio`, `audio_stop`,
-  `start/stop_background_music`, `audio_files_to_download`, `shutdown`
+  `start/stop_maze_ambience`, room ambience, `audio_files_to_download`, `shutdown`
 - `audio_manager.py` — downloads/caches audio from the server, plays it with VLC on one or
   more output zones
 - `trigger_manager.py` — polls sensors (lasers 10ms, ADC 50ms) and POSTs each trigger's
-  configured action to the server's REST API (`run_effect`, `set_theme`, music controls, …).
+  configured action to the server's REST API (`run_effect`, `set_theme`, ambience controls, …).
   Only loaded when the config defines triggers, so audio-only units run without the Pi GPIO stack
 - `config_manager.py` — loads the unit's JSON config
 
@@ -47,7 +47,7 @@ One JSON file per deployment, selected with the `UNIT_CONFIG` environment variab
 
 Each zone is one ALSA output device and the rooms it covers. The server already sends the room
 name with every audio command, so the client routes each sound to the right card; whole-maze
-audio (background music, all-rooms effects) plays on every zone. Configs without `zones` behave
+audio (maze ambience, all-rooms effects) plays on every zone. Configs without `zones` behave
 exactly as before: one default output for all associated rooms.
 
 ### USB sound cards

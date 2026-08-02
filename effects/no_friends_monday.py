@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 INDIGO = (60, 60, 255)
-GOLD = (255, 190, 40)
+GOLD = (255, 90, 20)
 MAGENTA = (255, 40, 180)
 CYAN = (0, 200, 255)
 
@@ -45,7 +45,7 @@ def create_no_friends_monday_effect():
 
     # Mirror-ball pop and a gold hit
     steps.append(_step(8.55, 80, *CYAN))
-    steps.append(_step(8.6, 255, 255, 255, 255, 170))
+    steps.append(_step(8.6, 255, *CYAN))
     steps.append(_step(8.72, 140, *CYAN))
     steps.append(_step(9.0, 255, *GOLD))
     steps.append(_step(9.15, 120, *GOLD))

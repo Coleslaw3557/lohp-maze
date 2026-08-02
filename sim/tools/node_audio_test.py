@@ -4,12 +4,12 @@ RemoteHostManager integration. No server or hardware needed:
 
   1. cue ids match the WAV filenames make_node_audio.py generates
   2. WS command mirroring: play_effect_audio -> streamed announcement cue URL,
-     music -> stream URL (percent-encoded), audio_stop -> announcement-only
-     stop (music survives), stop_background_music -> media stop
+     maze ambience -> stream URL (percent-encoded), audio_stop ->
+     announcement-only stop (beds survive), stop_maze_ambience -> media stop
   3. room=None broadcasts to every node room; unmapped rooms are untouched
-  4. a room's own background bed owns the shared media pipeline: maze music
+  4. a room's own background bed owns the shared media pipeline: maze ambience
      commands (start AND stop) leave a bed-active node alone, and the pipeline
-     goes back to the current music track when the bed stops
+     goes back to the current maze ambience file when the bed stops
   5. per-node FIFO lock keeps rapid-fire cues in dispatch order
   6. a dead node fails quietly (returns False, never raises, never blocks)
   7. RemoteHostManager: a node-only room (no WS client) reports success
@@ -102,60 +102,60 @@ async def run(tmp_path):
           not m.handle_command("Porto Room", "play_effect_audio",
                                {"file_name": "x.mp3"}))
 
-    # music broadcast: every node, URL percent-encoded
-    m.handle_command(None, "start_background_music",
-                     {"music_file": "The 7th Continent Soundscape - Area I.mp3"})
+    # maze ambience broadcast: every node, URL percent-encoded
+    m.handle_command(None, "start_maze_ambience",
+                     {"file_name": "ambience/The 7th Continent Soundscape - Area I.mp3"})
     await drain(m)
     url = ("http://10.0.0.2:5000/api/audio/"
-           "The%207th%20Continent%20Soundscape%20-%20Area%20I.mp3")
-    check("music broadcast hits every node with an encoded stream URL",
+           "ambience/The%207th%20Continent%20Soundscape%20-%20Area%20I.mp3")
+    check("maze ambience broadcast hits every node with an encoded stream URL",
           monkey.calls[-1] == ('media', None, url, False)
           and temple.calls[-1] == ('media', None, url, False))
 
-    # audio_stop stops cues only; stop_background_music stops the media pipeline
+    # audio_stop stops cues only; stop_maze_ambience stops the media pipeline
     m.handle_command("Monkey Room", "audio_stop", {})
-    m.handle_command(None, "stop_background_music", {})
+    m.handle_command(None, "stop_maze_ambience", {})
     await drain(m)
     from aioesphomeapi import MediaPlayerCommand
-    check("audio_stop -> announcement stop; music stop -> media stop",
+    check("audio_stop -> announcement stop; maze ambience stop -> media stop",
           ('media', MediaPlayerCommand.STOP, None, True) in monkey.calls
           and ('media', MediaPlayerCommand.STOP, None, False) in monkey.calls
           and ('media', MediaPlayerCommand.STOP, None, True) not in temple.calls)
 
-    # bed vs music on the node's ONE media pipeline: the room background
-    # overrides maze music for its node, music start/stop never steal the
+    # bed vs maze ambience on the node's ONE media pipeline: the room background
+    # overrides maze ambience for its node, ambience start/stop never steal the
     # pipeline from a bed, and the current track resumes when the bed stops
     monkey.calls.clear()
     temple.calls.clear()
     base = "http://10.0.0.2:5000/api/audio/"
-    m.handle_command(None, "start_background_music", {"music_file": "song.mp3"})
+    m.handle_command(None, "start_maze_ambience", {"file_name": "song.mp3"})
     m.handle_command("Monkey Room", "play_room_ambience", {"file_name": "bed.wav"})
-    m.handle_command(None, "start_background_music", {"music_file": "next.mp3"})
-    m.handle_command(None, "stop_background_music", {})
-    m.handle_command(None, "start_background_music", {"music_file": "song2.mp3"})
+    m.handle_command(None, "start_maze_ambience", {"file_name": "next.mp3"})
+    m.handle_command(None, "stop_maze_ambience", {})
+    m.handle_command(None, "start_maze_ambience", {"file_name": "song2.mp3"})
     m.handle_command("Monkey Room", "stop_room_ambience", {})
     await drain(m)
-    check("bed-active node: music rotation and stop never touch the pipeline",
+    check("bed-active node: maze ambience start and stop never touch the pipeline",
           monkey.calls[:2] == [('media', None, base + "song.mp3", False),
                                ('media', None, base + "bed.wav", False)]
           and monkey.calls[2] == ('media', None, base + "song2.mp3", False),
           f"({monkey.calls})")
-    check("bed stop hands the pipeline back to the current music track",
+    check("bed stop hands the pipeline back to the current maze ambience",
           len(monkey.calls) == 3 and not monkey.bed_active)
-    check("bed-free node keeps following music commands",
+    check("bed-free node keeps following maze ambience commands",
           temple.calls == [('media', None, base + "song.mp3", False),
                            ('media', None, base + "next.mp3", False),
                            ('media', MediaPlayerCommand.STOP, None, False),
                            ('media', None, base + "song2.mp3", False)],
           f"({temple.calls})")
 
-    # with music OFF, a bed stop stops the pipeline instead of resuming music
+    # with maze ambience OFF, a bed stop stops the pipeline instead of resuming
     monkey.calls.clear()
-    m.handle_command(None, "stop_background_music", {})
+    m.handle_command(None, "stop_maze_ambience", {})
     m.handle_command("Monkey Room", "play_room_ambience", {"file_name": "bed.wav"})
     m.handle_command("Monkey Room", "stop_room_ambience", {})
     await drain(m)
-    check("bed stop with music off -> media stop, no phantom resume",
+    check("bed stop with maze ambience off -> media stop, no phantom resume",
           monkey.calls[-1] == ('media', MediaPlayerCommand.STOP, None, False),
           f"({monkey.calls})")
 

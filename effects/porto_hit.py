@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 RED = (255, 30, 20)
-AMBER = (255, 150, 40)
+AMBER = (255, 110, 30)
 
 
 def _step(t, total, r, g, b, w=0):

@@ -44,11 +44,11 @@ def create_image_enhancement_effect():
     # Extraction: three rotor-strobe pops
     for t in (12.5, 12.9, 13.3):
         steps.append(_step(round(t - 0.05, 2), 90, *SKY))
-        steps.append(_step(t, 255, *POP, w=200))
+        steps.append(_step(t, 255, *POP, w=0))
         steps.append(_step(round(t + 0.12, 2), 210, *SKY, w=40))
 
     # Success hold, then out
-    steps.append(_step(13.8, 255, *SUCCESS, w=120))
+    steps.append(_step(13.8, 255, *SUCCESS, w=40))
     steps.append(_step(14.3, 200, *SUCCESS, w=40))
     steps.append(_step(15.0, 0, 0, 0, 0))
 

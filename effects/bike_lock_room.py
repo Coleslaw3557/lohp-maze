@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-GOLD = (255, 195, 25)
+GOLD = (230, 80, 20)
 GREEN = (70, 255, 100)
 BRIGHT = (255, 220, 90)
 
@@ -24,10 +24,10 @@ def create_bike_lock_room_effect():
     shimmer, triumphant swell, fade."""
     steps = [
         _step(0.0, 10, 40, 30, 0),
-        _step(0.1, 255, *GOLD, w=140),       # secret found!
-        _step(0.25, 255, *GOLD, w=90),
+        _step(0.1, 255, *GOLD, w=0),       # secret found!
+        _step(0.25, 255, *GOLD, w=0),
         _step(0.45, 120, *GOLD),
-        _step(0.6, 245, *GOLD, w=60),
+        _step(0.6, 245, *GOLD, w=0),
         _step(0.75, 130, *GOLD),
         # Celebration shimmer
         _step(0.95, 200, *GREEN),
@@ -36,8 +36,8 @@ def create_bike_lock_room_effect():
         _step(1.85, 230, *GOLD),
         _step(2.15, 210, *GREEN),
         # Triumphant swell, then out
-        _step(2.5, 220, *GOLD, w=60),
-        _step(3.1, 255, *BRIGHT, w=110),
+        _step(2.5, 220, *GOLD, w=0),
+        _step(3.1, 255, *BRIGHT, w=0),
         _step(3.5, 160, *GOLD),
         _step(4.0, 0, 0, 0, 0),
     ]
