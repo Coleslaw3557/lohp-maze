@@ -42,6 +42,11 @@ CHANNELS_PER_FIXTURE = 8
 # speaker at once. ONE server-side cooldown covers all sources (the sign
 # node's POST, the sim's panel button) — presses inside it get 429.
 SIGN_STORM_COOLDOWN_S = 30
+DOORWAY_ENTRY_SUPPRESS_PAD_S = 5
+DOORWAY_ENTRY_ONE_SHOTS = {
+    ("Entrance", "Entrance"),
+    ("Exit", "Exit"),
+}
 BACKTRACK_EFFECT_NAME = "Backtrack"
 BACKTRACK_TOKEN_TTL_S = 180
 BACKTRACK_ROOM_BLOCK_S = 30
@@ -86,6 +91,7 @@ _moop_state = {
     'started_at': None,
     'timer': None,
 }
+_doorway_entry_last_fire = {}
 
 
 def _moop_button_id(data):
@@ -167,6 +173,29 @@ async def _record_moop_press(data):
         logger.info("Moop march complete; scheduling room-local right-answer pool")
         _reset_moop_locked()
         return True
+
+
+def _doorway_entry_suppressed(room, effect_name, effect_data, now=None):
+    """Entrance/Exit ToF sensors can re-post while a visitor is still crossing.
+    These effects should pick exactly one random audio file per crossing, so
+    repeated posts inside the effect window become harmless no-ops."""
+    key = (room, effect_name)
+    if key not in DOORWAY_ENTRY_ONE_SHOTS:
+        return False, 0, None
+    now = now if now is not None else time.monotonic()
+    duration = float((effect_data or {}).get('duration') or 0)
+    window = max(duration, 0) + DOORWAY_ENTRY_SUPPRESS_PAD_S
+    last = _doorway_entry_last_fire.get(key)
+    if last is not None and now - last < window:
+        return True, window - (now - last), last
+    _doorway_entry_last_fire[key] = now
+    return False, 0, now
+
+
+def _clear_doorway_entry_fire(room, effect_name, started_at):
+    key = (room, effect_name)
+    if _doorway_entry_last_fire.get(key) == started_at:
+        _doorway_entry_last_fire.pop(key, None)
 
 
 def log_and_exit(error_message):
@@ -697,11 +726,24 @@ async def run_effect():
         if not effect_data:
             return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
 
+        suppressed, remaining, started_at = _doorway_entry_suppressed(
+            room, effect_name, effect_data)
+        if suppressed:
+            logger.info(f"Suppressing duplicate {room} {effect_name} entry trigger "
+                        f"({remaining:.1f}s left in one-shot window)")
+            return jsonify({
+                'status': 'success',
+                'message': f'Effect {effect_name} already running/recent in room {room}',
+                'suppressed': True,
+                'retry_after_s': round(remaining, 1),
+            })
+
         success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
         if success:
             if moop_complete:
                 asyncio.create_task(_apply_moop_resolution(MOOP_RIGHT_EFFECT))
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}'})
+        _clear_doorway_entry_fire(room, effect_name, started_at)
         logger.error(f"Failed to execute effect {effect_name} in room {room}: {message}")
         return jsonify({'status': 'error', 'message': message}), 500
     except Exception as e:

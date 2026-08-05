@@ -119,6 +119,9 @@ async def main():
             pass
 
     post('/api/set_theme', {'theme_name': 'notheme'})
+    # Leave the live sim in its normal boot state: attract is enabled and
+    # immediately relights when called with no current theme.
+    post('/api/attract', {'on': True})
     post('/api/stop_effect', {})
 
     print(f"\n{'ALL PASS' if not FAILS else 'FAILURES: ' + ', '.join(FAILS)}")
