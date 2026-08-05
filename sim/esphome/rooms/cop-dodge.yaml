@@ -6,7 +6,7 @@ substitutions:
   node_name: lohp-node-cop-dodge
   room: "Cop Dodge"
   effect: "PoliceLights"
-  server_host: "192.168.253.184"   # bench: this dev box; playa: 192.168.1.238
+  server_host: "192.168.253.185"   # bench: this dev box; playa: 192.168.1.238
   api_port: "6062"
   host_mac: "06:35:69:00:00:02"    # sim-only (sim_host.yaml); unused on hardware
   dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)

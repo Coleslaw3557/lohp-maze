@@ -124,22 +124,24 @@ class _NodeConn:
                                      f"{type(e).__name__}: {e}")
         return False
 
-    async def play_announcement(self, url):
+    async def play_announcement(self, url, volume=None):
         """Effect cue: stream `url` through the announcement pipeline (ducks
         the active bed, which resumes when the cue ends)."""
         def call():
             if self.media_key is None:
                 raise RuntimeError("node has no media_player entity")
             return self.client.media_player_command(self.media_key, media_url=url,
-                                                    announcement=True)
+                                                    announcement=True,
+                                                    volume=volume)
         return await self._run(f"announce {url}", call)
 
-    async def play_url(self, url):
+    async def play_url(self, url, volume=None):
         def call():
             if self.media_key is None:
                 raise RuntimeError("node has no media_player entity")
             return self.client.media_player_command(self.media_key, media_url=url,
-                                                    announcement=False)
+                                                    announcement=False,
+                                                    volume=volume)
         return await self._run(f"play {url}", call)
 
     async def stop(self, announcement):
@@ -214,6 +216,28 @@ class NodeAudioManager:
         return (f"http://{self.server_host}:{self.server_port}"
                 f"/api/audio/cues/{cue_id(audio_file)}.wav")
 
+    @staticmethod
+    def _volume(data, default):
+        try:
+            volume = float((data or {}).get('volume', default))
+        except (TypeError, ValueError):
+            volume = default
+        return max(0.0, min(1.0, volume))
+
+    @staticmethod
+    def _node_file(data):
+        return data.get('node_file_name') or data['file_name']
+
+    @staticmethod
+    def _node_loop(data):
+        if 'node_loop' in data:
+            return bool(data.get('node_loop'))
+        return bool(data.get('loop'))
+
+    @staticmethod
+    def _node_duration(data):
+        return data.get('node_duration_s') or data.get('duration_s')
+
     def handle_command(self, room, command, data):
         """Mirror a WS audio command onto the node(s). room=None means every
         node room (matching the WS broadcast semantics). Fire-and-forget:
@@ -253,7 +277,9 @@ class NodeAudioManager:
             if data.get('loop'):
                 logger.warning(f"Node audio [{conn.room}]: loop requested for "
                                f"{data.get('file_name')} — embedded cues don't loop")
-            return conn.play_announcement(self.cue_url(data['file_name']))
+            # Cue WAVs are already volume-baked by make_node_audio.py. Keep the
+            # media-player gain at full foreground level so beds stay lower.
+            return conn.play_announcement(self.cue_url(data['file_name']), volume=1.0)
         if command == 'play_room_ambience':
             # A bed belongs on the media pipeline, so effect cues duck it as
             # announcements instead of replacing it. The pipeline is single —
@@ -263,16 +289,19 @@ class NodeAudioManager:
             # the bed streams through once instead of looping.
             conn.bed_active = True
             self._cancel_repeat(conn)
-            logger.warning(f"Node audio [{conn.room}]: ambience "
-                           f"{data.get('file_name')} streams once — the node media "
-                           f"player has no repeat")
-            return conn.play_url(self.audio_url(data['file_name']))
+            node_file = self._node_file(data)
+            if self._node_loop(data):
+                logger.warning(f"Node audio [{conn.room}]: ambience "
+                               f"{data.get('file_name')} streams once — the node media "
+                               f"player has no repeat")
+            return conn.play_url(self.audio_url(node_file), volume=self._volume(data, 0.35))
         if command == 'stop_room_ambience':
             conn.bed_active = False
             if self.maze_ambience_file and self.maze_ambience_data:
                 # The freed pipeline goes back to the maze ambience.
                 self._arm_maze_repeat(conn, self.maze_ambience_data)
-                return conn.play_url(self.audio_url(self.maze_ambience_file))
+                return conn.play_url(self.audio_url(self._node_file(self.maze_ambience_data)),
+                                     volume=self._volume(self.maze_ambience_data, 0.35))
             return conn.stop(announcement=False)
         if command == 'start_maze_ambience':
             if conn.bed_active:
@@ -280,7 +309,8 @@ class NodeAudioManager:
                              "the room's own background owns the pipeline")
                 return None
             self._arm_maze_repeat(conn, data)
-            return conn.play_url(self.audio_url(data['file_name']))
+            return conn.play_url(self.audio_url(self._node_file(data)),
+                                 volume=self._volume(data, 0.35))
         if command == 'stop_maze_ambience':
             if conn.bed_active:
                 return None  # the pipeline is playing the room's bed, not maze ambience
@@ -304,8 +334,10 @@ class NodeAudioManager:
         self._cancel_repeat(conn)
         if not data.get('loop'):
             return
+        if not self._node_loop(data):
+            return
         try:
-            duration_s = float(data.get('duration_s') or 0)
+            duration_s = float(self._node_duration(data) or 0)
             play_for_s = float(data.get('play_for_s') or 0)
         except (TypeError, ValueError):
             return
@@ -321,9 +353,10 @@ class NodeAudioManager:
 
     async def _maze_repeat_loop(self, conn, data):
         file_name = data.get('file_name')
-        url = self.audio_url(file_name)
+        url = self.audio_url(self._node_file(data))
+        volume = self._volume(data, 0.35)
         deadline = time.monotonic() + float(data['play_for_s'])
-        delay = max(1.0, float(data['duration_s']) - 0.1)
+        delay = max(1.0, float(self._node_duration(data)) + 0.25)
         try:
             while True:
                 await asyncio.sleep(delay)
@@ -331,7 +364,7 @@ class NodeAudioManager:
                     return
                 if time.monotonic() >= deadline:
                     return
-                await conn.play_url(url)
+                await conn.play_url(url, volume=volume)
         except asyncio.CancelledError:
             raise
         except Exception as e:

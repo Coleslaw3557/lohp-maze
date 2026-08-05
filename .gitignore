@@ -11,6 +11,8 @@ photos/
 Background-images/
 # generated streamable cue WAVs (make_node_audio.py)
 audio_files/cues/
+# generated crossfaded ambience loop cache (audio_manager.py)
+audio_files/generated/
 # audio console's one-deep undo copy (tools/audio_console.py) + its pidfile
 audio_config.json.bak
 audio_config.json.tmp

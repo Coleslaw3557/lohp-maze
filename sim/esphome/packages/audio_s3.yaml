@@ -55,7 +55,7 @@ media_player:
     id: room_audio
     name: "${room} audio"
     volume_initial: 100%   # room level is set physically at the Pebble knob;
-	                           # ambience/cue balance is baked into the cue files
+                           # ambience/cue balance is baked into the cue files
     media_pipeline:
       speaker: media_resampler
       format: MP3

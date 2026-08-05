@@ -1,4 +1,5 @@
 import json
+import hashlib
 import logging
 import os
 import random
@@ -12,6 +13,9 @@ DEFAULT_AMBIENCE_PLAYBACK = {
     "loop_for_s": 180.0,
     "once_pad_s": 2.0,
     "unknown_loop": True,
+    "node_prepare_loop": True,
+    "node_loop_crossfade_s": 1.0,
+    "node_loop_max_copies": 64,
 }
 
 
@@ -97,6 +101,116 @@ class AudioManager:
             if os.path.exists(path):
                 return path
         return None
+
+    def _generated_loop_name(self, file_name, play_for_s, crossfade_s):
+        path = self._audio_path(file_name)
+        if not path:
+            return None, None
+        try:
+            stat = os.stat(path)
+        except OSError:
+            return None, None
+        key = "|".join([
+            file_name,
+            str(stat.st_mtime_ns),
+            str(stat.st_size),
+            f"{play_for_s:.3f}",
+            f"{crossfade_s:.3f}",
+        ])
+        digest = hashlib.sha1(key.encode("utf-8")).hexdigest()[:16]
+        stem = os.path.splitext(os.path.basename(file_name))[0]
+        safe_stem = "".join(c if c.isalnum() else "_" for c in stem).strip("_")[:48]
+        rel = os.path.join("generated", "ambience_loops",
+                           f"{safe_stem or 'loop'}_{digest}.mp3")
+        return path, rel
+
+    def prepare_node_ambience_loop(self, effect_name, file_name, playback):
+        """Create a cached, longer crossfaded bed for ESP32 node playback.
+
+        ESPHome's speaker media player does not expose a real repeat/crossfade
+        primitive. For short ambience assets, make one longer MP3 with
+        crossfaded joins and let the node stream it once; any remaining restart
+        boundary happens minutes apart instead of every source-file duration.
+        Browser clients still receive the original file and loop locally.
+        """
+        if not playback.get("loop"):
+            return None
+        config = self.get_audio_config(effect_name)
+        policy = dict(DEFAULT_AMBIENCE_PLAYBACK)
+        policy.update(self.audio_config.get("ambience_playback") or {})
+        policy.update(config.get("ambience_playback") or {})
+        if not policy.get("node_prepare_loop", True):
+            return None
+        try:
+            duration_s = float(playback.get("duration_s") or 0)
+            play_for_s = float(playback.get("play_for_s") or 0)
+            crossfade_s = float(policy.get("node_loop_crossfade_s", 1.0))
+            max_copies = int(policy.get("node_loop_max_copies", 64))
+        except (TypeError, ValueError):
+            return None
+        if duration_s <= 0 or play_for_s <= duration_s:
+            return None
+        crossfade_s = min(crossfade_s, max(0.0, duration_s / 3.0))
+        if crossfade_s < 0.1:
+            return None
+        step_s = duration_s - crossfade_s
+        copies = int((play_for_s + crossfade_s + step_s - 0.001) // step_s) + 1
+        copies = max(2, copies)
+        if copies > max_copies:
+            logger.info(f"Node ambience loop prep skipped for {file_name}: "
+                        f"{copies} copies exceeds cap {max_copies}")
+            return None
+        source_path, rel_name = self._generated_loop_name(file_name, play_for_s, crossfade_s)
+        if not source_path or not rel_name:
+            return None
+        out_path = os.path.join(self.base_dir, "audio_files", rel_name)
+        if os.path.exists(out_path):
+            return rel_name
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        inputs = []
+        labels = []
+        for i in range(copies):
+            inputs.extend(["-i", source_path])
+            labels.append(f"a{i}")
+        filters = [
+            f"[{i}:a]aformat=channel_layouts=mono,aresample=44100[{labels[i]}]"
+            for i in range(copies)
+        ]
+        current = labels[0]
+        for i in range(1, copies):
+            out = f"x{i}"
+            filters.append(
+                f"[{current}][{labels[i]}]acrossfade=d={crossfade_s:.3f}:"
+                f"c1=qsin:c2=qsin[{out}]"
+            )
+            current = out
+        filters.append(f"[{current}]atrim=0:{play_for_s:.3f},asetpts=N/SR/TB[out]")
+        tmp_path = out_path + ".tmp"
+        cmd = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            *inputs,
+            "-filter_complex", ";".join(filters),
+            "-map", "[out]",
+            "-f", "mp3",
+            "-codec:a", "libmp3lame",
+            "-q:a", "4",
+            tmp_path,
+        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=60)
+            os.replace(tmp_path, out_path)
+            logger.info(f"Prepared node ambience loop {rel_name} from {file_name} "
+                        f"({copies}x, {crossfade_s:.2f}s crossfade)")
+            return rel_name
+        except (OSError, subprocess.SubprocessError) as e:
+            try:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+            except OSError:
+                pass
+            stderr = getattr(e, "stderr", "") or str(e)
+            logger.warning(f"Could not prepare node ambience loop for {file_name}: {stderr}")
+            return None
 
     def get_audio_duration_s(self, file_name):
         """Duration for a configured audio asset, or None when it cannot be read."""

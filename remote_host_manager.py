@@ -207,12 +207,20 @@ class RemoteHostManager:
             volume = self.audio_manager.get_audio_config(effect_name).get(
                 'volume', self.audio_manager.audio_config.get('default_volume', 0.7))
         playback = self.audio_manager.ambience_playback(effect_name, audio_file, audio_params)
-        return {
+        data = {
             'effect_name': effect_name,
             'file_name': audio_file,
             'volume': volume,
             **playback,
         }
+        node_file = self.audio_manager.prepare_node_ambience_loop(effect_name, audio_file, playback)
+        if node_file:
+            data.update({
+                'node_file_name': node_file,
+                'node_loop': False,
+                'node_duration_s': data.get('play_for_s'),
+            })
+        return data
 
     async def start_maze_ambience(self, effect_name, audio_params=None):
         """Start the maze-wide ambience bed on its own channel.

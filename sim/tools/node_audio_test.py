@@ -38,9 +38,9 @@ class FakeClient:
         self.calls = calls
 
     async def media_player_command(self, key, command=None, media_url=None,
-                                   announcement=None):
+                                   announcement=None, volume=None):
         await asyncio.sleep(0.005)  # let another task interleave if it can
-        self.calls.append(('media', command, media_url, announcement))
+        self.calls.append(('media', command, media_url, announcement, volume))
 
     async def disconnect(self):
         pass
@@ -94,7 +94,7 @@ async def run(tmp_path):
     await drain(m)
     cue_url = "http://10.0.0.2:5000/api/audio/cues/monkey_shrine_complete.wav"
     check("play_effect_audio streams the cue URL to its node",
-          ok and monkey.calls == [('media', None, cue_url, True)]
+          ok and monkey.calls == [('media', None, cue_url, True, 1.0)]
           and temple.calls == [])
 
     # unmapped room: untouched, reported unhandled
@@ -109,8 +109,30 @@ async def run(tmp_path):
     url = ("http://10.0.0.2:5000/api/audio/"
            "ambience/The%207th%20Continent%20Soundscape%20-%20Area%20I.mp3")
     check("maze ambience broadcast hits every node with an encoded stream URL",
-          monkey.calls[-1] == ('media', None, url, False)
-          and temple.calls[-1] == ('media', None, url, False))
+          monkey.calls[-1] == ('media', None, url, False, 0.35)
+          and temple.calls[-1] == ('media', None, url, False, 0.35))
+
+    # prepared node loop: browsers still see file_name, but ESP nodes should
+    # receive the long generated bed and should not arm a replay timer.
+    monkey.calls.clear()
+    m.handle_command("Monkey Room", "start_maze_ambience", {
+        "file_name": "short.wav",
+        "node_file_name": "generated/ambience_loops/short_long.mp3",
+        "loop": True,
+        "node_loop": False,
+        "duration_s": 8.0,
+        "node_duration_s": 240.0,
+        "play_for_s": 240.0,
+        "volume": 0.3,
+    })
+    await drain(m)
+    check("prepared node ambience uses generated file and skips repeat",
+          monkey.calls[-1] == ('media', None,
+                               "http://10.0.0.2:5000/api/audio/"
+                               "generated/ambience_loops/short_long.mp3",
+                               False, 0.3)
+          and monkey not in m._repeat_tasks,
+          f"({monkey.calls[-1:]}, repeats={m._repeat_tasks})")
 
     # audio_stop stops cues only; stop_maze_ambience stops the media pipeline
     m.handle_command("Monkey Room", "audio_stop", {})
@@ -118,9 +140,9 @@ async def run(tmp_path):
     await drain(m)
     from aioesphomeapi import MediaPlayerCommand
     check("audio_stop -> announcement stop; maze ambience stop -> media stop",
-          ('media', MediaPlayerCommand.STOP, None, True) in monkey.calls
-          and ('media', MediaPlayerCommand.STOP, None, False) in monkey.calls
-          and ('media', MediaPlayerCommand.STOP, None, True) not in temple.calls)
+          ('media', MediaPlayerCommand.STOP, None, True, None) in monkey.calls
+          and ('media', MediaPlayerCommand.STOP, None, False, None) in monkey.calls
+          and ('media', MediaPlayerCommand.STOP, None, True, None) not in temple.calls)
 
     # bed vs maze ambience on the node's ONE media pipeline: the room background
     # overrides maze ambience for its node, ambience start/stop never steal the
@@ -136,17 +158,17 @@ async def run(tmp_path):
     m.handle_command("Monkey Room", "stop_room_ambience", {})
     await drain(m)
     check("bed-active node: maze ambience start and stop never touch the pipeline",
-          monkey.calls[:2] == [('media', None, base + "song.mp3", False),
-                               ('media', None, base + "bed.wav", False)]
-          and monkey.calls[2] == ('media', None, base + "song2.mp3", False),
+          monkey.calls[:2] == [('media', None, base + "song.mp3", False, 0.35),
+                               ('media', None, base + "bed.wav", False, 0.35)]
+          and monkey.calls[2] == ('media', None, base + "song2.mp3", False, 0.35),
           f"({monkey.calls})")
     check("bed stop hands the pipeline back to the current maze ambience",
           len(monkey.calls) == 3 and not monkey.bed_active)
     check("bed-free node keeps following maze ambience commands",
-          temple.calls == [('media', None, base + "song.mp3", False),
-                           ('media', None, base + "next.mp3", False),
-                           ('media', MediaPlayerCommand.STOP, None, False),
-                           ('media', None, base + "song2.mp3", False)],
+          temple.calls == [('media', None, base + "song.mp3", False, 0.35),
+                           ('media', None, base + "next.mp3", False, 0.35),
+                           ('media', MediaPlayerCommand.STOP, None, False, None),
+                           ('media', None, base + "song2.mp3", False, 0.35)],
           f"({temple.calls})")
 
     # with maze ambience OFF, a bed stop stops the pipeline instead of resuming
@@ -156,7 +178,7 @@ async def run(tmp_path):
     m.handle_command("Monkey Room", "stop_room_ambience", {})
     await drain(m)
     check("bed stop with maze ambience off -> media stop, no phantom resume",
-          monkey.calls[-1] == ('media', MediaPlayerCommand.STOP, None, False),
+          monkey.calls[-1] == ('media', MediaPlayerCommand.STOP, None, False, None),
           f"({monkey.calls})")
 
     # rapid-fire ordering through the per-node lock
@@ -168,7 +190,7 @@ async def run(tmp_path):
     check("8 rapid cues arrive in dispatch order",
           monkey.calls == [('media', None,
                             f"http://10.0.0.2:5000/api/audio/cues/cue{i}.wav",
-                            True) for i in range(8)])
+                            True, 1.0) for i in range(8)])
 
     # dead node: real _NodeConn against a closed port — quiet False, no raise,
     # and once the backoff is armed further commands fail fast instead of

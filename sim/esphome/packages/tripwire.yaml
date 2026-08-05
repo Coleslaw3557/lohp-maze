@@ -15,12 +15,15 @@
 # the same as room vacated for Entrance/Exit. The `trip`/`vacate` api actions
 # drive the same scripts from harness.py on host-platform sim nodes.
 #
-# The latch is what makes leave safe. Only a real enter arms it, so a radar that
-# briefly still-locks onto furniture and then clears cannot POST a leave for a
-# room nobody ever entered. The inverse failure — furniture holding a permanent
-# still-lock, so leave never fires — costs nothing here: the theme has already
+# The latch is what makes both sides safe. Only a real enter arms it, so a radar
+# that briefly still-locks onto furniture and then clears cannot POST a leave for
+# a room nobody ever entered. It also ignores extra enter edges while occupied:
+# LD2410 "moving target" can drop and re-press while "has target" stays true,
+# especially if someone stands still and then moves again. That should not fire
+# the room effect again. The inverse failure — furniture holding a permanent
+# still-lock, so leave never fires — costs little here: the theme has already
 # resumed on its own when the entry effect ended, and the next real enter simply
-# re-arms the latch.
+# remains blocked until the radar reports the room empty.
 #
 # Include alongside logic.yaml and set the `effect` substitution. Rooms whose
 # doorway has no bespoke effect yet simply omit this package (the old generic
@@ -66,14 +69,23 @@ binary_sensor:
       - delayed_on: 30ms   # debounce, same as the planned hardware config
     on_press:
       then:
-        - lambda: |-
-            id(room_occupied) = true;
-            ${entry_hook}
-        - script.execute: fire_effect
+        - if:
+            condition:
+              lambda: 'return !id(room_occupied);'
+            then:
+              - lambda: |-
+                  id(room_occupied) = true;
+                  ${entry_hook}
+              - script.execute: fire_effect
+            else:
+              - logger.log:
+                  level: DEBUG
+                  format: "Tripwire ignored: room already occupied (%s)"
+                  args: ['"${room}"']
 
 script:
   - id: fire_effect
-    mode: single   # ignores re-triggers while running -> 5s cooldown like trigger_manager
+    mode: single   # backup guard; room_occupied is the primary occupied-room debounce
     then:
       - logger.log:
           format: "Tripwire fired: POST run_effect room=%s effect=%s"
