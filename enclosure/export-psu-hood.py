@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Export the xTool cut files from psu-hood.scad (camp-sign PSU terminal hood).
+
+Two SVGs, two jobs:
+  psu-hood.svg        the full kit: five ply panels + DC connector board +
+                      fan-end ear shim (~370 x 316; on a shorter bed slide
+                      the shim in XCS — paths are loose objects)
+  psu-hood-board.svg  the DC connector board ALONE — the part expected to
+                      iterate; re-cut this one without re-burning the hood
+Two colors in one coordinate frame, same convention as the node box:
+  black paths = CUT        red paths = ETCH/MARK (score or engrave in XCS)
+Run from enclosure/:  python3 export-psu-hood.py
+Previews (eyeball before cutting — house rule):
+  xvfb-run -a openscad -o preview-assembly-psu-hood.png --imgsize=1400,1000 psu-hood.scad
+"""
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+HERE = Path(__file__).parent
+SCAD = HERE / 'psu-hood.scad'
+
+PATH_RE = re.compile(r'<path[^>]*\sd="([^"]+)"[^>]*/?>')
+VIEW_RE = re.compile(r'viewBox="([-\d. ]+)"')
+
+
+def scad_svg(part):
+    with tempfile.NamedTemporaryFile(suffix='.svg', delete=False) as f:
+        out = f.name
+    r = subprocess.run(['openscad', '-D', f'part="{part}"', '-o', out, str(SCAD)],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        sys.exit(f'openscad failed for {part}:\n{r.stderr}')
+    svg = Path(out).read_text()
+    Path(out).unlink()
+    vb = [float(v) for v in VIEW_RE.search(svg).group(1).split()]
+    return [m.group(1) for m in PATH_RE.finditer(svg)], vb
+
+
+def union_vb(a, b):
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    x, y = min(ax, bx), min(ay, by)
+    return [x, y, max(ax + aw, bx + bw) - x, max(ay + ah, by + bh) - y]
+
+
+def write_job(cut_part, etch_part, outname):
+    cut_paths, vb = scad_svg(cut_part)
+    etch_paths, evb = scad_svg(etch_part)
+    vb = union_vb(vb, evb)
+    x, y, w, h = vb
+    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" '
+             f'width="{w:g}mm" height="{h:g}mm" viewBox="{x:g} {y:g} {w:g} {h:g}">']
+    parts.append('<g id="cut" fill="none" stroke="#000000" stroke-width="0.2">')
+    parts += [f'<path d="{d}"/>' for d in cut_paths]
+    parts.append('</g>')
+    parts.append('<g id="etch" fill="#ff0000" stroke="#ff0000" stroke-width="0.1">')
+    parts += [f'<path d="{d}"/>' for d in etch_paths]
+    parts.append('</g>')
+    parts.append('</svg>')
+    out = HERE / outname
+    out.write_text('\n'.join(parts))
+    print(f'{out.name}: {len(cut_paths)} cut, {len(etch_paths)} etch, '
+          f'{w:g} x {h:g} mm')
+
+
+if __name__ == '__main__':
+    write_job('sheet', 'sheet_etch', 'psu-hood.svg')
+    write_job('board', 'board_etch', 'psu-hood-board.svg')

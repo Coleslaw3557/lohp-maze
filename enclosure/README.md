@@ -152,6 +152,56 @@ Different from the room kit:
 Etch orientation for the sign box: floor UP, **front OUT** (CAMP SIGN),
 back OUT (D1–D3), left/right forced by the pre-mirror as always.
 
+## Camp-sign PSU terminal hood (`psu-hood.scad`, 2026-08-02)
+
+Not a box AROUND anything: the ABI 500W rainproof supply keeps its own
+metal outdoor case, and this five-sided sleeve slides over its **terminal
+end only** (~65mm on the body, ~75mm of connection chamber past the end
+face). Same grammar as the node box — 5-seg corner fingers, floor mortise
+tabs, drop-in lid, pre-mirrored left wall — with one deliberate difference:
+the **mouth end has no wall** (the PSU body is the fourth wall), so floor,
+lid and side walls end flush and plain there — the lid is lifted at that
+free edge (its finger-pull notch died 08-02, unnecessary). The lid is SOLID (08-02): vent-slat arrays sit in
+BOTH side walls' chamber zone behind the ports — chamber cooling, and
+with the ~3mm body gap + the open mouth they breathe the body's covered
+terminal-end vents (never foam/seal the mouth).
+
+Rev B/C (same day, Tim's direction): the end wall is a fixed **main
+faceplate** — **one 104×45 window** (future boards may carry different
+ports; the faceplate never re-burns) + a **pre-cut 4× M3 datum grid**
+(deliberate exception to the no-fastener-holes rule: the grid is what
+lets every board revision re-register; window sized to the grid) — and a
+separate 130×64 **DC connector board** (same 6mm stock — the flange
+screws bite the board alone with the window behind) screws onto it
+carrying **4× SAE quick-connect flush-mounts, one family for ALL FOUR DC
+circuits** (LEGENDS 10A / LOGO 5A / TRUNK 20A / BOX 2A; Tim's on-hand
+parts, calipered: body 22.10 × 13.37, flange 50 × 21.62, mounted as
+vertical dominoes @ 28 pitch — 50-wide flanges don't fit the face side
+by side, and 30 pitch would ride the outer flanges under the M3 heads).
+The BOX cable converts SAE → the controller box's existing BTF pigtail
+at the BOX end (Tim's adapter) — the left wall's old BTF Ø8 is deleted,
+leaving that wall vents-only. The board is the part expected to iterate:
+it exports alone as `psu-hood-board.svg` — re-cut it without re-burning
+the hood. Other ports: the 110V snap-in in the RIGHT wall near the
+front — **the AC INLET** (calipered body 46.85 × 27.33, cutout
+47.5 × 28, `ac_style="snapin"`; the generator cord plugs straight onto
+the face, so the old M20 cord gland is DELETED) — and the **fuse block
+inside on the chamber floor** (etched zone; Tim: fuses live in the
+enclosure). The floor cuts slots matching the
+PSU's terminal-end mounting ear — ear + floor + pillar plank bolt
+through in one go; the sheet includes the fan-end ear shim. PSU body
+itself calipered 08-02: **119.05 × 54.03** (listing was ~8mm oversize).
+Own exporter (`export-psu-hood.py` → `psu-hood.svg` 373 × 332 mm +
+`psu-hood-board.svg` 130 × 64); stock is **6mm ply throughout — hood AND
+board** (t = 6.0 in the scad — caliper the real sheet and re-export; the
+family's other boxes stay 3mm). Wiring, fusing,
+BOM and the **remaining caliper gates** live in
+`../wiring-guides/camp-sign-psu-hood.md`. Not cut yet — gates first.
+Scad gotcha recorded there in a comment: OpenSCAD resolves top-level
+assignment right-hand sides in FILE ORDER — a forward reference is
+silently `undef` (it ate the M3 holes until a zoomed eyeball caught it;
+sheet-scale renders looked fine).
+
 ## Cut layer vs mark layer
 
 Each SVG carries two colours in one coordinate frame — **black = CUT,
@@ -213,6 +263,11 @@ corner screws leave <1mm acrylic web and it cracks.
 - `sheet.png` / `sheet-etch.png` — the two layers; `preview-assembly.png`,
   `preview-underside.png` — glued-up views; `sheet-sign.png` /
   `sheet-etch-sign.png` / `preview-assembly-sign.png` — the sign variant
+- `psu-hood.scad` / `export-psu-hood.py` / `psu-hood.svg` +
+  `psu-hood-board.svg` (the DC connector board alone — the iterating
+  part) — the camp-sign PSU terminal hood (own section above); previews
+  `preview-assembly-psu-hood.png`, `sheet-psu-hood.png`,
+  `sheet-etch-psu-hood.png`
 
 The SVG is true mm scale — import straight into XCS. Cut outlines are
 exact; add kerf compensation in XCS if you want piston-fit joints (glue

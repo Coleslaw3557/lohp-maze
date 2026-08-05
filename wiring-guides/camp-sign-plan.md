@@ -261,6 +261,21 @@ continuous; bring the second ABI as the onsite spare).
 
 ## Power distribution (sized for full white, no software cap)
 
+> **2026-08-02 — PSU terminal hood** (`camp-sign-psu-hood.md`,
+> `../enclosure/psu-hood.scad`): the PSU now wears a laser-cut sleeve over
+> its terminal end. The **LEFT block moves INSIDE the hood chamber** (blade
+> block on the chamber floor — Tim: fuses live in the enclosure) and the
+> **35A main is dropped** (no feeder left to protect; the block sits
+> centimeters from the terminals). Same four circuits, same fuse sizes,
+> same fuses-protect-the-wire rule; ALL FOUR circuits leave through the
+> hood's removable DC connector board — **one SAE quick-connect family**
+> (Tim's on-hand flush-mount harnesses, integrated 10AWG pigtails — the
+> trunk keeps its 10AWG end-to-end; the controller-box cable converts
+> SAE → the box's BTF pigtail at the BOX end, Tim's adapter). The RIGHT
+> block and everything from the trunk onward are unchanged. The tree
+> stays for the circuit/wire/fuse sizes it fixed. AC enters at the
+> hood's snap-in inlet face (no gland, no in-hood outlet).
+
 **One power run per chain** (2026-07-29, with the data regroup), landing
 ONLY at a word's front or back — that's where the 3-wire jumps and pigtails
 are accessible; never mid-word. 12V tolerates these run lengths; the
@@ -288,21 +303,34 @@ PSU− ── common negative bus (both pillars bridged by the trunk's return)
   word-boundary connections; the strip copper carries current inward. Both
   blocks keep spare fuse positions for soak-test additions (word boundaries
   only).
-- PSU mounted vertically inside a pillar: baffled vent path, fan clearance,
-  rain/dust shielded but **not airtight** (it's fan-cooled), strain relief,
-  terminals reachable.
+- PSU mounted vertically inside a pillar, **terminal end down, wearing the
+  terminal hood** (2026-08-02, `camp-sign-psu-hood.md`): the metal case stays
+  in open pillar air (it's fan-cooled — nothing encloses the fan end), the
+  hood covers only the terminal end, and its lid slats re-open the body vents
+  the sleeve overlaps. Strain relief + reachable terminals = the hood chamber.
 - 120V: inverter-generator feed, **no GFCI in the chain** (floating-neutral
   inverter sets nuisance-trip and protect nothing without an N-G bond) →
   outdoor 3-conductor cord → covered mains terminals, chassis ground bonded to
   the PSU housing, accessible disconnect. ~300 W LED load ≈ 3 A @ 120V.
-- AC section physically separated from DMX/data/12V runs.
+  All delivered by the hood: gland (or inlet face) → PSU AC terminals, the
+  purchased 110V receptacle rides the hood's end face, disconnect = the cord
+  coupling at the hood.
+- AC section physically separated from DMX/data/12V runs (in the hood: AC
+  left of the floor's etched tick + the end face; DC on the side walls).
 
 ## Connectors + playa-proofing
 
 - xConnect-style 3-pin waterproof connectors at every group start (the logo
   disc's doubles as its removable disconnect — controller access); separate
   2-pin pigtails at the three power entries ('L' / logo field / 'a') and the
-  box's 12V feed.
+  box's 12V feed. **2026-08-02 amendment**: every circuit's service
+  disconnect now lives at the PSU hood's removable DC board — **one SAE
+  quick-connect family (10AWG harness pigtails) for all four** ('L' /
+  logo / trunk / controller box; the box cable converts SAE → the box's
+  existing BTF pigtail at the BOX end — `camp-sign-psu-hood.md`); a
+  letter-end connector on the two **10A** entries ('L'/'a') is optional
+  and if wanted must be 14AWG-class (SAE) — the 18AWG BTF pairs top out
+  at 7A per the fuse table above.
 - Every cut end: sealed, adhesive-lined heat shrink, **neutral-cure** silicone
   only (acidic silicone corrodes the copper), strain relief so solder pads
   never carry cable tension.
@@ -333,7 +361,9 @@ Electronics to buy — essentials only, listings verified via browser
 | BTF 3-pin pigtail pairs (`dp/B01LCV8LGA`, 4.6★) — D1–D3 + the BTN port (3-wire since 2026-07-31) | 1 pack | $9.99 |
 | BTF 2-pin 18AWG pigtail pairs (`dp/B01LCV97AY`, 4.5★) | 2 packs | $12.99 ea |
 
-New spend ≈ **$197**.
+New spend ≈ **$197**, **plus ≈ $80 of PSU-hood connectors/fuse holders
+(2026-08-02 — table + links in `camp-sign-psu-hood.md`; the receptacle and
+both PSUs are owned)**.
 
 **Shop stock, not bought** (rules still specced above): 120Ω terminator +
 33–100Ω data resistors, 35A main fuse/holder + blade fuses + blocks,
