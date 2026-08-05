@@ -40,7 +40,11 @@
 // BTF 12V WS2811 60 LED/m: 1 pixel = one 3-LED group ≈ 2 in.
 // VERIFY ORDER on the first strip test: serial 'r' must light RED (12V WS2811
 // reels ship RGB or BRG depending on batch) — if not, change here + reflash.
-#define SIGN_COLOR_ORDER RGB
+// No USB needed once mounted: ./strip_probe.py cycle sends red/green/blue over
+// ArtDMX; the three colors you SEE, in that order, spell this constant.
+// 08-05 probed BRG on the "Legends of the" reel (SKU WS28115M30LB65) — re-run
+// the probe when D2/D3 reels first connect; a differing reel = per-chain orders.
+#define SIGN_COLOR_ORDER BRG
 
 // A letter (or the logo): its zone id + how many pixels it got on the strip.
 struct ZoneRun {
