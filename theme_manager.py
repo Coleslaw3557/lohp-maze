@@ -76,6 +76,8 @@ class ThemeManager:
         self.theme_list = []
         self.previous_values = {}  # Store previous values for smoothing
         self.smoothing_factor = 0.2  # Adjust this value to control smoothing (0.0 to 1.0)
+        self._step_lock = threading.RLock()
+        self._theme_started_at = None
         self.load_themes()  # Load themes when initializing
         self.temporary_theme_values = {}  # Store temporary theme values
         # Attract mode: rotate through the dark looks on a dwell clock.
@@ -219,6 +221,7 @@ class ThemeManager:
             # thread that outlived its join timeout (which would leave two
             # theme threads writing to the same fixtures).
             self.stop_event = threading.Event()
+            self._theme_started_at = time.time()
             self.theme_thread = threading.Thread(target=self._run_theme,
                                                  args=(theme_name, self.stop_event), daemon=True)
             self.theme_thread.start()
@@ -242,6 +245,7 @@ class ThemeManager:
                     logger.warning("Theme thread join timed out after 5 seconds")
             self.theme_thread = None
             self.current_theme = None
+            self._theme_started_at = None
             await asyncio.to_thread(self._reset_all_lights)
             # a deliberate stop buys a full dwell of dark before attract
             # relights the maze (and keeps rotation out of test windows)
@@ -336,6 +340,7 @@ class ThemeManager:
                 self.theme_thread.join(timeout=5)
             self.theme_thread = None
             self.current_theme = None
+            self._theme_started_at = None
             self._reset_all_lights()
             logger.info("Current theme stopped and all lights reset")
 
@@ -346,13 +351,14 @@ class ThemeManager:
     def _run_theme(self, theme_name, stop_event):
         theme_data = self.themes[theme_name]
         logger.info(f"Starting theme: {theme_name}")
-        start_time = time.time()
+        start_time = self._theme_started_at or time.time()
         last_update_time = 0
         try:
             while not stop_event.is_set():
                 current_time = time.time() - start_time
                 if current_time - last_update_time >= 1 / self.frequency:
-                    self._generate_and_apply_theme_step(theme_data, current_time)
+                    with self._step_lock:
+                        self._generate_and_apply_theme_step(theme_data, current_time)
                     last_update_time = current_time
                 time.sleep(0.001)  # Small sleep to prevent CPU hogging
         except Exception as e:
@@ -493,6 +499,35 @@ class ThemeManager:
     def resume_theme_for_room(self, room):
         self.paused_rooms.discard(room)
         logger.info(f"Theme resumed for room: {room}")
+        self._apply_room_theme_now(room)
+
+    def _apply_room_theme_now(self, room):
+        if not self.current_theme:
+            return
+        room_layout = self.light_config_manager.get_room_layout()
+        lights = room_layout.get(room)
+        if not lights:
+            return
+        theme_data = self.themes.get(self.current_theme)
+        if not theme_data:
+            return
+        started_at = self._theme_started_at or time.time()
+        current_time = time.time() - started_at
+        rooms = list(room_layout.keys())
+        room_index = rooms.index(room)
+        total_rooms = len(rooms)
+        profile = self.room_profiles.get(room) or {}
+        rate = profile.get('rate', 1.0)
+        with self._step_lock:
+            room_channels = generate_theme_values(theme_data, current_time * rate,
+                                                  self.master_brightness,
+                                                  room_index, total_rooms,
+                                                  self.temporary_theme_values)
+            room_channels = self._apply_room_profile(room, room_channels)
+            smoothed_channels = self._smooth_channels(room, room_channels)
+            if room != "Camp Sign":
+                smoothed_channels = self._enforce_palette(smoothed_channels, room)
+            self._apply_room_channels(room, lights, smoothed_channels, current_time * rate)
 
     def _apply_room_channels(self, room, lights, room_channels, room_time=0.0):
         # DMX means every fixture is its own lamp: give each one an offset
