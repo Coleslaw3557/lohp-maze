@@ -39,7 +39,8 @@ CONNECT_BACKOFF = 5   # after a failed connect, fail further commands fast this 
 STALE_AFTER = 5       # a command that waited this long behind the node lock is
                       # dropped — a thunder cue arriving after a reconnect backlog
                       # would fire long after its lightning
-NODE_GLOBAL_MAZE_AMBIENCE = False  # ESP nodes prioritize low-latency cues.
+NODE_GLOBAL_MAZE_AMBIENCE = True
+CUE_RESUME_PAD_S = 0.75
 
 
 class _BackingOff(Exception):
@@ -168,6 +169,7 @@ class NodeAudioManager:
         self.maze_ambience_data = None
         self._tasks = set()      # keep fire-and-forget tasks referenced
         self._repeat_tasks = {}  # _NodeConn -> bounded maze-loop repeat task
+        self._resume_tasks = {}  # _NodeConn -> delayed post-cue maze-bed resume
         self._conn_factory = conn_factory or _NodeConn
         self._load(config_file)
 
@@ -252,6 +254,7 @@ class NodeAudioManager:
             self.maze_ambience_file = None
             self.maze_ambience_data = None
             self._cancel_repeats()
+            self._cancel_resumes()
         if room is None:
             conns = list(self.rooms.values())
         elif self.enabled_for(room):
@@ -284,9 +287,15 @@ class NodeAudioManager:
                 # A long HTTP media stream can delay or starve announcement
                 # playback on ESPHome speaker nodes. Cues are timing-critical;
                 # clear stale/noncritical media before starting the cue.
+                self._cancel_repeat(conn)
+                self._cancel_resume(conn)
                 await conn.stop(announcement=False)
-                return await conn.play_announcement(self.cue_url(data['file_name']),
-                                                    volume=1.0)
+                ok = await conn.play_announcement(self.cue_url(data['file_name']),
+                                                  volume=1.0)
+                if ok and self.maze_ambience_file and not conn.bed_active:
+                    delay_s = self._cue_duration_s(data.get('file_name')) + CUE_RESUME_PAD_S
+                    self._arm_maze_resume(conn, delay_s)
+                return ok
             return play_cue()
         if command == 'play_room_ambience':
             # A bed belongs on the media pipeline, so effect cues duck it as
@@ -297,6 +306,7 @@ class NodeAudioManager:
             # the bed streams through once instead of looping.
             conn.bed_active = True
             self._cancel_repeat(conn)
+            self._cancel_resume(conn)
             node_file = self._node_file(data)
             if self._node_loop(data):
                 logger.warning(f"Node audio [{conn.room}]: ambience "
@@ -344,6 +354,23 @@ class NodeAudioManager:
         for conn in list(self._repeat_tasks):
             self._cancel_repeat(conn)
 
+    def _cancel_resume(self, conn):
+        task = self._resume_tasks.pop(conn, None)
+        if task is not None:
+            task.cancel()
+
+    def _cancel_resumes(self):
+        for conn in list(self._resume_tasks):
+            self._cancel_resume(conn)
+
+    def _cue_duration_s(self, audio_file):
+        if self.audio_manager is None or not audio_file:
+            return 3.0
+        duration = self.audio_manager.get_audio_duration_s(f"cues/{cue_id(audio_file)}.wav")
+        if duration is None:
+            duration = self.audio_manager.get_audio_duration_s(audio_file)
+        return max(0.25, float(duration or 3.0))
+
     def _arm_maze_repeat(self, conn, data):
         self._cancel_repeat(conn)
         if not data.get('loop'):
@@ -361,9 +388,37 @@ class NodeAudioManager:
         self._repeat_tasks[conn] = task
         task.add_done_callback(lambda done, c=conn: self._drop_repeat(c, done))
 
+    def _arm_maze_resume(self, conn, delay_s):
+        if not NODE_GLOBAL_MAZE_AMBIENCE or not self.maze_ambience_data:
+            return
+        self._cancel_resume(conn)
+        task = asyncio.create_task(
+            self._resume_maze_after_cue(conn, self.maze_ambience_file,
+                                        dict(self.maze_ambience_data), delay_s))
+        self._resume_tasks[conn] = task
+        task.add_done_callback(lambda done, c=conn: self._drop_resume(c, done))
+
+    def _drop_resume(self, conn, task):
+        if self._resume_tasks.get(conn) is task:
+            self._resume_tasks.pop(conn, None)
+
     def _drop_repeat(self, conn, task):
         if self._repeat_tasks.get(conn) is task:
             self._repeat_tasks.pop(conn, None)
+
+    async def _resume_maze_after_cue(self, conn, file_name, data, delay_s):
+        try:
+            await asyncio.sleep(max(0.25, delay_s))
+            if self.maze_ambience_file != file_name or conn.bed_active:
+                return
+            self._arm_maze_repeat(conn, data)
+            await conn.play_url(self.audio_url(self._node_file(data)),
+                                volume=self._volume(data, 0.35))
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.error(f"Node audio [{conn.room}] maze resume after cue failed: {e}",
+                         exc_info=True)
 
     async def _maze_repeat_loop(self, conn, data):
         file_name = data.get('file_name')
