@@ -39,6 +39,7 @@ CONNECT_BACKOFF = 5   # after a failed connect, fail further commands fast this 
 STALE_AFTER = 5       # a command that waited this long behind the node lock is
                       # dropped — a thunder cue arriving after a reconnect backlog
                       # would fire long after its lightning
+NODE_GLOBAL_MAZE_AMBIENCE = False  # ESP nodes prioritize low-latency cues.
 
 
 class _BackingOff(Exception):
@@ -279,7 +280,14 @@ class NodeAudioManager:
                                f"{data.get('file_name')} — embedded cues don't loop")
             # Cue WAVs are already volume-baked by make_node_audio.py. Keep the
             # media-player gain at full foreground level so beds stay lower.
-            return conn.play_announcement(self.cue_url(data['file_name']), volume=1.0)
+            async def play_cue():
+                # A long HTTP media stream can delay or starve announcement
+                # playback on ESPHome speaker nodes. Cues are timing-critical;
+                # clear stale/noncritical media before starting the cue.
+                await conn.stop(announcement=False)
+                return await conn.play_announcement(self.cue_url(data['file_name']),
+                                                    volume=1.0)
+            return play_cue()
         if command == 'play_room_ambience':
             # A bed belongs on the media pipeline, so effect cues duck it as
             # announcements instead of replacing it. The pipeline is single —
@@ -297,13 +305,19 @@ class NodeAudioManager:
             return conn.play_url(self.audio_url(node_file), volume=self._volume(data, 0.35))
         if command == 'stop_room_ambience':
             conn.bed_active = False
-            if self.maze_ambience_file and self.maze_ambience_data:
+            if (NODE_GLOBAL_MAZE_AMBIENCE and self.maze_ambience_file
+                    and self.maze_ambience_data):
                 # The freed pipeline goes back to the maze ambience.
                 self._arm_maze_repeat(conn, self.maze_ambience_data)
                 return conn.play_url(self.audio_url(self._node_file(self.maze_ambience_data)),
                                      volume=self._volume(self.maze_ambience_data, 0.35))
             return conn.stop(announcement=False)
         if command == 'start_maze_ambience':
+            if not NODE_GLOBAL_MAZE_AMBIENCE:
+                # Browser/VLC clients still get the maze bed. The ESP node's
+                # single media stream stays clear for low-latency cue playback.
+                logger.debug(f"Node audio [{conn.room}]: maze ambience skipped on node")
+                return None
             if conn.bed_active:
                 logger.debug(f"Node audio [{conn.room}]: maze ambience deferred — "
                              "the room's own background owns the pipeline")

@@ -168,7 +168,6 @@
         "GuyLineClimb-Background": {
             "_comment": "Guy Line Climb forest loops. Not room-opted by default; these natural beds also live in the global MazeAmbience-Bed pool and rotate there.",
             "audio_files": [
-                "rooms/Guy Line Climb/uploads/forest_cliff.wav",
                 "rooms/Guy Line Climb/uploads/forest_high_wind.wav",
                 "rooms/Guy Line Climb/uploads/forest_life.wav"
             ],
@@ -689,7 +688,6 @@
                 "ambience/The 7th Continent Soundscape - Area X.mp3",
                 "ambience/rainstorm.mp3",
                 "uploads/Hallow/hallowloop.wav",
-                "rooms/Guy Line Climb/uploads/forest_cliff.wav",
                 "rooms/Guy Line Climb/uploads/forest_high_wind.wav",
                 "rooms/Guy Line Climb/uploads/forest_life.wav"
             ],
