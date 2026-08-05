@@ -738,13 +738,36 @@ async def run_effect():
                 'retry_after_s': round(remaining, 1),
             })
 
-        success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
+        async def execute_effect():
+            success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
+            if success:
+                if moop_complete:
+                    asyncio.create_task(_apply_moop_resolution(MOOP_RIGHT_EFFECT))
+                return True, message
+            _clear_doorway_entry_fire(room, effect_name, started_at)
+            logger.error(f"Failed to execute effect {effect_name} in room {room}: {message}")
+            return False, message
+
+        user_agent = request.headers.get('User-Agent', '')
+        if user_agent.startswith('ESPHome/'):
+            async def background_execute_effect():
+                try:
+                    await execute_effect()
+                except Exception as e:
+                    _clear_doorway_entry_fire(room, effect_name, started_at)
+                    logger.error(f"Async ESPHome effect {effect_name} for room {room} failed: {e}",
+                                 exc_info=True)
+
+            asyncio.create_task(background_execute_effect())
+            return jsonify({
+                'status': 'success',
+                'message': f'Effect {effect_name} accepted for room {room}',
+                'accepted': True,
+            })
+
+        success, message = await execute_effect()
         if success:
-            if moop_complete:
-                asyncio.create_task(_apply_moop_resolution(MOOP_RIGHT_EFFECT))
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}'})
-        _clear_doorway_entry_fire(room, effect_name, started_at)
-        logger.error(f"Failed to execute effect {effect_name} in room {room}: {message}")
         return jsonify({'status': 'error', 'message': message}), 500
     except Exception as e:
         error_message = f"Error executing effect {effect_name} for room {room}: {e}"

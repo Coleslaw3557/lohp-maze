@@ -20,11 +20,10 @@ api:
   port: ${api_port}
   reboot_timeout: 0s   # sims/bench nodes must not reboot when no HA is connected
 
-# The server holds /api/run_effect open until the effect finishes (up to ~20s)
-# and ESPHome's http_request blocks the node's whole loop while waiting — a
-# trip/press during that hold would queue behind it. 3s is enough to deliver
-# the POST and hear the effect start; hanging up early does NOT cancel the
-# effect (verified against the sim server 2026-07-17: effect + photo capture
-# completed after a 1s client disconnect).
+# ESPHome-originated /api/run_effect requests are accepted immediately by the
+# server and run in the background, so the node is free to process native-API
+# audio commands without waiting for the full light timeline. Keep a short
+# timeout anyway: if the server is down or the network wedges, the node should
+# recover promptly instead of blocking its loop.
 http_request:
   timeout: 3s

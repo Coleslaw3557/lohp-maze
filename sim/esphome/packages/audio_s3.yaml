@@ -34,12 +34,12 @@ speaker:
     i2s_dout_pin: ${i2s_dout_pin}
     sample_rate: 44100
     bits_per_sample: 16bit
-    channel: mono          # PCM5102A duplicates mono to both line-out channels
+    channel: stereo        # Send a real L/R I2S frame to the PCM5102A.
     buffer_duration: 100ms # default 500ms adds command-to-sound delay
   - platform: mixer
     id: mixer_spk
     output_speaker: dac_out
-    num_channels: 1
+    num_channels: 2
     source_speakers:
       - id: media_mix_in
       - id: announce_mix_in

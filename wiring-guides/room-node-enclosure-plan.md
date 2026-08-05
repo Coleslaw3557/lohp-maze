@@ -74,8 +74,8 @@ Constraints this plan is built around (decided 2026-07-17):
 
 | Box (room) | Level | Sensor | Azimuth* | Down-tilt | Reach |
 |---|---|---|---|---|---|
-| Monkey / Temple / NFM / Cop Dodge / Gate | ground | LD2410C | +124° (into the room, at the far back corner) | 10° | gates 0–3, 3.0 m |
-| Bike Lock / Deep Playa / Photo Bomb / Porto / Sparkle | upper | LD2410C | −124° (mirrored) | 5° | gates 0–3, 3.0 m |
+| Monkey / Temple / NFM / Cop Dodge / Gate | ground | LD2410C | +124° (into the room, at the far back corner) | 10° | move gate 2, still gate 3 |
+| Bike Lock / Deep Playa / Photo Bomb / Porto / Sparkle | upper | LD2410C | −124° (mirrored) | 5° | move gate 2, still gate 3 |
 | Cuddle Cross (hex back corner, 1.5 m) | upper | LD2410C | 0° (across the deck at the front corner) | 0° | gate 4, 3.0 m |
 | Entrance (back leg) | ground | TOF200C | −18° (out through the START arch) | 10° | range gate 2.1 m |
 | Exit (back leg) | ground | TOF200C | +18° (out through the FINISH arch) | 10° | range gate 2.1 m |
@@ -123,19 +123,24 @@ Gate profile (0.75 m gates; radar at the corner, so distances are diagonal):
 | Gates | Zone | Setting |
 |---|---|---|
 | 0–1 (0–1.5 m) | entry arch + near half of room | full sensitivity (move + still) |
-| 2 (1.5–2.25 m) | far half of room | full move, moderate still |
-| 3 (2.25–3.0 m) | far corner + first sliver of backstage | **raised threshold**, move only |
-| 4–8 | backstage / neighbor bleed | **off** (max gate = 3) |
+| 2 (1.5–2.25 m) | far half of room | still allowed; moving edge allowed only if this room needs deeper entry coverage |
+| 3 (2.25–3.0 m) | far corner + first sliver of backstage | normally off for standard bays |
+| 4–8 | backstage / neighbor bleed | off |
 
-`still` max gate = 2 for entry-triggered rooms (still-detection deep in the
-gate-3 zone is where backstage crew would false); dwell rooms keep still to 3.
+Firmware defaults for standard bay rooms are `ld2410_max_move_gate: "2"` and
+`ld2410_max_still_gate: "3"` in `packages/ld2410.yaml`. The entry effect fires
+on moving-target ON, so gate 2 keeps the trigger close to the entry-side half
+of the room and away from adjacent stacked/back-to-back rooms. Still occupancy
+gets one more gate so someone who entered and stands near the far side is not
+immediately declared gone. If a room misses legitimate entries in testing, raise
+moving to gate 3 for that room only rather than broadening the whole fleet.
 Absence timeout: 5 s standard; 60 s on dwell rooms (No Friends Monday,
 Cuddle Cross) — this is the `absence_timeout` substitution the room's yaml
 passes to packages/ld2410.yaml, and it sets how long after the last
 detection the room reports a leave.
 Upper-floor variant: 5° tilt (keeps the lobe off the plywood deck — radar sees
-through wood to the room below) and still thresholds one notch higher on
-gates 2–3.
+through wood to the room below) and conservative moving range is more important
+than full-room diagonal coverage.
 
 ## Specials
 

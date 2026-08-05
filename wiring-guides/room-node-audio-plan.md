@@ -203,7 +203,7 @@ speaker:
     dac_type: external
     i2s_dout_pin: GPIO9  # D10
     sample_rate: 44100
-    channel: mono
+    channel: stereo
     buffer_duration: 100ms
 
 media_player:

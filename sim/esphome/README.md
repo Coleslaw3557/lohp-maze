@@ -95,9 +95,17 @@ still should remain occupied as long as the LD2410 still holds its still-target 
 moving again while occupied is ignored by the shared `room_occupied` latch and does
 not retrigger the effect.
 
-The only per-room tuning should be the radar front end: position, sensitivity gates,
-and `absence_timeout`. Do not add a second cooldown around `run_effect`; the latch is
-the deployed debounce for radar rooms.
+Standard 7 ft x 5 ft bay rooms default to a contained LD2410 profile because rooms
+share scaffold frames and radar can see through ply: moving/entry max gate `2`
+(about 1.5 m) and still/occupancy max gate `3` (about 2.25 m). Entry only needs
+the near-side moving edge as someone crosses into the room; occupancy gets one
+gate more so standing still inside the room does not immediately drop out.
+Cuddle Cross and the vertical climb shafts can override these substitutions when
+their hardware is flashed.
+
+The only per-room tuning should be the radar front end: physical aim, gate
+overrides, sensitivity thresholds, and `absence_timeout`. Do not add a second
+cooldown around `run_effect`; the latch is the deployed debounce for radar rooms.
 
 ## S3 audio bench (bench-xiao-s3.yaml)
 
@@ -126,13 +134,10 @@ Bring-up order (full checklist: `wiring-guides/room-node-audio-plan.md`):
 
 ## Hardware-day caveats (learned from the sim)
 
-- **The server holds `/api/run_effect` until the effect finishes** (up to ~20s) and
-  ESPHome's `http_request` blocks the node's loop while waiting — a button press
-  during a tripwire's hold would queue behind it. `http_request: timeout: 3s` keeps
-  the node responsive: hanging up early does **not** cancel the in-flight effect
-  (verified against the server 2026-07-17 — a client that disconnected after 1s
-  still got its full effect + photo capture). Note the host platform doesn't enforce
-  this timeout exactly; real ESP32s do.
+- ESPHome-originated `/api/run_effect` requests return immediately with
+  `accepted: true`; the server runs the effect in the background so native-API
+  audio commands can reach the same node without waiting behind a long HTTP
+  request. `http_request: timeout: 3s` remains as a network-failure guard.
 - **First-event trap**: a template binary_sensor without `publish_initial_state: true`
   treats the first-ever trigger after power-up as its *initial* state — `on_press`
   never fires for it. Cost us the first button press after every boot until fixed
