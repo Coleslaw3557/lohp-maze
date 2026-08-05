@@ -30,8 +30,7 @@
                 "rooms/Cop Dodge/uploads/duel_challenge.wav",
                 "rooms/Cop Dodge/uploads/duel_event.wav",
                 "rooms/Cop Dodge/uploads/0x53.wav",
-                "rooms/Cop Dodge/uploads/0x82.wav",
-                "rooms/Cop Dodge/uploads/0x83.wav"
+                "rooms/Cop Dodge/uploads/0x82.wav"
             ],
             "volume": 0.8
         },
@@ -168,7 +167,6 @@
         "GuyLineClimb-Background": {
             "_comment": "Guy Line Climb forest loops. Not room-opted by default; these natural beds also live in the global MazeAmbience-Bed pool and rotate there.",
             "audio_files": [
-                "rooms/Guy Line Climb/uploads/forest_high_wind.wav",
                 "rooms/Guy Line Climb/uploads/forest_life.wav"
             ],
             "volume": 0.35
@@ -688,7 +686,6 @@
                 "ambience/The 7th Continent Soundscape - Area X.mp3",
                 "ambience/rainstorm.mp3",
                 "uploads/Hallow/hallowloop.wav",
-                "rooms/Guy Line Climb/uploads/forest_high_wind.wav",
                 "rooms/Guy Line Climb/uploads/forest_life.wav"
             ],
             "volume": 0.3,

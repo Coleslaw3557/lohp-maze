@@ -6,6 +6,10 @@ substitutions:
   server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
   api_port: "6065"
   host_mac: "06:35:69:00:00:05"
+  # This room has an audible leave sting. When flashed with radar, report empty
+  # promptly so the send-off lands as the visitor exits.
+  ld2410_module_timeout_s: "1"
+  absence_timeout: 0s
 
 packages:
   logic: !include ../packages/logic.yaml
@@ -14,6 +18,7 @@ packages:
 
 # FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
 #   substitutions:      dmx_tx_pin: "6"   # D5, radar room
+#                       server_host: "192.168.1.238"
 #   packages:           radar: !include ../packages/ld2410.yaml
 #                       dmx: !include ../packages/dmx_out.yaml
 #   external_components: [{source: {type: local, path: ../components}}]

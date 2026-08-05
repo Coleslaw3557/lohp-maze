@@ -13,6 +13,13 @@ embedded/on-chip cue files or the `play_cue` action, that design is
 superseded — firmware carries only the two-pipeline player
 (`packages/audio_s3.yaml`).
 
+**2026-08-05 sync update:** maze-wide ambience is synchronized for real ESP
+nodes by the server, not by ESP clocks. The server records one bed start time;
+node starts/resumes/reconnects use `/api/audio/<generated-node-stream>?offset_s=N`
+where `N` is computed from that shared server clock. A disconnected node retries
+joining the current bed on reconciler ticks, but already-connected nodes are
+left alone so their streams are not restarted.
+
 ## Why move audio off the Pis
 
 The old audio was per-**zone**, not per-room: units A/B/C each drove one
@@ -215,7 +222,7 @@ media_player:
       format: MP3
       sample_rate: 44100
       num_channels: 1
-    announcement_pipeline:    # embedded effect cues, mixed/ducked over ambience
+    announcement_pipeline:    # streamed effect cues, mixed/ducked over ambience
       speaker: dac_out
       format: WAV
       sample_rate: 22050
@@ -237,7 +244,8 @@ without the mixer a cue would seize the speaker instead of ducking the ambience.
    mirroring every WS audio command onto mapped rooms — `play_effect_audio` →
    streamed announcement URL `/api/audio/cues/<cue_id>.wav` (2026-07-25; was
    the embedded `play_cue` action), `start_maze_ambience` →
-   `media_player.play_media` on the existing `/api/audio/<file>` URL,
+   `media_player.play_media` on a generated mono node stream under
+   `/api/audio/generated/...` (with `offset_s` when joining an active maze bed),
    `audio_stop` → announcement-only stop (beds survive, matching VLC).
 2. Additive beside WS: `remote_host_manager.send_audio_command` dispatches to
    nodes and still emits every WS message — the sim's browser client keeps
@@ -254,10 +262,11 @@ without the mixer a cue would seize the speaker instead of ducking the ambience.
 Latency/sync (bench-measured 2026-07-25 on the real Cop Dodge box, good RF):
 streamed cue start ≈ **400–490 ms trigger-to-sound** (embedded cues measured
 150 ms before they were dropped — streaming costs ~250–350 ms; Tim's call:
-one audio source of truth on the server outweighs the delta). Ambience bed
-start over HTTP (0.5–3 s) is not timing-sensitive. Re-check the cue delta
-during the marginal-RF soak on the bench checklist; a back-to-back cue
-replaces the one still playing.
+one audio source of truth on the server outweighs the delta). Ambience bed start
+over HTTP (0.5–3 s) is not cue-sensitive, but ESPs should land at the same bed
+position because resume/rejoin URLs include the current server-computed offset.
+Re-check the cue delta during the marginal-RF soak on the bench checklist; a
+back-to-back cue replaces the one still playing.
 
 ## Bench checklist before buying 15 of anything
 

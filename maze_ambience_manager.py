@@ -61,11 +61,18 @@ class MazeAmbienceManager:
             'loop': self.loop,
             'duration_s': self.duration_s,
             'play_for_s': self.play_for_s,
+            'elapsed_s': (
+                round(time.monotonic() - self.started_at, 3)
+                if self.started_at is not None else None
+            ),
         }
 
     def bed(self):
         """The effect a just-registered client should be looping, or None."""
-        return (self.effect, self.playing) if self.effect and self.playing else None
+        return (
+            (self.effect, self.playing, self.started_at)
+            if self.effect and self.playing else None
+        )
 
     def ensure_running(self):
         if self._task is None or self._task.done():
@@ -99,6 +106,7 @@ class MazeAmbienceManager:
                 and time.monotonic() - self.started_at >= self.play_for_s
             )
             if not force and not expired:
+                await self.remote_host_manager.retry_node_maze_ambience()
                 return
             if force:
                 logger.info("Maze ambience forced to a fresh pick")
@@ -118,7 +126,7 @@ class MazeAmbienceManager:
         self.loop = payload.get('loop')
         self.duration_s = payload.get('duration_s')
         self.play_for_s = payload.get('play_for_s')
-        self.started_at = time.monotonic()
+        self.started_at = payload.get('sync_started_at_s') or time.monotonic()
 
     def _clear_playing(self):
         self.playing = None

@@ -17,7 +17,9 @@ Run: sim/.venv/bin/python sim/tools/node_audio_test.py   (from the repo root)
 """
 import asyncio
 import sys
+import time
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import node_audio_manager as nam
@@ -146,6 +148,47 @@ async def run(tmp_path):
           and monkey not in m._repeat_tasks,
           f"({monkey.calls[-1:]}, repeats={m._repeat_tasks})")
 
+    monkey.calls.clear()
+    m.handle_command("Monkey Room", "start_maze_ambience", {
+        "file_name": "ambience/synced.mp3",
+        "node_file_name": "generated/node_streams/synced.mp3",
+        "loop": False,
+        "duration_s": 120.0,
+        "node_duration_s": 120.0,
+        "play_for_s": 122.0,
+        "sync_started_at_s": time.monotonic() - 31.0,
+    })
+    await drain(m)
+    parsed = urlparse(monkey.calls[-1][2])
+    offset = float(parse_qs(parsed.query).get("offset_s", ["0"])[0])
+    check("synced node ambience resumes from the shared maze-bed offset",
+          parsed.path.endswith("/api/audio/generated/node_streams/synced.mp3")
+          and 30.0 <= offset <= 32.0,
+          f"({monkey.calls[-1]})")
+
+    monkey.calls.clear()
+    temple.calls.clear()
+    monkey.client = object()
+    temple.client = None
+    m.maze_ambience_file = "ambience/synced.mp3"
+    m.maze_ambience_data = {
+        "file_name": "ambience/synced.mp3",
+        "node_file_name": "generated/node_streams/synced.mp3",
+        "loop": False,
+        "duration_s": 120.0,
+        "node_duration_s": 120.0,
+        "play_for_s": 122.0,
+        "sync_started_at_s": time.monotonic() - 12.0,
+    }
+    check("maze ambience retry targets disconnected nodes only",
+          m.retry_maze_ambience_on_disconnected_nodes() is True)
+    await drain(m)
+    check("maze ambience retry does not restart connected nodes",
+          monkey.calls == [] and len(temple.calls) == 1
+          and "offset_s=" in temple.calls[0][2],
+          f"(monkey={monkey.calls}, temple={temple.calls})")
+    monkey.client = None
+
     # audio_stop stops cues only; stop_maze_ambience stops the media pipeline
     m.handle_command("Monkey Room", "audio_stop", {})
     m.handle_command(None, "stop_maze_ambience", {})
@@ -210,7 +253,6 @@ async def run(tmp_path):
     # dead node: real _NodeConn against a closed port — quiet False, no raise,
     # and once the backoff is armed further commands fail fast instead of
     # queueing connect timeouts behind the node lock
-    import time
     dead = nam._NodeConn("Dead Room", "127.0.0.1", 1)
     result = await asyncio.wait_for(
         dead.play_announcement("http://10.0.0.2:5000/api/audio/cues/x.wav"),

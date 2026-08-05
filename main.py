@@ -888,14 +888,18 @@ async def room_vacated():
                 return jsonify({'status': 'error', 'message': message}), 500
             return jsonify({'status': 'success',
                             'message': f'Room {room} vacated; {BACKTRACK_EFFECT_NAME} fired'})
-        await effects_manager.stop_effect_in_room(room)
+        interrupted_effect = await effects_manager.stop_effect_in_room(room)
         # Opt-in send-off: a room can name a one-shot pool to fire as its last
         # visitor leaves (audio_config `room_leave_sounds` — Cop Dodge and
-        # Sparkle Pony, Tim 2026-08-01). After the stop above so nothing cuts
-        # it; the backtrack branch above skips it deliberately — the wrong-way
-        # audio owns that exit.
+        # Sparkle Pony, Tim 2026-08-01). Only fire it after the entry effect has
+        # completed; if vacate had to interrupt the active effect, the visitor
+        # ran through before the current sound/show finished and a send-off
+        # would pile on late.
         leave_effect = _room_leave_effect(room)
-        if leave_effect:
+        if leave_effect and interrupted_effect:
+            logger.info(f"Leave sound {leave_effect} skipped in {room}: "
+                        "vacate interrupted the active effect")
+        elif leave_effect:
             await remote_host_manager.play_effect_audio(leave_effect, rooms=[room])
             logger.info(f"Leave sound {leave_effect} fired in {room}")
         return jsonify({'status': 'success', 'message': f'Room {room} vacated'})
@@ -1286,10 +1290,32 @@ async def health():
 
 @app.route('/api/audio/<path:filename>')
 async def serve_audio(filename):
+    def resolve_audio_path(requested):
+        # Older clients can still ask by bare basename, even though new play
+        # commands preserve the selected pool member's relative path.
+        if (os.path.basename(requested) == requested
+                and not os.path.exists(os.path.join(audio_dir, requested))):
+            matches = glob.glob(os.path.join(audio_dir, '**', os.path.basename(requested)),
+                                recursive=True)
+            if matches:
+                requested = os.path.relpath(matches[0], audio_dir)
+        path = os.path.abspath(os.path.join(audio_dir, requested))
+        if os.path.commonpath([audio_dir, path]) != audio_dir:
+            return None
+        return path if os.path.exists(path) else None
+
     base_dir = os.path.dirname(__file__)
-    audio_dir = os.path.join(base_dir, 'audio_files')
-    # Older clients can still ask by bare basename, even though new play
-    # commands preserve the selected pool member's relative path.
+    audio_dir = os.path.abspath(os.path.join(base_dir, 'audio_files'))
+    offset_raw = request.args.get('offset_s')
+    if offset_raw is not None:
+        try:
+            offset_s = max(0.0, float(offset_raw))
+        except (TypeError, ValueError):
+            return jsonify({"status": "error", "message": "bad offset_s"}), 400
+        path = resolve_audio_path(filename)
+        if path is None:
+            return jsonify({"status": "error", "message": "audio not found"}), 404
+        return await stream_audio_from_offset(path, offset_s)
     if (os.path.basename(filename) == filename
             and not os.path.exists(os.path.join(audio_dir, filename))):
         matches = glob.glob(os.path.join(audio_dir, '**', os.path.basename(filename)),
@@ -1297,6 +1323,45 @@ async def serve_audio(filename):
         if matches:
             filename = os.path.relpath(matches[0], audio_dir)
     return await send_from_directory(audio_dir, filename)
+
+
+async def stream_audio_from_offset(path, offset_s):
+    ext = os.path.splitext(path)[1].lower()
+    codec = ["-codec:a", "copy"] if ext == ".mp3" else ["-codec:a", "libmp3lame", "-q:a", "4"]
+    proc = await asyncio.create_subprocess_exec(
+        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        "-ss", f"{offset_s:.3f}",
+        "-i", path,
+        "-vn",
+        *codec,
+        "-f", "mp3",
+        "pipe:1",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+    async def chunks():
+        try:
+            while True:
+                chunk = await proc.stdout.read(32768)
+                if not chunk:
+                    break
+                yield chunk
+            stderr = await proc.stderr.read()
+            await proc.wait()
+            if proc.returncode not in (0, None):
+                logger.warning(f"Offset audio stream failed for {os.path.basename(path)} "
+                               f"@ {offset_s:.3f}s: {stderr.decode(errors='replace')[:300]}")
+        finally:
+            if proc.returncode is None:
+                proc.terminate()
+                try:
+                    await asyncio.wait_for(proc.wait(), 2)
+                except asyncio.TimeoutError:
+                    proc.kill()
+                    await proc.wait()
+
+    return Response(chunks(), mimetype='audio/mpeg')
 
 
 if __name__ == '__main__':

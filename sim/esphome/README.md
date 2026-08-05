@@ -62,12 +62,13 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
 - `packages/audio_s3.yaml` — the speaker chain (I2S → PCM5102A → Pebble):
   mixer + dual media/announcement pipelines. Effect cues play as announcements at
   full node volume; ambience/music streams on the media pipeline at lower per-pool
-  volume and ducks under effect cues.
-- `make_node_audio.py` — generates each node's firmware cue assets from
-  `node_audio_config.json` + `audio_config.json`: `audio/cues/*.wav` (22.05kHz
-  mono, per-effect volume baked in) + `audio/cues-<node>.yaml` (the
-  `files:` list and the `play_cue` dispatch the server calls). Outputs are
-  gitignored — rerun after config/mp3 changes and before any flash.
+  volume and ducks under effect cues. Maze-wide ambience starts/resumes from
+  server-generated `offset_s` URLs, so real ESP speakers follow the same bed
+  clock instead of each restart beginning at zero.
+- `make_node_audio.py` — generates the server-side cue streams from
+  `node_audio_config.json` + `audio_config.json`: `audio_files/cues/*.wav`
+  (22.05kHz mono, per-effect volume baked in). Outputs are gitignored — rerun
+  after config/mp3 changes so `/api/audio/cues/<cue_id>.wav` is current.
 - `rooms/*.yaml` — one node per room: substitutions only (room, effect, server,
   api port 6061–6075, MAC). Room→effect mapping matches `triggers.json` (repo root, the canonical map).
 
@@ -94,6 +95,9 @@ means the radar no longer sees any moving or still target for that timeout. Stan
 still should remain occupied as long as the LD2410 still holds its still-target lock;
 moving again while occupied is ignored by the shared `room_occupied` latch and does
 not retrigger the effect.
+Rooms with audible leave/send-off sounds can override the radar timeout shorter
+(`ld2410_module_timeout_s: "1"`, `absence_timeout: 0s`) so the send-off plays
+close to the actual exit instead of after the standard empty-room grace period.
 
 Standard 7 ft x 5 ft bay rooms default to a contained LD2410 profile because rooms
 share scaffold frames and radar can see through ply: moving/entry max gate `2`
@@ -127,7 +131,8 @@ Bring-up order (full checklist: `wiring-guides/room-node-audio-plan.md`):
    Looping ambience is prepared server-side as a generated crossfaded MP3 for node
    playback, so ESPHome plays one long finite file instead of restarting a short
    loop on the node. Generated files live under `audio_files/generated/` and are
-   intentionally not committed.
+   intentionally not committed. Node ambience URLs may include `offset_s` so a
+   cue resume or a late node reconnect rejoins the current maze-bed position.
 4. Bench checks that gate the 15× buy: cue latency vs the VLC feel, 10× rapid
    `play_cue` retrigger (ESPHome #15692 regression), 30min ambience+cue soak on
    marginal RF, overnight power-bank hold, radar baseline with audio playing.

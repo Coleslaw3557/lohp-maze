@@ -3621,9 +3621,12 @@ function stopRoomAmbience(room) {
 async function playMazeAmbience(file, volume, loop = true) {
   const a = S.audio;
   if (!a.ctx || !file) return;
+  if (a.maze && a.maze.file === file) {
+    return;
+  }
+  stopMazeAmbience();
   try {
     const buf = await getBuffer(file);
-    stopMazeAmbience();
     const src = a.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = loop !== false;
@@ -3632,7 +3635,7 @@ async function playMazeAmbience(file, volume, loop = true) {
     gain.gain.value = vol;
     src.connect(gain).connect(a.ctx.destination);
     src.start();
-    a.maze = { src, gain, vol };
+    a.maze = { src, gain, vol, file };
     log('info', `≈ maze ambience: ${file}`);
   } catch (e) {
     log('err', `maze ambience failed: ${e.message}`);

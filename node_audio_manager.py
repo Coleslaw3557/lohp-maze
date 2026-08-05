@@ -24,7 +24,7 @@ import os
 import re
 import time
 import inspect
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ STALE_AFTER = 5       # a command that waited this long behind the node lock is
                       # would fire long after its lightning
 NODE_GLOBAL_MAZE_AMBIENCE = True
 CUE_RESUME_PAD_S = 0.75
+RESUME_MEDIA_RESET_GAP_S = 0.15
 
 
 class _BackingOff(Exception):
@@ -211,9 +212,17 @@ class NodeAudioManager:
         """Room names with a speaker node configured, original casing."""
         return [c.room for c in self.rooms.values()]
 
-    def audio_url(self, audio_file):
+    def audio_url(self, audio_file, offset_s=None):
+        query = ""
+        if offset_s is not None:
+            try:
+                offset = max(0.0, float(offset_s))
+            except (TypeError, ValueError):
+                offset = 0.0
+            if offset >= 0.25:
+                query = "?" + urlencode({"offset_s": f"{offset:.3f}"})
         return (f"http://{self.server_host}:{self.server_port}"
-                f"/api/audio/{quote(audio_file)}")
+                f"/api/audio/{quote(audio_file)}{query}")
 
     def cue_url(self, audio_file):
         return (f"http://{self.server_host}:{self.server_port}"
@@ -240,6 +249,25 @@ class NodeAudioManager:
     @staticmethod
     def _node_duration(data):
         return data.get('node_duration_s') or data.get('duration_s')
+
+    def _maze_offset_s(self, data):
+        try:
+            started_at = float(data.get('sync_started_at_s'))
+        except (TypeError, ValueError):
+            return None
+        offset = max(0.0, time.monotonic() - started_at)
+        try:
+            duration_s = float(self._node_duration(data) or 0)
+        except (TypeError, ValueError):
+            duration_s = 0.0
+        if duration_s > 0 and data.get('loop'):
+            offset %= duration_s
+        elif duration_s > 0:
+            offset = min(offset, max(0.0, duration_s - 0.5))
+        return offset
+
+    def _maze_audio_url(self, data):
+        return self.audio_url(self._node_file(data), offset_s=self._maze_offset_s(data))
 
     def handle_command(self, room, command, data):
         """Mirror a WS audio command onto the node(s). room=None means every
@@ -319,7 +347,7 @@ class NodeAudioManager:
                     and self.maze_ambience_data):
                 # The freed pipeline goes back to the maze ambience.
                 self._arm_maze_repeat(conn, self.maze_ambience_data)
-                return conn.play_url(self.audio_url(self._node_file(self.maze_ambience_data)),
+                return conn.play_url(self._maze_audio_url(self.maze_ambience_data),
                                      volume=self._volume(self.maze_ambience_data, 0.35))
             return conn.stop(announcement=False)
         if command == 'start_maze_ambience':
@@ -333,7 +361,7 @@ class NodeAudioManager:
                              "the room's own background owns the pipeline")
                 return None
             self._arm_maze_repeat(conn, data)
-            return conn.play_url(self.audio_url(self._node_file(data)),
+            return conn.play_url(self._maze_audio_url(data),
                                  volume=self._volume(data, 0.35))
         if command == 'stop_maze_ambience':
             if conn.bed_active:
@@ -344,6 +372,30 @@ class NodeAudioManager:
             return conn.stop(announcement=True)
         logger.debug(f"Node audio: no mapping for WS command '{command}'")
         return None
+
+    def retry_maze_ambience_on_disconnected_nodes(self):
+        """Retry the current maze bed only on nodes without a native API client.
+
+        This lets a node that was offline during the original start join the
+        shared bed later, using the same sync_started_at_s offset, without
+        restarting already-connected nodes every reconciler tick.
+        """
+        if (not NODE_GLOBAL_MAZE_AMBIENCE or not self.maze_ambience_file
+                or not self.maze_ambience_data):
+            return False
+        dispatched = False
+        for conn in self.rooms.values():
+            if conn.client is not None or conn.bed_active:
+                continue
+            coro = self._command_coro(conn, 'start_maze_ambience',
+                                      dict(self.maze_ambience_data))
+            if coro is None:
+                continue
+            task = asyncio.create_task(coro)
+            self._tasks.add(task)
+            task.add_done_callback(self._tasks.discard)
+            dispatched = True
+        return dispatched
 
     def _cancel_repeat(self, conn):
         task = self._repeat_tasks.pop(conn, None)
@@ -411,9 +463,18 @@ class NodeAudioManager:
             await asyncio.sleep(max(0.25, delay_s))
             if self.maze_ambience_file != file_name or conn.bed_active:
                 return
+            url = self._maze_audio_url(data)
+            volume = self._volume(data, 0.35)
+            logger.info(f"Node audio [{conn.room}] resuming maze ambience "
+                        f"{self._node_file(data)}"
+                        f" @ {self._maze_offset_s(data) or 0.0:.1f}s")
+            await conn.stop(announcement=False)
+            await asyncio.sleep(RESUME_MEDIA_RESET_GAP_S)
             self._arm_maze_repeat(conn, data)
-            await conn.play_url(self.audio_url(self._node_file(data)),
-                                volume=self._volume(data, 0.35))
+            ok = await conn.play_url(url, volume=volume)
+            if not ok:
+                logger.warning(f"Node audio [{conn.room}] maze ambience resume "
+                               f"did not start cleanly")
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -422,7 +483,6 @@ class NodeAudioManager:
 
     async def _maze_repeat_loop(self, conn, data):
         file_name = data.get('file_name')
-        url = self.audio_url(self._node_file(data))
         volume = self._volume(data, 0.35)
         deadline = time.monotonic() + float(data['play_for_s'])
         delay = max(1.0, float(self._node_duration(data)) + 0.25)
@@ -433,7 +493,7 @@ class NodeAudioManager:
                     return
                 if time.monotonic() >= deadline:
                     return
-                await conn.play_url(url, volume=volume)
+                await conn.play_url(self._maze_audio_url(data), volume=volume)
         except asyncio.CancelledError:
             raise
         except Exception as e:

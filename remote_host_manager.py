@@ -2,6 +2,7 @@ import json
 import logging
 import asyncio
 import random
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +44,11 @@ class RemoteHostManager:
             if not provided:
                 continue
             if isinstance(provided, tuple):
-                effect_name, file_name = provided
-                data = self._ambience_payload(effect_name, {'file': file_name})
+                effect_name, file_name, *rest = provided
+                audio_params = {'file': file_name}
+                if rest and rest[0] is not None:
+                    audio_params['sync_started_at_s'] = rest[0]
+                data = self._ambience_payload(effect_name, audio_params)
             else:
                 effect_name = provided
                 data = self._ambience_payload(effect_name)
@@ -213,7 +217,9 @@ class RemoteHostManager:
             'volume': volume,
             **playback,
         }
-        node_file = self.audio_manager.prepare_node_ambience_loop(effect_name, audio_file, playback)
+        if audio_params.get('sync_started_at_s') is not None:
+            data['sync_started_at_s'] = audio_params['sync_started_at_s']
+        node_file = self.audio_manager.prepare_node_ambience_stream(effect_name, audio_file, playback)
         if node_file:
             data.update({
                 'node_file_name': node_file,
@@ -233,12 +239,18 @@ class RemoteHostManager:
             if data is None:
                 logger.info(f"No maze ambience audio configured for {effect_name}")
                 return None
+            data['sync_started_at_s'] = time.monotonic()
             ok = await self.send_audio_command(None, 'start_maze_ambience', data)
             return data if ok else None
 
     async def stop_maze_ambience(self):
         async with self.maze_ambience_lock:
             return await self.send_audio_command(None, 'stop_maze_ambience', {})
+
+    async def retry_node_maze_ambience(self):
+        if not self.node_audio:
+            return False
+        return self.node_audio.retry_maze_ambience_on_disconnected_nodes()
 
     async def start_room_ambience(self, room, effect_name, audio_params=None):
         """Start a looping bed in one room, on a channel of its own.

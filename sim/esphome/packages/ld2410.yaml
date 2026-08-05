@@ -38,6 +38,8 @@
 # Absence timeout per room (room-node-enclosure-plan.md): 5s standard,
 # 60s on dwell rooms (No Friends Monday, Cuddle Cross) where standing still and
 # staying a while IS the point and an early leave would cut the room off.
+# Rooms with audible send-off stings may override both timeouts shorter so the
+# leave sound lands close to the visitor's actual exit.
 #
 # Range containment:
 # The maze bays are back-to-back/stacked, and bare ply does not reliably block

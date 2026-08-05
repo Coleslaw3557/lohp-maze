@@ -13,6 +13,7 @@ DEFAULT_AMBIENCE_PLAYBACK = {
     "loop_for_s": 180.0,
     "once_pad_s": 2.0,
     "unknown_loop": True,
+    "node_prepare_stream": True,
     "node_prepare_loop": True,
     "node_loop_crossfade_s": 1.0,
     "node_loop_max_copies": 64,
@@ -124,6 +125,34 @@ class AudioManager:
                            f"{safe_stem or 'loop'}_{digest}.mp3")
         return path, rel
 
+    def _generated_node_stream_name(self, file_name):
+        path = self._audio_path(file_name)
+        if not path:
+            return None, None
+        try:
+            stat = os.stat(path)
+        except OSError:
+            return None, None
+        key = "|".join([
+            file_name,
+            str(stat.st_mtime_ns),
+            str(stat.st_size),
+            "node-mono-44100-mp3-v1",
+        ])
+        digest = hashlib.sha1(key.encode("utf-8")).hexdigest()[:16]
+        stem = os.path.splitext(os.path.basename(file_name))[0]
+        safe_stem = "".join(c if c.isalnum() else "_" for c in stem).strip("_")[:48]
+        rel = os.path.join("generated", "node_streams",
+                           f"{safe_stem or 'stream'}_{digest}.mp3")
+        return path, rel
+
+    def _node_policy(self, effect_name):
+        config = self.get_audio_config(effect_name)
+        policy = dict(DEFAULT_AMBIENCE_PLAYBACK)
+        policy.update(self.audio_config.get("ambience_playback") or {})
+        policy.update(config.get("ambience_playback") or {})
+        return policy
+
     def prepare_node_ambience_loop(self, effect_name, file_name, playback):
         """Create a cached, longer crossfaded bed for ESP32 node playback.
 
@@ -135,10 +164,7 @@ class AudioManager:
         """
         if not playback.get("loop"):
             return None
-        config = self.get_audio_config(effect_name)
-        policy = dict(DEFAULT_AMBIENCE_PLAYBACK)
-        policy.update(self.audio_config.get("ambience_playback") or {})
-        policy.update(config.get("ambience_playback") or {})
+        policy = self._node_policy(effect_name)
         if not policy.get("node_prepare_loop", True):
             return None
         try:
@@ -210,6 +236,52 @@ class AudioManager:
                 pass
             stderr = getattr(e, "stderr", "") or str(e)
             logger.warning(f"Could not prepare node ambience loop for {file_name}: {stderr}")
+            return None
+
+    def prepare_node_ambience_stream(self, effect_name, file_name, playback):
+        """Return a node-friendly ambience asset for ESPHome speaker playback.
+
+        Short loopable browser beds become longer crossfaded mono MP3s. Long
+        one-shot beds are still normalized to mono 44.1 kHz MP3 so the ESP's
+        mono media pipeline never has to decode a stereo source.
+        """
+        loop_file = self.prepare_node_ambience_loop(effect_name, file_name, playback)
+        if loop_file:
+            return loop_file
+
+        policy = self._node_policy(effect_name)
+        if not policy.get("node_prepare_stream", True):
+            return None
+        source_path, rel_name = self._generated_node_stream_name(file_name)
+        if not source_path or not rel_name:
+            return None
+        out_path = os.path.join(self.base_dir, "audio_files", rel_name)
+        if os.path.exists(out_path):
+            return rel_name
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        tmp_path = out_path + ".tmp"
+        cmd = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", source_path,
+            "-af", "aformat=channel_layouts=mono,aresample=44100",
+            "-f", "mp3",
+            "-codec:a", "libmp3lame",
+            "-q:a", "4",
+            tmp_path,
+        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=60)
+            os.replace(tmp_path, out_path)
+            logger.info(f"Prepared node ambience stream {rel_name} from {file_name}")
+            return rel_name
+        except (OSError, subprocess.SubprocessError) as e:
+            try:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+            except OSError:
+                pass
+            stderr = getattr(e, "stderr", "") or str(e)
+            logger.warning(f"Could not prepare node ambience stream for {file_name}: {stderr}")
             return None
 
     def get_audio_duration_s(self, file_name):

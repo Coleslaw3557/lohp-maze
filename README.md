@@ -21,6 +21,9 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   on the maze WiFi. Sensors (mmWave radar in 13 rooms, ToF at Entrance/Exit, buttons, piezos) fire effects by POSTing to the
 	  server's REST API; each node's speaker plays effect cues and streamed ambience, commanded by the
   server over the ESPHome native API (`node_audio_manager.py` + `node_audio_config.json`).
+  Maze-wide ambience is server-clocked: ESP nodes start or resume the current bed
+  from a shared `offset_s` into the generated node stream, so real room speakers
+  stay aligned even after cue interruptions or node reconnects.
 - **Floor projection** (`projection_engine.py` + `projection_renderer.py`): the Cuddle Cross
   floor show, five themes on one engine — **lava** (a Mayan stepping-stone crossing with
   sink/rise mischief and the surfacing Kukulkan), **jungle** (small venomous snakes on an
@@ -227,7 +230,8 @@ sharing the same radar — is specced in
   `sim/esphome/components/artnet_dmx/`; the camp-sign pixel bridge (same packets
   rendered as WS2811 zones + the storm button) in `firmware/sign/`
 - `remote_host_manager.py` — audio command fan-out: WebSocket to every claiming client, mirrored
-	  to ESP32 nodes via `node_audio_manager.py` (ESPHome native API: firmware cues + streamed ambience)
+	  to ESP32 nodes via `node_audio_manager.py` (ESPHome native API: firmware cues + streamed ambience;
+  server-clocked `offset_s` URLs keep real ESP ambience beds aligned)
 - `audio_manager.py` — audio catalog from `audio_config.json`, served to clients over HTTP
 - `camera_manager.py` — Photo Bomb webcam capture scheduling (synthetic backend without hardware)
 - `projection_engine.py` — the Cuddle lava floor show: stones, mischief, Kukulkan (shared by

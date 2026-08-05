@@ -362,6 +362,7 @@ class EffectsManager:
             # still end up on ambient. resume is a set discard, so repeating it
             # costs nothing and can never unbalance a pause.
             self.theme_manager.resume_theme_for_room(room)
+            return stopped
 
     # --- Theme / audio passthroughs used by the API ---
 

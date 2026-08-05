@@ -10,6 +10,10 @@ substitutions:
   api_port: "6062"
   host_mac: "06:35:69:00:00:02"    # sim-only (sim_host.yaml); unused on hardware
   dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)
+  # This room has an audible leave sting. Keep the send-off close to the
+  # actual exit instead of the default ~10s empty-room grace chain.
+  ld2410_module_timeout_s: "1"
+  absence_timeout: 0s
 
 packages:
   logic: !include ../packages/logic.yaml

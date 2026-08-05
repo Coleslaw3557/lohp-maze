@@ -137,7 +137,9 @@ moving to gate 3 for that room only rather than broadening the whole fleet.
 Absence timeout: 5 s standard; 60 s on dwell rooms (No Friends Monday,
 Cuddle Cross) — this is the `absence_timeout` substitution the room's yaml
 passes to packages/ld2410.yaml, and it sets how long after the last
-detection the room reports a leave.
+detection the room reports a leave. Rooms with audible leave/send-off sounds
+use a fast leave profile (`ld2410_module_timeout_s: "1"`, `absence_timeout:
+0s`) so the sound lands close to the visitor's actual exit.
 Upper-floor variant: 5° tilt (keeps the lobe off the plywood deck — radar sees
 through wood to the room below) and conservative moving range is more important
 than full-room diagonal coverage.
@@ -170,7 +172,9 @@ drops inside the gate, then re-arm after the beam has been clear for the
 timeout; it does **not** call room-vacated, because left-the-beam is not the
 same as left-the-room. Absence timeout is **5 s standard, 60 s on the dwell
 rooms** (No Friends Monday, Cuddle Cross) where standing still and staying a
-while is the point and an early leave would cut the room off mid-visit.
+while is the point and an early leave would cut the room off mid-visit. Rooms
+with audible leave/send-off sounds can opt into the fast leave profile
+(`ld2410_module_timeout_s: "1"`, `absence_timeout: 0s`) for a prompt send-off.
 
 ## Pre-departure lock-in protocol (replaces on-site tuning)
 
