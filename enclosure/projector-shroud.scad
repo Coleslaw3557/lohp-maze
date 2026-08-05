@@ -33,6 +33,12 @@
 //    slab — service by slacking the two M6 carriage bolts and lowering the
 //    whole box.
 //
+//  FILTERED INTAKE PLENUM — right-side bolt/gasket-on cartridge for the
+//    on-hand 9.5 x 9.5 x 3/4 MERV filter and a 140 mm ARCTIC P14 Pro fan.
+//    LS625X airflow with lens facing forward: RIGHT = intake, LEFT =
+//    exhaust. Stack: room air -> MERV -> P14 -> shroud right vent ->
+//    projector intake. Leave left shroud vent open exhaust.
+//
 //  BEAM — 100 x 45 box beam on the CORNER BISECTOR (60.0 deg to each frame
 //    face), threading the 77 mm header-to-rail gap. Its SIDE PLATES extend
 //    at the corner end into a tall back frame (245 mm) carrying the cradle
@@ -70,7 +76,8 @@
 // Export: python3 export-shroud.py   (black = CUT, red = SCORE/etch in XCS)
 
 part = "3d";     // 3d | sheet | sheet_etch | front|rear|side|top|
-                 //   side_plate|rib|beam_plate|beam_rib|plate|plate_mid|flange
+                 //   side_plate|rib|beam_plate|beam_rib|plate|plate_mid|flange|
+                 //   plenum_back|plenum_front|plenum_side|plenum_clip
 
 t = 2.9;         // ply thickness, caliper-gated
 finger = 18;     // finger/socket pitch — literal everywhere so mates align
@@ -129,6 +136,24 @@ notch_y0 = 175.5;                   // notch floor = beam underside
                                     //  (plate bottom rides 3 mm above the
                                     //  window rim: 178.5 - 3)
 flange_d = 60;
+
+// ---- filtered intake plenum (right-side intake add-on, in this file)
+pf_filter_w = 241.3;                // 9.5 in nominal
+pf_filter_t = 19.1;                 // 3/4 in nominal
+pf_filter_clear = 3.0;
+pf_box = 265;
+pf_filter_open = pf_filter_w + pf_filter_clear;
+pf_depth = 72;                      // fan 27 + filter 19 + breathing room
+pf_fan_frame = 140;
+pf_fan_cut = 136;
+pf_fan_pitch = 125;
+pf_fan_screw = 4.5;
+pf_mount_dx = 68;                   // pilots land within the shroud side
+pf_mount_dy = 108;
+pf_mount_screw = 4.0;
+pf_clip_w = 36;
+pf_clip_h = 14;
+pf_clip_hole = 4.2;
 
 // =========================================================================
 module teeth_x(len) for (x = [0 : 2*finger : len - finger])
@@ -253,6 +278,50 @@ module flange() {
   }
 }
 
+// ---- FILTERED INTAKE PLENUM -------------------------------------------
+module rounded_rect(w, h, r = 2) {
+  hull() {
+    translate([r, r]) circle(r = r, $fn = 16);
+    translate([w - r, r]) circle(r = r, $fn = 16);
+    translate([r, h - r]) circle(r = r, $fn = 16);
+    translate([w - r, h - r]) circle(r = r, $fn = 16);
+  }
+}
+module plenum_fan_holes() {
+  circle(d = pf_fan_cut, $fn = 96);
+  for (sx = [-1, 1], sy = [-1, 1])
+    translate([sx * pf_fan_pitch / 2, sy * pf_fan_pitch / 2])
+      circle(d = pf_fan_screw, $fn = 32);
+}
+module plenum_mount_holes() {
+  for (sx = [-1, 1], sy = [-1, 1])
+    translate([sx * pf_mount_dx, sy * pf_mount_dy])
+      circle(d = pf_mount_screw, $fn = 28);
+}
+module plenum_back() {
+  difference() {
+    square([pf_box, pf_box], center = true);
+    plenum_fan_holes();
+    plenum_mount_holes();
+  }
+}
+module plenum_front() {
+  difference() {
+    square([pf_box, pf_box], center = true);
+    square([pf_filter_open, pf_filter_open], center = true);
+    for (p = [[0, pf_box/2 - 9], [0, -pf_box/2 + 9],
+              [pf_box/2 - 9, 0], [-pf_box/2 + 9, 0]])
+      translate(p) circle(d = 3.2, $fn = 24);
+  }
+}
+module plenum_side() square([pf_box, pf_depth]);
+module plenum_clip() {
+  difference() {
+    rounded_rect(pf_clip_w, pf_clip_h, 2);
+    translate([pf_clip_w / 2, pf_clip_h / 2]) circle(d = pf_clip_hole, $fn = 28);
+  }
+}
+
 // ---- sheet nesting ------------------------------------------------------
 P_front  = [   0,   0];
 P_rear   = [ 420,   0];
@@ -267,6 +336,14 @@ P_beamR  = [[0, 740], [110, 740]];
 P_plateM = [ 760, 600];
 P_plateV = [[1040, 600], [1090, 320]];
 P_flange = [[420, 780], [530, 780], [640, 780]];
+P_pf_y    = 875;
+P_pf_back = [pf_box/2, P_pf_y + pf_box/2];
+P_pf_front = [pf_box + 25 + pf_box/2, P_pf_y + pf_box/2];
+P_pf_side = [[0, P_pf_y + pf_box + 25],
+             [0, P_pf_y + pf_box + 25 + pf_depth + 15],
+             [pf_box + 25, P_pf_y + pf_box + 25],
+             [pf_box + 25, P_pf_y + pf_box + 25 + pf_depth + 15]];
+P_pf_clip0 = [2 * (pf_box + 25), P_pf_y];
 
 module sheet_cut() {
   translate(P_front) shroud_front();
@@ -282,6 +359,13 @@ module sheet_cut() {
   translate(P_plateM) plate_mid();
   for (p = P_plateV) translate(p) plate_vert();
   for (p = P_flange) translate(p) flange();
+  translate(P_pf_back) plenum_back();
+  translate(P_pf_front) plenum_front();
+  for (p = P_pf_side) translate(p) plenum_side();
+  for (i = [0 : 3])
+    translate([P_pf_clip0[0] + (i % 2) * (pf_clip_w + 10),
+               P_pf_clip0[1] + floor(i / 2) * (pf_clip_h + 10)])
+      plenum_clip();
 }
 
 // ---- etch layer ---------------------------------------------------------
@@ -321,6 +405,26 @@ module etch_sheet() {
   }
   translate(P_plateV[1]) plate_grid();
   translate(P_plateM) plate_grid();
+  translate(P_pf_back) {
+    translate([-pf_box/2 + 10, pf_box/2 - 16])
+      text("PLENUM BACK - gasket to RIGHT shroud side", size = 6);
+    square([id, ih], center = true);
+    square([vent_w, vent_h], center = true);
+    circle(d = pf_fan_frame, $fn = 96);
+    translate([-44, -4]) text("AIR TO SHROUD", size = 7);
+  }
+  translate(P_pf_front) {
+    translate([-pf_box/2 + 10, pf_box/2 - 16])
+      text("PLENUM FRONT - 9.5 x 9.5 x 0.75 MERV", size = 6);
+    square([pf_filter_w, pf_filter_w], center = true);
+  }
+  for (p = P_pf_side)
+    translate([p[0] + 8, p[1] + pf_depth/2 - 3])
+      text("PLENUM SIDE x4 - glue/tape airtight", size = 5);
+  for (i = [0 : 3])
+    translate([P_pf_clip0[0] + (i % 2) * (pf_clip_w + 10) + 2,
+               P_pf_clip0[1] + floor(i / 2) * (pf_clip_h + 10) + 4])
+      text("clip", size = 4);
 }
 
 // ---- 3D preview ---------------------------------------------------------
@@ -349,6 +453,15 @@ module preview3d() {
     cylinder(h = ext_up + ext_dn + 60, d = 43, $fn = 24);
   color("sienna") translate([-plate_w/2, id/2 + t + 1 + 3*t, 3])
     rotate([90, 0, 0]) linear_extrude(3*t) plate_vert();
+  // Right-side filtered intake plenum, centered on the shroud side vent.
+  color("sandybrown") translate([iw/2 + t, -pf_box/2, ih/2 - pf_box/2])
+    cube([pf_depth, pf_box, pf_box]);
+  color("burlywood") translate([iw/2 + t - 0.1, -id/2, 0])
+    cube([t, id, ih]);
+  %translate([iw/2 + t + 8, -pf_fan_frame/2, ih/2 - pf_fan_frame/2])
+    cube([27, pf_fan_frame, pf_fan_frame]);
+  %translate([iw/2 + t + pf_depth + t + 1, -pf_filter_w/2, ih/2 - pf_filter_w/2])
+    cube([pf_filter_t, pf_filter_w, pf_filter_w]);
 }
 
 // ---- part switch --------------------------------------------------------
@@ -365,4 +478,8 @@ else if (part == "beam_rib") beam_rib();
 else if (part == "plate") plate_vert();
 else if (part == "plate_mid") plate_mid();
 else if (part == "flange") flange();
+else if (part == "plenum_back") plenum_back();
+else if (part == "plenum_front") plenum_front();
+else if (part == "plenum_side") plenum_side();
+else if (part == "plenum_clip") plenum_clip();
 else preview3d();

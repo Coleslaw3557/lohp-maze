@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Export the xTool cut file for the Cuddle projector shroud + mount.
+"""Export the xTool cut file for the Cuddle projector enclosure.
 
-One SVG, one 3mm-ply job:
-  projector-shroud.svg    every panel nested on one bed
+One SVG, one coordinate frame:
+  projector-shroud.svg    shroud, mount, carriage, and filter plenum panels
 Two colors in one frame (same convention as export.py):
   black = CUT       red = SCORE/etch in XCS
 Run from enclosure/:  python3 export-shroud.py

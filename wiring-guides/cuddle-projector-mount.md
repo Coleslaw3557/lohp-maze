@@ -142,6 +142,24 @@ ELEVATION at the corner (heights above deck)        PLAN at the beam band
   grilles), beam pass-through (center 203 mm above the rim) + Ø16 cable
   exit in the rear wall. Top panel rides ~6 mm under the roof slab —
   service by lowering the box, not lifting a lid.
+- **Filtered powered intake**: `enclosure/projector-shroud.scad` also cuts
+  the right-side intake cartridge for the on-hand **9.5 x 9.5 x 0.75 in MERV
+  filter** and the optional **ARCTIC P14 Pro**.
+  Projector airflow was field-identified lens-forward as **RIGHT = intake,
+  LEFT = exhaust**, so the plenum gaskets to the RIGHT shroud window and
+  the LEFT window stays open exhaust (coarse screen only, no MERV). Stack:
+  room air -> MERV -> P14 -> shroud -> projector intake. The plenum is
+  265 mm square and overhangs the shroud side; verify corner/frame clearance
+  before glue, and seal the back panel to the shroud with foam tape so the
+  fan cannot pull dusty bypass air around the filter.
+- **Fan power**: the LS625X has USB-A power at **5 V / 1.5 A**, but the P14
+  Pro is a **12 V, 0.35 A** PC fan. Do not plug the P14 directly into USB.
+  Preferred: run it from an independent 12 V supply or the camp 12 V bus
+  with a local 1 A fuse, tied to the projector's switched AC if you want it
+  to follow projector power. The projector's 12 V trigger is a control
+  output, not fan power. A USB-to-12 V boost converter is electrically
+  possible but is the least preferred field option: fuse it, expect startup
+  margin to be thin, and do not hang anything else from that USB port.
 - Load path: bosses → plate → flange → M6 → beam → side plates → ribs →
   4 hose clamps → legs. **The real unit is 6.2 kg** (not the featherweight
   the phantom envelope implied): glue every ply joint (structural —
