@@ -173,6 +173,7 @@ const camera = new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.1, 30
 camera.rotation.order = 'YXZ';
 const streetCam = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 300);
 let topCam = null;
+let topYaw = 0; // overhead-plan spin (E/R keys); 0 = street side at the bottom
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -663,6 +664,7 @@ function buildMaze(cfg) {
 
   if (L.hex_center) buildHexCenter(L);
   if (L.entrance_towers) buildEntranceTowers(L);
+  buildCampLayout();
 
   // ladders (climb points between floors)
   for (const lad of (L.ladders || [])) {
@@ -1179,6 +1181,26 @@ function buildEntranceTowers(L) {
   let show = true;
   try { show = localStorage.getItem('lohp-sim-towers') !== '0'; } catch (e) { /* private mode */ }
   setTowersVisible(show);
+}
+
+// ------------------------------------------------------------- camp layout
+// The whole 4:30 & B camp lot around the maze (Jen's LotHP-26-v3.svg). ALL
+// rendering lives in the separate camp_layout.js module — keep it there.
+let campGroup = null;
+function setCampVisible(on) {
+  if (!campGroup) return;
+  campGroup.visible = on;
+  $('btn-camp').textContent = on ? 'Camp ✓' : 'Camp ✕';
+  try { localStorage.setItem('lohp-sim-camp', on ? '1' : '0'); } catch (e) { /* private mode */ }
+}
+
+function buildCampLayout() {
+  if (!window.CAMP_LAYOUT || !window.CAMP_DATA) return;
+  campGroup = window.CAMP_LAYOUT.build(THREE);
+  levelGroups[2].add(campGroup); // site plan: visible in every floor filter
+  let show = true;
+  try { show = localStorage.getItem('lohp-sim-camp') !== '0'; } catch (e) { /* private mode */ }
+  setCampVisible(show);
 }
 
 // The arch sign as a canvas texture (same trick as makeLabel): a gold band
@@ -3757,10 +3779,15 @@ function frameStreetView() {
   const shift = Math.tan(hHalf) * dist * (1 - avail);
   streetCam.position.set(cx + shift, 2.7, b.frontZ + dist);
   streetCam.lookAt(cx + shift, 1.85, b.frontZ);
+  S.streetLook = { x: cx + shift, y: 1.85, z: b.frontZ }; // E/R orbit pivot
 }
 
+const MODES = ['street', 'first', 'top'];
+const MODE_LABEL = { street: 'Street view', first: 'Noclip fly', top: 'Overhead plan' };
 function setMode(mode) {
   S.mode = mode;
+  const next = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
+  $('btn-view').textContent = `View: ${MODE_LABEL[mode]} ▸ ${MODE_LABEL[next]}`;
   $('crosshair').classList.toggle('hidden', mode !== 'first' || !S.pointerLocked);
   $('floor-filter').classList.toggle('hidden', mode !== 'top');
   roofGroup.visible = mode !== 'top'; // keep the plan view readable
@@ -3778,6 +3805,7 @@ function setFloorFilter(which) {
 
 function climb(viaLadder) {
   S.level = S.level === 0 ? 1 : 0;
+  S.pos.y = EYE + S.level * S.levelHeight; // hop the noclip eye to that floor
   S.teleporting = true;
   toast(S.level ? '↑ climbed to the upper floor' : '↓ climbed down to the ground floor');
   log('info', `climbed ${S.level ? 'up' : 'down'}${viaLadder ? ' (' + viaLadder.room + ')' : ''}`);
@@ -3797,6 +3825,7 @@ function clickWorld(ev, cam) {
   const hits = raycaster.intersectObjects(grounds, false);
   if (hits.length) {
     S.pos.x = hits[0].point.x; S.pos.z = hits[0].point.z;
+    S.pos.y = hits[0].point.y + EYE; // noclip: land the eye above the clicked slab
     S.level = hits[0].object.userData.level || 0;
     S.teleporting = true;
     toast(`Teleported (${S.level ? 'upper' : 'ground'} floor)`);
@@ -3830,7 +3859,9 @@ function setupControls(cfg) {
   addEventListener('keydown', (ev) => {
     if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT') return;
     S.keys[ev.code] = true;
+    if (ev.code === 'Space' && S.mode === 'first') ev.preventDefault(); // fly up, not a UI click
     if (ev.code === 'KeyN') setDayNight(!ENV.day);
+    if (ev.code === 'KeyM') setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]);
     if (ev.code === 'KeyE' && S.mode === 'first') tryInteract();
   });
   addEventListener('keyup', (ev) => { S.keys[ev.code] = false; });
@@ -3856,16 +3887,29 @@ function setupControls(cfg) {
     lastX = ev.clientX; lastY = ev.clientY;
     if (S.mode === 'top' && topCam) {
       const k = 0.045 / topCam.zoom;
-      topCam.position.x -= dx * k * (innerWidth / innerHeight) * 0.6;
-      topCam.position.z -= dy * k;
+      const kx = k * (innerWidth / innerHeight) * 0.6;
+      const cy = Math.cos(topYaw), sy = Math.sin(topYaw); // pan in SCREEN axes
+      topCam.position.x += -dx * kx * cy + dy * k * sy;
+      topCam.position.z += -dx * kx * sy - dy * k * cy;
     } else if (S.mode === 'street') {
       streetCam.position.x = Math.max(-3, Math.min(23, streetCam.position.x - dx * 0.018));
       streetCam.position.y = Math.max(0.9, Math.min(8, streetCam.position.y + dy * 0.012));
     }
   });
 
+  $('btn-view').onclick = () => setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]);
+  $('btn-respawn').onclick = () => {
+    const sp = cfg.layout.spawn;
+    S.pos.set(sp.pos[0], 1.6, sp.pos[1]);
+    S.level = sp.level || 0;
+    S.yaw = (sp.yaw_deg || 0) * Math.PI / 180;
+    S.pitch = 0;
+    S.teleporting = true;
+    setMode('first');
+  };
   $('btn-daynight').onclick = () => setDayNight(!ENV.day);
   $('btn-towers').onclick = () => setTowersVisible(!(towersGroup && towersGroup.visible));
+  $('btn-camp').onclick = () => setCampVisible(!(campGroup && campGroup.visible));
   $('btn-sign').onclick = () => setSignVisible(!(signGroup && signGroup.visible));
   $('btn-steel').onclick = () => setSteelMode(STEEL_MODES[(STEEL_MODES.indexOf(steelMode) + 1) % STEEL_MODES.length]);
   $('btn-eye').onclick = () => setEyeSkin(EYE_MODES[(EYE_MODES.indexOf(S.eyeSkin) + 1) % EYE_MODES.length]);
@@ -3941,19 +3985,27 @@ function updateInteractHint() {
 }
 
 function updateMovement(dt) {
-  const speed = (S.keys.ShiftLeft || S.keys.ShiftRight) ? 3.6 : 1.7; // human scale in 7ft bays
-  const forward = new THREE.Vector3(-Math.sin(S.yaw), 0, -Math.cos(S.yaw));
-  const right = new THREE.Vector3(-forward.z, 0, forward.x);
+  // NOCLIP flight (Half-Life style): W/S along the full look vector (pitch
+  // included), A/D strafe, Space/C straight up/down, Shift fast. No collision,
+  // no gravity. The floor level is derived from altitude so doorway-beam
+  // sensors, the audio ear and E-interactions keep working mid-flight.
+  const speed = (S.keys.ShiftLeft || S.keys.ShiftRight) ? 9 : 2.4;
+  const cp = Math.cos(S.pitch);
+  const forward = new THREE.Vector3(-Math.sin(S.yaw) * cp, Math.sin(S.pitch), -Math.cos(S.yaw) * cp);
+  const right = new THREE.Vector3(Math.cos(S.yaw), 0, -Math.sin(S.yaw));
   const move = new THREE.Vector3();
   if (S.keys.KeyW) move.add(forward);
   if (S.keys.KeyS) move.sub(forward);
   if (S.keys.KeyD) move.add(right);
   if (S.keys.KeyA) move.sub(right);
+  if (S.keys.Space) move.y += 1;
+  if (S.keys.KeyC) move.y -= 1;
   if (move.lengthSq() > 0) {
     move.normalize().multiplyScalar(speed * dt);
     S.pos.add(move);
+    S.pos.y = Math.max(0.25, Math.min(80, S.pos.y));
   }
-  S.pos.y = EYE + S.level * S.levelHeight; // a 5'11" visitor's eyes under the 6'2" ceiling
+  S.level = S.pos.y > S.levelHeight ? 1 : 0;
 }
 
 function nearestLadder(maxDist) {
@@ -4067,6 +4119,7 @@ async function boot() {
   const a = innerWidth / innerHeight;
   topCam = new THREE.OrthographicCamera(-36 * a, 36 * a, 24, -24, 0.1, 200);
   topCam.position.set((minX + maxX) / 2, 60, (minZ + maxZ) / 2);
+  topCam.up.set(0, 0, -1); // street side at the bottom (topYaw 0)
   topCam.lookAt((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
   topCam.zoom = 4.2;
   topCam.updateProjectionMatrix();
@@ -4089,6 +4142,24 @@ function animate() {
   const t = clock.getElapsedTime();
 
   if (S.mode === 'first') updateMovement(dt);
+
+  // E / R rotate the camera (plan: spin in place; street: orbit the facade).
+  // First-person keeps E = interact and mouse-look for turning.
+  if (S.mode !== 'first' && (S.keys.KeyE || S.keys.KeyR)) {
+    const da = ((S.keys.KeyE ? 1 : 0) - (S.keys.KeyR ? 1 : 0)) * 1.3 * dt;
+    if (S.mode === 'top' && topCam) {
+      topYaw += da;
+      topCam.up.set(Math.sin(topYaw), 0, -Math.cos(topYaw));
+      topCam.lookAt(topCam.position.x, 0, topCam.position.z);
+    } else if (S.mode === 'street' && S.streetLook) {
+      const L = S.streetLook;
+      const px = streetCam.position.x - L.x, pz = streetCam.position.z - L.z;
+      const c = Math.cos(da), s = Math.sin(da);
+      streetCam.position.x = L.x + px * c + pz * s;
+      streetCam.position.z = L.z - px * s + pz * c;
+      streetCam.lookAt(L.x, L.y, L.z);
+    }
+  }
   checkSensorTriggers();
   updateProjection(dt);
   updateEye(dt);

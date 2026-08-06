@@ -22,8 +22,13 @@
 
   <section>
     <div class="row">
+      <button id="btn-view" title="Cycle Street / Noclip fly / Overhead plan (M). Street + plan: mouse wheel zooms, drag pans, E / R rotate. Noclip: click for mouse-look, WASD fly where you look, Space / C up / down, Shift fast">View</button>
+      <button id="btn-respawn" title="Back to the entrance (first-person)">Respawn</button>
+    </div>
+    <div class="row">
       <button id="btn-daynight" title="Toggle day / night (N)">☀ Day</button>
       <button id="btn-towers" title="Show / hide the decorative entrance towers">Towers ✓</button>
+      <button id="btn-camp" title="Camp ground plan at 4:30 & B — the whole lot from Jen's LotHP-26-v3.svg placement drawing at true scale (shade structures, trailer, communal carports, water, generator, cars, shared fuel)">Camp ✓</button>
       <button id="btn-sign" title="Show / hide the camp sign — 24 REAL DMX letter zones @161–352 (cad-items/camp-sign.svg)">Sign ✓</button>
       <button id="btn-steel" title="Show the custom hex deck steel (cad-items drawings) — cycles deck / roof / both; the ply ghosts while it's shown">Steel ✕</button>
       <button id="btn-mount" title="Cuddle projector MOUNT dimensions — the calculated LS625X arm/enclosure position off the NE deck corner, the corner-to-corner string line and the deck surface (fab spec: wiring-guides/cuddle-projector-mount.md)">Mount ✕</button>
@@ -102,6 +107,8 @@
 <div id="interact-hint" class="hidden">Press <b>E</b></div>
 
 <script src="deck_steel.js"></script>
+<script src="camp_layout_data.js"></script>
+<script src="camp_layout.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
