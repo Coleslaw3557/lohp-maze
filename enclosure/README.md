@@ -202,6 +202,71 @@ assignment right-hand sides in FILE ORDER — a forward reference is
 silently `undef` (it ate the M3 holes until a zoomed eyeball caught it;
 sheet-scale renders looked fine).
 
+## Photo Bomb device boxes (`photobomb-boxes.scad`, 2026-08-08)
+
+Two more boxes in the family grammar — corner fingers, floor mortise tabs,
+drop-in lid with Ø14 finger notch, back-wall velcro slots, zero fastener
+holes — but in **6mm ply** (`t = 6.0` in the scad; caliper the real sheet
+and re-export). One scad, `box="camera"` / `box="printer"`;
+`python3 export-photobomb.py` writes both SVGs plus the previews. Device
+dims came from the manufacturers' spec sheets (2026-08-08): QL-820NWB
+125.3 × 234 × 145 / 1.16 kg (Brother US spec page), C930e body 94 × 29 × 24,
+on-clip 94 × 43.3 × 71 (Logitech datasheet). **Neither box is cut yet.**
+
+- **Camera box** (`photobomb-camera-box.svg`, ~237 × 276 mm, one bed load):
+  interior 104 × 100 × 66 for the C930e standing on its folded clip inside
+  the etched floor zone. Mounting = the camera's own 1/4-20 tripod thread
+  in the clip foot: sit it in the zone, mark the thread, **drill Ø7 and
+  bolt from below** (drill-from-the-real-part, same as the DB9 screwlocks).
+  Aim/tilt rides the camera's own clip hinge — the box just points roughly.
+  84 × 36 front aperture centered on the lens (90° diagonal FOV needs only
+  ~±13 mm at this setback; the extra width covers tilt and the flip-up
+  privacy shade, which also clears the 66 interior). Top-edge USB notch in
+  the back wall (13 wide — the molded USB-A head passes; lid caps the
+  channel). One velcro slot pair wraps a scaffold tube on the back plane —
+  the booth camera + flash face the poser from the back scaffolding, per
+  the sim layout.
+- **Printer box** (`photobomb-printer-box.svg`, ~297 × 805 mm total —
+  nested as three row-groups that each fit a ~430 × 390 bed load:
+  floor+lid / left+right / front+back; select per row in XCS and
+  reposition stock between loads): interior 134 × 280 × 155. The front
+  wall is SOLID except a **116 × 72 label mouth** (rev 2026-08-08, Tim:
+  no window — just a spot for prints to come out) and a Ø12 status-LED
+  peep hole. No public body CAD exists (GrabCAD/MakerWorld/Cults carry
+  only accessories), so the mouth was sized by TWO independent
+  measurements that agree within a few mm: product photos scaled to the
+  125.3 spec width, and Tim's photogrammetry scan (`~/printer-test/`,
+  arbitrary-scale mesh; scale fixed by the 145 spec height and
+  cross-validated by the tray width landing at 107.6 vs the photo band
+  106–109). A second, printer-only scan (printer-model.zip, dense
+  fused.ply) independently confirmed the ramp bottom ≈45. Merged
+  numbers: cutter/slot shelf 60–87 above the feet (worst-case spread
+  across all three sources), ramp bottom 42–50, button row bottom
+  ~100–109, output tray 106–109 wide, LED ~43 left of center at 106–118
+  up. The mouth (24–96 up, 116 wide) clears the whole tray on every
+  band from every source while keeping the LCD/buttons covered. Cut labels slide down the ramp and poke out
+  the mouth. Covered buttons are fine: enable **Auto Power On** once in
+  the Printer Setting Tool (Device Settings → Basic tab — "turns on
+  automatically when the power supply cord is plugged in", off by
+  default) and the printer boots with generator power; the LCD is only
+  needed for one-time WiFi setup, done lid-off or at the bench.
+  Rear 42 mm gap takes the DC barrel plug + bend; cables leave
+  through two top-edge notches, **PWR** (25 V DC from the PA-AD-001A
+  brick, which lives OUTSIDE the box) and **DATA** (USB-B / RJ45 heads
+  pass 13 mm). Roll changes: lid off, grip the cover front, lift — the
+  cover swings up through the open top ("hold the printer by the front
+  and firmly lift", per the QL-810W/820NWB Quick Setup Guide). Two velcro
+  slot pairs (paired straps for the ~1.4 kg box+printer), vent slats high
+  in both side walls. +10 mm headroom only — the optional battery base
+  needs an `ih` bump. Direct thermal media darkens with heat: mount the
+  box in shade, never in direct sun.
+
+Assembly quirks specific to these two: every panel is **non-chiral** (no
+pre-mirroring; orient at glue-up — floor etch UP, front OUT, back OUT, lid
+UP, label side up-and-out), and the floor/lid **only seat one way** — the
+front and back edges carry different tab patterns on purpose. Glue
+everything except the lid.
+
 ## Cut layer vs mark layer
 
 Each SVG carries two colours in one coordinate frame — **black = CUT,
@@ -268,6 +333,12 @@ corner screws leave <1mm acrylic web and it cracks.
   part) — the camp-sign PSU terminal hood (own section above); previews
   `preview-assembly-psu-hood.png`, `sheet-psu-hood.png`,
   `sheet-etch-psu-hood.png`
+- `photobomb-boxes.scad` / `export-photobomb.py` /
+  `photobomb-camera-box.svg` + `photobomb-printer-box.svg` — the Photo
+  Bomb C930e webcam + QL-820NWB printer boxes (own section above; **6mm
+  stock**, unlike the 3mm node family); previews
+  `preview-assembly-photobomb-{camera,printer}.png`,
+  `sheet-photobomb-{camera,printer}.png`
 
 The SVG is true mm scale — import straight into XCS. Cut outlines are
 exact; add kerf compensation in XCS if you want piston-fit joints (glue
