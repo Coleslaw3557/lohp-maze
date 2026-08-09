@@ -52,25 +52,28 @@ struct ZoneRun {
   uint16_t px;
 };
 
-// Pixel counts below are the PLAN ESTIMATES (big letter ~14 px, small ~6 px,
-// logo ~56 px). Count real pixels per letter AS INSTALLED and correct these
-// (build sequence step 2) — letter = zone = contiguous pixel range.
+// Pixel counts below are the AS-INSTALLED reel totals (counted 2026-08-09):
+// chain 1 = 43 groups, chain 2 = 18, chain 3 = 55 — LEDs bought in batches of
+// three, 1 px = one 3-LED group. Only chain TOTALS were counted; per-letter
+// splits are the unique whole-px fits with uniform size classes (small 3 /
+// Legends 4 / Hidden-Playa 5). If a letter renders shifted under per-letter
+// effects, move px between neighbors — each chain's total must not change.
 // Order = physical strip order leaving the box (pixel 0 at band center).
 
 // Chain 1: e h t · f o · s d n e g e L (the/of/Legends, all reversed)
 constexpr ZoneRun OUT1_RUNS[] = {
-    {11, 6}, {10, 6}, {9, 6},                                  // e h t  (@249,241,233)
-    {8, 6},  {7, 6},                                           // f o    (@225,217)
-    {6, 14}, {5, 14}, {4, 14}, {3, 14}, {2, 14}, {1, 14}, {0, 14},  // s d n e g e L (@209..161)
+    {11, 3}, {10, 3}, {9, 3},                                  // e h t  (@249,241,233)
+    {8, 3},  {7, 3},                                           // f o    (@225,217)
+    {6, 4}, {5, 4}, {4, 4}, {3, 4}, {2, 4}, {1, 4}, {0, 4},    // s d n e g e L (@209..161)
 };
 // Chain 2: logo field behind the disc
 constexpr ZoneRun OUT2_RUNS[] = {
-    {12, 56},                                                  // logo (@257)
+    {12, 18},                                                  // logo (@257)
 };
 // Chain 3: H i d d e n · P l a y a
 constexpr ZoneRun OUT3_RUNS[] = {
-    {13, 14}, {14, 14}, {15, 14}, {16, 14}, {17, 14}, {18, 14},  // Hidden (@265..305)
-    {19, 14}, {20, 14}, {21, 14}, {22, 14}, {23, 14},            // Playa  (@313..345)
+    {13, 5}, {14, 5}, {15, 5}, {16, 5}, {17, 5}, {18, 5},  // Hidden (@265..305)
+    {19, 5}, {20, 5}, {21, 5}, {22, 5}, {23, 5},           // Playa  (@313..345)
 };
 
 constexpr uint16_t runTotal(const ZoneRun *r, size_t n) {
