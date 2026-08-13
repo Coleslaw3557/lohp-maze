@@ -104,6 +104,24 @@ class RoomBackgroundManager:
         """One immediate reconcile (the POST route) instead of waiting a tick."""
         await self._reconcile()
 
+    async def restart_differing(self, differs):
+        """Sound-mode flip (main.py /api/sound_mode): stop live beds whose
+        pool resolves differently in the new mode, then reconcile so each
+        restarts with a mode-appropriate pick — or stays silent if the pool
+        is now empty (clients loop their bed until replaced or stopped, so
+        stop-first is the only way an emptied pool actually goes quiet).
+        Returns the affected rooms."""
+        affected = []
+        for room in list(self.playing):
+            effect = self.pools.get(room)
+            if effect and differs(effect):
+                await self.remote_host_manager.stop_room_ambience(room)
+                del self.playing[room]
+                affected.append(room)
+        if affected:
+            await self._reconcile()
+        return affected
+
     async def _run(self):
         logger.info(f"Room background reconciler up "
                     f"({len(self.pools)} room(s) configured)")

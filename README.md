@@ -139,6 +139,25 @@ Uploads are renamed on collision because basenames must stay unique across `audi
 play commands carry the bare basename and node cue ids come from the stem. Retiring a file
 pulls it from every pool and moves it to `audio_files/rejected/`; nothing is deleted.
 
+### Attended vs unattended sound modes
+
+The maze has two global **sound modes**: `unattended` (the default walk-through experience —
+every boot starts here, the mode is never persisted) and `attended` (staff running people
+through fast, so sounds are short and pointed). Only the sounds differ: in attended mode,
+pools resolve through the `effects_attended` overrides in `audio_config.json`, and a pool
+with no override keeps tracking its unattended twin — **shared until edited**. The console's
+**Editing** selector switches which mode's pools the page shows and writes; the first edit in
+the Attended view creates the override as a copy, and per-pool **Revert** deletes it again.
+Lights/DMX and the floor projector are identical in both modes.
+
+Flip the live mode with `POST /api/sound_mode {"mode": "attended"}` — the sim panel's Sound
+Mode button and the console's `live:` pill both do this, and a physical switch at the
+Entrance enclosure will later. A flip restarts any playing beds whose pool differs between
+the modes; one-shots and cues pick the new mode up on their next play. Auditioning through
+**Test in room** always plays under the server's *live* mode, not the Editing view. One node
+caveat: ESP32 cue WAVs are volume-baked per file, so give attended its own *files* rather
+than the same file at a different volume.
+
 ## Photo booth & the silver monkey
 
 Two rooms have button-driven set pieces (buttons wired to the room's ESP32 node,

@@ -4037,6 +4037,7 @@ function buildAvatar() {
 // ---------------------------------------------------------------- UI wiring
 async function wireUi(cfg) {
   $('cp-link').href = `${API}/`;
+  $('audio-link').href = `http://${HOST}:5055/`;  // audio console's default port
 
   // stamp which build of the sim code this tab is actually running — a
   // long-lived tab keeps executing the JS it loaded, so "nothing changed"
@@ -4072,6 +4073,24 @@ async function wireUi(cfg) {
 
   $('btn-maze-ambience-start').onclick = () => post('/api/start_maze_ambience', {});
   $('btn-maze-ambience-stop').onclick = () => post('/api/stop_maze_ambience', {});
+
+  // Attended/unattended sound mode — server-global like the floor theme
+  // (every tab and, later, the entrance node's switch share ONE live mode),
+  // so read the current mode from the server rather than assuming.
+  let soundMode = 'unattended';
+  const modeBtn = $('btn-sound-mode');
+  const showSoundMode = (mode) => {
+    soundMode = mode;
+    modeBtn.textContent = mode === 'attended' ? 'Sounds: Attended (staff-run)' : 'Sounds: Unattended';
+    modeBtn.classList.toggle('active', mode === 'attended');
+  };
+  showSoundMode(soundMode);
+  fetch(`${API}/api/sound_mode`).then((r) => r.json())
+    .then((s) => showSoundMode(s.mode)).catch(() => {});
+  modeBtn.onclick = async () => {
+    const want = soundMode === 'attended' ? 'unattended' : 'attended';
+    if (await post('/api/sound_mode', { mode: want }, 'panel')) showSoundMode(want);
+  };
 }
 
 // ---------------------------------------------------------------- boot

@@ -3,7 +3,8 @@
 
 2026-07-25 (Tim): ALL audio lives on and streams from the server — nothing is
 compiled into node firmware. This converts every effect mp3 referenced by
-audio_config.json to audio_files/cues/<cue_id>.wav — 22.05kHz mono s16 (the
+audio_config.json (the base `effects` pools AND the attended-mode
+`effects_attended` overrides) to audio_files/cues/<cue_id>.wav — 22.05kHz mono s16 (the
 announcement-pipeline format in packages/audio_s3.yaml) with the effect's
 per-effect VOLUME BAKED IN, since the node's media_player volume is shared
 with the ambience bed. node_audio_manager.py streams them to nodes as
@@ -35,12 +36,23 @@ def convert(src, dest, volume):
 
 
 def main():
-    effects_cfg = json.load(open(REPO / 'audio_config.json'))['effects']
+    config = json.load(open(REPO / 'audio_config.json'))
+    effects_cfg = config['effects']
     CUES_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Attended-mode pool overrides (top-level effects_attended) bake too — a
+    # sound-mode flip must find its cue WAVs already on disk. An override
+    # without its own volume inherits its base pool's.
+    sources = [(effect, entry, entry.get('volume', 0.7))
+               for effect, entry in effects_cfg.items()]
+    sources += [
+        (f'{name} (attended)', entry,
+         entry.get('volume', effects_cfg.get(name, {}).get('volume', 0.7)))
+        for name, entry in (config.get('effects_attended') or {}).items()
+        if not name.startswith('_') and isinstance(entry, dict)]
+
     cues = {}   # cue_id -> (src, volume)
-    for effect, entry in effects_cfg.items():
-        volume = entry.get('volume', 0.7)
+    for effect, entry, volume in sources:
         for fname in entry.get('audio_files', []):
             src = REPO / 'audio_files' / fname
             if not src.exists():

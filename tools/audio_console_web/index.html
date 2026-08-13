@@ -14,6 +14,12 @@
     <h1>Audio pools</h1>
     <span class="sub">actions, ambient one-shots, and beds all pick from anti-repeat pools</span>
     <span class="spacer"></span>
+    <span class="mode-edit" title="Which selection set this page edits. ATTENDED = the staff-run fast pass (/api/sound_mode): sound pools only — lights, DMX and the floor projector never change with the mode. Attended pools are shared-until-edited: no override yet means the pool plays and edits the unattended set; the first attended edit creates the override as a copy.">
+      Editing
+      <button id="mode-unattended" class="mode selected">Unattended</button>
+      <button id="mode-attended" class="mode">Attended</button>
+    </span>
+    <span id="live-mode" class="dot live" title="The show server's LIVE sound mode — what the maze (and 'Test in room') plays under right now. Browser ▶ auditions play the exact file regardless. Click to flip the maze.">live ?</span>
     <span id="server-dot" class="dot">server ?</span>
     <label class="chk" title="Rebuild the volume-baked WAVs the ESP32 speaker nodes stream (needs ffmpeg)">
       <input type="checkbox" id="apply-cues"> node cues

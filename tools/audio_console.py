@@ -9,6 +9,11 @@ audition, upload, add, reweight and retire the files in every pool.
 Every action plays ONE file drawn from its pool at run time (audio_manager.py),
 so a pool of one is still a pool — this tool never pins a single file.
 
+An Editing selector switches the page between the UNATTENDED pools (`effects`)
+and the ATTENDED overrides (`effects_attended` — the staff-run fast-pass sound
+mode, /api/sound_mode on the show server). Attended pools are shared-until-
+edited: a pool with no override keeps tracking its unattended twin.
+
 audio_config.json is written atomically, with the previous version kept as
 audio_config.json.bak. A running show server can be told to re-read it without a
 restart (POST /api/reload_audio_config), and the ESP32 node cue WAVs can be
@@ -132,6 +137,59 @@ SERVER_URL = 'http://localhost:5000'
 def load_json(path):
     with open(path) as f:
         return json.load(f)
+
+
+# --- sound modes ---------------------------------------------------------
+# Mirrors audio_manager.py: in 'attended' (staff-run fast pass) the server
+# draws a pool from the top-level `effects_attended` override when one
+# exists, else from `effects` — shared until edited. The console edits either
+# set; the show server's LIVE mode (what auditions play under) is separate,
+# proxied at /api/server_sound_mode.
+SOUND_MODES = ('unattended', 'attended')
+ATTENDED_KEY = 'effects_attended'
+
+
+def attended_overlay(config):
+    """Dict-valued, non-comment entries of the attended-mode overrides."""
+    overlay = config.get(ATTENDED_KEY) or {}
+    return {name: entry for name, entry in overlay.items()
+            if not name.startswith('_') and isinstance(entry, dict)}
+
+
+def resolved_pool_cfg(config, name, mode):
+    """(pool entry as `mode` plays it, customized-in-attended flag). The merge
+    mirrors audio_manager.get_audio_config: audio_files/audio_weights swap in
+    AS A PAIR, volume only when the override sets one; playback-policy and
+    comment keys stay with the base entry."""
+    base = config.get('effects', {}).get(name, {})
+    override = attended_overlay(config).get(name)
+    customized = override is not None
+    if mode != 'attended' or override is None:
+        return base, customized
+    merged = {key: value for key, value in base.items()
+              if key not in ('audio_files', 'audio_weights')}
+    merged['audio_files'] = list(override.get('audio_files', []))
+    if override.get('audio_weights'):
+        merged['audio_weights'] = list(override['audio_weights'])
+    if 'volume' in override:
+        merged['volume'] = override['volume']
+    return merged, customized
+
+
+def materialize_attended(config, name):
+    """First attended-specific APPEND to a pool (uploads): seed the override
+    as a copy of the base pool — shared until edited — then mutate that."""
+    overlay = config.setdefault(ATTENDED_KEY, {})
+    entry = overlay.get(name)
+    if not isinstance(entry, dict):
+        base = config.get('effects', {}).get(name, {})
+        entry = {'audio_files': list(base.get('audio_files', []))}
+        if base.get('audio_weights'):
+            entry['audio_weights'] = list(base['audio_weights'])
+        if 'volume' in base:
+            entry['volume'] = base['volume']
+        overlay[name] = entry
+    return entry
 
 
 # audio_config.json is hand-maintained too, so writes match its house style:
@@ -372,13 +430,15 @@ def route_rooms():
         return []
 
 
-def build_state():
+def build_state(mode='unattended'):
     config = load_json(CONFIG_PATH)
     effects = config.get('effects', {})
     triggers_config = load_json(TRIGGERS_PATH)
     triggers = triggers_config.get('triggers', [])
     prefetch_durations(library_files()
-                       + [f for cfg in effects.values() for f in cfg.get('audio_files', [])])
+                       + [f for cfg in effects.values() for f in cfg.get('audio_files', [])]
+                       + [f for cfg in attended_overlay(config).values()
+                          for f in cfg.get('audio_files', [])])
 
     # room -> effect -> the triggers that fire it
     by_room = {}
@@ -510,7 +570,7 @@ def build_state():
     room_order += [r for r in by_room if r not in room_order]
 
     def pool(name):
-        cfg = effects.get(name, {})
+        cfg, customized = resolved_pool_cfg(config, name, mode)
         files = cfg.get('audio_files', [])
         weights = cfg.get('audio_weights') or []
         return {
@@ -522,6 +582,7 @@ def build_state():
             'files': [dict(file_info(f), weight=weights[i] if i < len(weights) else 1)
                       for i, f in enumerate(files)],
             'used_by': used_by.get(name, []),
+            'attended_customized': customized,
         }
 
     rooms = []
@@ -541,8 +602,11 @@ def build_state():
         action['shared'] = False
 
     orphans = [pool(name) for name in effects if name not in used_by]
-    in_pools = {f for cfg in effects.values() for f in cfg.get('audio_files', [])}
-    library = [dict(file_info(rel), pools=sorted(n for n, c in effects.items()
+    # Library membership reflects the mode being edited, so the Attended view
+    # shows exactly what that mode would play.
+    resolved = {name: resolved_pool_cfg(config, name, mode)[0] for name in effects}
+    in_pools = {f for cfg in resolved.values() for f in cfg.get('audio_files', [])}
+    library = [dict(file_info(rel), pools=sorted(n for n, c in resolved.items()
                                                  if rel in c.get('audio_files', [])))
                for rel in library_files()]
 
@@ -573,6 +637,7 @@ def build_state():
         'default_volume': config.get('default_volume', 0.7),
         'server': server_status(),
         'in_pools': len(in_pools),
+        'mode': mode,
     }
 
 
@@ -623,7 +688,11 @@ def server_status():
 
 @app.route('/api/state')
 async def api_state():
-    return jsonify(build_state())
+    mode = request.args.get('mode', 'unattended')
+    if mode not in SOUND_MODES:
+        return jsonify({'status': 'error',
+                        'message': f'mode must be one of {list(SOUND_MODES)}'}), 400
+    return jsonify(build_state(mode))
 
 
 @app.route('/api/games/bike', methods=['PUT'])
@@ -683,13 +752,18 @@ async def api_save_pool(name):
     holding an older view must never write its stale list back — that is how
     files someone just removed used to come back from the dead."""
     body = await request.json
+    mode = body.get('mode', 'unattended')
+    if mode not in SOUND_MODES:
+        return jsonify({'status': 'error',
+                        'message': f'mode must be one of {list(SOUND_MODES)}'}), 400
     config = load_json(CONFIG_PATH)
     effects = config.setdefault('effects', {})
     if name not in effects:
         return jsonify({'status': 'error', 'message': f'no pool named {name}'}), 404
 
     base = body.get('base')
-    if base is not None and list(base) != list(effects[name].get('audio_files', [])):
+    current, _ = resolved_pool_cfg(config, name, mode)
+    if base is not None and list(base) != list(current.get('audio_files', [])):
         return jsonify({'status': 'error', 'message':
                         f'{name} changed since this page loaded it (another tab or device '
                         'saved in between) — refreshing to the current pool; redo the edit'}), 409
@@ -711,7 +785,12 @@ async def api_save_pool(name):
             weight = 1
         weights.append(max(1, min(99, weight)))
 
-    entry = effects[name]
+    # Attended edits land in the overlay, created on this first edit (shared
+    # until edited); either way the PUT replaces the pool wholesale.
+    if mode == 'attended':
+        entry = config.setdefault(ATTENDED_KEY, {}).setdefault(name, {})
+    else:
+        entry = effects[name]
     entry['audio_files'] = paths
     # audio_manager treats a missing audio_weights as uniform; keep the file that
     # way rather than writing a row of identical numbers.
@@ -726,7 +805,8 @@ async def api_save_pool(name):
             pass
     save_config(config)
     push_config_to_server_soon()
-    return jsonify({'status': 'success', 'pool': name, 'files': len(paths)})
+    return jsonify({'status': 'success', 'pool': name, 'files': len(paths),
+                    'mode': mode})
 
 
 @app.route('/api/pools', methods=['POST'])
@@ -747,19 +827,44 @@ async def api_create_pool():
     return jsonify({'status': 'success', 'pool': name})
 
 
+@app.route('/api/pools/<name>/revert', methods=['POST'])
+async def api_revert_pool(name):
+    """Drop a pool's attended override so it tracks the unattended pool again
+    (shared-until-edited). Idempotent — reverting a shared pool is a no-op."""
+    config = load_json(CONFIG_PATH)
+    overlay = config.get(ATTENDED_KEY) or {}
+    reverted = isinstance(overlay.get(name), dict)
+    if reverted:
+        overlay.pop(name)
+        save_config(config)
+        push_config_to_server_soon()
+    return jsonify({'status': 'success', 'pool': name, 'reverted': reverted})
+
+
 @app.route('/api/upload', methods=['POST'])
 async def api_upload():
     """Multipart upload. `pool` (optional) appends the file to that pool;
-    `room` (optional) picks the folder it lands in."""
+    `room` (optional) picks the folder it lands in; `mode` (optional,
+    attended) appends to the pool's attended override instead."""
     files = await request.files
     form = await request.form
     pool_name = (form.get('pool') or '').strip()
     room = (form.get('room') or '').strip()
+    mode = (form.get('mode') or 'unattended').strip()
+    if mode not in SOUND_MODES:
+        return jsonify({'status': 'error',
+                        'message': f'mode must be one of {list(SOUND_MODES)}'}), 400
 
     config = load_json(CONFIG_PATH)
     effects = config.setdefault('effects', {})
     if pool_name and pool_name not in effects:
         return jsonify({'status': 'error', 'message': f'no pool named {pool_name}'}), 404
+    # Uploads APPEND, so an attended-view upload first seeds the override as a
+    # copy of the base pool.
+    pool_entry = None
+    if pool_name:
+        pool_entry = (materialize_attended(config, pool_name)
+                      if mode == 'attended' else effects[pool_name])
 
     if room:
         dest_dir = AUDIO_DIR / 'rooms' / room / 'uploads'
@@ -782,12 +887,12 @@ async def api_upload():
         await storage.save(str(dest_dir / final))   # Quart's FileStorage.save is async
         rel = rel_path(dest_dir / final)
         saved.append(rel)
-        if pool_name:
-            pool_files = effects[pool_name].setdefault('audio_files', [])
+        if pool_entry is not None:
+            pool_files = pool_entry.setdefault('audio_files', [])
             if rel not in pool_files:
                 pool_files.append(rel)
-                if effects[pool_name].get('audio_weights'):
-                    effects[pool_name]['audio_weights'].append(1)
+                if pool_entry.get('audio_weights'):
+                    pool_entry['audio_weights'].append(1)
 
     if not saved:
         return jsonify({'status': 'error', 'message': '; '.join(skipped) or 'no files'}), 400
@@ -810,17 +915,19 @@ async def api_retire():
 
     config = load_json(CONFIG_PATH)
     dropped = []
-    for name, entry in config.get('effects', {}).items():
-        pool_files = entry.get('audio_files', [])
-        if rel not in pool_files:
-            continue
-        index = pool_files.index(rel)
-        pool_files.pop(index)
-        if entry.get('audio_weights'):
-            entry['audio_weights'].pop(index)
-            if len(set(entry['audio_weights'])) <= 1:
-                entry.pop('audio_weights')
-        dropped.append(name)
+    for suffix, pools in (('', config.get('effects', {})),
+                          (' (attended)', attended_overlay(config))):
+        for name, entry in pools.items():
+            pool_files = entry.get('audio_files', [])
+            if rel not in pool_files:
+                continue
+            index = pool_files.index(rel)
+            pool_files.pop(index)
+            if entry.get('audio_weights'):
+                entry['audio_weights'].pop(index)
+                if len(set(entry['audio_weights'])) <= 1:
+                    entry.pop('audio_weights')
+            dropped.append(name + suffix)
 
     dest = RETIRED_DIR / rel
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -873,6 +980,23 @@ async def api_play_in_room():
             {'effect_name': body.get('effect'), 'room': body.get('room')}, timeout=60)
         return jsonify({'status': 'success' if status == 200 else 'error',
                         'message': payload.get('message', '')}), status
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'{SERVER_URL}: {e}'}), 502
+
+
+@app.route('/api/server_sound_mode', methods=['GET', 'POST'])
+async def api_server_sound_mode():
+    """The show server's LIVE sound mode, proxied so the page works even when
+    the browser can't reach the server directly. GET reads, POST
+    {"mode": ...} flips it — auditions (Test in room) play under this mode,
+    not under the page's Editing selector."""
+    try:
+        if request.method == 'POST':
+            body = await request.json or {}
+            status, payload = server_call('/api/sound_mode', {'mode': body.get('mode')})
+        else:
+            status, payload = server_call('/api/sound_mode')
+        return jsonify(payload), status
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'{SERVER_URL}: {e}'}), 502
 

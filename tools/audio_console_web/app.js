@@ -2,6 +2,8 @@
 'use strict';
 
 let STATE = null;
+let MODE = 'unattended';          // which selection set the page EDITS (not the server's live mode)
+let liveMode = null;              // the show server's live sound mode, for the header pill
 let playing = null;               // the button of the file currently auditioning
 const openRooms = new Set();       // initial state is collapsed; preserve user-opened rooms across redraws
 const player = document.getElementById('player');
@@ -56,6 +58,7 @@ async function savePool(pool, changes = {}) {
     files: pool.files.map((f) => ({ path: f.path, weight: f.weight })),
     volume: pool.volume,
     base: pool.loaded,  // what this page loaded — a stale tab's save gets a 409, not a silent clobber
+    mode: MODE,         // attended edits land in the effects_attended override
     ...changes,
   };
   await api(`/api/pools/${encodeURIComponent(pool.name)}`, {
@@ -85,10 +88,12 @@ async function upload(fileList, pool, room) {
   for (const file of files) form.append('file', file);
   if (pool) form.append('pool', pool);
   if (room) form.append('room', room);
+  form.append('mode', MODE);
   toast(`uploading ${files.length} file${files.length > 1 ? 's' : ''}…`);
   try {
     const result = await api('/api/upload', { method: 'POST', body: form });
-    let message = `uploaded ${result.saved.length} file(s)` + (pool ? ` into ${pool}` : ' to the library');
+    let message = `uploaded ${result.saved.length} file(s)`
+      + (pool ? ` into ${pool}${MODE === 'attended' ? ' (attended)' : ''}` : ' to the library');
     if (result.renamed.length) message += ` — renamed ${result.renamed.join(', ')} (basenames must be unique)`;
     if (result.skipped.length) message += ` — skipped ${result.skipped.join(', ')}`;
     toast(message, 'ok');
@@ -247,13 +252,27 @@ function poolBlock(pool, action) {
       ? el('span', { className: 'dot warn', title: 'the same pool answers other rooms too — edits hit all of them' },
           `shared ×${new Set(pool.used_by.map((u) => u.room)).size}`)
       : null,
+    MODE === 'attended'
+      ? (pool.attended_customized
+          ? el('span', { className: 'dot attended-own',
+              title: 'this pool has its own attended selection (effects_attended in audio_config.json)' },
+              'attended override')
+          : el('span', { className: 'dot',
+              title: 'no attended override yet — plays the unattended files; the first edit here creates the override as a copy' },
+              'tracking unattended'))
+      : (pool.attended_customized
+          ? el('span', { className: 'dot attended-own',
+              title: 'this pool has a separate attended selection — switch Editing to Attended to change it' },
+              'has attended variant')
+          : null),
     action && action.route ? el('span', { className: 'fine' }, `(${action.route})`) : null,
     el('span', { className: 'spacer' }),
     el('span', { className: 'fine' }, `${pool.files.length} in pool · vol`),
     volume);
 
   if (action && action.room && action.testable !== false && STATE.server.online) {
-    const test = el('button', { className: 'tiny secondary', title: 'run the real effect in the real room' }, 'Test in room');
+    const test = el('button', { className: 'tiny secondary',
+      title: "run the real effect in the real room (sounds follow the show server's LIVE mode — the header pill, not this Editing view)" }, 'Test in room');
     test.onclick = async (e) => {
       e.stopPropagation();
       try {
@@ -265,6 +284,19 @@ function poolBlock(pool, action) {
       } catch (e) { toast(e.message, 'err'); }
     };
     head.append(test);
+  }
+  if (MODE === 'attended' && pool.attended_customized) {
+    const revert = el('button', { className: 'tiny secondary',
+      title: 'drop the attended override — this pool tracks the unattended selection again' }, 'Revert');
+    revert.onclick = async (e) => {
+      e.stopPropagation();
+      try {
+        await api(`/api/pools/${encodeURIComponent(pool.name)}/revert`, { method: 'POST' });
+        toast(`${pool.name} tracks unattended again`, 'ok');
+        await load();
+      } catch (err) { toast(err.message, 'err'); }
+    };
+    head.append(revert);
   }
   block.append(head);
 
@@ -357,6 +389,7 @@ function render() {
   dot.className = 'dot ' + (STATE.server.online ? 'ok' : 'err');
   dot.textContent = STATE.server.online ? 'server online' : 'server offline';
   dot.title = STATE.server.url;
+  refreshLiveMode();
 
   const global = $('global-actions');
   global.innerHTML = '';
@@ -488,6 +521,48 @@ function findPool(name) {
   return STATE.orphan_pools.find((p) => p.name === name) || null;
 }
 
+/* --- attended / unattended ---------------------------------------------- */
+
+function setEditMode(mode) {
+  if (mode === MODE) return;
+  MODE = mode;
+  $('mode-unattended').classList.toggle('selected', mode === 'unattended');
+  $('mode-attended').classList.toggle('selected', mode === 'attended');
+  document.body.classList.toggle('attended', mode === 'attended');
+  load().catch((e) => toast(`cannot load state: ${e.message}`, 'err'));
+}
+$('mode-unattended').onclick = () => setEditMode('unattended');
+$('mode-attended').onclick = () => setEditMode('attended');
+
+// The show server's LIVE mode — separate from the Editing selector above.
+// Auditions through 'Test in room' play under this; the pill flips it.
+async function refreshLiveMode() {
+  const pill = $('live-mode');
+  try {
+    const state = await api('/api/server_sound_mode');
+    liveMode = state.mode;
+    pill.className = 'dot live ' + (liveMode === 'attended' ? 'warn' : 'ok');
+    pill.textContent = `live: ${liveMode}`;
+  } catch (e) {
+    liveMode = null;
+    pill.className = 'dot live';
+    pill.textContent = 'live ?';
+  }
+}
+
+$('live-mode').onclick = async () => {
+  if (!liveMode) { refreshLiveMode(); return; }
+  const want = liveMode === 'attended' ? 'unattended' : 'attended';
+  try {
+    await api('/api/server_sound_mode', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: want }),
+    });
+    toast(`the maze now plays ${want} sounds`, 'ok');
+  } catch (e) { toast(e.message, 'err'); }
+  refreshLiveMode();
+};
+
 /* --- header actions ---------------------------------------------------- */
 
 $('apply-btn').onclick = async () => {
@@ -543,7 +618,7 @@ function stampLoadedPools() {
 }
 
 async function load() {
-  STATE = await api('/api/state');
+  STATE = await api(`/api/state?mode=${MODE}`);
   stampLoadedPools();
   render();
 }

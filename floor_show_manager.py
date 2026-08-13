@@ -217,6 +217,20 @@ class FloorShowManager:
             await self._reconcile_bed()
             self._reconcile_ambient()
 
+    async def restart_bed(self):
+        """Sound-mode flip (main.py /api/sound_mode): re-pick the live bed so
+        it plays the new mode's pool. Stop-first so a pool emptied in the new
+        mode ends silent instead of looping the old file; if the pool still
+        has files _reconcile_bed starts the fresh pick immediately. Safe no-op
+        while the show is down."""
+        async with self._lock:
+            if not self.active or not self.bed:
+                return False
+            await self.remote_host_manager.stop_room_ambience(self.room)
+            self._clear_bed()
+            await self._reconcile_bed()
+            return True
+
     # --- internals ---
 
     async def _reconcile_bed(self):

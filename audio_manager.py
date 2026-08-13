@@ -19,6 +19,15 @@ DEFAULT_AMBIENCE_PLAYBACK = {
     "node_loop_max_copies": 64,
 }
 
+# Global sound modes: 'unattended' (the default walk-through experience) and
+# 'attended' (staff running people through fast — short, pointed sounds).
+# Attended swaps POOL CONTENTS only, through the audio_config.json top-level
+# `effects_attended` overlay; every selection key (maze_ambience,
+# room_backgrounds, room_leave_sounds, ambient_oneshots, THEME_SHOWS) is
+# mode-shared, and lights/DMX/the floor projector never change with the mode.
+SOUND_MODES = ("unattended", "attended")
+ATTENDED_KEY = "effects_attended"
+
 
 class AudioManager:
     def __init__(self, config_file='audio_config.json', rng=None):
@@ -26,7 +35,10 @@ class AudioManager:
         self.base_dir = os.path.dirname(os.path.abspath(config_file)) or os.getcwd()
         self._rng = rng or random.SystemRandom()
         self.audio_config = self.load_config()
-        self._recent = {}  # effect_name -> deque of recently played files (anti-repeat)
+        # In-memory ON PURPOSE: every boot starts unattended, and a config
+        # reload (the console's push) must not reset a live flip.
+        self.sound_mode = SOUND_MODES[0]
+        self._recent = {}  # (sound_mode, effect_name) -> deque of recent picks (anti-repeat)
         self._duration_cache = {}
 
     def load_config(self):
@@ -39,10 +51,46 @@ class AudioManager:
             logger.error(f"Error loading {self.config_file}: {e}")
             return {"effects": {}, "default_volume": 0.7}
 
+    def set_sound_mode(self, mode):
+        """Switch the global sound mode. Returns True when it changed."""
+        if mode not in SOUND_MODES:
+            raise ValueError(f"unknown sound mode {mode!r} (choices: {SOUND_MODES})")
+        changed = mode != self.sound_mode
+        self.sound_mode = mode
+        if changed:
+            logger.info(f"Sound mode -> {mode}")
+        return changed
+
+    def attended_effects(self):
+        """The attended-mode pool overrides (top-level `effects_attended`).
+        Pools not listed keep tracking `effects` — shared until edited."""
+        overlay = self.audio_config.get(ATTENDED_KEY) or {}
+        return {name: entry for name, entry in overlay.items()
+                if not name.startswith('_') and isinstance(entry, dict)}
+
+    def attended_differs(self, effect_name):
+        """True when this pool resolves differently in the two modes — the
+        signal a live bed needs a fresh pick after a mode flip."""
+        override = self.attended_effects().get(effect_name)
+        if override is None:
+            return False
+        base = self.audio_config['effects'].get(effect_name, {})
+        if not base:
+            return False  # overlay-only names never resolve; nothing to restart
+        return (
+            list(override.get('audio_files', [])) != list(base.get('audio_files', []))
+            or list(override.get('audio_weights') or []) != list(base.get('audio_weights') or [])
+            or override.get('volume', base.get('volume')) != base.get('volume')
+        )
+
     def get_audio_files_to_download(self):
-        """All configured effect/ambience files a client should cache locally."""
+        """All configured effect/ambience files a client should cache locally.
+        BOTH modes' files, always — a sound-mode flip must never wait on a
+        download."""
         audio_files = []
         for config in self.audio_config['effects'].values():
+            audio_files.extend(config.get('audio_files', []))
+        for config in self.attended_effects().values():
             audio_files.extend(config.get('audio_files', []))
         return {
             'effects': list(set(audio_files)),
@@ -52,6 +100,22 @@ class AudioManager:
         config = self.audio_config['effects'].get(effect_name, {})
         if not config:
             logger.warning(f"No audio configuration found for effect: {effect_name}")
+            return config
+        if self.sound_mode == 'attended':
+            override = self.attended_effects().get(effect_name)
+            if override is not None:
+                # audio_files/audio_weights swap in AS A PAIR (base weights
+                # against override files would be a length-mismatched lie);
+                # volume rides along only if the override sets one; playback
+                # policy and comments stay with the base entry.
+                merged = {key: value for key, value in config.items()
+                          if key not in ('audio_files', 'audio_weights')}
+                merged['audio_files'] = list(override.get('audio_files', []))
+                if override.get('audio_weights'):
+                    merged['audio_weights'] = list(override['audio_weights'])
+                if 'volume' in override:
+                    merged['volume'] = override['volume']
+                return merged
         return config
 
     def get_random_audio_file(self, effect_name):
@@ -72,11 +136,12 @@ class AudioManager:
         # Independent draws feel repetitive, so never replay any of the last
         # len//2 picks for this effect (a 2-file effect strictly alternates).
         history_len = len(audio_files) // 2
-        recent = self._recent.get(effect_name)
+        history_key = (self.sound_mode, effect_name)
+        recent = self._recent.get(history_key)
         if recent is None or recent.maxlen != history_len:
             keep = list(recent)[-history_len:] if (recent and history_len) else []
             recent = deque(keep, maxlen=history_len)
-            self._recent[effect_name] = recent
+            self._recent[history_key] = recent
         eligible = [i for i, f in enumerate(audio_files) if f not in recent]
         if not eligible:  # unreachable (history < list size), but never dead-end
             eligible = list(range(len(audio_files)))

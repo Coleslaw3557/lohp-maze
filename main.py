@@ -18,7 +18,7 @@ from artnet_output_manager import ArtNetOutputManager
 from light_config_manager import LightConfigManager
 from effects_manager import EffectsManager
 from remote_host_manager import RemoteHostManager
-from audio_manager import AudioManager
+from audio_manager import AudioManager, SOUND_MODES
 from node_audio_manager import NodeAudioManager
 from floor_show_manager import FloorShowManager, read_saved_theme
 from room_background_manager import RoomBackgroundManager
@@ -1007,6 +1007,62 @@ async def update_theme_value():
     if await effects_manager.update_theme_value(control_id, value):
         return jsonify({'status': 'success', 'message': f'Updated {control_id} to {value}'})
     return jsonify({'status': 'error', 'message': 'Failed to update theme value'}), 500
+
+
+# --- Sound mode: unattended (default walk-through) vs attended (staff-run
+# fast pass, short pointed sounds). The mode swaps sound POOL CONTENTS only
+# (audio_manager.py `effects_attended` overlay); lights/DMX and the floor
+# projector are identical in both. Never persisted: every boot is unattended.
+# The sim's panel button flips it today; the entrance node's physical switch
+# (DB9 Port A, packages/button.yaml pattern) will POST the same body later.
+
+def sound_mode_state():
+    return {'mode': audio_manager.sound_mode, 'modes': list(SOUND_MODES)}
+
+
+async def _reapply_beds_for_mode():
+    """After a mode flip, re-pick live continuous audio whose pool resolves
+    differently in the new mode; one-shots and cues pick it up on their next
+    draw. A pool emptied in the new mode must STOP (clients loop their bed
+    until replaced or stopped), not keep looping the old mode's file."""
+    restarted = []
+    effect = maze_ambience_manager.effect
+    if effect and maze_ambience_manager.playing and audio_manager.attended_differs(effect):
+        if audio_manager.get_audio_config(effect).get('audio_files'):
+            await maze_ambience_manager.apply_now(force=True)
+            restarted.append('maze_ambience')
+        else:
+            # keep `effect` configured so flipping back revives the bed
+            maze_ambience_manager._clear_playing()
+            await remote_host_manager.stop_maze_ambience()
+            restarted.append('maze_ambience (stopped: pool empty in this mode)')
+    rooms = await room_background_manager.restart_differing(audio_manager.attended_differs)
+    restarted.extend(f'room_background:{room}' for room in rooms)
+    if floor_show_manager.bed and audio_manager.attended_differs(floor_show_manager.bed):
+        if await floor_show_manager.restart_bed():
+            restarted.append('floor_bed')
+    return restarted
+
+
+@app.route('/api/sound_mode', methods=['GET'])
+async def get_sound_mode():
+    """unattended (power-up default) vs attended (staff-run fast pass)."""
+    return jsonify(sound_mode_state())
+
+
+@app.route('/api/sound_mode', methods=['POST'])
+async def post_sound_mode():
+    """{"mode": "attended"|"unattended"} — flip which sound selections play
+    (audio only). Live beds whose pools differ restart with a fresh pick."""
+    data = await request.get_json() or {}
+    mode = data.get('mode')
+    if mode not in SOUND_MODES:
+        return jsonify({'status': 'error',
+                        'message': f'mode must be one of {list(SOUND_MODES)}'}), 400
+    changed = audio_manager.set_sound_mode(mode)
+    restarted = await _reapply_beds_for_mode() if changed else []
+    return jsonify({'status': 'success', 'changed': changed,
+                    'restarted': restarted, **sound_mode_state()})
 
 
 @app.route('/api/maze_ambience', methods=['GET'])

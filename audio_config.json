@@ -843,5 +843,8 @@
                 "max_s": 110
             }
         }
+    },
+    "effects_attended": {
+        "_comment": "ATTENDED-mode pool overrides (staff running people through fast — short, pointed sounds; /api/sound_mode). A pool listed here replaces its effects twin's audio_files/audio_weights/volume while the mode is attended; pools NOT listed keep tracking effects (shared until edited in the console's Attended view). Lights/DMX and the floor projector never change with the mode. Keys starting with _ are ignored."
     }
 }

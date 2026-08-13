@@ -139,7 +139,7 @@ class EffectsManager:
             return effect_name
         if room in SHARED_ANSWER_AUDIO_ROOMS:
             return effect_name
-        config = self.audio_manager.audio_config.get('effects', {}).get(candidate, {})
+        config = self.audio_manager.get_audio_config(candidate)
         if room in NO_SHARED_ANSWER_AUDIO_FALLBACK_ROOMS:
             return candidate
         return candidate if config.get('audio_files') else effect_name

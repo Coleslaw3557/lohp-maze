@@ -87,6 +87,17 @@ def test_stop_test():
     post_success('stop_test', {})
 
 
+def test_sound_mode():
+    state = get_json('sound_mode')
+    assert state['mode'] in state['modes'], f"mode {state['mode']} not in {state['modes']}"
+    assert 'unattended' in state['modes'] and 'attended' in state['modes']
+    assert post_success('sound_mode', {"mode": "attended"})['mode'] == 'attended'
+    assert get_json('sound_mode')['mode'] == 'attended'
+    assert post_success('sound_mode', {"mode": "unattended"})['mode'] == 'unattended'
+    response = requests.post(f"{BASE_URL}/sound_mode", json={"mode": "party"})
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}"
+
+
 if __name__ == "__main__":
     print(f"Starting API tests against {BASE_URL}")
     tests = [
@@ -100,6 +111,7 @@ if __name__ == "__main__":
         (test_run_channel_test, 5),
         (test_run_effect_test, 5),
         (test_stop_test, 0),
+        (test_sound_mode, 0),
     ]
     results = []
     for test, wait in tests:

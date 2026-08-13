@@ -82,6 +82,13 @@
     </div>
   </section>
 
+  <section>
+    <h3>Sound Mode</h3>
+    <div class="row">
+      <button id="btn-sound-mode" title="Attended = staff running people through fast: a second selection of shorter sounds (ambience, victory, cues — curated in the audio console's Attended view). Lights/DMX and the projector are identical in both modes. The server boots unattended; the entrance node's physical switch will use the same API.">Sounds: …</button>
+    </div>
+  </section>
+
   <details>
     <summary>Trigger sensors directly</summary>
     <div id="trigger-list"></div>
@@ -99,7 +106,8 @@
   </details>
 
   <footer>
-    <a id="cp-link" href="#" target="_blank">Server control panel ↗</a>
+    <a id="cp-link" href="#" target="_blank">Server control panel ↗</a> ·
+    <a id="audio-link" href="#" target="_blank" title="Audio pool console (tools/audio_console.py, port 5055) — pick the sounds each action, one-shot and bed plays; Attended view edits the staff-run selections">Audio console ↗</a>
   </footer>
 </div>
 

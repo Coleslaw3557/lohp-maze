@@ -41,6 +41,18 @@ button.danger:hover { background: #3d1420; border-color: #7a2437; color: #ff8296
 .dot.err { background: #3d1420; color: #ff7285; }
 .dot.warn { background: #3a2f10; color: #ffc94d; }
 
+/* --- attended / unattended editing mode --- */
+.mode-edit { display: inline-flex; align-items: center; gap: 6px; color: #8b90a8;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+button.mode { padding: 3px 9px; font-size: 11px; }
+button.mode.selected { background: #12351f; border-color: #2c8f52; color: #7fd6a0; }
+body.attended button.mode.selected { background: #3a2f10; border-color: #8f742c; color: #ffc94d; }
+.dot.live { cursor: pointer; }
+.dot.attended-own { background: #3a2f10; color: #ffc94d; }
+/* the Attended view must be unmistakable */
+body.attended #top { background: rgba(42,32,10,0.97); border-bottom-color: #5c4a1a; }
+body.attended #top .sub::after { content: " — EDITING ATTENDED (staff-run) SOUNDS"; color: #ffc94d; }
+
 /* --- library inbox (drop anywhere on the page lands here) --- */
 #inbox { margin-bottom: 14px; }
 #dropzone { border: 2px dashed #32364e; background: #0d0e15;
