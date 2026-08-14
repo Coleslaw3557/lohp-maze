@@ -45,13 +45,15 @@ binary_sensor:
     filters: [delayed_on: 30ms]
     on_press:
       - http_request.post:
-          url: http://192.168.1.238:5000/api/run_effect
+          url: http://192.168.252.231:5000/api/run_effect
           request_headers: { Content-Type: application/json }
           json: { room: "${room}", effect_name: "${effect}" }
 ```
 
 **Network:** a dedicated 2.4GHz travel router inside the maze (GL.iNet Mango ~$29 or Opal ~$40 —
-USB-powered, runs off a power bank), wired to the server's Ethernet port. Survey channels at night
+USB-powered, runs off a power bank), wired to the server's Ethernet port.
+*(As built 2026-08-10: a Teltonika RUT140 routes/DHCPs `192.168.252.0/24` and the Pi itself
+is the 2.4 GHz AP, SSID `LOHP-ESP` — `wiring-guides/maze-network.md`.)* Survey channels at night
 with a phone WiFi analyzer, pin the emptiest of 1/6/11, WPA2, static IPs. Fifteen nodes sending
 one tiny POST per event is a trivial WiFi load even in congested camp spectrum — congestion kills
 throughput, and you need none. Keep ESP-NOW (native in ESPHome) as the break-glass re-flash if

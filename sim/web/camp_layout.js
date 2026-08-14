@@ -16,7 +16,8 @@
 //   Water                        250-gallon water tank
 //   Small Generator              Predator 5000 inverter
 //   plus: 6 cars, OSS container, shower & evap, 2 bike racks, shared fuel
-//   depot circles (Blazing Death Ship), maze tie-down margin.
+//   depot circles (Blazing Death Ship), maze tie-down margin, and the five
+//   extension cord home runs off the generator (wiring-guides/camp-power-cords.md).
 window.CAMP_LAYOUT = (() => {
   const FT = 0.3048;
 
@@ -361,6 +362,53 @@ window.CAMP_LAYOUT = (() => {
           outline(circlePts(it.cx, it.cz, it.r), 0xd3d1e9, 0.04, { dashed: true, opacity: 0.55 });
           break;
         }
+      }
+    }
+
+    // ---- extension cord runs (wiring-guides/camp-power-cords.md) ----------
+    // Four home runs off the Predator 5000 plus one daisy-chain branch: the
+    // gen->water cord splits at the tank into a short stinger to the kitchen
+    // (the communal's REAR carport — the one facing the water, where the
+    // coffee maker lives). Colors match the plan artifact. Camp-side ends
+    // track the baked drawing so an SVG rev moves the cords with the items;
+    // the maze drop is the audio_power battery bus behind the hex
+    // (maze_layout.json), a constant so this file still depends on
+    // camp_layout_data.js only.
+    {
+      const MAZE_BUS = [10.044, -0.72];
+      const zoneC = (k) => { const z = D.zones.find((x) => x.key === k); return z && [z.cx, z.cz]; };
+      const itemC = (k) => { const i = D.items.find((x) => x.kind === k); return i && [i.cx, i.cz]; };
+      const genAt = itemC('generator');
+      const waterAt = itemC('water');
+      const kitchenAt = (() => { // rear carport center, zone-local (0, -15 ft)
+        const z = D.zones.find((x) => x.key === 'communal');
+        if (!z) return null;
+        const lz = -15 * FT;
+        return [z.cx + lz * Math.sin(z.rot || 0), z.cz + lz * Math.cos(z.rot || 0)];
+      })();
+      const cords = [
+        { from: genAt, to: MAZE_BUS, gauge: '10/3', color: 0xe06a50 },  // maze battery bus
+        { from: genAt, to: itemC('trailer_brs'), gauge: '10/3', color: 0x7fb086 },
+        { from: genAt, to: zoneC('brs_tents'), gauge: '12/3', color: 0xa68ac9 }, // strip at the excluded middle spots
+        { from: genAt, to: waterAt, gauge: '12/3', color: 0xcfa53d },
+        { from: waterAt, to: kitchenAt, gauge: '12/3', color: 0x62a7c0 }, // kitchen stinger off the tank
+      ];
+      for (const c of cords) {
+        if (!c.from || !c.to) continue; // a bake rev renamed an endpoint — skip, don't crash
+        const dx = c.to[0] - c.from[0], dz = c.to[1] - c.from[1], len = Math.hypot(dx, dz);
+        const m = mat(c.color, { emissiveIntensity: 0.5, roughness: 0.6 });
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(len, 0.035, 0.14), m);
+        bar.position.set(c.from[0] + dx / 2, 0.05, c.from[1] + dz / 2);
+        bar.rotation.y = Math.atan2(-dz, dx);
+        g.add(bar);
+        // 1px overlay line so the run stays visible at overview zoom
+        outline([[c.from[0], c.from[1]], [c.to[0], c.to[1]]], c.color, 0.065, { opacity: 0.95 });
+        const dot = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 12), m);
+        dot.position.set(c.to[0], 0.06, c.to[1]);
+        g.add(dot);
+        label(`${Math.round(len / FT)}′ · ${c.gauge}`,
+          c.from[0] + dx * 0.55, 0.55, c.from[1] + dz * 0.55,
+          0.42, '#' + c.color.toString(16).padStart(6, '0'));
       }
     }
     return g;

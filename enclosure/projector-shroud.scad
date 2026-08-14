@@ -1,82 +1,81 @@
-// LoHP maze — Cuddle projector SHROUD + MOUNT, laser-cut edition
-// (2026-08-01 REAL-DIMS rev; supersedes 2026-07-29)
+// LoHP maze — Cuddle projector SHROUD, laser-cut edition
+// (2026-08-11 VIVO-mount rev; supersedes the 2026-08-01 beam/cradle arm)
+// (2026-08-11b: CLOSED bottom w/ lens window + cable bay — Tim: open
+//  bottom defeats the dust purpose; HDMI/power/serial need to plug in)
 // ===========================================================================
 // The LS625X hangs NOSE-DOWN at the hex NE corner throwing SW down the deck
-// diagonal. 2026-08-01: chassis re-sized to the OFFICIAL ViewSonic figures
-// (user guide p.56: 383.7 w x 291.5 d x 147.7 h, net 6.2 kg; ceiling bosses
-// 4x M4 on a 223.0 x 150.0 pattern) — the earlier 293 x 221.5 x 114.6 body
-// was a bad source, ~0.76x in every axis. The taller nose-down body forces
-// the window DOWN: 1455 mm above deck (0.49 x 2969 mm image), body top
-// 1746.5, shroud top 6 mm under the 1760 roof soffit. Lens plumb 250 mm
-// from the corner ON the string line (coverage 90.2%, rear corners 25 mm
-// clear of the rail tube worst-case). Numbers + on-site calibration in
-// wiring-guides/cuddle-projector-mount.md; the sim's Mount button draws
-// this hardware to scale.
+// diagonal (optics + calibration in wiring-guides/cuddle-projector-mount.md).
 //
-// WHY THIS SHAPE (the corner is hostile to flat plates): the two frame
-// planes meet at 120 deg, only 30 deg off any plate facing the corner, and
-// each frame carries a TOP RAIL 75 mm below the leg tops plus a full-width
-// HEADER 190 mm down. Anything wide that touches the leg pair crosses those
-// members' ends within ~40 mm laterally. So the mount touches the legs ONLY
-// at member-free heights, with horizontal CRADLE RIBS; everything vertical
-// stays >= 65 mm inboard of the corner where no steel lives.
+// MOUNTING (2026-08-11): COTS VIVO MOUNT-VP01B universal projector mount
+// (listing + vivo-us.com reviewed 2026-08-11): all-steel, 30 lb / 13.6 kg
+// rated, +-15 deg tilt, +-15 deg swivel, 360 deg rotation, FIXED 6 in /
+// 152 mm profile, spider feet fit boss spreads 5.25-12.5 in / 133-318 mm
+// (LS625X 223 x 150 pattern = 268.8 diagonal — fits). Plate hose-clamped to
+// the paired 43 mm corner legs on ~40 mm standoff blocks (see doc); the
+// spider feet land OUTSIDE the REAR WALL and their M4 screws pass through
+// the ply into the chassis bosses — wall SANDWICHED, shroud hangs on those
+// four screws. 360 deg collar rolls the unit nose-down; tilt/swivel = fine
+// trim. Nose-down the boss face is vertical facing the corner ("the bottom
+// of the projector" IS the rear wall).
+//
+// ORIENTATION FACTS the box lives by (nose-down; airflow BENCH-MEASURED
+// by Tim 2026-08-11):
+//   lens/front face   -> DOWN  (bottom panel: EXACT 117 x 120 lens
+//                               aperture — the ONLY front opening)
+//   boss/bottom face  -> NE corner (rear wall = mount wall)
+//   connector/rear    -> UP    (cable bay above the body; guide p.5 puts
+//                               the connector panel on the chassis rear)
+//   top face          -> SW    (front wall, throw side)
+//   intake grille     -> flank, 9 x 3.5 in, viewer-LEFT facing the lens
+//                       head-on = side R here, plenum side
+//   exhaust grille    -> the OTHER flank (the one next to the off-center
+//                       lens), same 9 x 3.5 = side L here, open vent
+//
+// CABLE BAY + THE ROOF TRADE: the old cavity left 4.5 mm over the body —
+// no plug fits. cable_bay adds headroom for right-angle plugs BUT the
+// shroud top is pinned ~6 mm under the 1760 soffit, so every mm of bay
+// LOWERS the projection window 1 mm and costs ~2 mm of image width
+// (TR 0.49). 35 is a right-angle-adapter BUDGET, not a measurement —
+// bench-measure the plugged stack (HDMI + power + DB9, right-angle where
+// possible) above the chassis rear face and shrink cable_bay to that.
+// Cables gather to the 55 x 30 slot high in the rear wall (Tim covers it).
+//
+// BOTTOM = screw-on WINDOW PANEL (dust floor): flat plate under the rim on
+// a glued 2-ply perimeter ring; 6 screws up into the ring. ONE opening —
+// the lens aperture, BENCH-MEASURED by Tim 2026-08-11: EXACT 117 across x
+// 120 high, starting 56 from the chassis edge on the side-L (exhaust)
+// side. Vertical position on the 147.7 face assumed CENTERED — lay the
+// unit on the panel and verify against the etched ruler before glue-up.
 //
 // Assemblies (3mm ply, t = 2.9 caliper-gated node-box stock; ply is
-// STRUCTURAL here — glue every joint, Titebond III; the REAL unit is
-// 6.2 kg, so no dry joints and all 4 hose clamps):
+// STRUCTURAL — glue every joint, Titebond III; the box hangs on the wall):
 //
-//  SHROUD — 5-sided finger-jointed sleeve around the nose-down chassis
-//    (383.7 x 147.7 plan, 291.5 tall): OPEN BOTTOM (beam + dust exit; rim
-//    flush with the projection window), vent windows both sides (filter
-//    cloth stapled OUTSIDE, staple ring etched), rear wall = beam
-//    pass-through + 16 mm cable exit. Top panel rides ~6 mm under the roof
-//    slab — service by slacking the two M6 carriage bolts and lowering the
-//    whole box.
+//  SHROUD — 5-sided finger-jointed sleeve + screw-on bottom window panel:
+//    vent windows both sides (filter cloth stapled OUTSIDE, staple ring
+//    etched), rear wall = MOUNT WALL (etched 10 mm drill grid + nominal
+//    223 x 150 boss rectangle — drill the real pattern FROM THE UNIT on
+//    the bench) + cable slot. Top rides ~6 mm under the roof slab; service
+//    = unscrew the spider feet or slack the hose clamps.
 //
 //  FILTERED INTAKE PLENUM — right-side bolt/gasket-on cartridge for the
 //    on-hand 9.5 x 9.5 x 3/4 MERV filter and a 140 mm ARCTIC P14 Pro fan.
 //    LS625X airflow with lens facing forward: RIGHT = intake, LEFT =
 //    exhaust. Stack: room air -> MERV -> P14 -> shroud right vent ->
-//    projector intake. Leave left shroud vent open exhaust.
+//    projector intake. Leave left shroud vent open exhaust. NOTE the
+//    plenum hangs asymmetric off the right side — torque the VIVO's
+//    rotation collar properly or the rig rolls toward the plenum.
 //
-//  BEAM — 100 x 45 box beam on the CORNER BISECTOR (60.0 deg to each frame
-//    face), threading the 77 mm header-to-rail gap. Its SIDE PLATES extend
-//    at the corner end into a tall back frame (245 mm) carrying the cradle
-//    ribs; top/bottom plates carry the +-80 mm carriage slots (2026-08-01:
-//    slots re-centered on the carriage's actual bolt line ~139 mm from the
-//    corner — the 07-29 sheet had them at the far inboard end where the
-//    carriage can never ride).
-//
-//  CRADLE RIBS x4 — horizontal plates at the four clamp heights (two bands:
-//    ~1530-1560 above deck, below the legs' brace studs; ~1745-1775, above
-//    the top-rail weld under the coupling collars). Each rib ends in two
-//    open D44 cradles that seat the paired 43 mm legs, with a hose-clamp
-//    slot inboard of each cradle: the clamp threads the slot, wraps the
-//    tube, and pulls the cradle onto the leg. Ribs tenon through mortises
-//    in the side-plate back frames (glued cross-lap).
-//
-//  CARRIAGE — vertical plate x3 laminations, 260 x 240 with a beam notch:
-//    the real 223 x 150 boss pattern is WIDER than the beam and its top row
-//    rides ABOVE the beam underside, so the plate ears rise beside the beam
-//    (PI shape) and the notch floor sits at the beam bottom. Drill the boss
-//    pattern ON THE BENCH from the unit (10 mm grid etched as drill guide;
-//    4x M4x16 + fender washers into the chassis bosses — verify boss depth,
-//    do NOT bottom out; center the LENS on the string line, not the
-//    chassis — the lens sits off-center in the 383.7 width). Top flange
-//    (x3, tongue into the mid lamination at the notch floor) bolting UP
-//    into the beam slots: 2x M6, nuts + fender washers inside the open beam
-//    end. Slack the bolts -> the carriage (plate + chassis + shroud) slides
-//    +-80 mm along the beam = the on-site radial trim. Shroud rear wall
-//    screws to the plate face (etched pilots).
-//
-// Load path: chassis bosses -> plate -> flange -> M6 -> beam -> side plates
-// -> cradle ribs -> 4 hose clamps -> paired corner legs. Add a safety
-// lanyard from the beam through the rail-header gap around the top rail.
+// Field notes (also etched):
+//  - VIVO's included M4s are sized for feet directly on bosses; through
+//    2.9 ply they need ~3 mm more — verify boss depth, do NOT bottom out.
+//  - Center the LENS on the string line, not the chassis (lens sits
+//    off-center in the 383.7 width).
+//  - Safety lanyard: from the VIVO pole/plate around the top rail.
 //
 // Export: python3 export-shroud.py   (black = CUT, red = SCORE/etch in XCS)
 
-part = "3d";     // 3d | sheet | sheet_etch | front|rear|side|top|
-                 //   side_plate|rib|beam_plate|beam_rib|plate|plate_mid|flange|
+part = "3d";     // 3d | sheet | sheet_etch | front|rear|side|top|bottom|
+                 //   ring_long|ring_short|
                  //   plenum_back|plenum_front|plenum_side|plenum_clip
 
 t = 2.9;         // ply thickness, caliper-gated
@@ -86,56 +85,64 @@ finger = 18;     // finger/socket pitch — literal everywhere so mates align
 //      147.7 normal orientation; nose-down the DEPTH hangs vertical)
 cw = 383.7;  cd = 147.7;  ch = 291.5;
 gap = 4;
+cable_bay = 35;         // headroom above the body top for right-angle
+                        //  plugs — SEE ROOF TRADE in the header before
+                        //  changing; bench-measure, then shrink
 iw = cw + 2*gap;        // 391.7 inner width  (lateral)
 id = cd + 2*gap + 0.4;  // 156.1 inner depth  (along the throw)
-ih = ch + 4.5;          // 296 inner height
+ih = ch + 4.5 + cable_bay;  // inner height: body + seat + cable bay
 ow = iw + 2*t;
 od = id + 2*t;
+cz = 2 + ch/2;          // chassis CENTER above the rim — anchors bosses,
+                        //  vents, grids, ghost (ih/2 is wrong once the
+                        //  bay exists: the bay grows the box, not the body)
 
-// ---- rear-wall openings
-beam_w = 100; beam_h = 45;
-pass_w = beam_w + 4;  pass_h = beam_h + 4;
-pass_cy = 203;                      // pass center above the bottom rim
-                                    //  (beam axis 1658 - window 1455)
-cable_d = 16;
-vent_w = 90; vent_h = 160;          // sized to the real side fan grilles
+// ---- rear wall = mount wall
+boss_w = 223.0;  boss_h = 150.0;    // LS625X ceiling bosses, 4x M4 (p.56);
+                                    //  NOMINAL — etched for reference only,
+                                    //  the real holes are drilled from the
+                                    //  unit (pattern may sit off-center on
+                                    //  the chassis; grid absorbs it)
+grid_hw = 130;                      // drill-grid half-width around center
+grid_y0 = 68;  grid_y1 = 228;       // drill-grid rows (cz = 147.75)
+cable_slot_w = 55;                  // one pass for HDMI + molded C13 +
+cable_slot_h = 30;                  //  DB9-with-backshell heads, one at a
+cable_slot_x = 110;                 //  time; Tim covers the hole. Center
+                                    //  +cable_slot_x from wall center-x,
+                                    //  vertically mid-bay (above the body)
 
-// ---- beam + back frame + ribs (heights in mm ABOVE THE DECK for sanity;
-//      beam axis 1658 = mid rail-header gap; window 1455)
-beam_len = 320;                     // beam FRONT end lands 40 mm shy of the
-                                    //  corner (scad x = beam_len end);
-                                    //  x = 0 is the inboard/deck end
-adj = 80;  m6 = 6.5;
-adj_slot_len = 2*adj + m6;
-slot_x0 = 136;                      // slot start from the inboard end —
-                                    //  centers the +-80 travel on the
-                                    //  carriage bolt line ~139 mm from the
-                                    //  corner (nominal plumb 250)
-bolt_dx = 28;
-web_h = beam_h - 2*t;               // 39.2 — the beam-band web height
-ext_d = 80;                         // back-frame depth (along the bisector)
-ext_off = 25;                       // back frame ends this far shy of the
-                                    //  beam end -> outboard edge corner-65,
-                                    //  clear of the rail/header ends
-ext_up = 94;                        // above the web bottom -> 1775 top
-ext_dn = 111;                       // below the web bottom -> 1530 bottom
-rib_ys = [-111, -97, 104, 118];     // rib undersides above web bottom:
-                                    //  bands 1530/1544 and 1745/1759
-mort_len = 45;                      // rib wing crossing in the back frame
-// cradle rib plan (local y: 0 = inboard tip = corner-102)
-rib_w = 150;  rib_d = 124;          // wings reach corner+9
-wing_y0 = 5;                        // wing leading shoulder
-tube_z = 102; tube_dx = 22.5;       // nominal leg centers (pair varies —
-tube_d = 44;                        //  cradles are open, clamps close them)
-cslot_w = 16; cslot_h = 5;          // hose-clamp slots (1/2" band)
-cslot_z = 82;
-// carriage (2026-08-01: sized to the real 223 x 150 boss pattern)
-plate_w = 260; plate_h = 240;
-notch_w = pass_w;                   // beam notch through all 3 laminations
-notch_y0 = 175.5;                   // notch floor = beam underside
-                                    //  (plate bottom rides 3 mm above the
-                                    //  window rim: 178.5 - 3)
-flange_d = 60;
+// ---- airflow openings (Tim BENCH-MEASURED 2026-08-11, corrected same
+//      day: BOTH flanks carry a 9 x 3.5 in / 228.6 x 88.9 grille. Facing
+//      the lens head-on: viewer-LEFT flank = INTAKE (= side R here, the
+//      plenum side); the other flank — the one next to the off-center
+//      lens — = EXHAUST (= side L here, open vent, coarse screen only,
+//      never MERV). The FRONT face gets the lens aperture ONLY.)
+vent_w = 95;  vent_h = 235;         // vent both flanks: grille + ~3 mm
+                                    //  margin; vertical grille position
+                                    //  assumed CENTERED — verify on unit
+
+// ---- bottom window panel + perimeter ring
+lens_w = 117;  lens_h = 120;        // lens aperture, EXACT (Tim bench):
+lens_from_right = 56;               //  117 across x 120 high, starting
+                                    //  56 from the chassis edge on the
+                                    //  no-grille side (viewer-RIGHT
+                                    //  facing head-on = side L here)
+ring_w = 20;                        // 2-ply ring glued under the rim
+panel_screw = 3.2;  ring_pilot = 2.4;   // #4 wood screws up into the ring
+// panel screw points (shared by panel holes + ring pilots)
+function bottom_pts() = [[70, 10], [ow - 70, 10],
+                         [70, od - 10], [ow - 70, od - 10],
+                         [10, od/2], [ow - 10, od/2]];
+ch_x0 = (ow - cw)/2;                // chassis edge inset on the panel (6.9)
+
+// ---- VIVO MOUNT-VP01B ghost dims (preview only, NOT cut: profile 152 is
+//      the published number; plate/hub/pole are eyeballed from photos —
+//      measure the real unit in hand before committing shim thickness)
+vp_profile = 152;                   // plate face to boss face (6 in)
+vp_plate = 130;  vp_plate_t = 4;
+vp_pole_d = 35;  vp_hub_d = 70;
+vp_shim = 42;                       // nominal leg standoff (see doc)
+leg_dx = 22.5;  leg_d = 43;         // paired corner legs (nominal centers)
 
 // ---- filtered intake plenum (right-side intake add-on, in this file)
 pf_filter_w = 241.3;                // 9.5 in nominal
@@ -148,8 +155,9 @@ pf_fan_frame = 140;
 pf_fan_cut = 136;
 pf_fan_pitch = 125;
 pf_fan_screw = 4.5;
-pf_mount_dx = 68;                   // pilots land within the shroud side
-pf_mount_dy = 108;
+pf_mount_dx = 64;                   // pilots FLANK the vent now — the old
+pf_mount_dy = 100;                  //  +-108 verticals would land inside
+                                    //  the 235-tall intake opening
 pf_mount_screw = 4.0;
 pf_clip_w = 36;
 pf_clip_h = 14;
@@ -160,6 +168,14 @@ module teeth_x(len) for (x = [0 : 2*finger : len - finger])
   translate([x, 0]) square([finger, t]);
 module teeth_y(len) for (y = [0 : 2*finger : len - finger])
   translate([0, y]) square([t, finger]);
+module rounded_rect(w, h, r = 2) {
+  hull() {
+    translate([r, r]) circle(r = r, $fn = 16);
+    translate([w - r, r]) circle(r = r, $fn = 16);
+    translate([r, h - r]) circle(r = r, $fn = 16);
+    translate([w - r, h - r]) circle(r = r, $fn = 16);
+  }
+}
 
 // ---- SHROUD -------------------------------------------------------------
 module shroud_face_blank() {
@@ -178,10 +194,15 @@ module shroud_front() shroud_face();
 module shroud_rear() {
   difference() {
     shroud_face();
-    translate([ow/2 - pass_w/2, pass_cy - pass_h/2]) square([pass_w, pass_h]);
-    translate([ow/2 + 90, 55]) circle(d = cable_d, $fn = 40);
+    // cable slot mid-bay: bottom edge rides ~5 mm above the body top so
+    // plugged right-angle heads clear the chassis edge on the way out
+    translate([ow/2 + cable_slot_x - cable_slot_w/2,
+               ih - cable_bay/2 - cable_slot_h/2])
+      rounded_rect(cable_slot_w, cable_slot_h, 8);
   }
 }
+// identical vent both flanks: side R = intake (plenum gaskets over it),
+// side L = exhaust (open, coarse screen at most)
 module shroud_side() {
   difference() {
     union() {
@@ -190,7 +211,7 @@ module shroud_side() {
       translate([-t, 0]) teeth_y(ih);
       translate([id, 0]) teeth_y(ih);
     }
-    translate([id/2 - vent_w/2, ih/2 - vent_h/2]) square([vent_w, vent_h]);
+    translate([id/2 - vent_w/2, cz - vent_h/2]) square([vent_w, vent_h]);
   }
 }
 module shroud_top() {
@@ -201,92 +222,32 @@ module shroud_top() {
     for (sx = [0, ow - t]) translate([sx, 2*t]) teeth_y(id - 2*t);
   }
 }
-
-// ---- BEAM side plate (web + back frame), 2D in the vertical bisector
-// plane: x = along the beam toward the corner, y = up from the web bottom
-module side_plate() {
+// bottom window panel: hangs under the glued ring, 6 screws up into it.
+// ONE opening — the EXACT lens aperture (Tim: nothing else on the front)
+module shroud_bottom() {
   difference() {
-    union() {
-      square([beam_len, web_h]);                                  // web
-      translate([beam_len - ext_off - ext_d, -ext_dn])
-        square([ext_d, ext_up + ext_dn]);                         // back frame
-    }
-    // rib mortises: the rib tongues cross the back frame's outboard zone
-    for (ry = [rib_ys[0], rib_ys[1], rib_ys[2], rib_ys[3]])
-      translate([beam_len - ext_off - mort_len, ry]) square([mort_len, t]);
+    square([ow, od]);
+    translate([ch_x0 + lens_from_right, od/2 - lens_h/2])
+      rounded_rect(lens_w, lens_h, 2);
+    for (p = bottom_pts()) translate(p) circle(d = panel_screw, $fn = 28);
   }
 }
-
-// ---- beam top/bottom plates + internal ribs ----------------------------
-module adj_slots() for (sy = [-1, 1])
-  translate([slot_x0 + m6/2, beam_w/2 + sy*bolt_dx])
-    hull() { circle(d = m6, $fn = 30);
-             translate([adj_slot_len - m6, 0]) circle(d = m6, $fn = 30); }
-module beam_plate() difference() { square([beam_len, beam_w]); adj_slots(); }
-module beam_rib() square([beam_w - 2*t, web_h]);
-
-// ---- CRADLE RIB ---------------------------------------------------------
-// horizontal; slides in from the corner side — the WINGS (full +-75 span,
-// 45 deep) enter the side-plate mortises while the central block (92 wide)
-// threads between the plates — then the open cradles seat on the leg pair
-// and the clamps close them
-module cradle_rib() {
+// perimeter ring strips (cut 2 of each = 2-ply stack, glued under the rim
+// flush with the outer walls; pilots line up with the panel screws)
+module ring_long() {
   difference() {
-    union() {
-      translate([-rib_w/2, wing_y0]) square([rib_w, mort_len]);        // wings
-      translate([-46, 0]) square([92, rib_d]);                          // core
-    }
-    for (sx = [-1, 1]) {
-      // open cradle: D44 slot from the tube seat out the far edge
-      hull() {
-        translate([sx*tube_dx, tube_z]) circle(d = tube_d, $fn = 48);
-        translate([sx*tube_dx, rib_d + tube_d]) circle(d = tube_d, $fn = 48);
-      }
-      // hose-clamp slot inboard of the cradle
-      translate([sx*tube_dx - cslot_w/2, cslot_z - cslot_h/2])
-        square([cslot_w, cslot_h]);
-    }
+    square([ow, ring_w]);
+    for (x = [70, ow - 70]) translate([x, 10]) circle(d = ring_pilot, $fn = 24);
   }
 }
-
-// ---- CARRIAGE -----------------------------------------------------------
-// PI-shaped plate: full width below the beam underside, ears rising beside
-// the beam so the 223 x 150 boss pattern's top row (which sits above the
-// beam bottom on the 291.5 mm boss face) still lands on ply
-module plate_vert() {
+module ring_short() {
   difference() {
-    square([plate_w, plate_h]);
-    translate([plate_w/2 - notch_w/2, notch_y0])
-      square([notch_w, plate_h - notch_y0]);
-  }
-}
-module plate_mid() {
-  difference() {
-    plate_vert();
-    // flange tongue slot at the notch floor
-    translate([plate_w/2 - beam_w/2, notch_y0 - t]) square([beam_w, t]);
-  }
-}
-module flange() {
-  difference() {
-    union() {
-      square([beam_w, flange_d]);
-      translate([0, -t]) square([beam_w, t]);
-    }
-    for (sy = [-1, 1]) translate([beam_w/2 + sy*bolt_dx, flange_d/2])
-      circle(d = m6, $fn = 30);
+    square([od - 2*ring_w, ring_w]);
+    translate([od/2 - ring_w, 10]) circle(d = ring_pilot, $fn = 24);
   }
 }
 
 // ---- FILTERED INTAKE PLENUM -------------------------------------------
-module rounded_rect(w, h, r = 2) {
-  hull() {
-    translate([r, r]) circle(r = r, $fn = 16);
-    translate([w - r, r]) circle(r = r, $fn = 16);
-    translate([r, h - r]) circle(r = r, $fn = 16);
-    translate([w - r, h - r]) circle(r = r, $fn = 16);
-  }
-}
 module plenum_fan_holes() {
   circle(d = pf_fan_cut, $fn = 96);
   for (sx = [-1, 1], sy = [-1, 1])
@@ -327,23 +288,14 @@ P_front  = [   0,   0];
 P_rear   = [ 420,   0];
 P_sideL  = [ 850,   0];
 P_sideR  = [1040,   0];
-P_top    = [   0, 320];
-P_sp     = [[420, 320], [420, 545]];      // side plates
-P_ribsC  = [[760, 320], [930, 320], [760, 460], [930, 460]];
-P_beamT  = [   0, 500];
-P_beamB  = [   0, 620];
-P_beamR  = [[0, 740], [110, 740]];
-P_plateM = [ 760, 600];
-P_plateV = [[1040, 600], [1090, 320]];
-P_flange = [[420, 780], [530, 780], [640, 780]];
-P_pf_y    = 875;
-P_pf_back = [pf_box/2, P_pf_y + pf_box/2];
-P_pf_front = [pf_box + 25 + pf_box/2, P_pf_y + pf_box/2];
-P_pf_side = [[0, P_pf_y + pf_box + 25],
-             [0, P_pf_y + pf_box + 25 + pf_depth + 15],
-             [pf_box + 25, P_pf_y + pf_box + 25],
-             [pf_box + 25, P_pf_y + pf_box + 25 + pf_depth + 15]];
-P_pf_clip0 = [2 * (pf_box + 25), P_pf_y];
+P_top    = [   0, 375];
+P_bottom = [   0, 555];
+P_pf_back  = [420 + pf_box/2, 375 + pf_box/2];
+P_pf_front = [420 + pf_box + 25 + pf_box/2, 375 + pf_box/2];
+P_pf_side  = [[1000, 375], [1000, 462], [1000, 549], [1000, 636]];
+P_pf_clip0 = [1000, 723];
+P_ringL  = [[0, 730], [0, 755], [0, 780], [0, 805]];
+P_ringS  = [[420, 660], [560, 660], [420, 685], [560, 685]];
 
 module sheet_cut() {
   translate(P_front) shroud_front();
@@ -351,14 +303,7 @@ module sheet_cut() {
   translate(P_sideL) shroud_side();
   translate(P_sideR) shroud_side();
   translate(P_top)   shroud_top();
-  for (p = P_sp) translate([p[0], p[1] + ext_dn]) side_plate();
-  for (p = P_ribsC) translate([p[0] + rib_w/2, p[1]]) cradle_rib();
-  translate(P_beamT) beam_plate();
-  translate(P_beamB) beam_plate();
-  for (p = P_beamR) translate(p) beam_rib();
-  translate(P_plateM) plate_mid();
-  for (p = P_plateV) translate(p) plate_vert();
-  for (p = P_flange) translate(p) flange();
+  translate(P_bottom) shroud_bottom();
   translate(P_pf_back) plenum_back();
   translate(P_pf_front) plenum_front();
   for (p = P_pf_side) translate(p) plenum_side();
@@ -366,45 +311,75 @@ module sheet_cut() {
     translate([P_pf_clip0[0] + (i % 2) * (pf_clip_w + 10),
                P_pf_clip0[1] + floor(i / 2) * (pf_clip_h + 10)])
       plenum_clip();
+  for (p = P_ringL) translate(p) ring_long();
+  for (p = P_ringS) translate(p) ring_short();
 }
 
 // ---- etch layer ---------------------------------------------------------
-// carriage drill grid: full-width rows below the notch floor, ear columns
-// beside the notch above it — covers the whole 223 x 150 boss-pattern zone
-module plate_grid() {
-  for (gy = [20 : 10 : notch_y0 - 8])
-    translate([15, gy - 0.2]) square([plate_w - 30, 0.4]);
-  for (gx = [15 : 10 : plate_w - 15]) {
-    ear = (gx < plate_w/2 - notch_w/2 - 4) || (gx > plate_w/2 + notch_w/2 + 4);
-    translate([gx - 0.2, 20]) square([0.4, (ear ? plate_h - 10 : notch_y0 - 8) - 20]);
+// hairline hollow frame (a FILLED etch square would union with grid strips
+// in OpenSCAD 2D and erase every line inside it)
+module etch_frame(w, h) {
+  difference() {
+    translate([-0.4, -0.4]) square([w + 0.8, h + 0.8]);
+    translate([0.4, 0.4]) square([w - 0.8, h - 0.8]);
+  }
+}
+// rear-wall drill guide: 10 mm grid over the whole plausible boss zone +
+// the NOMINAL 223 x 150 rectangle for reference — the four real holes are
+// transferred from the unit on the bench (lens off-center, pattern maybe
+// too), then the VIVO spider feet screw through into the bosses
+module mount_wall_guide() {
+  translate([ow/2 - boss_w/2, cz - boss_h/2]) etch_frame(boss_w, boss_h);
+  translate([ow/2 - 12, cz - 0.2]) square([24, 0.4]);
+  translate([ow/2 - 0.2, cz - 12]) square([0.4, 24]);
+  for (gy = [grid_y0 : 10 : grid_y1])
+    translate([ow/2 - grid_hw, gy - 0.2]) square([2*grid_hw, 0.4]);
+  for (gx = [ow/2 - grid_hw : 10 : ow/2 + grid_hw])
+    translate([gx - 0.2, grid_y0]) square([0.4, grid_y1 - grid_y0]);
+}
+// bottom-panel guide: hairline frame around the exact lens aperture +
+// 10 mm ruler ticks clipped clear of both cutouts (transfer/verify aid)
+module bottom_guide() {
+  translate([ch_x0 + lens_from_right - 2.5, od/2 - lens_h/2 - 2.5])
+    etch_frame(lens_w + 5, lens_h + 5);
+  difference() {
+    union() {
+      for (gy = [od/2 - 60 : 10 : od/2 + 60])
+        translate([30, gy - 0.2]) square([ow - 60, 0.4]);
+      for (gx = [40 : 10 : ow - 40])
+        translate([gx - 0.2, od/2 - 70]) square([0.4, 140]);
+    }
+    translate([ch_x0 + lens_from_right - 6, od/2 - lens_h/2 - 6])
+      square([lens_w + 12, lens_h + 12]);
   }
 }
 module etch_sheet() {
   translate(P_front) translate([10, ih - 16]) text("FRONT (throw side)", size = 7);
   translate(P_rear) {
-    translate([10, ih - 16]) text("REAR  beam pass  cable", size = 7);
-    for (sx = [-1, 1]) translate([ow/2 + sx*70, pass_cy]) circle(d = 2, $fn = 16);
+    translate([10, ih - 16]) text("REAR = MOUNT WALL", size = 7);
+    mount_wall_guide();
+    translate([ow/2 + cable_slot_x - 18, ih - cable_bay/2 - cable_slot_h/2 - 10])
+      text("cables", size = 5);
+    translate([40, 30])
+      text("VIVO VP01B feet OUTSIDE - M4 thru wall into bosses", size = 5);
+    translate([40, 18])
+      text("223 x 150 NOMINAL - drill from the unit, do NOT bottom out", size = 5);
   }
   for (i = [0, 1]) translate(i ? P_sideR : P_sideL) {
-    translate([10, ih - 16]) text(str("SIDE ", i ? "R" : "L", "  cloth OUTSIDE"), size = 6);
+    translate([10, ih - 16]) text(i ? "SIDE R  INTAKE - plenum gaskets here"
+      : "SIDE L  EXHAUST - open, coarse screen only", size = 6);
     for (a = [0 : 30 : 359])
-      translate([id/2 + cos(a)*(vent_w/2 + 8), ih/2 + sin(a)*(vent_h/2 + 8)])
+      translate([id/2 + cos(a)*(vent_w/2 + 8), cz + sin(a)*(vent_h/2 + 8)])
         circle(d = 1.5, $fn = 12);
   }
   translate(P_top) translate([10, od/2]) text("TOP  (roof slab ~6mm above)", size = 6);
-  translate([P_sp[0][0] + 20, P_sp[0][1] + ext_dn + 8])
-    text("SIDE PLATE  corner end ->", size = 6);
-  translate([P_ribsC[0][0] + rib_w/2 - 55, P_ribsC[0][1] + 12])
-    text("CRADLE RIB x4  clamps thread slots", size = 5);
-  translate(P_beamT) translate([30, beam_w/2 - 3])
-    text("BEAM TOP   <- -80 to corner    +80 to deck ->", size = 5);
-  translate(P_plateV[0]) {
-    plate_grid();
-    translate([8, 12]) text("LS625X bosses 223 x 150 - drill from the unit", size = 5);
-    translate([8, 4]) text("4x M4x16 +washers (don't bottom) - LENS on the line", size = 5);
+  translate(P_bottom) {
+    bottom_guide();
+    translate([12, 3])
+      text("BOTTOM - LENS 117 x 120 @ 56 off side-L chassis edge - the ONLY front opening", size = 4.5);
+    translate([12, 11])
+      text("lay the unit on this panel to verify before glue-up (bench 8-11)", size = 4.5);
   }
-  translate(P_plateV[1]) plate_grid();
-  translate(P_plateM) plate_grid();
   translate(P_pf_back) {
     translate([-pf_box/2 + 10, pf_box/2 - 16])
       text("PLENUM BACK - gasket to RIGHT shroud side", size = 6);
@@ -425,6 +400,10 @@ module etch_sheet() {
     translate([P_pf_clip0[0] + (i % 2) * (pf_clip_w + 10) + 2,
                P_pf_clip0[1] + floor(i / 2) * (pf_clip_h + 10) + 4])
       text("clip", size = 4);
+  translate([P_ringL[0][0] + 130, P_ringL[0][1] + 6])
+    text("RING x2 layers - glue under rim, pilots up", size = 4.5);
+  translate([P_ringS[0][0] + 8, P_ringS[0][1] + 6])
+    text("RING short x2 layers", size = 4.5);
 }
 
 // ---- 3D preview ---------------------------------------------------------
@@ -436,31 +415,48 @@ module preview3d() {
     translate([iw/2, -id/2, 0]) rotate([90, 0, 90]) linear_extrude(t) shroud_side();
     translate([-ow/2, -od/2, ih]) linear_extrude(t) square([ow, od]);
   }
+  // bottom: 2-ply ring under the rim + the window panel under that
+  color("peru") translate([-ow/2, -od/2, -2*t]) linear_extrude(2*t)
+    difference() {
+      square([ow, od]);
+      translate([ring_w, ring_w]) square([ow - 2*ring_w, od - 2*ring_w]);
+    }
+  color("sienna") translate([-ow/2, -od/2, -3*t]) linear_extrude(t) shroud_bottom();
   %translate([-cw/2, -cd/2, 2]) cube([cw, cd, ch]);
-  yb = pass_cy - beam_h/2 + t;                 // web bottom, shroud coords
-  for (sx = [-1, 1]) color("tan")
-    translate([sx*(beam_w/2 - (sx > 0 ? t : 0)), id/2 - 30, yb])
-      rotate([90, 0, 90]) linear_extrude(t) side_plate();
-  color("tan") {
-    translate([-beam_w/2, id/2 - 30, yb - t]) cube([beam_w, beam_len, t]);
-    translate([-beam_w/2, id/2 - 30, yb + web_h]) cube([beam_w, beam_len, t]);
+  // ---- VIVO MOUNT-VP01B ghost (approx; +y = toward the corner) ----------
+  wall_y = od/2 + t;                 // rear wall outer face
+  boss_y = cd/2;                     // chassis boss face
+  plate_y = boss_y + vp_profile;     // VIVO fixed 6in profile
+  %union() {
+    // spider feet on the wall at the nominal boss corners
+    for (sx = [-1, 1], sz = [-1, 1])
+      translate([sx*boss_w/2 - 12, wall_y, cz + sz*boss_h/2 - 6])
+        cube([24, 6, 12]);
+    // arms: feet up to the hub
+    for (sx = [-1, 1], sz = [-1, 1]) hull() {
+      translate([sx*boss_w/2, wall_y + 8, cz + sz*boss_h/2]) cube(10, center = true);
+      translate([0, plate_y - 60, cz]) cube(12, center = true);
+    }
+    // hub + ball/pole stem + plate
+    translate([0, plate_y - 62, cz]) rotate([-90, 0, 0]) cylinder(h = 20, d = vp_hub_d, $fn = 40);
+    translate([0, plate_y - 46, cz]) rotate([-90, 0, 0]) cylinder(h = 46, d = vp_pole_d, $fn = 32);
+    translate([-vp_plate/2, plate_y, cz - vp_plate/2])
+      cube([vp_plate, vp_plate_t, vp_plate]);
+    // shim blocks plate->legs (thickness set on site) + the leg pair
+    for (bz = [cz - 65, cz + 25]) translate([-30, plate_y + vp_plate_t, bz])
+      cube([60, vp_shim, 40]);
+    for (sx = [-1, 1])
+      translate([sx*leg_dx, plate_y + vp_plate_t + vp_shim + leg_d/2, -60])
+        cylinder(h = ih + 110, d = leg_d, $fn = 28);
   }
-  for (ry = rib_ys) color("peru")
-    translate([0, id/2 - 30 + beam_len - ext_off - mort_len - wing_y0, yb + ry])
-      linear_extrude(t) cradle_rib();
-  // leg pair ghost
-  for (sx = [-1, 1]) %translate([sx*tube_dx, id/2 - 30 + beam_len - ext_off - mort_len - wing_y0 + tube_z, yb - ext_dn - 30])
-    cylinder(h = ext_up + ext_dn + 60, d = 43, $fn = 24);
-  color("sienna") translate([-plate_w/2, id/2 + t + 1 + 3*t, 3])
-    rotate([90, 0, 0]) linear_extrude(3*t) plate_vert();
   // Right-side filtered intake plenum, centered on the shroud side vent.
-  color("sandybrown") translate([iw/2 + t, -pf_box/2, ih/2 - pf_box/2])
+  color("sandybrown") translate([iw/2 + t, -pf_box/2, cz - pf_box/2])
     cube([pf_depth, pf_box, pf_box]);
   color("burlywood") translate([iw/2 + t - 0.1, -id/2, 0])
     cube([t, id, ih]);
-  %translate([iw/2 + t + 8, -pf_fan_frame/2, ih/2 - pf_fan_frame/2])
+  %translate([iw/2 + t + 8, -pf_fan_frame/2, cz - pf_fan_frame/2])
     cube([27, pf_fan_frame, pf_fan_frame]);
-  %translate([iw/2 + t + pf_depth + t + 1, -pf_filter_w/2, ih/2 - pf_filter_w/2])
+  %translate([iw/2 + t + pf_depth + t + 1, -pf_filter_w/2, cz - pf_filter_w/2])
     cube([pf_filter_t, pf_filter_w, pf_filter_w]);
 }
 
@@ -471,13 +467,9 @@ else if (part == "front") shroud_front();
 else if (part == "rear") shroud_rear();
 else if (part == "side") shroud_side();
 else if (part == "top") shroud_top();
-else if (part == "side_plate") side_plate();
-else if (part == "rib") cradle_rib();
-else if (part == "beam_plate") beam_plate();
-else if (part == "beam_rib") beam_rib();
-else if (part == "plate") plate_vert();
-else if (part == "plate_mid") plate_mid();
-else if (part == "flange") flange();
+else if (part == "bottom") shroud_bottom();
+else if (part == "ring_long") ring_long();
+else if (part == "ring_short") ring_short();
 else if (part == "plenum_back") plenum_back();
 else if (part == "plenum_front") plenum_front();
 else if (part == "plenum_side") plenum_side();

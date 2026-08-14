@@ -70,8 +70,10 @@ guides are historical), and `client/README.md` for the fallback audio client.
 ### Deploying to the server Pi
 
 The production box is a DietPi Raspberry Pi 3B+ flashed from a preconfigured SD image —
-first boot joins the WiFi, installs Docker and authorizes the bench box's SSH key
-unattended ([pi-notes.md](pi-notes.md)). Then:
+first boot installs Docker and authorizes the bench box's SSH key unattended
+([pi-notes.md](pi-notes.md)). It lives at `192.168.252.231` on the maze LAN behind the
+RUT140 router, doubling as the LAN's WiFi access point (**LOHP-ESP** — join it to reach
+the Pi; [wiring-guides/maze-network.md](wiring-guides/maze-network.md)). Then:
 
 ```bash
 tools/deploy-rpi.sh                  # target lohp-server.local (mDNS), or pass an IP

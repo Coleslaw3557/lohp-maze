@@ -1,6 +1,6 @@
 """Manual API smoke test. Run against a live server:
 
-    LOHP_SERVER=http://192.168.1.238:5000 python test_api.py
+    LOHP_SERVER=http://192.168.252.231:5000 python test_api.py
 
 Requires the `requests` package (not in requirements.txt; dev-only).
 """

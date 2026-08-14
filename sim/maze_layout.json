@@ -31,24 +31,80 @@
   ]
  },
  "server_rack": {
-  "note": "small enclosure mounted on the OUTSIDE of the back wall, behind Cuddle Cross on the shared scaffold frame between Cuddle Cross and Photo Bomb Room (upper level) \u2014 NOT inside the hex",
+  "note": "NO rack (Tim 2026-08-09) \u2014 the Pi enclosure sits on the floor at the service cluster under the riser, beside the crate and the RUT140 enclosure",
   "pos": [
-   8.724,
-   0.385
+   9.28,
+   -0.03
   ],
-  "level": 1,
+  "level": 0,
+  "h": 0.28,
   "label": "RPi + USB-DMX"
  },
  "audio_power": {
-  "note": "Back-side day-power and per-room Creative Pebble speaker planning layer. The 12 V battery bus lives behind the maze (generator off by day, DMX lights off); buck converters sit behind each stacked bay pair and feed room node enclosures plus the Pebble USB power leads. The sim draws only the back-side battery and charger for this layer. Speakers, wiring, and converter/tap hardware are intentionally not drawn.",
+  "note": "Back-side day-power layer, AS BUILT rev 2026-08-09(c): NO rack, NO low bus. Service cluster ON THE FLOOR at the hex SW corner, directly under the riser: a vented ply CRATE (battery + charger + breaker + the two BBS43-P bus bars), the Pi enclosure, and the RUT140 enclosure beside it. ONE 14/2 riser climbs from the bars to the HIGH BUS at 2.515 m (8ft3in above ground = 22in above the deck line) \u2014 the height where ground and upper node boxes are the SAME routed USB distance (~11ft2in), so every wing room uses one 12 ft cable SKU (Tim's equal-distance requirement). West and east runs split at the riser-top tee (bench-soldered): WEST straight to x=1.269; EAST wraps the hex back faces (8 cm stand-off) to x=16.689. Hubs S1-S8 clamp AT bus height; S5 posi-taps the east run at the hex S corner (serves Entrance/Exit/Cuddle nodes + Cuddle Pebble); S9 sits on the crate off the bars (Pi + Entrance/Exit Pebbles). RUT140 12 V direct off the bars. Cut sheet: wiring-guides/maze-12v-day-bus.md. Speakers and 5 V USB drops intentionally not drawn.",
   "enabled": true,
-  "back_z": 0.28,
-  "bus_y": 0.2,
+  "back_z": 0.46,
+  "bus_y": 2.515,
+  "bus_bars": {
+   "pos": [
+    8.9,
+    0.18
+   ],
+   "y": 0.3,
+   "label": "15 A \u2192 bus bars (crate)",
+   "note": "inside the floor crate with battery/charger/breaker; riser rises from here"
+  },
+  "bus_routes": [
+   [
+    [
+     8.7,
+     0.43
+    ],
+    [
+     1.269,
+     0.44
+    ]
+   ],
+   [
+    [
+     8.7,
+     0.43
+    ],
+    [
+     10.044,
+     -0.356
+    ],
+    [
+     11.404,
+     0.429
+    ],
+    [
+     16.689,
+     0.44
+    ]
+   ]
+  ],
+  "routes_note": "runs are at bus_y=2.515 m, split at the riser-top tee; the east hex-face spans keep the 8 cm stand-off outside the skinned Cuddle back walls; cut-list lengths in the build sheet",
+  "riser": {
+   "x": 8.7,
+   "z": 0.43,
+   "y0": 0.3,
+   "y1": 2.515,
+   "note": "ONE trunk riser, crate bars -> riser-top tee; carries the whole bus, protected by the 15 A breaker (no ATC fuses anywhere, Tim 2026-08-09)"
+  },
+  "rut140": {
+   "pos": [
+    9.62,
+    -0.22
+   ],
+   "y": 0.18,
+   "label": "RUT140"
+  },
   "speaker": {
    "model": "Creative Pebble 2.0",
    "satellite_dim_m": [
     0.123,
-    0.120,
+    0.12,
     0.118
    ],
    "usb_cable_m": 1.2,
@@ -58,37 +114,105 @@
   },
   "battery": {
    "pos": [
-    10.044,
-    -0.72
+    8.9,
+    0.18
    ],
    "dim_m": [
-    0.34,
-    0.19,
-    0.22
+    0.55,
+    0.4,
+    0.35
    ],
-   "label": "12V 100Ah LiFePO4"
+   "label": "crate: battery + charger + bus bars"
   },
-  "charger": {
-   "pos": [
-    10.52,
-    -0.72
-   ],
-   "dim_m": [
-    0.18,
-    0.08,
-    0.06
-   ],
-   "label": "14.6V / 20A charger"
-  },
-  "converter_bay_centers": [
-   1.269,
-   3.399,
-   5.529,
-   7.659,
-   10.044,
-   12.429,
-   14.559,
-   16.689
+  "converters": [
+   {
+    "id": "S1",
+    "pos": [
+     1.269,
+     0.455
+    ],
+    "y": 2.515,
+    "ports": "VMM node + Pebble (2 spare)"
+   },
+   {
+    "id": "S2",
+    "pos": [
+     3.399,
+     0.455
+    ],
+    "y": 2.515,
+    "ports": "Monkey + Bike Lock nodes/Pebbles"
+   },
+   {
+    "id": "S3",
+    "pos": [
+     5.529,
+     0.455
+    ],
+    "y": 2.515,
+    "ports": "Temple + Deep Playa nodes/Pebbles"
+   },
+   {
+    "id": "S4",
+    "pos": [
+     7.659,
+     0.455
+    ],
+    "y": 2.515,
+    "ports": "No Friends + Photo Bomb nodes/Pebbles"
+   },
+   {
+    "id": "S5",
+    "pos": [
+     10.39,
+     -0.17
+    ],
+    "y": 2.515,
+    "yaw_deg": -30,
+    "ports": "Entrance/Exit/Cuddle nodes + Cuddle Pebble",
+    "note": "posi-tapped on the east run at the hex S corner, 8 cm off the face",
+    "tap": [
+     10.044,
+     -0.356
+    ]
+   },
+   {
+    "id": "S6",
+    "pos": [
+     12.429,
+     0.455
+    ],
+    "y": 2.515,
+    "ports": "Cop Dodge + Porto nodes/Pebbles"
+   },
+   {
+    "id": "S7",
+    "pos": [
+     14.559,
+     0.455
+    ],
+    "y": 2.515,
+    "ports": "Gate + Sparkle nodes/Pebbles"
+   },
+   {
+    "id": "S8",
+    "pos": [
+     16.689,
+     0.455
+    ],
+    "y": 2.515,
+    "ports": "Guy Line node + Pebble (2 spare)"
+   },
+   {
+    "id": "S9",
+    "pos": [
+     8.62,
+     0.05
+    ],
+    "y": 0.35,
+    "feed": "riser",
+    "ports": "Pi + Entrance/Exit Pebbles (1 spare = Moop puck charging)"
+   }
   ],
   "converter": {
    "dim_m": [
@@ -98,6 +222,7 @@
    ],
    "label": "5V 8A USB buck"
   },
+  "bom_note": "plan-time snapshot (2026-07-30 pricing pass) \u2014 kept for the paper trail. As-delivered reality differs: 70 ft of 14/2 arrived (not 100; the cut list consumes ~69 ft), plus a RED WOLF 15 A breaker, 10x inline ATC fuse holders + fuse kit, and 5/16-inch ring terminals. As-built parts + cut list: wiring-guides/maze-12v-day-bus.md.",
   "bom": [
    {
     "qty": 1,

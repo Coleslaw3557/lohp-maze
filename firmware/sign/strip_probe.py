@@ -7,7 +7,7 @@ to one pure color, same packet shape the server sends.
 
     ./strip_probe.py cycle          # RED / GREEN / BLUE, 4 s each, forever
     ./strip_probe.py red            # hold one color (red/green/blue/white/off)
-    ./strip_probe.py cycle --host 192.168.1.x   # if .local doesn't resolve
+    ./strip_probe.py cycle --host 192.168.252.x # if .local doesn't resolve
 
 Reading the result: the three colors you SEE during RED, GREEN, BLUE — in that
 order — spell the constant. See blue,red,green -> BRG. See red,green,blue ->

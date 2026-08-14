@@ -25,27 +25,24 @@ if ! grep -q '^dtoverlay=i2c-rtc,ds3231' "$CFG"; then
     REBOOT_NEEDED=1
 fi
 
-# Sync system time from the RTC at boot even if the base image lacks the
-# Raspbian udev hwclock hook. Harmless if the hook exists too.
-cat > /etc/systemd/system/lohp-hwclock.service <<'EOF'
-[Unit]
-Description=LOHP: set system clock from DS3231 at boot
-ConditionPathExists=/dev/rtc0
-DefaultDependencies=no
-After=systemd-modules-load.service
-Before=time-set.target sysinit.target
-[Service]
-Type=oneshot
-ExecStart=/sbin/hwclock --hctosys --utc
-[Install]
-WantedBy=sysinit.target
+# Sync system time from the RTC the moment the kernel registers it, even if
+# the base image lacks the Raspbian udev hwclock hook (harmless if it exists
+# too). A udev rule, not a boot unit: the DS3231 probes ~7 s into boot,
+# after sysinit has evaluated unit conditions (seen live 2026-08-12: a
+# ConditionPathExists=/dev/rtc0 unit was skipped at 6.2 s, rtc0 appeared at
+# 7.7 s). The kernel's own hctosys also fires at probe; belt and braces.
+systemctl disable --now lohp-hwclock.service 2>/dev/null || true
+rm -f /etc/systemd/system/lohp-hwclock.service   # old race-prone unit
+cat > /etc/udev/rules.d/85-lohp-hwclock.rules <<'EOF'
+ACTION=="add", SUBSYSTEM=="rtc", KERNEL=="rtc0", RUN+="/sbin/hwclock --hctosys --utc --rtc=/dev/rtc0"
 EOF
+udevadm control --reload 2>/dev/null || true
 
 # --- services -----------------------------------------------------------
 cp "$SRV/tools/lohp-projector-power.service" /etc/systemd/system/
 cp "$SRV/tools/lohp-projector-shutdown.service" /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable lohp-hwclock.service lohp-projector-power.service \
+systemctl enable lohp-projector-power.service \
     lohp-projector-shutdown.service
 systemctl restart lohp-projector-power.service
 systemctl start lohp-projector-shutdown.service

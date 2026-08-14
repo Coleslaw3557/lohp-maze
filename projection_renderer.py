@@ -8,7 +8,7 @@ framebuffer is the more playa-robust path anyway.
     python projection_renderer.py --source demo             # phantom walkers
     python projection_renderer.py --theme jungle            # snakes in the undergrowth
     python projection_renderer.py --source esphome \
-        --node 192.168.253.x [--api-key ...]                # real LD2450
+        --node 192.168.252.x [--api-key ...]                # real LD2450
     python projection_renderer.py --windowed                # desktop debug (pygame)
 
 Same engine as the sim (projection_engine.py); only the track source and the

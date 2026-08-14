@@ -2,7 +2,7 @@
 """Export the xTool cut file for the Cuddle projector enclosure.
 
 One SVG, one coordinate frame:
-  projector-shroud.svg    shroud, mount, carriage, and filter plenum panels
+  projector-shroud.svg    shroud (rear = VIVO mount wall) + filter plenum panels
 Two colors in one frame (same convention as export.py):
   black = CUT       red = SCORE/etch in XCS
 Run from enclosure/:  python3 export-shroud.py

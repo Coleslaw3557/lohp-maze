@@ -3,7 +3,7 @@ substitutions:
   node_name: lohp-node-cuddle-cross
   room: "Cuddle Cross"
   effect: "CuddlePuddle"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
+  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.252.231
   api_port: "6067"
   host_mac: "06:35:69:00:00:07"
 

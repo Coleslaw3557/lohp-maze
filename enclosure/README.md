@@ -313,9 +313,47 @@ through their holes; the DB9 posts get marked from the real part). The
 window M2s go on the panel MIDLINE near its ends, never the corners —
 corner screws leave <1mm acrylic web and it cracks.
 
+## Per-room XCS project (`enclosure-all-rooms.xs`, 2026-08-09)
+
+`node-enclosure-jen.svg` is the fab master for the base room box (Jen's
+Illustrator redraw, 720 px = 254 mm; the .scad still owns `-sign`/`-cuddle`).
+It carries the slot-in sensor-plate system: two plate variants parked
+bottom-right (**TOF** wide-U for Entrance/Exit, **mm wave** narrow-U for the
+13 radar rooms), their two floor brackets below the front wall, and the
+matching slots in the floor and front wall.
+
+`enclosure-all-rooms.xs` is the ready-to-burn xTool Creative Space project
+built from that master: **one canvas per room** (14 — Cop Dodge is already
+cut), each with the full box + lid + only that room's sensor plate + the
+room name on the red etch layer. Names are DM Serif Display outlines on the
+right (USB/AUX) wall, reading top-to-bottom like Jen's port labels so they
+sit upright on the assembled box (Cop Dodge precedent, cap 5.59 mm, long
+names shrink to fit the wall). The lid is re-parked right of the 254 mm
+sheet so everything lands on the S1 bed; drag pieces to your stock as
+usual. Device/material/processing settings are cloned from the Cop Dodge
+project (`enclosure-3mm.xs`).
+
+**Cuddle Cross is the exception**: its canvas carries the dual-sensor
+wide-aperture sheet from `node-enclosure-cuddle.svg` (LD2450 + LD2410C on
+the acrylic window, lid nested in-sheet, no plate system), with the name
+horizontal on the right wall exactly like Cop Dodge. Its acrylic is the
+separate `window-acrylic-cuddle.svg` job.
+
+```bash
+python3 make-xcs-all-rooms.py   # rebuild after editing the jen or cuddle SVG
+```
+
 ## Files
 
 - `node-enclosure.scad` — the design; every dimension is a named parameter
+- `node-enclosure-jen.svg` — **fab master for the base room box** (see
+  section above); edit THIS for base-box changes — `export.py` does not
+  write it
+- `enclosure-3mm.xs` — Tim's Cop Dodge XCS project; template for canvas/
+  device/profile blocks
+- `enclosure-all-rooms.xs` / `make-xcs-all-rooms.py` /
+  `DMSerifDisplay-Regular.ttf` — the 14-room per-canvas XCS project, its
+  generator, and the name-etch font (OFL, matches the XCS built-in face)
 - `node-enclosure.svg` — the PLY job: six wall panels nested on one
   ~232 × 170 mm bed, black = cut + red = etch (3 mm ply)
 - `window-acrylic.svg` — the ACRYLIC job: the sensor-window panel alone

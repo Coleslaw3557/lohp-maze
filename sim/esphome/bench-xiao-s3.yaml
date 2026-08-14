@@ -20,7 +20,7 @@ substitutions:
   room: "Monkey Room"            # a real room so the POST genuinely runs an effect
   button_effect: "MonkeyBusiness"
   button_pin: GPIO2              # XIAO S3: D1 position = GPIO2 (C3 was GPIO3)
-  server_host: "192.168.253.184" # this dev box — the sim's real server on :5000
+  server_host: "192.168.253.184" # UPDATE: this dev box's LOHP-ESP address (RUT DHCP — check after joining; maze-network.md)
   api_port: "6098"               # 6099 = the C3 bench node
 
 packages:

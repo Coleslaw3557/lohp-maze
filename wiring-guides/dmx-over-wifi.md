@@ -68,8 +68,9 @@ effect engine, themes, and the sim are untouched.
   rooms; its BlenderDMX mirror stays opt-in via `SIM_ARTNET`.
 - **Docker note:** the production container is on a bridge network — outbound
   UDP is fine but **mDNS `.local` names will not resolve inside it**. On the real
-  deployment either give nodes DHCP reservations on the travel router and put
-  IPs in `dmx_nodes.json` (recommended — do it at bench-flash time), or switch
+  deployment either give nodes DHCP reservations on the RUT140 (the maze LAN
+  router, `192.168.252.0/24` — `wiring-guides/maze-network.md`) and put IPs in
+  `dmx_nodes.json` (recommended — do it at bench-flash time), or switch
   the compose file to `network_mode: host`. `.local` names work when running
   outside docker (bench/dev).
 

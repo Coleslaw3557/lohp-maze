@@ -25,6 +25,8 @@ firmware/orb/tools/preview_face
 # sign-bridge firmware credentials + build output
 firmware/sign/secrets.h
 firmware/sign/build/
+# maze network credentials cut-sheet sidecar (the repo is public)
+wiring-guides/maze-network-credentials.md
 .floor_theme
 # AI video-base experiment: generated media stays local (~1 GB, regenerable
 # from the tracked scripts + prompts + job logs — see its README). Tracked:

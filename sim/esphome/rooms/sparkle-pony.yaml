@@ -3,7 +3,7 @@ substitutions:
   node_name: lohp-node-sparkle-pony
   room: "Sparkle Pony Room"
   effect: "SparkPony"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.1.238
+  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.252.231
   api_port: "6065"
   host_mac: "06:35:69:00:00:05"
   # This room has an audible leave sting. When flashed with radar, report empty
@@ -18,7 +18,7 @@ packages:
 
 # FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
 #   substitutions:      dmx_tx_pin: "6"   # D5, radar room
-#                       server_host: "192.168.1.238"
+#                       server_host: "192.168.252.231"
 #   packages:           radar: !include ../packages/ld2410.yaml
 #                       dmx: !include ../packages/dmx_out.yaml
 #   external_components: [{source: {type: local, path: ../components}}]

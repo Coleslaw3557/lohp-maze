@@ -105,7 +105,7 @@ async def main():
     if cmd == 'call':
         # Generic action call on any node (bench hardware included, which
         # rooms/*.yaml doesn't know about), with key=value service args:
-        #   harness.py call 192.168.1.87:6098 play_cue cue=monkey_shrine_complete
+        #   harness.py call 192.168.252.87:6098 play_cue cue=monkey_shrine_complete
         target, action = sys.argv[2], sys.argv[3]
         host, _, port = target.partition(':')
         data = dict(arg.split('=', 1) for arg in sys.argv[4:])

@@ -436,6 +436,12 @@ function carve(a0, a1, gaps) {
 
 function roomLevels(r) { return r.floor === 'both' ? [0, 1] : [r.floor || 0]; }
 
+// The 12 V day-power bus, drawn as built (wiring-guides/maze-12v-day-bus.md):
+// battery + charger behind the hex corner, 15 A breaker + bus bars on the corner
+// frame, two 14/2 legs wrapping the hex back faces then running the back wall
+// at bus_y, a converter at every stacked bay pair (pigtail drops off the bus),
+// the rack riser up the Cuddle/Photo-Bomb shared frame, and the RUT140 on 12 V
+// at the top of it. Geometry comes from layout audio_power — nothing computed.
 function buildAudioPowerLayer(L) {
   const cfg = L.audio_power;
   if (!cfg || cfg.enabled === false) return;
@@ -445,12 +451,39 @@ function buildAudioPowerLayer(L) {
 
   const batteryMat = new THREE.MeshStandardMaterial({ color: 0x26352d, roughness: 0.72, metalness: 0.08 });
   const chargerMat = new THREE.MeshStandardMaterial({ color: 0x222936, roughness: 0.62, metalness: 0.16 });
+  // 14/2 marine duplex is black-jacketed; drawn oxide red so the run reads
+  // against the night ground (same license as the strap orange)
+  const cableMat = new THREE.MeshStandardMaterial({ color: 0x86301a, roughness: 0.8, metalness: 0.05, emissive: 0x2a0a05 });
+  const convMat = new THREE.MeshStandardMaterial({ color: 0x3d4652, roughness: 0.45, metalness: 0.55 });
+  const gearMat = new THREE.MeshStandardMaterial({ color: 0x14171c, roughness: 0.55, metalness: 0.3 });
+  const busY = cfg.bus_y || 0.2;
+  const backZ = cfg.back_z || 0.28;
+  const J = cfg.bus_bars && cfg.bus_bars.pos;
+  const Jy = cfg.bus_bars && cfg.bus_bars.y != null ? cfg.bus_bars.y : busY;
+
+  const cable = (ax, ay, az, bx, by, bz, r = 0.012) => {
+    const a = new THREE.Vector3(ax, ay, az);
+    const d = new THREE.Vector3(bx - ax, by - ay, bz - az);
+    const len = d.length();
+    if (len < 0.02) return;
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 6), cableMat);
+    m.position.copy(a).addScaledVector(d, 0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    power.add(m);
+  };
+  const tag = (text, x, y, z, scale) => {
+    const s = makeLabel(text, scale || 0.13);
+    s.position.set(x, y, z);
+    power.add(s);
+  };
+
   if (cfg.battery) {
     const d = cfg.battery.dim_m || [0.34, 0.19, 0.22];
     const [x, z] = cfg.battery.pos;
     const b = new THREE.Mesh(new THREE.BoxGeometry(d[0], d[2], d[1]), batteryMat);
     b.position.set(x, d[2] / 2, z);
     power.add(b);
+    tag(cfg.battery.label || '12V 100Ah', x, d[2] + 0.22, z, 0.15);
   }
   if (cfg.charger) {
     const d = cfg.charger.dim_m || [0.18, 0.06, 0.08];
@@ -458,6 +491,68 @@ function buildAudioPowerLayer(L) {
     const c = new THREE.Mesh(new THREE.BoxGeometry(d[0], d[2], d[1]), chargerMat);
     c.position.set(x, d[2] / 2, z);
     power.add(c);
+    tag('charger', x + 0.14, d[2] + 0.14, z, 0.11);
+  }
+
+  // battery(+) jumper up to the breaker/bus bars on the hex corner frame
+  if (J) {
+    if (cfg.battery) {
+      const bd = cfg.battery.dim_m || [0.34, 0.19, 0.22];
+      cable(cfg.battery.pos[0], bd[2], cfg.battery.pos[1], J[0], Jy + 0.14, J[1], 0.009);
+    }
+    const brk = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.05, 0.04), gearMat);
+    brk.position.set(J[0], Jy + 0.16, J[1]);
+    power.add(brk);
+    tag(cfg.bus_bars.label || '15 A → bus bars', J[0], Jy + 0.44, J[1], 0.12);
+  }
+
+  // the two 14/2 legs (polylines at bus height)
+  for (const route of (cfg.bus_routes || [])) {
+    for (let i = 0; i + 1 < route.length; i++) {
+      cable(route[i][0], busY, route[i][1], route[i + 1][0], busY, route[i + 1][1]);
+    }
+  }
+  if (cfg.bus_routes && cfg.bus_routes.length) {
+    tag('12 V day bus', 4.46, busY + 0.26, backZ, 0.15);
+  }
+
+  // rack riser (west-leg tap at the hex SW corner up the shared frame)
+  if (cfg.riser) {
+    const R = cfg.riser;
+    cable(R.x, R.y0 != null ? R.y0 : busY, R.z, R.x, R.y1, R.z, 0.009);
+  }
+
+  // one 4-port buck per stacked bay pair + the hex and rack stations;
+  // each gets its input pigtail back to where it actually taps
+  const cd = (cfg.converter && cfg.converter.dim_m) || [0.11, 0.06, 0.035];
+  for (const cv of (cfg.converters || [])) {
+    const y = cv.y != null ? cv.y : 0.72;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(cd[0], cd[2], cd[1]), convMat);
+    box.position.set(cv.pos[0], y, cv.pos[1]);
+    box.rotation.y = (cv.yaw_deg || 0) * Math.PI / 180;
+    power.add(box);
+    tag(cv.id, cv.pos[0], y + 0.15, cv.pos[1], 0.11);
+    if (cv.feed === 'bus_bars' && J) {
+      cable(J[0], Jy, J[1], cv.pos[0], y - 0.02, cv.pos[1], 0.007);
+    } else if (cv.tap) {
+      cable(cv.tap[0], busY, cv.tap[1], cv.pos[0], y - 0.02, cv.pos[1], 0.007);
+    } else if (cv.feed === 'riser' && cfg.riser) {
+      cable(cfg.riser.x, y, cfg.riser.z, cv.pos[0], y, cv.pos[1], 0.007);
+    } else {
+      cable(cv.pos[0], busY, backZ, cv.pos[0], y - 0.02, cv.pos[1], 0.007);
+    }
+  }
+
+  // RUT140 on 12 V at the top of the riser, antenna up
+  if (cfg.rut140) {
+    const [x, z] = cfg.rut140.pos;
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.083, 0.03), gearMat);
+    r.position.set(x, cfg.rut140.y, z);
+    power.add(r);
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.11, 6), gearMat);
+    ant.position.set(x + 0.04, cfg.rut140.y + 0.095, z);
+    power.add(ant);
+    tag(cfg.rut140.label || 'RUT140', x, cfg.rut140.y + 0.24, z, 0.12);
   }
 }
 
@@ -698,13 +793,14 @@ function buildMaze(cfg) {
     const [rx, rz] = L.server_rack.pos;
     const lv = L.server_rack.level || 0;
     const yBase = lv * LH;
+    const rh = L.server_rack.h != null ? L.server_rack.h : 1.05;
     const box = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.46, 0.16),
       new THREE.MeshStandardMaterial({ color: 0x101318, roughness: 0.6, metalness: 0.4 }));
-    box.position.set(rx, yBase + 1.05, rz);
+    box.position.set(rx, yBase + rh, rz);
     grp(lv).add(box);
     const led = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.02),
       new THREE.MeshBasicMaterial({ color: 0x33ff66 }));
-    led.position.set(rx + 0.1, yBase + 1.2, rz - 0.085); // faces out the back
+    led.position.set(rx + 0.1, yBase + (L.server_rack.h != null ? L.server_rack.h : 1.05) + 0.15, rz - 0.085); // faces out the back
     grp(lv).add(led);
   }
 
@@ -2175,7 +2271,8 @@ function checkSensorTriggers() {
 
 // ------------------------------------------------- planned projection rig (sim preview)
 // The PLANNED Cuddle Cross floor projection from the layout's `projection` key:
-// a face-down short-throw projector on a stub arm at the hex NE corner
+// a face-down short-throw projector on a VIVO ceiling mount off the corner
+// legs at the hex NE corner
 // paints a reactive playfield on the deck; an LD2450 in the node box tracks walker
 // positions. The sim's walker IS the target — filtered through the tracker's
 // real coverage wedge and first-order latency so the interactivity previews
@@ -2192,7 +2289,7 @@ function buildProjection(cfg) {
   const yDeck = P.level * LH + 0.145; // hair above the deck slab
   const g = new THREE.Group();
 
-  // projector body + mount arm back to its frame; yaw_deg spins the rig
+  // projector body + mount rig back to its frame; yaw_deg spins the rig
   // (0 = throws +z; -90 = throws -x as on the old rear-leg mount; -120 =
   // throws SW down the long diagonal from the NE corner arm)
   const [bw, bh, bd] = P.projector.body || [0.3837, 0.2915, 0.1477];
@@ -2355,17 +2452,20 @@ function buildProjection(cfg) {
   }
   const C = V[ci], F = V[(ci + 3) % 6];
 
-  // ---- mount assembly (2026-07-29 stand-off revision): the REAL planned
-  // hardware, to scale — yoke plate hose-clamped to the paired corner legs
-  // in the two clean bands (between the header/rail weld zones and above
-  // the rail), arm slab threading the 77 mm header-to-rail gap on the
-  // corner bisector, and the ply shroud sleeve around the nose-down body
-  // (open bottom; the roof slab rides ~6 mm above the top panel). Cut
-  // files: enclosure/projector-shroud.scad; build spec:
-  // wiring-guides/cuddle-projector-mount.md.
+  // ---- mount assembly (2026-08-11 VIVO revision): the REAL planned
+  // hardware, to scale — a COTS VIVO MOUNT-VP01B universal projector mount
+  // replaces the plywood corner arm. Spider feet sandwich the shroud rear
+  // wall onto the chassis bosses (M4 through the ply); pole horizontal on
+  // the corner bisector; ceiling plate hose-clamped to the paired legs on
+  // two standoff blocks at the member-free bands. The fixed 6 in / 152 mm
+  // profile + the header band sitting at pole height both demand the
+  // standoff; the REAL leg ring stands ~40 mm outside the idealized vertex
+  // so real blocks run ~40 mm — the drawn legs sit AT the vertex, so the
+  // drawn blocks render thin. Cut files: enclosure/projector-shroud.scad;
+  // build spec: wiring-guides/cuddle-projector-mount.md.
   {
     const legTop = (P.level + 1) * LH;      // top of the corner legs
-    const armY = legTop - 0.1325;           // mid rail-header gap (abs)
+    const bands = [legTop - 0.245, legTop - 0.145];  // block/clamp bands
     const asm = new THREE.Group();
     asm.position.set(P.projector.pos[0], yProj, P.projector.pos[1]);
     asm.rotation.y = (P.projector.arm_deg != null ? P.projector.arm_deg
@@ -2385,28 +2485,28 @@ function buildProjection(cfg) {
     boxAt(iw + 2 * t, bh + 0.006, t, 0, 0.0015, id / 2 + t / 2, matShroud);
     for (const sx of [-1, 1]) boxAt(t, bh + 0.006, id + 2 * t, sx * (iw / 2 + t / 2), 0.0015, 0, matShroud);
     boxAt(iw + 2 * t, t, id + 2 * t, 0, bh / 2 + 0.006, 0, matShroud);
-    // mount plate on the chassis ceiling-mount bosses (its rear face,
-    // nose-down), arm slab out through the rear-wall opening to the yoke
-    // carriage plate on the chassis bosses, box beam out to the corner
-    // (front end 40 mm shy of the vertex), side plates rising into the
-    // back frames (they stop 65 mm inboard — where the rail/header ends
-    // live), and the horizontal cradle ribs that actually grab the legs
-    // PI-shaped carriage plate spans the real 223 x 150 boss pattern —
-    // 260 x 240, centered 80 mm below the beam axis (ears rise beside the
-    // beam; drawn as its bounding slab)
-    boxAt(0.26, 0.24, 0.009, 0, armY - yProj - 0.08, bd / 2 + 0.0075, matPly);
-    boxAt(0.1, 0.045, zCorner - 0.06, 0, armY - yProj, (zCorner - 0.04 + 0.02) / 2, matPly);
-    for (const sx of [-1, 1])
-      boxAt(0.006, 0.245, 0.08, sx * 0.047, legTop - 0.1375 - yProj, zCorner - 0.105, matPly);
-    for (const cyAbs of [legTop - 0.2525, legTop - 0.0375])
-      boxAt(0.15, 0.006, 0.124, 0, cyAbs - yProj, zCorner - 0.04, matPly);
-    // hose clamps: two per leg at the rib bands — below the brace studs
-    // and above the top-rail weld (the beam band itself stays clamp-free)
+    // VP01B (152 mm profile is published; plate/hub/spider eyeballed from
+    // photos): feet at the 223 x 150 boss corners outside the rear wall,
+    // spider plane, hub, pole, plate, standoff blocks, clamps
+    const zWall = id / 2 + t;               // rear wall outer face
+    const zPlate = bd / 2 + 0.152;          // fixed 6 in profile off the bosses
+    for (const sx of [-1, 1]) for (const sy of [-1, 1])
+      boxAt(0.024, 0.012, 0.006, sx * 0.1115, sy * 0.075, zWall + 0.003, matGalv);
+    boxAt(0.24, 0.165, 0.004, 0, 0, zWall + 0.008, matGalv);         // spider arms
+    boxAt(0.07, 0.07, 0.03, 0, 0, zWall + 0.027, matGalv);           // hub + ball
+    boxAt(0.035, 0.035, zPlate - zWall - 0.042, 0, 0,
+      (zPlate + zWall + 0.042) / 2, matGalv);                        // pole
+    boxAt(0.13, 0.13, 0.004, 0, 0, zPlate + 0.002, matGalv);         // ceiling plate
+    // standoff blocks plate->legs at the two bands (thin here — see above)
+    const blockD = Math.max(0.008, zCorner - 0.0215 - zPlate - 0.004);
+    for (const bandY of bands)
+      boxAt(0.06, 0.04, blockD, 0, bandY - yProj, zPlate + 0.004 + blockD / 2, matPly);
+    // hose clamps wrap leg + block + plate at both bands
     for (const sx of [-1, 1]) {
-      for (const cyAbs of [legTop - 0.2525, legTop - 0.0375]) {
+      for (const bandY of bands) {
         const ring = new THREE.Mesh(new THREE.TorusGeometry(0.0245, 0.004, 8, 20), matGalv);
         ring.rotation.x = Math.PI / 2;
-        ring.position.set(sx * 0.0225, cyAbs - yProj, zCorner - 0.013);
+        ring.position.set(sx * 0.0225, bandY - yProj, zCorner);
         asm.add(ring);
       }
     }
@@ -2461,12 +2561,12 @@ function buildProjection(cfg) {
     note(`lens plumb — ${mm(dAt(win.x, win.z))} in from the corner, ON the line`,
       win.x + fwd[0] * 0.6, ySlab + 0.42, win.z + fwd[1] * 0.6);
     note(`window ${mm(winH)} above deck`, win.x + lat[0] * 0.32, ySlab + winH * 0.56, win.z + lat[1] * 0.32);
-    // body heights + the gap back to the legs (arm slots ±80 mm radially,
-    // final plumb set on-site — see the fab spec)
+    // body heights + the gap back to the legs (VP01B profile is FIXED at
+    // 152 mm — radial position = standoff-block thickness, cut on-site)
     const rearX = P.projector.pos[0] - fwd[0] * bd / 2, rearZ = P.projector.pos[1] - fwd[1] * bd / 2;
     note(`body top ${mm(topH)} — ${mm(roofH - topH)} under the roof slab`,
       P.projector.pos[0] + lat[0] * 0.55, ySlab + topH, P.projector.pos[1] + lat[1] * 0.55, 0.13);
-    note(`rear face ${mm(dAt(rearX, rearZ))} off the corner — slot the arm ±80 mm on the line`,
+    note(`rear face ${mm(dAt(rearX, rearZ))} off the corner — VP01B 152 mm profile + ~40 mm blocks`,
       rearX - lat[0] * 0.5, ySlab + winH + 0.06, rearZ - lat[1] * 0.5, 0.13);
     // arm-angle callout: the arm bisects the 120° corner — 60° to each face
     const thDiag = Math.atan2(F[1] - C[1], F[0] - C[0]);
@@ -2476,14 +2576,14 @@ function buildProjection(cfg) {
       arcPts.push(vec(C[0] + Math.cos(th) * 0.42, yDim, C[1] + Math.sin(th) * 0.42));
     }
     mountG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(arcPts), dimMat));
-    note('60° + 60° — arm on the corner bisector', C[0] + Math.cos(thDiag) * 0.66,
+    note('60° + 60° — pole on the corner bisector', C[0] + Math.cos(thDiag) * 0.66,
       ySlab + 0.30, C[1] + Math.sin(thDiag) * 0.66, 0.13);
-    // mount hardware callouts (heights above deck; bands dodge the frames'
-    // header/rail weld zones — the arm threads between those two members)
-    note(`yoke on the leg pair — clamps ~${mm((P.level + 1) * LH - 0.25 - ySlab)} & ~${mm((P.level + 1) * LH - 0.035 - ySlab)} above deck`,
+    // mount hardware callouts (heights above deck; the standoff blocks sit
+    // in the member-free bands so the plate never touches the header ends)
+    note(`plate on the leg pair — blocks + clamps ~${mm((P.level + 1) * LH - 0.245 - ySlab)} & ~${mm((P.level + 1) * LH - 0.145 - ySlab)} above deck`,
       C[0], ySlab + 1.32, C[1], 0.13);
-    note('arm threads the 77 mm rail–header gap', C[0] + fwd[0] * 0.35, ySlab + 1.62, C[1] + fwd[1] * 0.35, 0.13);
-    note(`lit footprint ${litPct}% of deck — slide the slot outboard on-site to recover`,
+    note('pole axis in the HEADER band — blocks stand the plate off the steel', C[0] + fwd[0] * 0.35, ySlab + 1.62, C[1] + fwd[1] * 0.35, 0.13);
+    note(`lit footprint ${litPct}% of deck — block thickness trues the near edge on-site`,
       P.image.center[0], ySlab + 0.55, P.image.center[1], 0.13);
     // image edges as deck tape marks: verify the mapping with a tape from
     // the corner before locking the arm
