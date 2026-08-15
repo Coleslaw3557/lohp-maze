@@ -112,6 +112,18 @@ The only per-room tuning should be the radar front end: physical aim, gate
 overrides, sensitivity thresholds, and `absence_timeout`. Do not add a second
 cooldown around `run_effect`; the latch is the deployed debounce for radar rooms.
 
+## Telemetry + analytics
+
+No firmware changes are required for the first telemetry pass. The Pi records
+the existing `run_effect` and `room_vacated` POSTs in `data/telemetry.sqlite3`
+and derives room dwell, coarse room heatmaps, completion rate, run duration and
+abandonment from those server-time-stamped events.
+
+Use `/api/telemetry` only for richer diagnostics later: RSSI heartbeats, node
+uptime/sequence numbers, raw radar transitions, ToF range samples, or POST gap
+reports. Those events are additive and should not replace the existing
+`tripwire.yaml` occupancy contract.
+
 ## S3 audio bench (bench-xiao-s3.yaml)
 
 The audio-era hardware stack of a button room, mapped as "Monkey Room" in

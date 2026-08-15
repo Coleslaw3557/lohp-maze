@@ -36,8 +36,13 @@ everything that travels lands under screws or plugs in:
 - **Cable:** premade **straight-through M-F DB9 serial extension** —
   ⚠ NOT a null-modem cable (those swap pins internally and scramble the
   map). Any length, ~$5.
-- **Pod end:** DB9 screw-terminal breakout (male) inside the button
-  cluster. Button/piezo wires land under screws.
+- **Pod end:** DB9 screw-terminal breakout (male) inside the **button
+  pod enclosure** (`enclosure/button-pod/` — node-box shell, 2026-08-15):
+  breakout + the 91 × 30 six-circuit terminal block (the 5V/GND bus;
+  signals land on the breakout's own pin screws) inside, seven
+  Ø7 holes out the front for the 4-pin JST-SM button pigtails (hole n =
+  signal n; per-room table + prewire recipe:
+  `arcade-button-db9-prewire-guide.md`).
 - Dust caps/covers both sides at teardown; a spare cable in the kit is
   the field fix for anything flaky.
 

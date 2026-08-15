@@ -439,6 +439,40 @@ Retrieves information about all configured light models.
 curl http://localhost:5000/api/light_models
 ```
 
+### 15. Sensor Telemetry + Analytics
+
+The server records room events in `data/telemetry.sqlite3` using server UTC as
+the clock of record. `/api/run_effect` automatically records canonical room
+entries and other effect triggers; `/api/room_vacated` records room exits.
+Nodes can also POST richer diagnostics here without changing effect behavior.
+
+#### Ingest One Event
+```bash
+curl -X POST http://localhost:5000/api/telemetry \
+     -H "Content-Type: application/json" \
+     -d '{"room": "Cop Dodge", "event_type": "heartbeat", "sensor_type": "wifi", "sensor_name": "rssi", "value": {"rssi_dbm": -61}, "node_uptime_ms": 123456, "seq": 42}'
+```
+
+#### Ingest Batch
+```bash
+curl -X POST http://localhost:5000/api/telemetry \
+     -H "Content-Type: application/json" \
+     -d '{"room": "Cop Dodge", "node_name": "lohp-node-cop-dodge", "events": [{"event_type": "radar_presence", "value": true}, {"event_type": "heartbeat", "value": {"rssi_dbm": -61}}]}'
+```
+
+#### Review Events
+```bash
+curl 'http://localhost:5000/api/sensor_events?room=Cop%20Dodge&limit=100'
+curl 'http://localhost:5000/api/sensor_events.csv?since_s=3600'
+```
+
+Useful analytics endpoints:
+
+- `GET /api/analytics/room_dwell?since_s=3600&include_visits=1`
+- `GET /api/analytics/maze_runs?timeout_s=900`
+- `GET /api/analytics/abandonment?timeout_s=900`
+- `GET /api/analytics/room_heatmap`
+
 ## Additional Endpoints
 
 | Method | URL | Description |
@@ -460,6 +494,13 @@ curl http://localhost:5000/api/light_models
 | POST | `/api/sound_mode` | `{"mode": "attended"\|"unattended"}` — flips which sound selections play. Live beds (maze ambience, room backgrounds, Cuddle floor bed) whose pools differ between modes restart with a fresh pick (listed as `restarted` in the response); one-shots and cues pick the new mode up on their next draw. The sim's Sound Mode button flips it today; the entrance node's physical switch will POST the same body |
 | GET | `/api/floor_state` | What the server believes the Cuddle floor show is doing: `theme`, `active`, the `bed` pool playing, the `ambient` one-shot pool armed, `has_sounds`, and `age_s` since the renderer last reported (`null` = never) |
 | POST | `/api/next_floor_theme` | Switches the projector's floor theme through the renderer's control port (`FLOOR_CTL_URL`, default `:5002`) and recolours the room to match. Body `{"theme": "lava"}` picks one; an empty body cycles |
+| POST | `/api/telemetry` | Records arbitrary node/sensor telemetry. Accepts one event object or `{"events": [...]}` batch; server UTC receive time is authoritative |
+| GET | `/api/sensor_events` | Queries stored events. Filters: `room`, `event_type`, `since`, `since_s`, `until`, `limit`, `order=asc` |
+| GET | `/api/sensor_events.csv` | CSV export of the same event query |
+| GET | `/api/analytics/room_dwell` | Derives room visits and dwell summaries from `room_entry` + `room_vacated`; add `include_visits=1` for raw visit pairs |
+| GET | `/api/analytics/maze_runs` | Infers maze runs, duration and completion from route-ordered room entries. `timeout_s` controls abandonment cutoff |
+| GET | `/api/analytics/abandonment` | Counts inferred incomplete runs by last room seen |
+| GET | `/api/analytics/room_heatmap` | Coarse room-level heatmap weights from visits and dwell |
 | GET | `/api/photobomb/photos` | Photo booth captures, newest first (`photos_dir`, capture `backend`, and per-photo filename/size/timestamp) |
 | GET | `/api/photobomb/photos/<filename>` | Serves one captured photo (JPEG) |
 | POST | `/api/shutdown` | Powers off the server host and all connected units after 3 seconds |

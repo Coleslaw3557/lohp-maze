@@ -267,6 +267,26 @@ UP, label side up-and-out), and the floor/lid **only seat one way** — the
 front and back edges carry different tab patterns on purpose. Glue
 everything except the lid.
 
+## Button pod (`button-pod/`, 2026-08-15)
+
+The far end of every port-A DB9 cable: one universal pod per wired room
+(7 rooms), mounted near the buttons — the node-box SHELL verbatim (same
+110 × 78 × 39.8, 3 mm, drop-in lid — **the lid is the same part as the
+room box's**, spares interchange) with the pod port set: DB9 window in
+the left wall's BACK half (male breakout inside, node-box geometry),
+seven Ø7 4-pin-JST pigtail exits across the front wall (sign-box pigtail
+grammar; hole n = DB9 signal n), and floor zones for the 91 × 30 × 17.6
+terminal block (calipered 2026-08-15 — the height closes the hole-row
+gate, 3.8 clearance). The block is the POWER BUS only (6 circuits,
+2 = 5V / 4 = GND); signals land straight on the breakout's pin screws —
+the draft's WAGOs are out of the standard build. Back wall adds **four
+horizontal zip-tie slots** (high/low pair each end — the pods zip-tie
+to scaffolding cross members) beside the node-standard velcro slots.
+**Its front wall etches OUTSIDE** (hole numerals — the field wirer
+reads the wall), unlike the room box. Own scad/exporter/README in the
+folder — per-room population table and remaining bench checks live
+there. Not cut yet.
+
 ## Cut layer vs mark layer
 
 Each SVG carries two colours in one coordinate frame — **black = CUT,
@@ -371,6 +391,9 @@ python3 make-xcs-all-rooms.py   # rebuild after editing the jen or cuddle SVG
   part) — the camp-sign PSU terminal hood (own section above); previews
   `preview-assembly-psu-hood.png`, `sheet-psu-hood.png`,
   `sheet-etch-psu-hood.png`
+- `button-pod/` — the DB9 cable's far-end pod (own section above): same
+  shell, pod port set; `button-pod.scad` + `export-button-pod.py` +
+  `button-pod.svg` + previews + its own README (per-room table, gates)
 - `photobomb-boxes.scad` / `export-photobomb.py` /
   `photobomb-camera-box.svg` + `photobomb-printer-box.svg` — the Photo
   Bomb C930e webcam + QL-820NWB printer boxes (own section above; **6mm

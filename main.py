@@ -25,6 +25,7 @@ from room_background_manager import RoomBackgroundManager
 from maze_ambient_manager import MazeAmbientManager
 from maze_ambience_manager import MazeAmbienceManager
 from camera_manager import CameraManager
+from telemetry_store import TelemetryStore
 from effects.photobomb_shot import SHUTTER_OFFSET, DURATION as PHOTOBOMB_SHOT_DURATION
 from photobooth import PhotoBoothSession
 from room_answer_pools import answer_pool_name
@@ -83,6 +84,8 @@ logging.getLogger('pyftdi.ftdi').setLevel(logging.WARNING)
 
 app = Quart(__name__, static_folder='frontend/static')
 app = cors(app)
+telemetry_store = TelemetryStore(os.environ.get(
+    'LOHP_TELEMETRY_DB', os.path.join('data', 'telemetry.sqlite3')))
 
 connected_clients = set()
 _moop_lock = asyncio.Lock()
@@ -92,6 +95,35 @@ _moop_state = {
     'timer': None,
 }
 _doorway_entry_last_fire = {}
+
+
+def _source_ip():
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        return forwarded.split(',', 1)[0].strip()
+    return request.remote_addr
+
+
+def _record_event(event_type, room=None, effect_name=None, value=None,
+                  sensor_type=None, sensor_name=None, node_name=None,
+                  node_uptime_ms=None, seq=None):
+    try:
+        return telemetry_store.record_event(
+            event_type=event_type,
+            room=room,
+            node_name=node_name,
+            sensor_type=sensor_type,
+            sensor_name=sensor_name,
+            effect_name=effect_name,
+            value=value,
+            source_ip=_source_ip(),
+            user_agent=request.headers.get('User-Agent', ''),
+            node_uptime_ms=node_uptime_ms,
+            seq=seq,
+        )
+    except Exception as e:
+        logger.error(f"Telemetry write failed for {event_type}: {e}", exc_info=True)
+        return None
 
 
 def _moop_button_id(data):
@@ -680,6 +712,7 @@ async def run_effect():
     data = await request.json
     room = data.get('room')
     effect_name = data.get('effect_name')
+    requested_effect_name = effect_name
 
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
@@ -694,9 +727,15 @@ async def run_effect():
 
     try:
         moop_complete = False
+        moop_button_id = _moop_button_id(data)
         if room == MOOP_ROOM and effect_name == MOOP_BUTTON_EFFECT:
             moop_complete = await _record_moop_press(data)
 
+        trigger_effect_name = effect_name
+        trigger_event_type = (
+            'room_entry' if MAZE_ENTRY_EFFECTS.get(room) == trigger_effect_name
+            else 'effect_trigger'
+        )
         _maybe_reset_route_start(room, effect_name)
         route_action = _route_entry_action(room, effect_name)
         if route_action == 'forward':
@@ -731,12 +770,38 @@ async def run_effect():
         if suppressed:
             logger.info(f"Suppressing duplicate {room} {effect_name} entry trigger "
                         f"({remaining:.1f}s left in one-shot window)")
+            _record_event(
+                f"{trigger_event_type}_suppressed",
+                room=room,
+                effect_name=effect_name,
+                value={
+                    'requested_effect_name': requested_effect_name,
+                    'trigger_effect_name': trigger_effect_name,
+                    'route_action': route_action,
+                    'retry_after_s': round(remaining, 1),
+                    'payload': data,
+                },
+            )
             return jsonify({
                 'status': 'success',
                 'message': f'Effect {effect_name} already running/recent in room {room}',
                 'suppressed': True,
                 'retry_after_s': round(remaining, 1),
             })
+
+        _record_event(
+            trigger_event_type,
+            room=room,
+            effect_name=effect_name,
+            value={
+                'requested_effect_name': requested_effect_name,
+                'trigger_effect_name': trigger_effect_name,
+                'route_action': route_action,
+                'moop_button_id': moop_button_id,
+                'moop_complete': moop_complete,
+                'payload': data,
+            },
+        )
 
         async def execute_effect():
             success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
@@ -768,9 +833,21 @@ async def run_effect():
         success, message = await execute_effect()
         if success:
             return jsonify({'status': 'success', 'message': f'Effect {effect_name} executed in room {room}'})
+        _record_event(
+            'effect_failed',
+            room=room,
+            effect_name=effect_name,
+            value={'requested_effect_name': requested_effect_name, 'message': message},
+        )
         return jsonify({'status': 'error', 'message': message}), 500
     except Exception as e:
         error_message = f"Error executing effect {effect_name} for room {room}: {e}"
+        _record_event(
+            'effect_error',
+            room=room,
+            effect_name=effect_name,
+            value={'requested_effect_name': requested_effect_name, 'error': str(e)},
+        )
         logger.error(error_message, exc_info=True)
         return jsonify({'status': 'error', 'message': error_message}), 500
 
@@ -875,6 +952,7 @@ async def room_vacated():
     if not room:
         return jsonify({'status': 'error', 'message': 'Room is required'}), 400
     try:
+        _record_event('room_vacated', room=room, value={'payload': data})
         logger.info(f"Room vacated: {room}")
         if room == PHOTOBOMB_ROOM:
             photobooth.vacated()
@@ -1224,6 +1302,175 @@ async def fire_ambient():
         room=data.get('room'), maze=bool(data.get('maze')))
     return (jsonify({'status': 'success' if ok else 'error',
                      'message': message}), 200 if ok else 400)
+
+
+def _telemetry_window_args():
+    since = request.args.get('since')
+    since_s = request.args.get('since_s')
+    until = request.args.get('until')
+    if since_s and not since:
+        try:
+            since = time.time() - float(since_s)
+        except (TypeError, ValueError):
+            since = None
+    return since, until
+
+
+def _event_limit(default=250):
+    try:
+        return int(request.args.get('limit', default))
+    except (TypeError, ValueError):
+        return default
+
+
+@app.route('/api/telemetry', methods=['POST'])
+async def post_telemetry():
+    """Flexible ingest path for ESP/node diagnostics and future sensor details.
+
+    Accepts either one event object or {"events": [...]} for batching. Server UTC
+    receive time is authoritative; node uptime/sequence can be included for gap
+    analysis, but not as the clock of record.
+    """
+    data = await request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({'status': 'error', 'message': 'JSON object required'}), 400
+    events = data.get('events')
+    if events is None:
+        events = [data]
+    elif not isinstance(events, list):
+        return jsonify({'status': 'error', 'message': 'events must be a list'}), 400
+
+    ids = []
+    for event in events:
+        if not isinstance(event, dict):
+            return jsonify({'status': 'error', 'message': 'each event must be an object'}), 400
+        merged = {
+            'room': data.get('room'),
+            'node_name': data.get('node_name'),
+            'sensor_type': data.get('sensor_type'),
+            'sensor_name': data.get('sensor_name'),
+            **event,
+        }
+        event_type = merged.get('event_type') or merged.get('type') or 'telemetry'
+        event_id = _record_event(
+            event_type=event_type,
+            room=merged.get('room'),
+            node_name=merged.get('node_name'),
+            sensor_type=merged.get('sensor_type'),
+            sensor_name=merged.get('sensor_name'),
+            effect_name=merged.get('effect_name'),
+            node_uptime_ms=merged.get('node_uptime_ms'),
+            seq=merged.get('seq'),
+            value=merged.get('value') if 'value' in merged else merged,
+        )
+        ids.append(event_id)
+    return jsonify({'status': 'success', 'count': len(ids), 'ids': ids})
+
+
+@app.route('/api/sensor_events', methods=['GET'])
+def get_sensor_events():
+    since, until = _telemetry_window_args()
+    events = telemetry_store.query_events(
+        room=request.args.get('room') or None,
+        event_type=request.args.get('event_type') or None,
+        since=since,
+        until=until,
+        limit=_event_limit(),
+        newest_first=request.args.get('order') != 'asc',
+    )
+    return jsonify({'events': events, 'count': len(events)})
+
+
+@app.route('/api/sensor_events.csv', methods=['GET'])
+def get_sensor_events_csv():
+    since, until = _telemetry_window_args()
+    events = telemetry_store.query_events(
+        room=request.args.get('room') or None,
+        event_type=request.args.get('event_type') or None,
+        since=since,
+        until=until,
+        limit=_event_limit(5000),
+        newest_first=False,
+    )
+    csv_text = telemetry_store.events_csv(events)
+    return Response(
+        csv_text,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=lohp-sensor-events.csv'},
+    )
+
+
+@app.route('/api/analytics/room_dwell', methods=['GET'])
+def analytics_room_dwell():
+    since, until = _telemetry_window_args()
+    visits = telemetry_store.room_visits(since=since, until=until)
+    body = {
+        'rooms': telemetry_store.room_dwell_summary(since=since, until=until),
+        'visit_count': len(visits),
+    }
+    if request.args.get('include_visits') in {'1', 'true', 'yes'}:
+        body['visits'] = visits
+    return jsonify(body)
+
+
+@app.route('/api/analytics/maze_runs', methods=['GET'])
+def analytics_maze_runs():
+    since, until = _telemetry_window_args()
+    try:
+        timeout_s = float(request.args.get('timeout_s', 900))
+    except (TypeError, ValueError):
+        timeout_s = 900
+    runs = telemetry_store.maze_runs(
+        MAZE_ENTRY_ROUTE, since=since, until=until, timeout_s=timeout_s)
+    completed = [r for r in runs if r['completed']]
+    durations = [r['duration_s'] for r in completed]
+    return jsonify({
+        'route': MAZE_ENTRY_ROUTE,
+        'runs': runs,
+        'run_count': len(runs),
+        'completed_count': len(completed),
+        'abandoned_count': len(runs) - len(completed),
+        'completion_rate': round(len(completed) / len(runs), 3) if runs else None,
+        'avg_completed_duration_s': (
+            round(sum(durations) / len(durations), 3) if durations else None
+        ),
+    })
+
+
+@app.route('/api/analytics/abandonment', methods=['GET'])
+def analytics_abandonment():
+    since, until = _telemetry_window_args()
+    try:
+        timeout_s = float(request.args.get('timeout_s', 900))
+    except (TypeError, ValueError):
+        timeout_s = 900
+    runs = telemetry_store.maze_runs(
+        MAZE_ENTRY_ROUTE, since=since, until=until, timeout_s=timeout_s)
+    counts = {}
+    for run in runs:
+        if not run['completed']:
+            room = run['last_room']
+            counts[room] = counts.get(room, 0) + 1
+    rooms = [{'room': room, 'abandoned_count': count}
+             for room, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))]
+    return jsonify({'rooms': rooms, 'abandoned_count': sum(counts.values())})
+
+
+@app.route('/api/analytics/room_heatmap', methods=['GET'])
+def analytics_room_heatmap():
+    """Coarse heatmap input: one cell per room, weighted by visits and dwell."""
+    since, until = _telemetry_window_args()
+    rooms = telemetry_store.room_dwell_summary(since=since, until=until)
+    max_dwell = max((room['total_duration_s'] for room in rooms), default=0.0)
+    max_visits = max((room['visits'] for room in rooms), default=0)
+    for room in rooms:
+        room['dwell_weight'] = (
+            round(room['total_duration_s'] / max_dwell, 3) if max_dwell else 0.0
+        )
+        room['visit_weight'] = (
+            round(room['visits'] / max_visits, 3) if max_visits else 0.0
+        )
+    return jsonify({'rooms': rooms})
 
 
 @app.route('/api/toggle_maze_ambience', methods=['POST'])

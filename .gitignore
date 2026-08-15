@@ -4,6 +4,7 @@ __pycache__/
 effects_config.json
 client/cache/
 photos/
+data/
 .env
 *.log
 .playwright-mcp/

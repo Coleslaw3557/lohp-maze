@@ -5,6 +5,7 @@ tools/
 *.md
 rooms.png
 photos/
+data/
 sim/
 enclosure/
 cad-items/

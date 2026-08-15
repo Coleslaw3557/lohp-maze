@@ -45,6 +45,15 @@ Recommended color map for common RGB cable:
 
 ## Pod Breakout Wiring
 
+All of this lives in the laser-cut **button pod enclosure**
+(`../enclosure/button-pod/`, 2026-08-15): DB9 male breakout in the left
+wall's window, the 91 x 30 six-circuit terminal block as the +5V/GND
+buses ONLY (left 2 circuits linked = 5V, right 4 = GND; each pigtail's
+LED-/COM pair lands under one GND screw), each signal wire straight on
+its DB9 pin's own breakout screw — no WAGOs in the standard build — and
+one Ø7 front-wall exit hole per JST pigtail (hole n = signal n, hole 1
+at the DB9 corner; tape unused holes).
+
 ```text
 DB9 male breakout in pod
 

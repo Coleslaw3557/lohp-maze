@@ -261,4 +261,8 @@ sharing the same radar — is specced in
   (systemd `lohp-projection`, outside the container)
 - `floor_show_manager.py` — Cuddle Cross following the floor show: theme-driven bed audio,
   event-fired accents, and the room's light palette (fed by `POST /api/floor_event`)
+- `telemetry_store.py` — SQLite room-event history and derived analytics. The Pi records
+  existing ESP `/api/run_effect` and `/api/room_vacated` posts with server UTC time, so
+  first-pass dwell/completion/abandonment metrics need no ESP firmware change; optional
+  node diagnostics can POST richer batches to `/api/telemetry`.
 - `effects/` — one file per effect; `effect_utils.py` — shared step interpolation and theme math
