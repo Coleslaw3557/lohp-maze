@@ -12,6 +12,7 @@ from effects import (
     create_deep_playa_hit_effect, create_image_enhancement_effect, create_bike_lock_room_effect,
     create_bike_lock_entry_effect, create_no_friends_monday_effect, create_lightning_storm_effect,
     create_photobomb_shot_effect, create_monkey_business_effect,
+    create_shrine_guard_effect, create_moop_march_effect,
     create_cuddle_lava_hit_effect, create_cuddle_lava_breach_effect,
     create_cuddle_chamber_trap_effect, palette_for
 )
@@ -62,6 +63,8 @@ class EffectsManager:
             "LightningStorm": create_lightning_storm_effect(),
             "PhotoBomb-Shot": create_photobomb_shot_effect(),
             "MonkeyBusiness": create_monkey_business_effect(),
+            "ShrineGuard": create_shrine_guard_effect(),
+            "MoopMarch": create_moop_march_effect(),
             # Cuddle Cross accents, fired by the floor projection's own events
             # (floor_show_manager.py), not by a sensor
             "Cuddle-Lava-Hit": create_cuddle_lava_hit_effect(),

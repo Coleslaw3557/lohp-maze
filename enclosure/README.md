@@ -283,9 +283,12 @@ the draft's WAGOs are out of the standard build. Back wall adds **four
 horizontal zip-tie slots** (high/low pair each end — the pods zip-tie
 to scaffolding cross members) beside the node-standard velcro slots.
 **Its front wall etches OUTSIDE** (hole numerals — the field wirer
-reads the wall), unlike the room box. Own scad/exporter/README in the
-folder — per-room population table and remaining bench checks live
-there. Not cut yet.
+reads the wall), unlike the room box. `button-pod-8x.xs` packs all 8
+kits into three S1 loads (the Vertical Moop March pod joined 2026-08-16
+with the puck revert) and etches each ROOM NAME on its right wall
+(DM Serif, .xs layer only — the name assigns the kit's room; that wall
+glues name-OUT). Own scad/exporter/README in the folder — per-room
+population table and remaining bench checks live there. Not cut yet.
 
 ## Cut layer vs mark layer
 
@@ -393,7 +396,10 @@ python3 make-xcs-all-rooms.py   # rebuild after editing the jen or cuddle SVG
   `sheet-etch-psu-hood.png`
 - `button-pod/` — the DB9 cable's far-end pod (own section above): same
   shell, pod port set; `button-pod.scad` + `export-button-pod.py` +
-  `button-pod.svg` + previews + its own README (per-room table, gates)
+  `button-pod.svg` + previews + its own README (per-room table, gates);
+  `button-pod-7x.xs` (via `make-xcs-button-pod.py`) = all 7 pods
+  band-packed into two S1 bed loads, settings cloned from
+  `enclosure-3mm.xs`
 - `photobomb-boxes.scad` / `export-photobomb.py` /
   `photobomb-camera-box.svg` + `photobomb-printer-box.svg` — the Photo
   Bomb C930e webcam + QL-820NWB printer boxes (own section above; **6mm

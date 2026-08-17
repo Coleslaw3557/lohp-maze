@@ -28,7 +28,6 @@ from camera_manager import CameraManager
 from telemetry_store import TelemetryStore
 from effects.photobomb_shot import SHUTTER_OFFSET, DURATION as PHOTOBOMB_SHOT_DURATION
 from photobooth import PhotoBoothSession
-from room_answer_pools import answer_pool_name
 
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
@@ -68,13 +67,6 @@ PHOTOBOMB_VICTORY_EFFECT = "CorrectAnswer"
 PHOTOBOMB_FAIL_EFFECT = "WrongAnswer"
 # the capture lands ~SHUTTER_OFFSET+0.25s in; the chime waits out the outro
 PHOTOBOMB_VICTORY_DELAY_S = round(PHOTOBOMB_SHOT_DURATION - SHUTTER_OFFSET, 2)
-MOOP_ROOM = "Vertical Moop March"
-MOOP_BUTTON_EFFECT = "CorrectAnswer"
-MOOP_RIGHT_EFFECT = answer_pool_name(MOOP_ROOM, "CorrectAnswer")
-MOOP_WRONG_EFFECT = answer_pool_name(MOOP_ROOM, "WrongAnswer")
-MOOP_WINDOW_S = 60
-MOOP_BUTTON_COUNT = 4
-
 # Set up logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -88,12 +80,6 @@ telemetry_store = TelemetryStore(os.environ.get(
     'LOHP_TELEMETRY_DB', os.path.join('data', 'telemetry.sqlite3')))
 
 connected_clients = set()
-_moop_lock = asyncio.Lock()
-_moop_state = {
-    'pressed': set(),
-    'started_at': None,
-    'timer': None,
-}
 _doorway_entry_last_fire = {}
 
 
@@ -124,87 +110,6 @@ def _record_event(event_type, room=None, effect_name=None, value=None,
     except Exception as e:
         logger.error(f"Telemetry write failed for {event_type}: {e}", exc_info=True)
         return None
-
-
-def _moop_button_id(data):
-    for key in ('trigger_name', 'button_name', 'sensor_name'):
-        value = data.get(key)
-        if value:
-            return str(value)
-    index = data.get('button_index')
-    if index is None:
-        index = data.get('game_index')
-    if index is not None:
-        try:
-            return f"Moop Button {int(index) + 1}"
-        except (TypeError, ValueError):
-            return str(index)
-    return None
-
-
-def _reset_moop_locked():
-    timer = _moop_state.get('timer')
-    current = asyncio.current_task()
-    if timer and timer is not current and not timer.done():
-        timer.cancel()
-    _moop_state['pressed'] = set()
-    _moop_state['started_at'] = None
-    _moop_state['timer'] = None
-
-
-async def _apply_moop_resolution(effect_name):
-    effect_data = effects_manager.get_effect(effect_name)
-    if not effect_data:
-        logger.error(f"Moop march resolution effect {effect_name} not found")
-        return
-    success, message = await effects_manager.apply_effect_to_room(
-        MOOP_ROOM, effect_name, effect_data)
-    if not success:
-        logger.error(f"Moop march resolution failed: {message}")
-
-
-async def _moop_timeout(started_at):
-    try:
-        await asyncio.sleep(MOOP_WINDOW_S)
-        async with _moop_lock:
-            if _moop_state.get('started_at') != started_at:
-                return
-            if not _moop_state['pressed'] or len(_moop_state['pressed']) >= MOOP_BUTTON_COUNT:
-                return
-            pressed = sorted(_moop_state['pressed'])
-            logger.info(f"Moop march timed out with {len(pressed)}/{MOOP_BUTTON_COUNT}: {pressed}")
-            _reset_moop_locked()
-        await _apply_moop_resolution(MOOP_WRONG_EFFECT)
-    except asyncio.CancelledError:
-        return
-
-
-async def _record_moop_press(data):
-    button_id = _moop_button_id(data)
-    if not button_id:
-        logger.warning("Moop march CorrectAnswer did not include trigger_name; "
-                       "playing button sound without changing round state")
-        return False
-
-    async with _moop_lock:
-        now = time.monotonic()
-        if (
-            _moop_state['started_at'] is None
-            or now - _moop_state['started_at'] > MOOP_WINDOW_S
-        ):
-            _reset_moop_locked()
-            _moop_state['started_at'] = now
-            _moop_state['timer'] = asyncio.create_task(_moop_timeout(now))
-
-        _moop_state['pressed'].add(button_id)
-        count = len(_moop_state['pressed'])
-        logger.info(f"Moop march button latched: {button_id} ({count}/{MOOP_BUTTON_COUNT})")
-        if count < MOOP_BUTTON_COUNT:
-            return False
-
-        logger.info("Moop march complete; scheduling room-local right-answer pool")
-        _reset_moop_locked()
-        return True
 
 
 def _doorway_entry_suppressed(room, effect_name, effect_data, now=None):
@@ -726,11 +631,6 @@ async def run_effect():
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
 
     try:
-        moop_complete = False
-        moop_button_id = _moop_button_id(data)
-        if room == MOOP_ROOM and effect_name == MOOP_BUTTON_EFFECT:
-            moop_complete = await _record_moop_press(data)
-
         trigger_effect_name = effect_name
         trigger_event_type = (
             'room_entry' if MAZE_ENTRY_EFFECTS.get(room) == trigger_effect_name
@@ -797,8 +697,6 @@ async def run_effect():
                 'requested_effect_name': requested_effect_name,
                 'trigger_effect_name': trigger_effect_name,
                 'route_action': route_action,
-                'moop_button_id': moop_button_id,
-                'moop_complete': moop_complete,
                 'payload': data,
             },
         )
@@ -806,8 +704,6 @@ async def run_effect():
         async def execute_effect():
             success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
             if success:
-                if moop_complete:
-                    asyncio.create_task(_apply_moop_resolution(MOOP_RIGHT_EFFECT))
                 return True, message
             _clear_doorway_entry_fire(room, effect_name, started_at)
             logger.error(f"Failed to execute effect {effect_name} in room {room}: {message}")

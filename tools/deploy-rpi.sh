@@ -15,6 +15,7 @@ cd "$(dirname "$0")/.."
 rsync -az --delete --info=stats1 -e "ssh ${SSH_OPTS[*]}" \
     --exclude .git --exclude __pycache__ --exclude '*.pyc' \
     --exclude sim/.venv --exclude sim/sim.log --exclude sim/sim.pid \
+    --exclude sim/esphome/.venv --exclude sim/esphome/rooms/.esphome \
     --filter 'protect /photos/***' --exclude /photos \
     --filter 'protect /data/***' --exclude /data \
     --filter 'protect /.floor_theme' --filter 'protect /.projector-manual' \

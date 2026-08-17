@@ -299,6 +299,19 @@
       }
     },
     {
+      "name": "Monkey Room Radar",
+      "type": "presence",
+      "room": "Monkey Room",
+      "action": {
+        "data": {
+          "effect_name": "ShrineGuard",
+          "room": "Monkey Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      }
+    },
+    {
       "name": "Monkey Puzzle Button",
       "type": "button",
       "room": "Monkey Room",
@@ -571,6 +584,26 @@
       }
     },
     {
+      "name": "Vertical Moop March Laser",
+      "type": "presence",
+      "room": "Vertical Moop March",
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Vertical Moop March",
+          "effect_name": "MoopMarch"
+        }
+      },
+      "leave_action": {
+        "method": "POST",
+        "path": "/api/room_vacated",
+        "data": {
+          "room": "Vertical Moop March"
+        }
+      }
+    },
+    {
       "name": "Moop Button 1",
       "type": "button",
       "room": "Vertical Moop March",
@@ -734,5 +767,5 @@
       }
     }
   ],
-  "_games_comment": "Triggers with a `game` key resolve through per-room game logic (mirrored in sim/web/app.js and the room node firmware, wiring-guides/room-games-plan.md): gate = two banks of 3 simultaneous body-pressed arcade buttons (bank 1 -> CorrectAnswer chime, then bank 2 -> CorrectAnswer chime, then leave on the room occupancy trigger); porto = 1 random winning knock pad of 3 per room entry, attempt 1 always fails, attempts 2-3 pass on the winner, attempt 4 force-passes; dph = 1 random winner of 5 per room entry (CorrectAnswer on winner; others WrongAnswer); bike = 2 static true/false answers for this room (both right -> chime then BikeLockRoom); moop = 4 standalone battery button pucks (each press -> CorrectAnswer, all four unique pucks in 60s -> VerticalMoopMarch-RightAnswer, timeout after partial set -> VerticalMoopMarch-WrongAnswer); lightsout = 5 lit truck buttons, press toggles self+neighbors, all lit -> chime then NoFriendsMonday."
+  "_games_comment": "Triggers with a `game` key resolve through per-room game logic (mirrored in sim/web/app.js and the room node firmware, wiring-guides/room-games-plan.md): gate = two banks of 3 simultaneous body-pressed arcade buttons (bank 1 -> CorrectAnswer chime, then bank 2 -> CorrectAnswer chime, then leave on the room occupancy trigger); porto = 1 random winning knock pad of 3 per room entry, attempt 1 always fails, attempts 2-3 pass on the winner, attempt 4 force-passes; dph = 1 random winner of 5 per room entry (CorrectAnswer on winner; others WrongAnswer); bike = 2 static true/false answers for this room (both right -> chime then BikeLockRoom); moop = 4 buttons on the room node, wired via the DB9-A button pod (each press -> CorrectAnswer, all four unique buttons in a 60s round -> chime then VerticalMoopMarch-RightAnswer, timeout after partial set -> VerticalMoopMarch-WrongAnswer); lightsout = 5 lit truck buttons, press toggles self+neighbors, all lit -> chime then NoFriendsMonday."
 }

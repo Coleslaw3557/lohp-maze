@@ -3,7 +3,7 @@
 The traveling-maze field IO: every node box carries **one DB9 (port A) and
 one XLR3 DMX jack on the left wall** (`enclosure/node-enclosure.scad`).
 Port A's window is pre-cut in every box (07-22 enclosure rev2; populated
-in the 7 wired rooms, blanked with tape/cover elsewhere) — the button-pod
+in the 8 wired rooms, blanked with tape/cover elsewhere) — the button-pod
 cable. The
 XLR is **cut in every box — it's the room's DMX out** (`dmx-over-wifi.md`):
 the node's MAX485 drives the room's fixtures through it on a standard DMX
@@ -93,6 +93,7 @@ now it can't happen in the field.
 | Photo Bomb | shutter (→ **D1**, button contract) | — | — | — | — | — | — |
 | Monkey | pedestal switch (→ **D1**, button contract) | — | — | — | — | — | — |
 | Porto | piezo 1 + | piezo 2 + | piezo 3 + | — | — | — | — |
+| Vertical Moop March | btn 1 | btn 2 | btn 3 | btn 4 | — | — | — |
 
 Gate banks: pads 1–3 = bank A, 4–6 = bank B. NFM's resistor ladder and
 lamp chain live at the truck; pins 1/2 power the lamps — **5V addressable
@@ -107,19 +108,20 @@ expander path early: I2C on D4/D5, cable and pin map above unchanged, DMX
 TX takes the freed D0. See `dmx-over-wifi.md` and
 `sim/esphome/packages/game_gate_hw_mcp.yaml`.
 
-Rooms with no wired inputs (Entrance, Exit, Guy Line, VMM, Cuddle,
+Rooms with no wired inputs (Entrance, Exit, Guy Line, Cuddle,
 Cop Dodge, Sparkle Pony, Temple) leave port A's pre-cut window empty —
 blank it against dust (tape/cover plate) — but every room, wired or not,
 carries the XLR jack for its DMX out.
-Moop pucks are wireless — nothing here.
+(VMM joined the wired rooms 2026-08-16 — the wireless Moop puck design
+is dead; its 4 buttons ride pins 3–6 like any other room.)
 
 ## BOM (shopping-list.xlsx)
 
 | Item | Qty | Note |
 |---|---|---|
-| DB9 female screw-terminal breakout | 9 | 7 port-A box ends + 2 spares |
-| DB9 male screw-terminal breakout | 9 | 7 pod ends + 2 spares |
-| DB9 M-F straight-through extension cables | 9 | port-A lengths per room + 2 spares |
+| DB9 female screw-terminal breakout | 10 | 8 port-A box ends + 2 spares |
+| DB9 male screw-terminal breakout | 10 | 8 pod ends + 2 spares |
+| DB9 M-F straight-through extension cables | 10 | port-A lengths per room + 2 spares |
 | XLR3 female panel jack, D-size (Devinal 4-pack, amzn B07S6J8WVD, $8.99) | 20 | 5 packs: 15 DMX outs + 5 spares; solder cups, bench-wired |
 | Short wood screws (#4-ish, 6–10mm) | ~34 | 2 per jack through its flange holes — **from stash**; jacks ship with no screws |
 | XLR3 M-F cables, 6 ft | 17 | box → first fixture, used WHOLE (nothing gets cut up); 2 spares double as fixture hops |

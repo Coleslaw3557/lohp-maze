@@ -124,7 +124,9 @@ predictably. The radar mounts at the **top of the room pointed straight down**
 (Guy Line 3.70 m; VMM 1.80 m above the level-1 deck) so its cone covers the whole
 floor and it sees someone at the bottom **however they got there** — in through
 the doorway, or down the ropes or the scaffolding. Wiring is the standard radar
-recipe above: D6/D7, DMX TX on D5.
+recipe above: D6/D7, DMX TX on D5. VMM additionally carries the 4 march-game
+buttons on D0–D3 through port A pins 3–6 (2026-08-16 — the wireless puck
+design is dead; `game_moop.yaml`, pod recipe in `db9-field-wiring.md`).
 
 ## LD2450 tracking radar (Cuddle only, second radar)
 
@@ -198,7 +200,8 @@ notch pointing away, pin 1 is the far-RIGHT leg; paint-mark pin 1 before gluing.
 | Room | Sensor(s) | DMX TX | Port A |
 |---|---|---|---|
 | Entrance / Exit | TOF200C (D4/D5) | D7 | blank |
-| Guy Line Climb / Vertical Moop March | LD2410C, top of room pointed down | D5 | blank |
+| Guy Line Climb | LD2410C, top of room pointed down | D5 | blank |
+| Vertical Moop March | LD2410C top-down + 4 buttons D0–D3 | D5 | pins 3–6 |
 | Gate | LD2410C + 6 pads via MCP23017 | D0 | pins 3–8 |
 | Deep Playa Handshake | LD2410C + 5 buttons D0–D4 | D5 | pins 3–7 |
 | Bike Lock | LD2410C + 4 buttons D0–D3 | D5 | pins 3–6 |
@@ -209,7 +212,8 @@ notch pointing away, pin 1 is the far-RIGHT leg; paint-mark pin 1 before gluing.
 | Cuddle Cross | LD2410C + LD2450 (D2/D3) — wide window variant | D5 | blank |
 
 Every room: MAX485+XLR (DMX out) and, if it's an audio room, the DAC on
-D8–D10. Moop pucks are wireless — no box wiring. WiFi antenna stays inside.
+D8–D10. WiFi antenna stays inside. (2026-08-16: the wireless Moop pucks are
+dead — VMM's 4 game buttons wire to its box like every other button room.)
 Draw on the 5V pin: radar + DAC + MAX485 ≈ 135 mA — within the pin budget.
 
 ## Spec-sheet sources

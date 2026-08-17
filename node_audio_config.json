@@ -1,15 +1,19 @@
 {
-  "_comment": "Rooms whose audio ALSO plays on their ESP32-S3 node box (additive beside the WS unit path \u2014 see node_audio_manager.py). server_host = this server's LAN address; nodes stream ALL audio from it (2026-07-25: nothing stored on nodes): ambience beds GET /api/audio/<file>, effect cues GET /api/audio/cues/<cue_id>.wav (volume-baked WAVs \u2014 sim/esphome/make_node_audio.py). 2026-08-10: set to the server Pi's RUT DHCP reservation (wiring-guides/maze-network.md); when benching the server on the dev box, temporarily put the dev box's LOHP-ESP address here. Per room: host/port = the node's ESPHome native API. Mapped: the S3 bench node + Cop Dodge (first real box, 2026-07-25) \u2014 add rooms as their boxes are built.",
-  "server_host": "192.168.252.231",
-  "server_port": 5000,
-  "rooms": {
-    "Monkey Room": {
-      "host": "lohp-bench-s3.local",
-      "port": 6098
-    },
-    "Cop Dodge": {
-      "host": "lohp-node-cop-dodge.local",
-      "port": 6062
+    "_comment": "Rooms whose audio ALSO plays on their ESP32-S3 node box (additive beside the WS unit path \u2014 see node_audio_manager.py). server_host = this server's LAN address; nodes stream ALL audio from it (2026-07-25: nothing stored on nodes): ambience beds GET /api/audio/<file>, effect cues GET /api/audio/cues/<cue_id>.wav (volume-baked WAVs \u2014 sim/esphome/make_node_audio.py). 2026-08-10: set to the server Pi's RUT DHCP reservation (wiring-guides/maze-network.md); when benching the server on the dev box, temporarily put the dev box's LOHP-ESP address here. Per room: host/port = the node's ESPHome native API. Mapped: the S3 bench node + Cop Dodge (first real box, 2026-07-25) \u2014 add rooms as their boxes are built.",
+    "server_host": "192.168.252.231",
+    "server_port": 5000,
+    "rooms": {
+        "Monkey Room": {
+            "host": "192.168.252.72",
+            "port": 6072
+        },
+        "Cop Dodge": {
+            "host": "lohp-node-cop-dodge.local",
+            "port": 6062
+        },
+        "Vertical Moop March": {
+            "host": "192.168.252.74",
+            "port": 6074
+        }
     }
-  }
 }

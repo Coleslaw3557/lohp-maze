@@ -3,6 +3,13 @@ client/
 wiring-guides/
 tools/
 *.md
+# Runtime reads these through the compose bind mount (.:/app) — the image
+# copy is dead weight, and tar-hashing ~3.5G off the Pi SD is what made
+# builds take 10+ min (found 2026-08-16).
+audio_files/
+Background-images/
+experiments/
+firmware/
 rooms.png
 photos/
 data/

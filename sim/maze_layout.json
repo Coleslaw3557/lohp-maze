@@ -211,7 +211,7 @@
     ],
     "y": 0.35,
     "feed": "riser",
-    "ports": "Pi + Entrance/Exit Pebbles (1 spare = Moop puck charging)"
+    "ports": "Pi + Entrance/Exit Pebbles (1 spare)"
    }
   ],
   "converter": {
@@ -1291,7 +1291,7 @@
    ],
    "label": "Moop 1",
    "color": "e84545",
-   "note": "standalone wireless puck: XIAO ESP32-C3 + arcade button + 18650 in a case, always-on, recharged nightly - no wire to the node box"
+   "note": "wired like every other game room since 2026-08-16: JST lead to the room's button pod, DB9 port A pins 3-6 back to the node box (the standalone battery C3 puck plan is dead)"
   },
   "Moop Button 2": {
    "kind": "button",

@@ -11,7 +11,9 @@ ch 6, WPA2), a transparent L2 bridge with a DHCP reservation:
 - Pi: `dietpi@192.168.252.231` (`lohp-server.local` still works — mDNS
   crosses the bridge — so deploy/sim/console are unchanged **when you're on
   LOHP-ESP or the RUT LAN**)
-- RUT: `https://192.168.252.1` (admin), `root@` for ssh
+- RUT: `https://192.168.252.1` (admin), `root@` for ssh — **from the maze LAN
+  only**; from upstream its admin surfaces answer solely at the WAN address
+  (`192.168.253.219`), even though `.252.1` pings
 - From the upstream camp WiFi the Pi needs the RUT as a jump host:
   `ssh -J root@192.168.253.219 dietpi@192.168.252.231` (the `253.219` is the
   RUT's upstream DHCP lease — may change). The Pi's old upstream address
@@ -59,6 +61,17 @@ Rsyncs the repo to `/home/dietpi/lohp-server` (deletes stale files; the Pi's
 `photos/` is preserved), installs `tools/lohp-server.service`, runs
 `docker compose build`, restarts the service, and waits for
 `http://<pi>:5000/api/health` to answer.
+
+Build facts from the first production deploy (2026-08-16, Monkey Room
+bring-up): the image needs **ffmpeg** (node ambience stream prep in
+`audio_manager.py` — without it every node's media pipeline errors);
+`.dockerignore` excludes `audio_files/`/`Background-images/`/`experiments/`/
+`firmware/` because the compose bind mount (`.:/app`) serves them at runtime —
+before that exclude the 3.5 GB build context off the SD was the whole build
+time. A rebuild is now ~2.5 min warm, ~9 min when the apt layer changes
+(image export to SD is the long pole). The rsync also skips
+`sim/esphome/.venv` and `sim/esphome/rooms/.esphome` (~800 MB of toolchain the
+server never uses).
 
 ### Watching it from the sim
 

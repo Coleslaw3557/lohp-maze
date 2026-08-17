@@ -95,7 +95,11 @@ Legend: **DONE** = themed audio pack wired + lights redesigned to it.
 - **Vertical Moop March** (shaft down, pars @145/@153): 4 wireless button
   pucks. **Fixed 07-29**: pucks fired shared `WrongAnswer` in `triggers.json`
   while the plan of record and the sim both chime — all four now fire
-  `CorrectAnswer`. No room effect yet (future `MoopMarch` + game rule TBD);
+  `CorrectAnswer`. **Superseded 2026-08:** the pucks were reverted to wired
+  node buttons (16th, `game_moop.yaml` — 60s all-four round resolves on the
+  node), and `MoopMarch` was built (17th, `effects/moop_march.py`): radar
+  entry, leave-no-trace green fall-in + descending march cadence + amber
+  moop-spotted snatch, light-only until the room's audio pack is authored;
   same two-zone engine limitation as Guy Line Climb.
 - **Monkey Room** (par @121 + spot @129): button → `MonkeyBusiness` —
   current and correct; its light hits are synced to the sampled fanfare

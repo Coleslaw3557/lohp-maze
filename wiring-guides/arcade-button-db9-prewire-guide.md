@@ -80,6 +80,7 @@ example `GATE-1`, `GATE-2`, `DPH-1`.
 | Gate | 6 buttons | pin 3 pad 1, pin 4 pad 2, pin 5 pad 3, pin 6 pad 4, pin 7 pad 5, pin 8 pad 6 |
 | Deep Playa Handshake | 5 buttons | pin 3 btn 1, pin 4 btn 2, pin 5 btn 3, pin 6 btn 4, pin 7 btn 5 |
 | Bike Lock Room | 4 buttons | pin 3 Q1 TRUE, pin 4 Q1 FALSE, pin 5 Q2 TRUE, pin 6 Q2 FALSE |
+| Vertical Moop March | 4 buttons | pin 3 btn 1, pin 4 btn 2, pin 5 btn 3, pin 6 btn 4 |
 | Photo Bomb Room | 1 button | pin 3 shutter |
 | Monkey Room | 1 switch | pin 3 pedestal switch |
 | Porto Room | 3 piezos | pin 2 piezo common, pin 3 piezo 1+, pin 4 piezo 2+, pin 5 piezo 3+ |

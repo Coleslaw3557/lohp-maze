@@ -57,9 +57,49 @@ Host lohp-pi
 The Pi's former upstream-WiFi address `192.168.253.186` is **dead** — the Pi
 no longer joins any WiFi as a client.
 
+Two upstream-side reachability quirks (learned on the 2026-08-16 Monkey Room
+bring-up):
+
+- The RUT's own admin surfaces (WebUI + ssh) answer from upstream **only at
+  the WAN address** `192.168.253.219`. `192.168.252.1` pings from upstream
+  but refuses admin — use it only from the maze LAN.
+- Upstream traffic is forwarded to **wired** LAN hosts (the Pi) but **not to
+  WLAN clients** — ESP nodes are unreachable from the upstream network. To
+  drive a node from an upstream bench box, go through the Pi:
+  `scp sim/esphome/harness.py root@192.168.252.231:/home/dietpi/lohp-server/`
+  then `ssh root@192.168.252.231 "docker exec lohp-server python
+  /app/harness.py call <node-ip>:<api_port> press_button"` (the container has
+  aioesphomeapi; the copy is cleaned by the next deploy's rsync).
+
+**Reflash gotcha — stale hostapd station entry.** Reflashing a node kills its
+WiFi client without a deauth frame, and the Pi's brcmfmac AP then refuses the
+node's re-association: the node loops `reason='Auth Expired'` at strong RSSI
+while `iw dev wlan0 station dump` on the Pi still shows the old session's
+`connected time` climbing. Fix: `systemctl restart hostapd` on the Pi (brief
+AP blip for every WLAN client), then the node joins within ~30 s. Hit on the
+Monkey Room radar reflash 2026-08-16 — expect it on every node reflash.
+FIXED same day: `hostapd.conf` now carries `ctrl_interface=/run/hostapd`
+(surgical kick: `hostapd_cli -p /run/hostapd deauthenticate <mac>`) and
+`ap_max_inactivity=60`, so a dead session ages out and the reflashed node
+re-associates on its own within ~1 min — the manual restart is only the
+impatient path now. Backup of the pre-change conf:
+`/etc/hostapd/hostapd.conf.bak-20260816` on the Pi (config is Pi-local,
+not in this repo — re-apply by hand if the SD is ever re-imaged).
+
 ## RUT140 (FW `RUT14X_R_00.07.20.3`)
 
 - LAN `192.168.252.1/24`; internal RUT AP **disabled** — the Pi is the AP
+  - ⚠ **GOTCHA (hit 2026-08-17):** found silently re-enabled
+    (`wireless.default_radio0`, same `LOHP-ESP`/psk2 as the Pi, cause
+    unknown — possibly the 08-14 config session). TWO same-SSID APs a
+    meter apart = nodes roam Pi↔RUT; every roam is a ~seconds TCP
+    blackout that eats in-flight `run_effect`/`room_vacated` POSTs and
+    kills the node's ambience stream mid-flow, while Art-Net UDP sails
+    through — looks like "random lost triggers", VMM bench hit it twice
+    in 10 min. Re-disabled via
+    `uci set wireless.default_radio0.disabled=1; uci commit wireless;
+    wifi`. If triggers ever go flaky again, `iwinfo` on the RUT and an
+    empty `iw dev wlan0 station dump` on the Pi is the 30-second check.
 - WiFi configured exclusively as **Multi AP station** (WiFi WAN), scan
   interval 60 s, priority order per the credentials file. Priority 1 tested
   live; priority 2 stored but untested (network was unavailable)
@@ -72,10 +112,16 @@ no longer joins any WiFi as a client.
 
 - Dynamic range `192.168.252.100–249`, 150 leases, 12 h, authoritative;
   leases in `/tmp/dhcp.leases`; IPv6 DHCP + RA enabled
-- One persistent reservation: `lohp-server` → `192.168.252.231`
+- Persistent reservations: `lohp-server` → `192.168.252.231`;
+  `lohp-node-monkey` → `192.168.252.72` (uci section `dhcp.node_monkey`,
+  first room node, 2026-08-16). ESP32-S3 WiFi MAC = the board's USB-JTAG
+  serial id (`ls /dev/serial/by-id/`), so a node's reservation can be staged
+  before its first boot
 - No automatic dynamic→static conversion — **add a reservation per ESP node
   at flash time** (needed anyway: the dockerized server can't resolve
-  `.local`, so `dmx_nodes.json` wants IPs — see `dmx-over-wifi.md`)
+  `.local`, so `dmx_nodes.json` wants IPs — see `dmx-over-wifi.md`).
+  Node scheme: `192.168.252.(api_port − 6000)` — e.g. `lohp-node-monkey`
+  api 6072 → `.72` (added 2026-08-16, first node reservation)
 
 ### Firewall
 

@@ -108,7 +108,12 @@ async def main():
         #   harness.py call 192.168.252.87:6098 play_cue cue=monkey_shrine_complete
         target, action = sys.argv[2], sys.argv[3]
         host, _, port = target.partition(':')
-        data = dict(arg.split('=', 1) for arg in sys.argv[4:])
+        # digit values -> int: ESPHome int service args (press_moop n=2,
+        # press_pad pad=1, ...) reject strings at the API layer
+        data = {}
+        for arg in sys.argv[4:]:
+            k, _, v = arg.partition('=')
+            data[k] = int(v) if re.fullmatch(r'-?\d+', v) else v
         await fire(target, {'port': int(port or 6053), 'room': host},
                    action, host=host, data=data)
         return

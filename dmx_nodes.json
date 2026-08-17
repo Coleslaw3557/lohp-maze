@@ -16,9 +16,9 @@
     "Deep Playa Handshake": {"host": "lohp-node-deep-playa-handshake.local", "enabled": true},
     "No Friends Monday":    {"host": "lohp-node-no-friends-monday.local",    "enabled": true},
     "Temple Room":          {"host": "lohp-node-temple.local",               "enabled": true},
-    "Monkey Room":          {"host": "lohp-node-monkey.local",               "enabled": true},
+    "Monkey Room":          {"host": "192.168.252.72",                       "enabled": true, "hardware": true},
     "Bike Lock Room":       {"host": "lohp-node-bike-lock.local",            "enabled": true},
-    "Vertical Moop March":  {"host": "lohp-node-vertical-moop-march.local",  "enabled": true},
+    "Vertical Moop March":  {"host": "192.168.252.74",                       "enabled": true, "hardware": true},
     "Camp Sign":            {"host": "lohp-sign-bridge.local",               "enabled": true, "hardware": true}
   }
 }

@@ -4,12 +4,16 @@ WORKDIR /app
 
 # libusb runtime for the FTDI USB-DMX interface (pyftdi);
 # fswebcam grabs Photo Bomb stills from the USB webcam (camera_manager.py);
-# dejavu + tzdata for the photos' Pacific-time corner watermark
+# dejavu + tzdata for the photos' Pacific-time corner watermark;
+# ffmpeg preps the ESP32 node ambience streams (audio_manager crossfade/offset
+# WAVs — first missed on the 2026-08-16 Monkey Room bring-up, bench servers
+# always had it from the host)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0 \
     fswebcam \
     fonts-dejavu-core \
     tzdata \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

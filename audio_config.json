@@ -216,7 +216,7 @@
             "volume": 0.42
         },
         "VerticalMoopMarch-RightAnswer": {
-            "_comment": "Final Vertical Moop March success pool: the server fires this only after all four unique moop buttons are pressed within 60s. Individual moop button presses still use the shared CorrectAnswer pool.",
+            "_comment": "Final Vertical Moop March success pool: the room node (game_moop.yaml) fires this only after all four unique moop buttons are pressed within a 60s round. Individual moop button presses still use the shared CorrectAnswer pool.",
             "audio_files": [
                 "ff9-victory.mp3",
                 "rooms/Porto Room/sensor_responses/victory/03_zelda_chime_door_opens.wav"
@@ -224,7 +224,7 @@
             "volume": 0.8
         },
         "VerticalMoopMarch-WrongAnswer": {
-            "_comment": "Final Vertical Moop March failure pool: the server fires one sound from here when a partial moop round times out after 60s, then resets the room.",
+            "_comment": "Final Vertical Moop March failure pool: the room node (game_moop.yaml) fires one sound from here when a partial moop round times out after 60s, then resets the round.",
             "audio_files": [],
             "volume": 0.8
         },
@@ -757,6 +757,13 @@
                 "monkey-shrine-complete.mp3"
             ],
             "volume": 1.0
+        },
+        "ShrineGuard": {
+            "_comment": "Monkey Room entry (radar presence) — LotHT temple guard ambush sting, same archive as the shrine cue (tools/fetch_guard_sound.sh); lights hand-synced in effects/monkey_shrine.py",
+            "audio_files": [
+                "temple-guard-entry.mp3"
+            ],
+            "volume": 0.9
         },
         "DeepPlaya-BG": {
             "_comment": "Doorway entry swell — LIGHTS ONLY since 2026-08-01 evening (Tim): dance-distance-muffled moved into the DeepPlayaHandshake-Background pool so entries never lay a second bed over the always-on bed.",

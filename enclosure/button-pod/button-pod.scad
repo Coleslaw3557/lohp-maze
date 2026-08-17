@@ -230,10 +230,14 @@ module panel_left_cut() translate([D, 0]) mirror([1, 0]) panel_left();
 module left_etch_cut()                        // x runs BACK->front
   translate([D - db9_cx, db9_cz + 12]) label("DB9", 3);
 
-module panel_right() panel_side();            // no cuts, no etch: the ONLY
-                                              //  non-chiral side wall in
-                                              //  the family — orient at
-                                              //  glue-up however it fits
+module panel_right() panel_side();            // no cuts, no scad etch. The
+                                              //  7x XCS project etches the
+                                              //  ROOM NAME here
+                                              //  (make-xcs-button-pod.py)
+                                              //  — glue up name-OUT; from
+                                              //  this file's plain export
+                                              //  it stays the family's one
+                                              //  orient-anyway panel
 
 module panel_floor() difference() {
   union() {

@@ -12,6 +12,9 @@ is `triggers.json` (entries with a `game` key). The server needs zero changes
 Buttons throughout are **30mm illuminated arcade buttons** (EG Starts 5-colour
 kits, 5V LED + microswitch). Button LEDs wire straight to the node's 5V rail
 (always lit — no GPIO spent on lamps, except NFM's WS2812 chain below).
+Physically each button's 4-wire JST lead lands in the room's **button pod**
+(`../enclosure/button-pod/`, 2026-08-15) at the far end of the DB9-A cable —
+pinouts and the pod recipe: `arcade-button-db9-prewire-guide.md`.
 
 ## Gate — two-bank body press ("the pat-down")
 
@@ -60,24 +63,30 @@ kits, 5V LED + microswitch). Button LEDs wire straight to the node's 5V rail
   `triggers.json` drive the sim, and the audio console mirrors them into
   `sim/esphome/rooms/bike-lock.yaml` for the node firmware.
 
-## Vertical Moop March — four standalone button pucks
+## Vertical Moop March — four buttons, one 60s round
 
-- **Hardware:** 4 **wireless pucks**, no wire to the node box: XIAO ESP32-C3
-  (from the spare pool — pucks don't need PSRAM) + one 30mm button on D1 +
-  an 18650 on the XIAO's battery pads, in a small case. **Always-on**, ~12h
-  day shift per charge — they join the fleet's nightly dusk-recharge flip.
-  Flash target `hardware_c3.yaml`; nodes `rooms/moop-button-{1..4}.yaml`
-  (API 6076–6079, MACs :10–:13).
-- **Logic:** every press fires the shared CorrectAnswer button-response pool
-  (`button.yaml` reused, 3s cooldown). The server opens a 60s round on the
-  first identified puck press; all four unique pucks in that window fire
-  `VerticalMoopMarch-RightAnswer`, while an incomplete round times out to
-  `VerticalMoopMarch-WrongAnswer` and resets.
+- **Hardware:** 4 buttons on **D0–D3** (+ radar UART + I2S + DMX D5 =
+  10/11), wired like every other game room: JST pigtails into the room's
+  button pod, DB9-A pins 3–6 back to the node box.
+  > Rev 2026-08-16: this replaces the wireless XIAO-C3 + 18650 **puck**
+  > design (four battery boxes, their cases, and a nightly charging chore
+  > to avoid one cable run in a room that already has a node box, a pod
+  > standard, and a 12V bus drop — wrong trade; Tim killed it). The
+  > `moop-button-{1..4}.yaml` nodes (API 6076–6079, MACs :10–:13) are
+  > deleted and those ports/MACs are free again.
+- **Logic** (`game_moop.yaml`): the first press opens a 60s round; every
+  press fires the shared CorrectAnswer chime; all four unique buttons
+  inside the round fire chime → 2.5s → `VerticalMoopMarch-RightAnswer`;
+  the round timing out on a partial set fires
+  `VerticalMoopMarch-WrongAnswer` and resets. Resolves **on the node**
+  like the other games — the server's puck-era 60s aggregation in
+  `main.py` is gone.
 
 ## Monkey Room — button now, dance later
 
 - Unchanged today: the silver-monkey pedestal microswitch fires
-  **MonkeyBusiness** (its own celebration = the victory).
+  **MonkeyBusiness** (its own celebration = the victory). LIVE on the real
+  node box 2026-08-16 — physical press → effect + par + Pebble validated.
 - **FUTURE (TBD, nothing built):** a night-time "do a dance / movement" win
   condition — candidate: LD2450 track jitter or LD2410C energy variance as a
   motion-intensity signal, gated to night hours; falls back to the button.
@@ -134,9 +143,6 @@ tab + a tab per room). Summary:
 | Item | Qty | Note |
 |---|---|---|
 | 30mm LED arcade buttons (EG Starts 5-colour 5-pk) | 24 → 5 pks | Gate 6, DPH 5, Bike 4, Moop 4, NFM 5 |
-| XIAO ESP32-C3 | 4 | Moop pucks — from the existing spare pool ($0 if spares hold) |
-| 18650 cells + holders | 4 | pucks; XIAO battery pads do the charging |
-| Small puck cases | 4 | 3D-print or off-the-shelf |
 | WS2812 pixels (5) + resistor-ladder Rs | 1 set | NFM truck; 74AHCT125 from sign spares (10-pack received 07-23) |
 
 ## Bench & sim
@@ -145,6 +151,6 @@ tab + a tab per room). Summary:
   same logic (Gate's one-click-per-bank simplification aside).
 - Harness pokes: `call <host>:<port> press_pad pad=1..6` (gate),
   `press_shake n=1..5`, `press_bike n=1..4`, `press_truck n=1..5`,
-  `press <room>` (moop pucks).
+  `press_moop n=1..4`, `press <room>` (single-button rooms).
 - `sim/tools/gate_game_test.py` = the 4-path gate regression (needs
   `run_node.sh gate -d` first).

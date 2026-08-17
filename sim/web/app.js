@@ -2103,12 +2103,17 @@ function resolveGame(sensor, source) {
       return { effect: 'CorrectAnswer' };
     }
     case 'moop': {
+      // Mirror game_moop.yaml on the room node: first press opens a 60s
+      // round, all four unique buttons -> chime then the right-answer pool,
+      // timeout on a partial set -> the wrong-answer pool.
       if (!GAME.moop.at || now - GAME.moop.at > 60) {
         resetMoopGame();
         GAME.moop.at = now;
         GAME.moop.timer = setTimeout(() => {
           if (GAME.moop.pressed.size > 0 && GAME.moop.pressed.size < 4) {
-            toast('Moop: timed out — server plays failure');
+            toast('Moop: timed out — wrong answer');
+            post(sensor.action.path,
+              actionData(sensor, 'VerticalMoopMarch-WrongAnswer'), source);
           }
           resetMoopGame();
         }, 60000);
@@ -2117,10 +2122,11 @@ function resolveGame(sensor, source) {
       const count = GAME.moop.pressed.size;
       if (count >= 4) {
         resetMoopGame();
-        toast('Moop: all buttons — server plays right answer');
-      } else {
-        toast(`Moop: ${count}/4 buttons`);
+        toast('Moop: all buttons — right answer');
+        chimeThen(sensor, 'VerticalMoopMarch-RightAnswer', source);
+        return null;
       }
+      toast(`Moop: ${count}/4 buttons`);
       return { effect: 'CorrectAnswer' };
     }
     case 'lightsout': {

@@ -34,9 +34,10 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
 
 - `packages/logic.yaml` — the shared node base (name, api port, 3s http_request),
   **identical for sim and hardware**. Trigger behavior comes from the packages below;
-  a node with none of them (exit/temple/vertical-moop-march — their Lightning-on-entry
+  a node with none of them (exit/temple — their Lightning-on-entry
   placeholders were test wiring, removed 2026-07-17) is an API bench node until its
-  bespoke effect is designed.
+  bespoke effect is designed. (vertical-moop-march left that list 2026-08-16: it
+  now carries the 4-button march game, `packages/game_moop.yaml`, `press_moop`.)
 - `packages/tripwire.yaml` — doorway-crossing trigger: `tripwire` sensor → 30ms
   `delayed_on` debounce → occupancy latch → POST `run_effect` `${effect}`. Once a
   radar room is occupied, additional enter edges are ignored until `room_vacated`
@@ -72,7 +73,17 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
 - `rooms/*.yaml` — one node per room: substitutions only (room, effect, server,
   api port 6061–6075, MAC). Room→effect mapping matches `triggers.json` (repo root, the canonical map).
 
-## Flashing a real node later
+## Flashing a real node
+
+Workflow proven end-to-end on Cop Dodge (bench, 2026-07-25) and Monkey Room
+(first full room box on the production RUT140/LOHP-ESP network, 2026-08-16:
+physical button → MonkeyBusiness, par @121 over WiFi DMX, cue + bed on the
+Pebble — `rooms/monkey.yaml` is the reference hardware config for a button
+room, `rooms/cop-dodge.yaml` for a radar room). **The full per-room
+program + test runbook (RUT reservation, dmx_nodes IP swap, node audio
+map, deploy order, validation checks, network gotchas) is
+`../../wiring-guides/room-node-bringup.md` — use it for the one-by-one
+room build.**
 
 1. In the room's yaml: swap `sim_host.yaml` → `hardware_s3.yaml` (fleet standard;
    button rooms also set `button_pin: GPIO2` — S3's D1), set
@@ -82,11 +93,28 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
    Entrance/Exit, plus any gpio button per the hardware doc) and
    have it drive the automation — either publish to the `tripwire` template sensor,
    or replace it with the platform sensor keeping `id: tripwire` + the `on_press`.
-3. Speaker rooms: add `audio_s3.yaml` + the generated `audio/cues-<node>.yaml` to
-   the packages, list the room in `node_audio_config.json`, and run
-   `./make_node_audio.py`.
-4. `esphome run rooms/<room>.yaml` with the board plugged in. Done — `logic.yaml`
-   already carried the tested behavior over.
+3. Speaker rooms: add `audio_s3.yaml` to the packages and map the room in
+   `node_audio_config.json`. Nothing is stored on the node (2026-07-25) — cues
+   and beds stream from the server, so there is no per-node cues yaml; just
+   make sure `./make_node_audio.py` has been run since the last pool change.
+4. Stage the node's RUT DHCP reservation BEFORE first boot: the S3's WiFi MAC
+   is the USB-JTAG serial id (`ls /dev/serial/by-id/`), IP scheme
+   `192.168.252.(api_port − 6000)` — monkey api 6072 → `.72`. Put that IP (not
+   `.local` — the dockerized server can't mDNS) in `dmx_nodes.json`
+   (+ `"hardware": true`) and, for speaker rooms, `node_audio_config.json`,
+   then `tools/deploy-rpi.sh`.
+5. `esphome run rooms/<room>.yaml` with the board plugged in — `logic.yaml`
+   already carried the tested behavior over. **Reflashing a node that was
+   already on LOHP-ESP?** The old association lingers in the Pi's hostapd and
+   blocks the rejoin (`Auth Expired` loop at strong RSSI) —
+   `systemctl restart hostapd` on the Pi clears it
+   (`wiring-guides/maze-network.md`, reflash gotcha).
+6. Validate from a machine on LOHP-ESP:
+   `harness.py call <node-ip>:<api_port> press_button` (or `trip`), then the
+   physical trigger. From the upstream network WLAN clients are unreachable —
+   drive the node through the Pi instead (`wiring-guides/maze-network.md`,
+   "reachability quirks"). Once the room passes, drop the yaml's bring-up
+   `logger: DEBUG` back to INFO over OTA.
 
 ## Radar Occupancy Behavior
 

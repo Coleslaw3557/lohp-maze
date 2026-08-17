@@ -16,7 +16,7 @@
 > Game add-on (arcade-button room games, 2026-07-20) lives in
 > `room-games-plan.md` — changes several rooms' pin fills (Gate goes exactly
 > full at 11/11: 6 pads + radar + I2S; DPH 5 buttons; Bike 4; NFM ladder +
-> WS2812) and adds 4 standalone battery button pucks in Moop.
+> WS2812; Moop 4 buttons D0–D3 since the 2026-08-16 puck revert).
 
 Constraints this plan is built around (decided 2026-07-17):
 

@@ -218,7 +218,9 @@ order:
    box, and watch the par track the sim UI ("Monkey Room" already points at
    the bench hostname). Scope the break/MAB if anything's off.
 2. **Per room on hardware days:** flash the room YAML per its `# FLASH ADDS`
-   comment (right `dmx_tx_pin` baked in), give the node a DHCP reservation and
+   comment (right `dmx_tx_pin` baked in), give the node a DHCP reservation
+   (scheme `192.168.252.(api_port − 6000)` — `maze-network.md`; stage it
+   pre-boot, the S3 WiFi MAC = its USB-JTAG serial id) and
    put the IP into `dmx_nodes.json` (the container can't resolve `.local`),
    build the box with MAX485 + the bench-soldered XLR jack, hang the room's
    fixtures off it with a standard DMX cable. The room lights the moment the
