@@ -122,20 +122,23 @@ class RemoteHostManager:
 
     def has_audio_client(self, room):
         """Whether anything can play audio for this room right now — a connected
-        unit, or the room's own ESP32 speaker node. Lets a caller skip quietly
-        and try again later instead of logging a failure per attempt."""
+        unit, or the room's own ESP32 speaker node with a LIVE connection
+        (a configured-but-offline box can't play; the ambient scatter used to
+        fire into those). Lets a caller skip quietly and try again later
+        instead of logging a failure per attempt."""
         if self.get_websockets_by_room(room, warn_if_empty=False):
             return True
-        return bool(self.node_audio) and self.node_audio.enabled_for(room)
+        return bool(self.node_audio) and self.node_audio.is_connected(room)
 
     def audio_rooms(self):
-        """Every room something could play audio in right now: any room a
-        connected client covers, plus the rooms with a speaker node. Names
-        come back in whatever casing they registered with (the maze ambient
+        """Every room something can play audio in right now: any room a
+        connected client covers, plus the rooms whose speaker node is
+        currently connected (the keepalive keeps that truthful). Names come
+        back in whatever casing they registered with (the maze ambient
         scatter picks its random room from this)."""
         rooms = {r for client in self.clients.values() for r in client["rooms"]}
         if self.node_audio:
-            rooms.update(self.node_audio.enabled_rooms())
+            rooms.update(self.node_audio.connected_rooms())
         return sorted(rooms)
 
     async def _send(self, websocket, message):
@@ -267,9 +270,12 @@ class RemoteHostManager:
             return await self.send_audio_command(None, 'stop_maze_ambience', {})
 
     async def retry_node_maze_ambience(self):
+        """Re-offer the live maze bed to nodes that aren't playing it —
+        offline boxes joining late and connected boxes whose stream died
+        (the node bed watchdog)."""
         if not self.node_audio:
             return False
-        return self.node_audio.retry_maze_ambience_on_disconnected_nodes()
+        return self.node_audio.reconcile_maze_ambience_on_nodes()
 
     async def start_room_ambience(self, room, effect_name, audio_params=None):
         """Start a looping bed in one room, on a channel of its own.

@@ -140,7 +140,11 @@ repeat for a bounded window before the server rotates to a fresh anti-repeat
 pick. ESP32 room nodes receive a server-clocked start timestamp; when a node
 starts, resumes after a cue, or reconnects later, the server gives it an
 `/api/audio/<file>?offset_s=...` URL so real room speakers rejoin the same
-position instead of restarting the ambience from zero.
+position instead of restarting the ambience from zero. Node connections are
+kept warm from boot, so room eligibility (ambient one-shots, bed starts)
+counts only LIVE speakers, and a bed watchdog re-dispatches the stream to any
+connected node whose media pipeline sits idle mid-window (a play command can
+succeed and the stream still die — e.g. a server restart mid-fetch).
 
 Bed changes fade instead of hard-cutting: `ambience_playback.fade_s`
 (audio_config.json, global or per-effect, default 2.0 s) rides every ambience

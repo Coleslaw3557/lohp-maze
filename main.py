@@ -1627,6 +1627,9 @@ if __name__ == '__main__':
     async def run_server():
         try:
             websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
+            # Node connections are kept warm from boot: liveness (audio_rooms)
+            # is real and the first bed start never races a cold connect.
+            node_audio_manager.ensure_running()
             maze_ambience_manager.ensure_running()
             room_background_manager.ensure_running()
             global _bed_cache_warmup_task

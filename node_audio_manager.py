@@ -46,7 +46,20 @@ CONNECT_BACKOFF = 5   # after a failed connect, fail further commands fast this 
 STALE_AFTER = 5       # a command that waited this long behind the node lock is
                       # dropped — a thunder cue arriving after a reconnect backlog
                       # would fire long after its lightning
+KEEPALIVE_TICK_S = 7  # connection keepalive cadence (see _NodeConn._maintain)
 NODE_GLOBAL_MAZE_AMBIENCE = True
+
+# aioesphomeapi MediaPlayerState values the bed watchdog cares about.
+MEDIA_IDLE = 1
+
+# A connected node whose media pipeline reports IDLE this long, while the maze
+# bed should be playing, gets the bed re-dispatched (see
+# reconcile_maze_ambience_on_nodes). Longer than any legitimate gap: a
+# stream's fetch startup is ~1s and cue announcements report ANNOUNCING.
+STALL_GRACE_S = 12.0
+# ...unless the bed's window ends within this — the reconciler is about to
+# rotate anyway, and a once-mode bed sits IDLE through its once_pad_s tail.
+ROTATION_SLOP_S = 10.0
 
 
 class _BackingOff(Exception):
@@ -76,6 +89,13 @@ class _NodeConn:
         # maze-wide ambience commands must not touch it (beds share the
         # node's single media pipeline — last command wins).
         self.bed_active = False
+        # Last media_player state the node PUSHED (subscribe_states), and when
+        # it changed. The bed watchdog trusts this over command results: a
+        # play command can succeed while the stream later dies (server restart
+        # mid-fetch, 2026-08-17) and only the device's own state shows it.
+        self.media_state = None
+        self.media_state_at = 0.0
+        self._maintain_task = None
 
     async def _ensure_connected(self):
         if self.client is not None:
@@ -87,17 +107,82 @@ class _NodeConn:
         entities, _ = await client.list_entities_services()
         self.media_key = next((e.key for e in entities
                                if type(e).__name__ == 'MediaPlayerInfo'), None)
+        try:
+            client.subscribe_states(self._on_state)
+        except Exception as e:
+            logger.debug(f"Node audio [{self.room}]: state subscription "
+                         f"unavailable: {e}")
         self.client = client
         logger.info(f"Node audio connected: {self.room} @ {self.host}:{self.port}")
+
+    def _on_state(self, state):
+        if type(state).__name__ != 'MediaPlayerEntityState':
+            return
+        try:
+            new_state = int(state.state)
+        except (TypeError, ValueError):
+            return
+        if new_state != self.media_state:
+            # Timestamp only transitions: media_state_at means "in this state
+            # since", which is what the watchdog's grace period measures.
+            self.media_state = new_state
+            self.media_state_at = time.monotonic()
 
     async def _drop(self):
         client, self.client = self.client, None
         self.media_key = None
+        self.media_state = None
+        self.media_state_at = 0.0
         if client is not None:
             try:
                 await client.disconnect()
             except Exception:
                 pass
+
+    def ensure_maintained(self):
+        """Start (idempotently) the background keepalive for this node."""
+        if self._maintain_task is None or self._maintain_task.done():
+            self._maintain_task = asyncio.create_task(self._maintain())
+        return self._maintain_task
+
+    async def _maintain(self):
+        """Keep the native API connection up instead of connecting lazily on
+        the first command. This makes liveness real — audio_rooms() and the
+        ambient scatter only count rooms that can actually play — and the
+        maze bed starts on a warm connection instead of racing a cold
+        connect (the 2026-08-17 silent-bed failure). Down nodes stay quiet:
+        one INFO per lost connection, DEBUG while retrying."""
+        while True:
+            try:
+                async with self.lock:
+                    if self.client is None:
+                        try:
+                            await asyncio.wait_for(self._ensure_connected(),
+                                                   CONNECT_TIMEOUT)
+                        except _BackingOff:
+                            pass
+                        except Exception as e:
+                            if self.client is None:
+                                self._fail_ts = time.monotonic()
+                            await self._drop()
+                            logger.debug(f"Node audio [{self.room}] keepalive "
+                                         f"connect failed: {e}")
+                    else:
+                        probe = getattr(self.client, 'device_info', None)
+                        if probe is not None:
+                            try:
+                                await asyncio.wait_for(probe(), 3)
+                            except Exception as e:
+                                await self._drop()
+                                self._fail_ts = time.monotonic()
+                                logger.info(f"Node audio lost: {self.room} "
+                                            f"({type(e).__name__})")
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.error(f"Node audio keepalive [{self.room}] tick failed: {e}",
+                             exc_info=True)
+            await asyncio.sleep(KEEPALIVE_TICK_S)
 
     async def _run(self, what, call):
         """Run `call()` under the node lock; one reconnect-and-retry on failure.
@@ -215,6 +300,22 @@ class NodeAudioManager:
     def enabled_rooms(self):
         """Room names with a speaker node configured, original casing."""
         return [c.room for c in self.rooms.values()]
+
+    def ensure_running(self):
+        """Start every node's connection keepalive (idempotent)."""
+        for conn in self.rooms.values():
+            conn.ensure_maintained()
+
+    def is_connected(self, room):
+        """Whether the room's node has a LIVE native API connection — the
+        difference between 'a box is configured' and 'a speaker can play
+        right now' (the ambient scatter was firing into offline boxes)."""
+        conn = self.rooms.get((room or '').lower())
+        return bool(conn and conn.client is not None)
+
+    def connected_rooms(self):
+        """Rooms whose node is connected right now, original casing."""
+        return [c.room for c in self.rooms.values() if c.client is not None]
 
     def audio_url(self, audio_file, offset_s=None):
         query = ""
@@ -378,29 +479,62 @@ class NodeAudioManager:
         logger.debug(f"Node audio: no mapping for WS command '{command}'")
         return None
 
-    def retry_maze_ambience_on_disconnected_nodes(self):
-        """Retry the current maze bed only on nodes without a native API client.
+    def reconcile_maze_ambience_on_nodes(self):
+        """Hand the current maze bed to nodes that should be playing it but
+        aren't, using the same sync_started_at_s offset. Two cases:
 
-        This lets a node that was offline during the original start join the
-        shared bed later, using the same sync_started_at_s offset, without
-        restarting already-connected nodes every reconciler tick.
-        """
+        * no native API client — the node was offline during the original
+          start; the dispatch itself reconnects it.
+        * connected but the media pipeline reports IDLE mid-window — the play
+          command that started the bed can 'succeed' while the stream later
+          dies (a server restart kills the HTTP fetch, 2026-08-17), and only
+          the device's own pushed state shows the silence.
+
+        Already-playing nodes are never restarted."""
         if (not NODE_GLOBAL_MAZE_AMBIENCE or not self.maze_ambience_file
                 or not self.maze_ambience_data):
             return False
         dispatched = False
         for conn in self.rooms.values():
-            if conn.client is not None or conn.bed_active:
+            if conn.bed_active:
+                continue
+            stalled = conn.client is not None and self._maze_bed_stalled(conn)
+            if conn.client is not None and not stalled:
                 continue
             coro = self._command_coro(conn, 'start_maze_ambience',
                                       dict(self.maze_ambience_data))
             if coro is None:
                 continue
+            if stalled:
+                logger.info(f"Node audio [{conn.room}]: maze bed stalled — "
+                            f"pipeline idle "
+                            f"{time.monotonic() - conn.media_state_at:.0f}s "
+                            f"mid-window; re-dispatching")
             task = asyncio.create_task(coro)
             self._tasks.add(task)
             task.add_done_callback(self._tasks.discard)
             dispatched = True
         return dispatched
+
+    def _maze_bed_stalled(self, conn):
+        """A connected node sitting IDLE past the grace period while the maze
+        bed's window is still comfortably open. media_state None (no state
+        received / subscription unavailable) is treated as fine — better a
+        missed retry than restarting a bed that is audibly playing."""
+        if conn.media_state != MEDIA_IDLE or not conn.media_state_at:
+            return False
+        now = time.monotonic()
+        if now - conn.media_state_at < STALL_GRACE_S:
+            return False
+        data = self.maze_ambience_data or {}
+        try:
+            started = float(data.get('sync_started_at_s'))
+            play_for = float(data.get('play_for_s') or 0)
+        except (TypeError, ValueError):
+            return True
+        if play_for and now - started > play_for - ROTATION_SLOP_S:
+            return False
+        return True
 
     def _cancel_repeat(self, conn):
         task = self._repeat_tasks.pop(conn, None)

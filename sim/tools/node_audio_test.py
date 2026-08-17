@@ -14,6 +14,12 @@ RemoteHostManager integration. No server or hardware needed:
   7. RemoteHostManager: a node-only room (no WS client) reports success
   8. beds with node_gain_baked pin the shared entity volume at 1.0; legacy
      payloads still ride the entity volume
+  9. the bed watchdog re-dispatches the maze bed to a connected node whose
+     media pipeline sits IDLE mid-window (a play command can 'succeed' and
+     the stream still die, 2026-08-17) — but not within the grace period,
+     not near rotation, and never over a playing pipeline
+ 10. liveness: has_audio_client/audio_rooms only count nodes with a live
+     connection (the ambient scatter used to fire into offline boxes)
 
 Run: sim/.venv/bin/python sim/tools/node_audio_test.py   (from the repo root)
 """
@@ -179,13 +185,68 @@ async def run(tmp_path):
         "sync_started_at_s": time.monotonic() - 12.0,
     }
     check("maze ambience retry targets disconnected nodes only",
-          m.retry_maze_ambience_on_disconnected_nodes() is True)
+          m.reconcile_maze_ambience_on_nodes() is True)
     await drain(m)
     check("maze ambience retry does not restart connected nodes",
           monkey.calls == [] and len(temple.calls) == 1
           and "offset_s=" in temple.calls[0][2],
           f"(monkey={monkey.calls}, temple={temple.calls})")
+
+    # bed watchdog: a connected node whose media pipeline reports IDLE past
+    # the grace period, mid-window, gets the bed back; a playing node, a
+    # freshly-idle node, and a node near rotation are left alone
+    temple.client = object()
+    m.maze_ambience_data["sync_started_at_s"] = time.monotonic() - 30.0
+    m.maze_ambience_data["play_for_s"] = 600.0
+    monkey.media_state = nam.MEDIA_IDLE
+    monkey.media_state_at = time.monotonic() - (nam.STALL_GRACE_S + 8)
+    temple.media_state = 2  # PLAYING
+    temple.media_state_at = time.monotonic() - 60
+    monkey.calls.clear()
+    temple.calls.clear()
+    check("watchdog re-dispatches a stalled (idle mid-window) node",
+          m.reconcile_maze_ambience_on_nodes() is True)
+    await drain(m)
+    parsed = urlparse(monkey.calls[-1][2]) if monkey.calls else None
+    offset = float(parse_qs(parsed.query).get("offset_s", ["0"])[0]) if parsed else -1
+    check("stalled node rejoins at the shared offset; playing node untouched",
+          len(monkey.calls) == 1 and 29.0 <= offset <= 32.0 and temple.calls == [],
+          f"(monkey={monkey.calls}, temple={temple.calls})")
+    monkey.calls.clear()
+    monkey.media_state_at = time.monotonic() - 2.0  # idle, but inside grace
+    check("freshly-idle node gets grace (stream startup, cue tails)",
+          m.reconcile_maze_ambience_on_nodes() is False and monkey.calls == [])
+    monkey.media_state_at = time.monotonic() - (nam.STALL_GRACE_S + 8)
+    m.maze_ambience_data["sync_started_at_s"] = time.monotonic() - 595.0  # 5s left
+    check("idle node near rotation is left for the rotation",
+          m.reconcile_maze_ambience_on_nodes() is False and monkey.calls == [])
+    monkey.media_state = None
+    monkey.media_state_at = 0.0
+    temple.media_state = None
+    temple.media_state_at = 0.0
     monkey.client = None
+    temple.client = None
+
+    # pushed-state bookkeeping: only MediaPlayerEntityState transitions move
+    # the timestamp (repeats must not reset the watchdog's idle clock)
+    MediaPlayerEntityState = type('MediaPlayerEntityState', (), {'state': None})
+    s = MediaPlayerEntityState()
+    s.state = 2
+    monkey._on_state(s)
+    t_first = monkey.media_state_at
+    await asyncio.sleep(0.02)
+    monkey._on_state(s)  # same state again
+    same = monkey.media_state_at == t_first and monkey.media_state == 2
+    s2 = MediaPlayerEntityState()
+    s2.state = 1
+    monkey._on_state(s2)
+    check("_on_state tracks transitions only",
+          same and monkey.media_state == 1 and monkey.media_state_at > t_first)
+    other = type('LightEntityState', (), {'state': 9})()
+    monkey._on_state(other)
+    check("_on_state ignores non-media entities", monkey.media_state == 1)
+    monkey.media_state = None
+    monkey.media_state_at = 0.0
 
     # audio_stop stops cues only; stop_maze_ambience stops the media pipeline
     m.handle_command("Monkey Room", "audio_stop", {})
@@ -288,6 +349,27 @@ async def run(tmp_path):
                                          {"file_name": "x.mp3"})
     check("send_audio_command: node-only room True, unmapped room False",
           ok is True and not_ok is False)
+
+    # liveness: a configured-but-offline node is not a playable room
+    temple.client = None
+    check("has_audio_client/audio_rooms count LIVE node connections only",
+          rhm.has_audio_client("Monkey Room")
+          and not rhm.has_audio_client("Temple Room")
+          and rhm.audio_rooms() == ["Monkey Room"])
+
+    # keepalive: ensure_running connects every node from boot, idempotently
+    monkey.client = None
+    m.ensure_running()
+    tasks_first = {c._maintain_task for c in m.rooms.values()}
+    await asyncio.sleep(0.05)
+    m.ensure_running()
+    tasks_again = {c._maintain_task for c in m.rooms.values()}
+    check("keepalive connects nodes at startup, idempotently",
+          all(c.client is not None for c in m.rooms.values())
+          and tasks_first == tasks_again)
+    for c in m.rooms.values():
+        if c._maintain_task:
+            c._maintain_task.cancel()
 
 
 def main():
