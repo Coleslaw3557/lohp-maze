@@ -61,9 +61,11 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
 - `packages/hardware_s3.yaml` — **fleet standard**: XIAO ESP32-S3 + PSRAM + WiFi
   + OTA (per-room audio revisit, `wiring-guides/room-node-audio-plan.md`).
 - `packages/audio_s3.yaml` — the speaker chain (I2S → PCM5102A → Pebble):
-  mixer + dual media/announcement pipelines. Effect cues play as announcements at
-  full node volume; ambience/music streams on the media pipeline at lower per-pool
-  volume and ducks under effect cues. Maze-wide ambience starts/resumes from
+  mixer + dual media/announcement pipelines. Effect cues play as announcements;
+  the ambience bed keeps streaming on the media pipeline underneath and the
+  mixer ducks it 12 dB under a cue (2026-08-17: the server no longer stops the
+  bed around cues — bed gain is baked into the generated node stream and the
+  shared entity volume stays at 1.0). Maze-wide ambience starts/resumes from
   server-generated `offset_s` URLs, so real ESP speakers follow the same bed
   clock instead of each restart beginning at zero.
 - `make_node_audio.py` — generates the server-side cue streams from
@@ -94,7 +96,8 @@ room build.**
    have it drive the automation — either publish to the `tripwire` template sensor,
    or replace it with the platform sensor keeping `id: tripwire` + the `on_press`.
 3. Speaker rooms: add `audio_s3.yaml` to the packages and map the room in
-   `node_audio_config.json`. Nothing is stored on the node (2026-07-25) — cues
+   `node_audio_config.json`. Nothing is stored on the node (2026-07-25,
+   reaffirmed 2026-08-17 — an embedded-cue variant was rejected) — cues
    and beds stream from the server, so there is no per-node cues yaml; just
    make sure `./make_node_audio.py` has been run since the last pool change.
 4. Stage the node's RUT DHCP reservation BEFORE first boot: the S3's WiFi MAC

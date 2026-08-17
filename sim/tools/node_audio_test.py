@@ -3,15 +3,17 @@
 RemoteHostManager integration. No server or hardware needed:
 
   1. cue ids match the WAV filenames make_node_audio.py generates
-  2. WS command mirroring: play_effect_audio clears node media then streams
-     the announcement cue URL; global maze ambience streams to ESP nodes while
-     idle and resumes after cues; stop_maze_ambience -> media stop
+  2. WS command mirroring: play_effect_audio streams the announcement cue URL
+     WITHOUT touching the media pipeline (the bed keeps playing; the node's
+     mixer ducks it); stop_maze_ambience -> media stop
   3. room=None broadcasts to every node room; unmapped rooms are untouched
   4. a room's own background bed owns the shared media pipeline; global maze
      ambience commands do not steal it, and bed stop resumes the maze bed
   5. per-node FIFO lock keeps rapid-fire cues in dispatch order
   6. a dead node fails quietly (returns False, never raises, never blocks)
   7. RemoteHostManager: a node-only room (no WS client) reports success
+  8. beds with node_gain_baked pin the shared entity volume at 1.0; legacy
+     payloads still ride the entity volume
 
 Run: sim/.venv/bin/python sim/tools/node_audio_test.py   (from the repo root)
 """
@@ -89,14 +91,14 @@ async def run(tmp_path):
           m.enabled_for("MONKEY room") and not m.enabled_for("Porto Room")
           and not m.enabled_for(None))
 
-    # effect cue -> the mapped node only
+    # effect cue -> the mapped node only, announcement ONLY (media untouched:
+    # the bed keeps streaming and the node's mixer ducks it under the cue)
     ok = m.handle_command("Monkey Room", "play_effect_audio",
                           {"file_name": "monkey-shrine-complete.mp3", "loop": False})
     await drain(m)
     cue_url = "http://10.0.0.2:5000/api/audio/cues/monkey_shrine_complete.wav"
-    check("play_effect_audio clears media then streams the cue URL to its node",
-          ok and monkey.calls == [('media', nam.MediaPlayerCommand.STOP, None, False, None),
-                                  ('media', None, cue_url, True, 1.0)]
+    check("play_effect_audio streams the cue URL without touching media",
+          ok and monkey.calls == [('media', None, cue_url, True, 1.0)]
           and temple.calls == [])
 
     # unmapped room: untouched, reported unhandled
@@ -118,13 +120,9 @@ async def run(tmp_path):
     ok = m.handle_command("Monkey Room", "play_effect_audio",
                           {"file_name": "monkey-shrine-complete.mp3", "loop": False})
     await drain(m)
-    check("cue over maze ambience clears media and schedules bed resume",
-          ok and monkey.calls == [
-              ('media', nam.MediaPlayerCommand.STOP, None, False, None),
-              ('media', None, cue_url, True, 1.0),
-          ] and monkey in m._resume_tasks,
-          f"({monkey.calls}, resumes={m._resume_tasks})")
-    m._cancel_resume(monkey)
+    check("cue over maze ambience leaves the bed stream alone",
+          ok and monkey.calls == [('media', None, cue_url, True, 1.0)],
+          f"({monkey.calls})")
 
     # prepared node loop: browsers still see file_name, but ESP nodes should
     # receive the long generated bed and should not arm a replay timer.
@@ -242,13 +240,29 @@ async def run(tmp_path):
         m.handle_command("Monkey Room", "play_effect_audio",
                          {"file_name": f"cue{i}.mp3"})
     await drain(m)
-    stop_calls = [c for c in monkey.calls if c[1] == MediaPlayerCommand.STOP]
-    cue_calls = [c for c in monkey.calls if c[2]]
-    check("8 rapid cues clear media and arrive in dispatch order",
-          stop_calls == [('media', MediaPlayerCommand.STOP, None, False, None)] * 8
-          and cue_calls == [('media', None,
-                             f"http://10.0.0.2:5000/api/audio/cues/cue{i}.wav",
-                             True, 1.0) for i in range(8)])
+    check("8 rapid cues arrive in dispatch order with no media stops",
+          monkey.calls == [('media', None,
+                            f"http://10.0.0.2:5000/api/audio/cues/cue{i}.wav",
+                            True, 1.0) for i in range(8)])
+
+    # node_gain_baked beds pin the shared entity volume at 1.0 (gain lives in
+    # the generated stream); legacy payloads still ride the entity volume
+    monkey.calls.clear()
+    m.handle_command("Monkey Room", "play_room_ambience", {
+        "file_name": "bed.wav",
+        "node_file_name": "generated/node_streams/bed.mp3",
+        "node_gain_baked": True,
+        "volume": 0.3,
+    })
+    await drain(m)
+    check("gain-baked bed plays at entity volume 1.0",
+          monkey.calls[-1] == ('media', None,
+                               "http://10.0.0.2:5000/api/audio/"
+                               "generated/node_streams/bed.mp3", False, 1.0),
+          f"({monkey.calls[-1:]})")
+    m.handle_command("Monkey Room", "stop_room_ambience", {})
+    m.handle_command(None, "stop_maze_ambience", {})
+    await drain(m)
 
     # dead node: real _NodeConn against a closed port — quiet False, no raise,
     # and once the backoff is armed further commands fail fast instead of

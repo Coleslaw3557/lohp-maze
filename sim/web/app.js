@@ -178,8 +178,14 @@ let topYaw = 0; // overhead-plan spin (E/R keys); 0 = street side at the bottom
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+// AgX, not ACESFilmic: ACES tone-maps each RGB channel independently, so an
+// over-bright SATURATED colour clips red first and skews orange → yellow →
+// white on nearby lit surfaces (three.js issue #27862 territory; the r160
+// release added AgX specifically to keep hue stable through over-exposure).
+// With ACES the fixture data was orange on the wire while the room rendered
+// yellow-white — verified 2026-08-17 with a held (255,120,20) channel test.
+renderer.toneMapping = THREE.AgXToneMapping;
+renderer.toneMappingExposure = 1.6; // AgX sits darker than ACES; compensate
 $('scene').appendChild(renderer.domElement);
 
 ENV.amb = new THREE.AmbientLight(0x9895b0, 0.2);
@@ -202,7 +208,7 @@ function setDayNight(day) {
   scene.fog.color.set(day ? 0xc9c2b0 : 0x141020);
   scene.fog.near = day ? 60 : 25;
   scene.fog.far = day ? 260 : 95;
-  renderer.toneMappingExposure = day ? 1.0 : 1.15;
+  renderer.toneMappingExposure = day ? 1.4 : 1.6; // AgX-compensated (was 1.0/1.15 under ACES)
   $('btn-daynight').textContent = day ? '☾ Night' : '☀ Day'; // shows what a click switches TO
   try { localStorage.setItem('lohp-sim-day', day ? '1' : '0'); } catch (e) { /* private mode */ }
 }
@@ -1797,9 +1803,12 @@ function updateFixtures(t) {
     const { R, G, B, lum } = decodeFixture(fx, t);
     const litR = R * lum, litG = G * lum, litB = B * lum;
     fx.light.color.setRGB(R, G, B);
-    fx.light.intensity = lum * (fx.isSpot ? 12 : 7);  // 11/18 blew lit surfaces past tone-map clip: saturated orange rendered YELLOW-white
-    // faint idle glow so every fixture is visible even when dark
-    fx.lens.material.color.setRGB(Math.min(1, litR * 1.6 + 0.07), Math.min(1, litG * 1.6 + 0.07), Math.min(1, litB * 1.6 + 0.09));
+    fx.light.intensity = lum * (fx.isSpot ? 12 : 7);  // hue survives over-range now that tone mapping is AgX (ACES skewed saturated orange to yellow-white)
+    // faint idle glow so every fixture is visible even when dark. ONE shared
+    // scale for all three channels: the old per-channel `min(1, lit*1.6)`
+    // clipped R before G on warm colours, so an orange bulb rendered yellow.
+    const lensS = 0.09 + lum * 0.88;
+    fx.lens.material.color.setRGB(R * lensS + 0.06, G * lensS + 0.06, B * lensS + 0.07);
     fx.cone.material.color.setRGB(R, G, B);
     fx.cone.material.opacity = 0.05 + lum * 0.22;
     const acc = roomTint.get(fx.room) || [0, 0, 0, 0];
@@ -2206,7 +2215,10 @@ function fireSensor(sensor, manual) {
   for (const m of sensor.meshes) {
     if (m.material && m.material.color) {
       const orig = m.userData.origColor || (m.userData.origColor = m.material.color.clone());
-      m.material.color.set(0xffffff);
+      // fired-flash: bright warm red, NOT 0xffffff — the doorway beam bar is
+      // right in the walker's eye line, and a white blink on entry read as
+      // "the room went white" (Tim, 2026-08-17)
+      m.material.color.set(0xff5533);
       setTimeout(() => m.material.color.copy(orig), 250);
       setTimeout(() => { m.material.color.set(0x555555); }, 300);
       setTimeout(() => m.material.color.copy(orig), COOLDOWN_S * 1000);
@@ -3584,7 +3596,7 @@ function connectAudio() {
         break;
       case 'play_room_ambience': {
         const d = msg.data || {};
-        playRoomAmbience(msg.room, d.file_name, d.volume, d.effect_name, d.loop);
+        playRoomAmbience(msg.room, d.file_name, d.volume, d.effect_name, d.loop, d.fade_s);
         break;
       }
       case 'stop_room_ambience':
@@ -3592,7 +3604,7 @@ function connectAudio() {
         break;
       case 'start_maze_ambience': {
         const d = msg.data || {};
-        playMazeAmbience(d.file_name, d.volume, d.loop);
+        playMazeAmbience(d.file_name, d.volume, d.loop, d.fade_s);
         break;
       }
       case 'stop_maze_ambience':
@@ -3701,19 +3713,54 @@ function stopEffectAudio(room) {
   else stopOne(room);
 }
 
+// Bed track changes fade out/in instead of hard-cutting. The ramp lives on a
+// dedicated `fade` gain in series with the gating gain: updateAudioGating
+// rewrites the gating gain every frame, so a ramp there would be clobbered.
+// The server sends the configured fade in the payload (`fade_s`).
+const AMBIENCE_FADE_S = 2.0;
+
+function ambienceFadeS(fadeS) {
+  const f = +fadeS;
+  return Number.isFinite(f) && f >= 0 ? f : AMBIENCE_FADE_S;
+}
+
+function newFadeIn(fadeS) {
+  const a = S.audio;
+  const fade = a.ctx.createGain();
+  if (fadeS > 0) {
+    const t = a.ctx.currentTime;
+    fade.gain.setValueAtTime(0, t);
+    fade.gain.linearRampToValueAtTime(1, t + fadeS);
+  }
+  return fade;
+}
+
+// Ramp a detached bed record to silence, then stop its source.
+function retireAmbience(rec, fadeS) {
+  const a = S.audio;
+  const t = a.ctx.currentTime;
+  const f = Math.max(fadeS, 0.02);
+  rec.fade.gain.cancelScheduledValues(t);
+  rec.fade.gain.setValueAtTime(rec.fade.gain.value, t);
+  rec.fade.gain.linearRampToValueAtTime(0, t + f);
+  try { rec.src.stop(t + f + 0.05); } catch (e) { /* already stopped */ }
+}
+
 // Looping room bed (the Cuddle floor show's lava rumble). Kept in its own map
 // so effect audio plays OVER it and audio_stop never cuts it — the same split
 // the Pi client makes between effect players and ambience players.
-async function playRoomAmbience(room, file, volume, effectName, loop = true) {
+async function playRoomAmbience(room, file, volume, effectName, loop = true, fadeS) {
   const a = S.audio;
   if (!a.ctx || !file) return;
   try {
+    const f = ambienceFadeS(fadeS);
     const buf = await getBuffer(file);
-    stopRoomAmbience(room);
+    stopRoomAmbience(room, f);
     const src = a.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = loop !== false;
     const vol = volume == null ? 0.5 : volume;
+    const fade = newFadeIn(f);
     const gain = a.ctx.createGain();
     gain.gain.value = earCanHear(room || '__all__') ? vol : 0;
     const rm = room && S.roomsMeshes[room];
@@ -3727,52 +3774,54 @@ async function playRoomAmbience(room, file, volume, effectName, loop = true) {
     } else {
       gain.connect(a.ctx.destination);
     }
-    src.connect(gain);
+    src.connect(fade).connect(gain);
     src.start();
-    a.beds.set(room || '__all__', { src, gain, vol });
+    a.beds.set(room || '__all__', { src, gain, fade, vol, fadeS: f });
     log('info', `≈ bed ${effectName || ''} ${file}${room ? ' @ ' + room : ''}`);
   } catch (e) {
     log('err', `ambience play failed: ${e.message}`);
   }
 }
 
-function stopRoomAmbience(room) {
+function stopRoomAmbience(room, fadeS) {
   const a = S.audio;
   const stopOne = (key) => {
     const v = a.beds.get(key);
-    if (v) { try { v.src.stop(); } catch (e) { /* already stopped */ } a.beds.delete(key); }
+    if (v) { retireAmbience(v, fadeS == null ? v.fadeS : fadeS); a.beds.delete(key); }
   };
   if (room == null) { for (const key of Array.from(a.beds.keys())) stopOne(key); }
   else stopOne(room);
 }
 
-async function playMazeAmbience(file, volume, loop = true) {
+async function playMazeAmbience(file, volume, loop = true, fadeS) {
   const a = S.audio;
   if (!a.ctx || !file) return;
   if (a.maze && a.maze.file === file) {
     return;
   }
-  stopMazeAmbience();
   try {
+    const f = ambienceFadeS(fadeS);
     const buf = await getBuffer(file);
+    stopMazeAmbience(f);
     const src = a.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = loop !== false;
+    const fade = newFadeIn(f);
     const gain = a.ctx.createGain();
     const vol = volume == null ? 0.5 : volume;
     gain.gain.value = vol;
-    src.connect(gain).connect(a.ctx.destination);
+    src.connect(fade).connect(gain).connect(a.ctx.destination);
     src.start();
-    a.maze = { src, gain, vol, file };
+    a.maze = { src, gain, fade, vol, file, fadeS: f };
     log('info', `≈ maze ambience: ${file}`);
   } catch (e) {
     log('err', `maze ambience failed: ${e.message}`);
   }
 }
 
-function stopMazeAmbience() {
+function stopMazeAmbience(fadeS) {
   const a = S.audio;
-  if (a.maze) { try { a.maze.src.stop(); } catch (e) { /* noop */ } a.maze = null; }
+  if (a.maze) { retireAmbience(a.maze, fadeS == null ? a.maze.fadeS : fadeS); a.maze = null; }
 }
 
 function updateListener() {

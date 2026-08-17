@@ -142,6 +142,13 @@ starts, resumes after a cue, or reconnects later, the server gives it an
 `/api/audio/<file>?offset_s=...` URL so real room speakers rejoin the same
 position instead of restarting the ambience from zero.
 
+Bed changes fade instead of hard-cutting: `ambience_playback.fade_s`
+(audio_config.json, global or per-effect, default 2.0 s) rides every ambience
+payload. Browser/VLC clients crossfade at runtime on every track change, stop,
+and bed↔maze handoff; node streams can't ramp their shared entity volume, so
+the fade is baked into the head and tail of the generated stream, which start
+and end exactly at the rotation boundary.
+
 - **URL:** `/start_maze_ambience`
 - **Method:** `POST`
 
@@ -343,11 +350,15 @@ its radar stops seeing anyone for the room's absence timeout (5 s standard,
 Exit use narrow ToF beams and intentionally do not POST this on beam clear;
 once a ToF room triggers, its routine finishes normally.
 
-The server cancels anything still running in the room, silences lingering effect
-audio, and hands the room's fixtures back to the current theme. The resume is
-unconditional, so a room vacated long after its entry effect already finished
-still ends up on ambient. Maze ambience is deliberately untouched; if a room
-bed was active, stopping it hands that speaker back to the maze ambience bed.
+The server cancels anything still running in the room, releases the room's
+occupied colour lock (an entry in a full-occupancy-pair room pins the theme's
+room blend to the room's own profile colour — `OCCUPIED_MIX` in
+`theme_manager.py` — for as long as it stays occupied), silences lingering
+effect audio, and hands the room's fixtures back to the current theme. The
+resume is unconditional, so a room vacated long after its entry effect already
+finished still ends up on ambient. Maze ambience is deliberately untouched; if
+a room bed was active, stopping it hands that speaker back to the maze
+ambience bed.
 
 Functionally the same work as a per-room `/stop_effect`; it exists as its own
 route because the room is reporting a fact rather than an operator issuing a

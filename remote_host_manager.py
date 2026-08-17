@@ -48,10 +48,10 @@ class RemoteHostManager:
                 audio_params = {'file': file_name}
                 if rest and rest[0] is not None:
                     audio_params['sync_started_at_s'] = rest[0]
-                data = self._ambience_payload(effect_name, audio_params)
+                data = await self._ambience_payload_async(effect_name, audio_params)
             else:
                 effect_name = provided
-                data = self._ambience_payload(effect_name)
+                data = await self._ambience_payload_async(effect_name)
             if data is None:
                 continue
             if await self._send(websocket, {"type": "start_maze_ambience", "data": data}):
@@ -69,10 +69,10 @@ class RemoteHostManager:
                     continue
                 if isinstance(provided, tuple):
                     effect_name, file_name = provided
-                    data = self._ambience_payload(effect_name, {'file': file_name})
+                    data = await self._ambience_payload_async(effect_name, {'file': file_name})
                 else:
                     effect_name = provided
-                    data = self._ambience_payload(effect_name)
+                    data = await self._ambience_payload_async(effect_name)
                 if data is None:
                     continue
                 if await self._send(websocket, {"type": "play_room_ambience",
@@ -199,9 +199,21 @@ class RemoteHostManager:
 
     # --- Room ambience (looping beds) ---
 
+    async def _ambience_payload_async(self, effect_name, audio_params=None):
+        """_ambience_payload OFF the event loop. The payload build shells out
+        to ffprobe (duration) and, on a cache miss, ffmpeg (the gain-baked
+        node stream — 30-60s for a 15-minute bed track on the Pi). Run inline
+        that transcode FROZE the whole server: no POSTs processed, node
+        presses timing out at their 3s client timeout and bursting through on
+        unfreeze (VMM, 2026-08-17 22:28 — a 49s freeze). Never call the sync
+        version from the event loop."""
+        return await asyncio.to_thread(self._ambience_payload, effect_name, audio_params)
+
     def _ambience_payload(self, effect_name, audio_params=None):
         """The play_room_ambience payload for one pool pick, or None if the
-        pool is empty. Shared by room-wide starts and single-socket resends."""
+        pool is empty. Shared by room-wide starts and single-socket resends.
+        BLOCKING (ffprobe + possible ffmpeg transcode) — event-loop callers
+        must use _ambience_payload_async."""
         audio_params = audio_params or {}
         audio_file = audio_params.get('file') or self.audio_manager.get_random_audio_file(effect_name)
         if not audio_file:
@@ -219,12 +231,19 @@ class RemoteHostManager:
         }
         if audio_params.get('sync_started_at_s') is not None:
             data['sync_started_at_s'] = audio_params['sync_started_at_s']
-        node_file = self.audio_manager.prepare_node_ambience_stream(effect_name, audio_file, playback)
+        # The pool volume is baked INTO the generated node stream (gain=volume):
+        # the ESP media_player's entity volume is shared with the announcement
+        # pipeline, so a bed riding the entity volume would jump to cue level
+        # on the first cue. Browser/VLC clients keep scaling the original file
+        # by `volume` client-side.
+        node_file = self.audio_manager.prepare_node_ambience_stream(
+            effect_name, audio_file, playback, gain=volume)
         if node_file:
             data.update({
                 'node_file_name': node_file,
                 'node_loop': False,
                 'node_duration_s': data.get('play_for_s'),
+                'node_gain_baked': True,
             })
         return data
 
@@ -235,7 +254,7 @@ class RemoteHostManager:
         ambient one-shots mix over the bed.
         """
         async with self.maze_ambience_lock:
-            data = self._ambience_payload(effect_name, audio_params)
+            data = await self._ambience_payload_async(effect_name, audio_params)
             if data is None:
                 logger.info(f"No maze ambience audio configured for {effect_name}")
                 return None
@@ -261,7 +280,7 @@ class RemoteHostManager:
         instead of replacing it. Only `stop_room_ambience` ends it.
         Returns the file that was started, or None when nothing was.
         """
-        data = self._ambience_payload(effect_name, audio_params)
+        data = await self._ambience_payload_async(effect_name, audio_params)
         if data is None:
             logger.info(f"No ambience audio configured for {effect_name}")
             return None

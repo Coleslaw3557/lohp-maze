@@ -27,6 +27,7 @@ from maze_ambience_manager import MazeAmbienceManager
 from camera_manager import CameraManager
 from telemetry_store import TelemetryStore
 from effects.photobomb_shot import SHUTTER_OFFSET, DURATION as PHOTOBOMB_SHOT_DURATION
+from effects.moop_march import MOOP_WIN_RGB, MOOP_WIN_TOTAL
 from photobooth import PhotoBoothSession
 
 # Configuration
@@ -54,9 +55,6 @@ BACKTRACK_ENTRANCE_RESET_S = 8
 BACKTRACK_FORWARD_MIN_STEPS = 2
 BACKTRACK_REVERSE_TRIGGER_STEPS = 1
 BACKTRACK_BLIND_REVERSE_ENTRY_ROOMS = {"Entrance"}
-DEEP_PLAYA_ROOM = "Deep Playa Handshake"
-DEEP_PLAYA_ENTRY_EFFECT = "DeepPlaya-BG"
-DEEP_PLAYA_STALE_ENTRY_EFFECT = "DeepPlaya-Hit"
 PHOTOBOMB_ROOM = "Photo Bomb Room"
 PHOTOBOMB_SHOT_EFFECT = "PhotoBomb-Shot"
 PHOTOBOMB_ENTRY_EFFECT = "PhotoBomb-BG"
@@ -115,9 +113,17 @@ def _record_event(event_type, room=None, effect_name=None, value=None,
 def _doorway_entry_suppressed(room, effect_name, effect_data, now=None):
     """Entrance/Exit ToF sensors can re-post while a visitor is still crossing.
     These effects should pick exactly one random audio file per crossing, so
-    repeated posts inside the effect window become harmless no-ops."""
+    repeated posts inside the effect window become harmless no-ops.
+
+    The backtrack warning gets the same treatment in EVERY room: a blocked room
+    answers each re-trigger with the warning instead of its own effect, so a
+    visitor standing in a blocked room used to collect a fresh 2.4 s red/amber
+    strobe on every sensor re-post (28 of them in one walkthrough — the most
+    fired effect in the log, and what reads as "rapidly flashing"). One warning
+    per pass says the same thing without the strobe.
+    """
     key = (room, effect_name)
-    if key not in DOORWAY_ENTRY_ONE_SHOTS:
+    if key not in DOORWAY_ENTRY_ONE_SHOTS and effect_name != BACKTRACK_EFFECT_NAME:
         return False, 0, None
     now = now if now is not None else time.monotonic()
     duration = float((effect_data or {}).get('duration') or 0)
@@ -268,6 +274,19 @@ effects_manager.register_effect_hooks(
     on_cancel=lambda room: camera_manager.cancel_pending(),
 )
 
+# Vertical Moop March win (Tim 2026-08-17): all four buttons inside the round
+# slam the room to SOLID victory green and HOLD it until the radar reports the
+# room empty. The hook arms the theme_manager win hold the moment the victory
+# effect actually starts; the effect's last frame equals the hold, so the room
+# just stays green when it ends. /api/room_vacated -> set_room_occupied(False)
+# releases it. No on_cancel: a press superseding the victory bloom must not
+# un-win the room.
+effects_manager.register_effect_hooks(
+    "VerticalMoopMarch-RightAnswer",
+    on_start=lambda room: effects_manager.theme_manager.set_room_win_hold(
+        room, MOOP_WIN_RGB, MOOP_WIN_TOTAL),
+)
+
 # Photo Bomb game state: entry starts the room bed, MAX_SHOTS shots per
 # visitor, then presses fail until the room turns over (photobooth.py).
 photobooth = PhotoBoothSession()
@@ -299,9 +318,12 @@ camera_manager.on_captured = _on_photobomb_captured
 
 
 def _load_maze_route_tracking():
-    """Route order and entry effects used to infer reverse travel from entries."""
+    """Route order, entry effects (reverse-travel inference), and the rooms
+    with the full occupancy pair (leave_action) — the ones that hold their
+    occupied colour lock until the radar reports them empty."""
     route = []
     entry_effects = {}
+    hold_rooms = set()
     try:
         with open(os.path.join('sim', 'maze_layout.json')) as f:
             route = json.load(f).get('route', [])
@@ -310,24 +332,28 @@ def _load_maze_route_tracking():
     try:
         with open('triggers.json') as f:
             for trig in json.load(f).get('triggers', []):
+                if trig.get('type') != 'presence':
+                    continue
+                if trig.get('leave_action'):
+                    hold_rooms.add(trig['room'])
                 action = trig.get('action') or {}
                 effect = (action.get('data') or {}).get('effect_name')
                 if (
                     action.get('path') != '/api/run_effect'
                     or not effect
                     or trig.get('room') in entry_effects
-                    or trig.get('type') not in {'laser', 'presence'}
                 ):
                     continue
                 entry_effects[trig['room']] = effect
     except (OSError, json.JSONDecodeError) as e:
         logger.warning(f"Maze route tracking disabled; could not read entry triggers: {e}")
         entry_effects = {}
+        hold_rooms = set()
     entry_route = [room for room in route if room in entry_effects]
-    return entry_route, {room: i for i, room in enumerate(entry_route)}, entry_effects
+    return entry_route, {room: i for i, room in enumerate(entry_route)}, entry_effects, hold_rooms
 
 
-MAZE_ENTRY_ROUTE, MAZE_ENTRY_INDEX, MAZE_ENTRY_EFFECTS = _load_maze_route_tracking()
+MAZE_ENTRY_ROUTE, MAZE_ENTRY_INDEX, MAZE_ENTRY_EFFECTS, MAZE_HOLD_ROOMS = _load_maze_route_tracking()
 _route_tokens = []
 _next_route_token_id = 1
 _backtrack_room_until = {}
@@ -618,14 +644,12 @@ async def run_effect():
     room = data.get('room')
     effect_name = data.get('effect_name')
     requested_effect_name = effect_name
+    # The firing sensor's name ("Moop Button 2") — nodes and the sim both send
+    # it; per-button light overrides key on it (effects_manager).
+    trigger_name = data.get('trigger_name')
 
     if not room or not effect_name:
         return jsonify({'status': 'error', 'message': 'Room and effect_name are required'}), 400
-
-    if room == DEEP_PLAYA_ROOM and effect_name == DEEP_PLAYA_STALE_ENTRY_EFFECT:
-        logger.warning(f"Rewriting stale {room} entry effect "
-                       f"{DEEP_PLAYA_STALE_ENTRY_EFFECT} -> {DEEP_PLAYA_ENTRY_EFFECT}")
-        effect_name = DEEP_PLAYA_ENTRY_EFFECT
 
     if not effects_manager.get_effect(effect_name):
         return jsonify({'status': 'error', 'message': f'Effect {effect_name} not found'}), 404
@@ -636,6 +660,12 @@ async def run_effect():
             'room_entry' if MAZE_ENTRY_EFFECTS.get(room) == trigger_effect_name
             else 'effect_trigger'
         )
+        # Entry in a full-occupancy-pair room pins the room to its own colour
+        # (theme_manager OCCUPIED_MIX) until /api/room_vacated releases it —
+        # the entry effect plays over it, then the room settles into the held
+        # look instead of the plain theme blend.
+        if trigger_event_type == 'room_entry' and room in MAZE_HOLD_ROOMS:
+            effects_manager.set_room_occupied(room, True)
         _maybe_reset_route_start(room, effect_name)
         route_action = _route_entry_action(room, effect_name)
         if route_action == 'forward':
@@ -702,7 +732,8 @@ async def run_effect():
         )
 
         async def execute_effect():
-            success, message = await effects_manager.apply_effect_to_room(room, effect_name, effect_data)
+            success, message = await effects_manager.apply_effect_to_room(
+                room, effect_name, effect_data, trigger_name=trigger_name)
             if success:
                 return True, message
             _clear_doorway_entry_fire(room, effect_name, started_at)
@@ -850,6 +881,9 @@ async def room_vacated():
     try:
         _record_event('room_vacated', room=room, value={'payload': data})
         logger.info(f"Room vacated: {room}")
+        # Release the occupied colour lock first: the theme repaint inside
+        # stop_effect_in_room's resume must render the plain room blend.
+        effects_manager.set_room_occupied(room, False)
         if room == PHOTOBOMB_ROOM:
             photobooth.vacated()
             _cancel_photobomb_victory()
@@ -1567,6 +1601,7 @@ if __name__ == '__main__':
     from hypercorn.config import Config
     from hypercorn.asyncio import serve
 
+    _bed_cache_warmup_task = None  # keep the boot warmup task referenced
     config = Config()
     config.bind = ["0.0.0.0:5000"]
     config.use_reloader = False
@@ -1574,11 +1609,28 @@ if __name__ == '__main__':
     config.errorlog = "-"
     config.loglevel = "DEBUG" if DEBUG else "INFO"
 
+    async def _warm_node_bed_cache():
+        """Pre-transcode the maze bed pool's gain-baked node streams in the
+        background so rotations are cache-hit. A cache-miss transcode is
+        30-60s of ffmpeg per 15-minute track; the payload build runs in a
+        worker thread now, but a cold rotation would still start its bed a
+        transcode late — this keeps that a boot-time background cost."""
+        effect = maze_ambience_manager.effect
+        if not effect:
+            return
+        try:
+            prepared = await asyncio.to_thread(audio_manager.warm_node_streams, [effect])
+            logger.info(f"Node bed cache warm ({effect}: {prepared} stream(s) ready)")
+        except Exception as e:
+            logger.error(f"Node bed cache warmup failed: {e}", exc_info=True)
+
     async def run_server():
         try:
             websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 8765)
             maze_ambience_manager.ensure_running()
             room_background_manager.ensure_running()
+            global _bed_cache_warmup_task
+            _bed_cache_warmup_task = asyncio.create_task(_warm_node_bed_cache())
             # the maze lights itself: attract rotation from boot (Tim 2026-08-01)
             await effects_manager.theme_manager.set_attract(True)
             maze_ambient_manager.ensure_running()

@@ -152,7 +152,8 @@ class WebSocketClient:
 
         try:
             success = await self.audio_manager.play_room_ambience(
-                file_name, audio_data.get('volume', 1.0), audio_data.get('loop', True), room=room)
+                file_name, audio_data.get('volume', 1.0), audio_data.get('loop', True),
+                room=room, fade_s=audio_data.get('fade_s'))
             if not success:
                 logger.error(f"Failed to start ambience '{file_name}' for room '{room}'")
         except Exception:
@@ -174,7 +175,8 @@ class WebSocketClient:
         file_name = data.get('file_name')
         if file_name:
             await self.audio_manager.start_maze_ambience(
-                file_name, data.get('volume'), data.get('loop', True))
+                file_name, data.get('volume'), data.get('loop', True),
+                fade_s=data.get('fade_s'))
         else:
             logger.error("Received start_maze_ambience without a file")
 

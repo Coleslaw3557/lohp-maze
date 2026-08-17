@@ -50,7 +50,8 @@ sensor:
     name: "${room} node RSSI"
     update_interval: 30s
 
-# Bring-up visibility: button + POST logs at DEBUG. Drop back to INFO
-# (logic.yaml default) via OTA once validated.
+# Room live-verified 2026-08-17 -> back at INFO (logic.yaml default). DEBUG
+# was the bring-up setting; LD2410 frame spam at DEBUG also costs main-loop
+# time the button path doesn't need to pay.
 logger:
-  level: DEBUG
+  level: INFO

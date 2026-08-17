@@ -1,3 +1,4 @@
+import colorsys
 import logging
 import asyncio
 from collections import defaultdict
@@ -12,12 +13,16 @@ from effects import (
     create_deep_playa_hit_effect, create_image_enhancement_effect, create_bike_lock_room_effect,
     create_bike_lock_entry_effect, create_no_friends_monday_effect, create_lightning_storm_effect,
     create_photobomb_shot_effect, create_monkey_business_effect,
-    create_shrine_guard_effect, create_moop_march_effect,
+    create_shrine_guard_effect, create_moop_march_effect, create_moop_victory_effect,
+    create_moop_press_flash_effect, create_temple_wake_effect,
+)
+from effects.moop_march import MOOP_BUTTON_COLORS
+from effects import (
     create_cuddle_lava_hit_effect, create_cuddle_lava_breach_effect,
     create_cuddle_chamber_trap_effect, palette_for
 )
 from theme_manager import ThemeManager
-from effect_utils import get_effect_step_values, palette_clamp_frame
+from effect_utils import get_effect_step_values, palette_clamp_frame, snap_hue_out_of_yellow
 from interrupt_handler import InterruptHandler
 from room_answer_pools import ANSWER_EFFECTS, ROOM_ANSWER_POOL_PREFIXES, answer_pool_name
 
@@ -65,6 +70,7 @@ class EffectsManager:
             "MonkeyBusiness": create_monkey_business_effect(),
             "ShrineGuard": create_shrine_guard_effect(),
             "MoopMarch": create_moop_march_effect(),
+            "TempleWake": create_temple_wake_effect(),
             # Cuddle Cross accents, fired by the floor projection's own events
             # (floor_show_manager.py), not by a sensor
             "Cuddle-Lava-Hit": create_cuddle_lava_hit_effect(),
@@ -72,6 +78,31 @@ class EffectsManager:
             "Cuddle-Chamber-Trap": create_cuddle_chamber_trap_effect(),
         }
         self._register_room_answer_effects()
+        # VMM game lighting (Tim 2026-08-17): while occupied the room runs its
+        # own green/blue/red gradient (theme_manager ROOM_OCCUPIED_GRADIENTS —
+        # the MoopMarch entry effect is a no_lights marker), each button press
+        # flashes THAT button's identity colour whole-room, and the win
+        # overrides the pool registration with a bloom that lands on the solid
+        # win hold (main.py hook). The game still POSTs "CorrectAnswer" with
+        # the button's trigger_name, so the shared audio pool, WS clients and
+        # telemetry are untouched — only the light is swapped below.
+        self.effects["VerticalMoopMarch-RightAnswer"] = create_moop_victory_effect()
+        self.effects["VerticalMoopMarch-Press"] = create_moop_press_flash_effect()
+        for i, (button, (rgb, w, label)) in enumerate(MOOP_BUTTON_COLORS.items(), 1):
+            self.effects[f"VerticalMoopMarch-Press{i}"] = \
+                create_moop_press_flash_effect(rgb, w, label)
+        # (room, requested effect) -> effect name whose LIGHT plays in that
+        # room instead. Audio, telemetry and WS payloads keep the requested
+        # name; only apply_effect_to_room's lighting data is swapped. The
+        # trigger-keyed map wins when the POST carries a matching
+        # trigger_name; the room-keyed map is the unlabeled fallback.
+        self.room_light_overrides = {
+            ("Vertical Moop March", "CorrectAnswer"): "VerticalMoopMarch-Press",
+        }
+        self.room_trigger_light_overrides = {
+            ("Vertical Moop March", "CorrectAnswer", button): f"VerticalMoopMarch-Press{i}"
+            for i, button in enumerate(MOOP_BUTTON_COLORS, 1)
+        }
         self._enforce_effect_palette()
         # effect_name -> {'start': fn(room), 'cancel': fn(room)} side-channel for
         # non-lighting actions tied to an effect run (the Photo Bomb camera)
@@ -115,6 +146,22 @@ class EffectsManager:
                     for key, v in (("r_dimming", r), ("g_dimming", g), ("b_dimming", b)):
                         if v != hi:
                             ch[key] = int(v * 0.4)
+                # Backstop on the values that actually ship. The two rules above
+                # are deliberately untouched — they shape the maze's warm tones
+                # and every effect was authored against them — but between them
+                # they only catch BRIGHT red-dominant yellows, so authored dim
+                # yellow and yellow-green (moop march's khaki, monkey's amber)
+                # still reached the pars. Anything left inside the arc lands on
+                # its nearer edge; anything outside is passed through untouched.
+                r = ch.get("r_dimming", 0); g = ch.get("g_dimming", 0); b = ch.get("b_dimming", 0)
+                if max(r, g, b) > 10:
+                    h, s, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+                    h, snapped = snap_hue_out_of_yellow(h)
+                    if snapped:
+                        r1, g1, b1 = colorsys.hsv_to_rgb(h, s, v)
+                        ch["r_dimming"] = int(r1 * 255)
+                        ch["g_dimming"] = int(g1 * 255)
+                        ch["b_dimming"] = int(b1 * 255)
 
     def _register_room_answer_effects(self):
         """Room-local answer pools reuse the shared answer light effects.
@@ -190,11 +237,32 @@ class EffectsManager:
                 lights = tagged
         return [(light['start_address'] - 1) // 8 for light in lights]
 
-    async def apply_effect_to_room(self, room, effect_name, effect_data=None):
+    async def apply_effect_to_room(self, room, effect_name, effect_data=None,
+                                   trigger_name=None):
         if effect_data is None:
             effect_data = self.get_effect(effect_name)
         if not effect_data:
             return False, f"{effect_name} effect not found"
+        override_name = None
+        if trigger_name:
+            override_name = self.room_trigger_light_overrides.get(
+                (room, effect_name, trigger_name))
+        if not override_name:
+            override_name = self.room_light_overrides.get((room, effect_name))
+        if override_name:
+            effect_data = self.get_effect(override_name) or effect_data
+
+        if effect_data.get('no_lights'):
+            # Entry MARKER (VMM's MoopMarch): the POST carries occupancy,
+            # route tracking and telemetry, but the room's look is owned
+            # elsewhere (the occupied gradient) — no takeover, no theme
+            # pause. Audio still goes out if the effect has any.
+            await self.remote_host_manager.play_effect_audio(
+                self._audio_effect_name(room, effect_name), rooms=[room],
+                audio_params=effect_data.get('audio', {}))
+            logger.info(f"Effect '{effect_name}' in room '{room}' is a "
+                        f"no-lights marker; lighting untouched")
+            return True, f"{effect_name} marker applied to room {room}"
 
         fixture_ids = self._room_fixture_ids(room, effect_data.get('fixture_role'))
         if not fixture_ids:
@@ -206,6 +274,7 @@ class EffectsManager:
         whole_room = len(fixture_ids) >= len(self._room_fixture_ids(room))
 
         logger.info(f"Applying effect '{effect_name}' to room '{room}'"
+                    + (f" as '{override_name}'" if override_name else '')
                     + ('' if whole_room else f" (accent fixtures only: {fixture_ids})"))
         # The lock makes the takeover atomic: cancel whatever is running, then
         # register the new task before anyone else can touch this room.
@@ -368,6 +437,9 @@ class EffectsManager:
             return stopped
 
     # --- Theme / audio passthroughs used by the API ---
+
+    def set_room_occupied(self, room, occupied):
+        self.theme_manager.set_room_occupied(room, occupied)
 
     def set_master_brightness(self, brightness):
         self.theme_manager.set_master_brightness(brightness)

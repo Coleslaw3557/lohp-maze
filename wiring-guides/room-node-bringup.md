@@ -103,6 +103,34 @@ host route).
 7. **After validation**: logger DEBUG→INFO via OTA; stamp the room
    yaml header REAL ROOM BOX + date + what was validated.
 
+## OTA updates after install (no USB — the field path)
+
+Proven end-to-end on VMM 2026-08-17 (1.03 MB in ~5 s). Nodes are WLAN
+clients: unreachable from upstream directly (RUT blocks upstream→WLAN,
+and on the bench box VMware's vmnet1 squats 192.168.252.0/24 on top of
+that). Two working routes:
+
+- **From the bench box (upstream), tunneled through the Pi** — no need
+  to join LOHP-ESP:
+  ```
+  ssh -f -N -o ExitOnForwardFailure=yes \
+      -L 3232:192.168.252.<node>:3232 root@192.168.252.231
+  cd sim/esphome && .venv/bin/esphome upload rooms/<room>.yaml --device 127.0.0.1
+  pkill -f 'ssh -f -N.*3232'
+  ```
+  (`esphome run` works the same way when the config changed and needs a
+  rebuild first. IP = api_port − 6000.)
+- **On-site laptop joined to LOHP-ESP**: plain
+  `esphome run rooms/<room>.yaml --device 192.168.252.<node>`.
+
+The node reboots (~15 s: radar/buttons/audio out) and rejoins on its
+own. Post-OTA smoke from the Pi:
+`docker exec lohp-server python sim/esphome/harness.py call
+<node-ip>:<api-port> press_moop n=1` (or `trip`/`press_button` per
+room) — then read the POST + effect in `docker logs lohp-server`.
+If it doesn't rejoin: stale hostapd association — `systemctl restart
+hostapd` on the Pi (maze-network.md reflash gotcha).
+
 ## If triggers/audio go randomly flaky
 
 30-second network check BEFORE debugging firmware (cost VMM an evening,

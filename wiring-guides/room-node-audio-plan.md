@@ -13,6 +13,25 @@ embedded/on-chip cue files or the `play_cue` action, that design is
 superseded — firmware carries only the two-pipeline player
 (`packages/audio_s3.yaml`).
 
+**2026-08-17: embedded cues re-proposed for the VMM march buttons and
+REJECTED by Tim the same day** ("I don't want sounds in flash") — the
+nothing-stored rule stands absolute, game cues included. A working
+embedded-cue variant (per-room cues package + server `local_cues` skip) was
+built, verified, and fully reverted; press cues stream like everything else
+and press-to-sound stays at the streamed ~400–490 ms. Do not re-propose
+embedding; if streamed cues ever contend with the bed on marginal RF, tune
+the stream (bed bitrate, buffers) instead.
+
+**2026-08-17 cue/bed mixing rework:** cues no longer stop the bed. The
+2026-08-05 "clear media before cues" workaround (and its resume-after-cue
+dance) audibly killed the ambience around every cue; it is removed. Cues play
+as announcements while the bed keeps streaming — the on-node mixer ducks the
+bed 12 dB and recovers (`audio_s3.yaml`). Because the speaker media_player has
+ONE entity volume shared by both pipelines, bed gain is now BAKED into the
+generated node stream (`audio_manager.prepare_node_ambience_stream(gain=...)`)
+and the entity volume stays pinned at 1.0 — a bed riding the entity volume
+would have jumped to cue level on the first cue.
+
 **2026-08-05 sync update:** maze-wide ambience is synchronized for real ESP
 nodes by the server, not by ESP clocks. The server records one bed start time;
 node starts/resumes/reconnects use `/api/audio/<generated-node-stream>?offset_s=N`
@@ -262,7 +281,9 @@ without the mixer a cue would seize the speaker instead of ducking the ambience.
 Latency/sync (bench-measured 2026-07-25 on the real Cop Dodge box, good RF):
 streamed cue start ≈ **400–490 ms trigger-to-sound** (embedded cues measured
 150 ms before they were dropped — streaming costs ~250–350 ms; Tim's call:
-one audio source of truth on the server outweighs the delta). Ambience bed start
+one audio source of truth on the server outweighs the delta — reaffirmed
+2026-08-17 when an embedded variant for the VMM buttons was rejected, see
+above). Ambience bed start
 over HTTP (0.5–3 s) is not cue-sensitive, but ESPs should land at the same bed
 position because resume/rejoin URLs include the current server-computed offset.
 Re-check the cue delta during the marginal-RF soak on the bench checklist; a

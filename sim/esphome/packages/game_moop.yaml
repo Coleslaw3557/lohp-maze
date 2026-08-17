@@ -9,6 +9,9 @@
 # Sim/harness: `call <host>:<port> press_moop n=1` (n = 1-4).
 # Real S3 wiring: buttons on D0-D3 (DB9-A pins 3-6), LEDs hardwired to the
 # 5V rail; GPIO front-end feeds moop_press with a 30ms delayed_on debounce.
+# (2026-08-17: an embedded-cue variant — WAVs in flash, played at press time —
+# was built and REJECTED by Tim the same day: nothing is stored on nodes,
+# full stop. All cues stream from the server; see room-node-audio-plan.md.)
 substitutions:
   moop_right_effect: "VerticalMoopMarch-RightAnswer"
   moop_wrong_effect: "VerticalMoopMarch-WrongAnswer"

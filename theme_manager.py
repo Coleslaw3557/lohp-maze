@@ -4,7 +4,8 @@ import math
 import time
 import threading
 import asyncio
-from effect_utils import generate_theme_values
+from effect_utils import (generate_theme_values, snap_hue_out_of_yellow,
+                          YELLOW_ARC, YELLOW_SPLIT)
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,32 @@ ATTRACT_TICK_S = 20
 # of test windows), short enough that the maze never sits dark all night.
 ATTRACT_RELIGHT_S = 180
 
+# While a radar room is OCCUPIED (entry fired, vacate not yet), its profile
+# mix is pinned here: the room locks onto its own colour instead of tinting
+# the wandering theme hue. The theme still drives brightness/motion, so the
+# held look breathes slowly and stays inside the cap and palette clamps.
+# Vacate un-pins it and the room rejoins the plain theme blend.
+OCCUPIED_MIX = 0.85
+
+# Rooms that swap the theme for their OWN look while occupied, instead of the
+# OCCUPIED_MIX blend (Tim 2026-08-17, VMM: no flashing on entry — a
+# medium-paced green/blue/red cycle while anyone is inside). The hue
+# ping-pongs hue_lo -> hue_hi and back (green -> blue -> red for VMM), which
+# never crosses the forbidden yellow arc; period_s is the full round trip and
+# each successive fixture trails by fixture_phase_s so a two-par room reads
+# as a moving gradient rather than one flat colour. Painted at the theme tick
+# rate; a press-flash interrupt owns its fixtures and the gradient resumes
+# around it. The win hold outranks the gradient.
+ROOM_OCCUPIED_GRADIENTS = {
+    "Vertical Moop March": {
+        "hue_lo": 1.0 / 3.0,   # green
+        "hue_hi": 1.0,         # red, passing blue at the midpoint
+        "period_s": 12.0,      # medium pace: full green->red->green round trip
+        "total": 160,          # the room's ambient cap
+        "fixture_phase_s": 1.8,
+    },
+}
+
 
 class ThemeManager:
     def __init__(self, dmx_state_manager, light_config_manager, interrupt_handler):
@@ -71,6 +98,12 @@ class ThemeManager:
         self.master_brightness = 1.0
         self.frequency = 10  # Reduce update rate to 10 Hz
         self.paused_rooms = set()
+        self.occupied_rooms = set()  # rooms wearing the OCCUPIED_MIX colour lock
+        # room -> ((r, g, b), total): a game-won room holds this SOLID look —
+        # no theme motion, no sway, no cap — until /api/room_vacated releases
+        # it (set_room_occupied False). Set via set_room_win_hold (the VMM
+        # victory hook in main.py).
+        self.win_hold_rooms = {}
         self.room_profiles = {room: dict(profile)
                               for room, profile in ROOM_LIGHT_PROFILES.items()}
         self.theme_list = []
@@ -371,24 +404,32 @@ class ThemeManager:
         total_rooms = len(room_layout)
         all_room_channels = {}
         for room_index, (room, lights) in enumerate(room_layout.items()):
-            if room not in self.paused_rooms:
-                # a room's `rate` scales the theme clock: its colours breathe
-                # at the tempo of its own soundtrack, not the maze average
-                rate = (self.room_profiles.get(room) or {}).get('rate', 1.0)
-                room_channels = generate_theme_values(theme_data, current_time * rate,
-                                                      self.master_brightness,
-                                                      room_index, total_rooms, self.temporary_theme_values)
-                room_channels = self._apply_room_profile(room, room_channels)
-                smoothed_channels = self._smooth_channels(room, room_channels)
-                # guard AFTER the smoother: its RGB-space EMA passes through
-                # grey when the hue swings — clamp what actually gets written
-                if room != "Camp Sign":  # the sign's amber is its brand
-                    smoothed_channels = self._enforce_palette(smoothed_channels, room)
-                all_room_channels[room] = smoothed_channels
-                logger.debug(f"Generated channels for room {room}: {smoothed_channels}")
-                self._apply_room_channels(room, lights, smoothed_channels, current_time * rate)
-            else:
+            if room in self.paused_rooms:
                 logger.debug(f"Room {room} is paused, skipping theme application")
+                continue
+            if room in self.win_hold_rooms:
+                # Won room: hold the solid victory look instead of the theme.
+                all_room_channels[room] = self._apply_win_hold(room, lights)
+                continue
+            if room in self.occupied_rooms and room in ROOM_OCCUPIED_GRADIENTS:
+                # Occupied gradient room: its own colour cycle owns the look.
+                all_room_channels[room] = self._apply_room_gradient(room, lights)
+                continue
+            # a room's `rate` scales the theme clock: its colours breathe
+            # at the tempo of its own soundtrack, not the maze average
+            rate = (self.room_profiles.get(room) or {}).get('rate', 1.0)
+            room_channels = generate_theme_values(theme_data, current_time * rate,
+                                                  self.master_brightness,
+                                                  room_index, total_rooms, self.temporary_theme_values)
+            room_channels = self._apply_room_profile(room, room_channels)
+            smoothed_channels = self._smooth_channels(room, room_channels)
+            # guard AFTER the smoother: its RGB-space EMA passes through
+            # grey when the hue swings — clamp what actually gets written
+            if room != "Camp Sign":  # the sign's amber is its brand
+                smoothed_channels = self._enforce_palette(smoothed_channels, room)
+            all_room_channels[room] = smoothed_channels
+            logger.debug(f"Generated channels for room {room}: {smoothed_channels}")
+            self._apply_room_channels(room, lights, smoothed_channels, current_time * rate)
         
         if not all_room_channels:
             logger.warning("No room channels were generated. Check if all rooms are paused or if there's an issue with room layout.")
@@ -425,7 +466,8 @@ class ThemeManager:
             out['total_dimming'] = int(round(out.get('total_dimming', 0) * (cap / 255.0)))
         rgb = profile.get('rgb')
         if rgb:
-            mix = profile.get('mix', 0.75)
+            mix = (OCCUPIED_MIX if room in self.occupied_rooms
+                   else profile.get('mix', 0.75))
             # Blend in HUE space, not RGB: an RGB lerp between two different
             # hues collapses into desaturated grey mud that renders as dim
             # WHITE lamps (Tim caught this live 2026-08-01 — Sparkle Pony's
@@ -464,12 +506,14 @@ class ThemeManager:
         if sat < 0.45:            # grey/pastel -> saturated (continuous floor)
             sat = 0.45
             changed = True
-        if 0.09 <= h <= 0.19:     # yellow band -> a sticky edge (orange/green)
+        if YELLOW_ARC[0] <= h <= YELLOW_ARC[1]:   # -> a STICKY edge (orange/green)
+            # Sticky so a hue loitering near the split doesn't flip edges frame
+            # to frame; it re-decides only once clearly on one side.
             side = self._band_side.get(room_key)
-            if side is None or abs(h - 0.1425) > 0.012:
-                side = 'lo' if h < 0.1425 else 'hi'
+            if side is None or abs(h - YELLOW_SPLIT) > 0.02:
+                side = 'lo' if h < YELLOW_SPLIT else 'hi'
                 self._band_side[room_key] = side
-            h = 0.075 if side == 'lo' else 0.205
+            h, _ = snap_hue_out_of_yellow(h, side)
             changed = True
         if changed:
             r1, g1, b1 = colorsys.hsv_to_rgb(h, sat, v)
@@ -492,6 +536,92 @@ class ThemeManager:
         self.previous_values[room] = smoothed_channels
         return smoothed_channels
 
+    def set_room_occupied(self, room, occupied):
+        """Presence half of the triggers.json occupancy contract: entry pins
+        the room's mix to OCCUPIED_MIX, vacate releases it. Set ops only, so
+        it is safe from any thread and repeats are no-ops. Vacate also ends
+        any win hold — a won room stays solid green only while its winners
+        are still inside."""
+        if occupied:
+            self.occupied_rooms.add(room)
+        else:
+            self.occupied_rooms.discard(room)
+            if self.win_hold_rooms.pop(room, None) is not None:
+                logger.info(f"Room {room} win hold released")
+                if not self.current_theme:
+                    # No theme to repaint over the held frame (the dark
+                    # relight window): a vacated won room must not stay lit
+                    # solid green alone in a dark maze.
+                    for light in self.light_config_manager.get_room_layout().get(room, []):
+                        fixture_id = (light['start_address'] - 1) // 8
+                        if not self.interrupt_handler.is_interrupted(fixture_id):
+                            self.dmx_state_manager.reset_fixture(fixture_id)
+        logger.info(f"Room {room} {'occupied — colour lock on' if occupied else 'vacated — colour lock off'}")
+
+    def set_room_win_hold(self, room, rgb, total=200):
+        """Pin a room to a SOLID look — no theme motion, no per-fixture sway,
+        no profile cap — until set_room_occupied(room, False) releases it
+        (the /api/room_vacated path). The game-won state: VMM's victory hook
+        sets solid green here the moment the win effect starts, and the room
+        wears it from the effect's last frame until the radar reports empty.
+        Runs even with no theme up: the hold is painted once immediately, so
+        a won room can't sit dark waiting for the next theme tick."""
+        self.win_hold_rooms[room] = (tuple(rgb), int(total))
+        logger.info(f"Room {room} win hold: rgb={tuple(rgb)} total={int(total)}")
+        lights = self.light_config_manager.get_room_layout().get(room)
+        if lights and room not in self.paused_rooms:
+            with self._step_lock:
+                self._apply_win_hold(room, lights)
+
+    def _apply_win_hold(self, room, lights):
+        """Write the room's held solid frame to every non-interrupted fixture.
+        Deliberately bypasses profile cap/mix, smoothing and sway: 'solid'
+        means every frame is identical until the hold is released."""
+        (r, g, b), total = self.win_hold_rooms[room]
+        channels = {'total_dimming': total, 'r_dimming': r, 'g_dimming': g,
+                    'b_dimming': b, 'w_dimming': 0, 'total_strobe': 0,
+                    'function_selection': 0, 'function_speed': 0}
+        for light in lights:
+            self._write_fixture_channels(light, channels)
+        return channels
+
+    def _apply_room_gradient(self, room, lights):
+        """Paint one tick of an occupied room's colour cycle
+        (ROOM_OCCUPIED_GRADIENTS): hue ping-pongs hue_lo..hue_hi on the
+        monotonic clock, full saturation, steady brightness — the motion IS
+        the hue travel. Each fixture trails the previous by fixture_phase_s.
+        Skips interrupted fixtures so press flashes play over it."""
+        cfg = ROOM_OCCUPIED_GRADIENTS[room]
+        period = cfg['period_s']
+        half = period / 2.0
+        now = time.monotonic()
+        channels = None
+        for k, light in enumerate(lights):
+            t = (now - k * cfg['fixture_phase_s']) % period
+            frac = t / half if t < half else (period - t) / half
+            hue = (cfg['hue_lo'] + (cfg['hue_hi'] - cfg['hue_lo']) * frac) % 1.0
+            r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+            channels = {'total_dimming': cfg['total'],
+                        'r_dimming': int(r * 255), 'g_dimming': int(g * 255),
+                        'b_dimming': int(b * 255), 'w_dimming': 0,
+                        'total_strobe': 0, 'function_selection': 0,
+                        'function_speed': 0}
+            self._write_fixture_channels(light, channels)
+        return channels
+
+    def _write_fixture_channels(self, light, channels):
+        """Map a channel dict through the fixture's model and write it,
+        unless an effect currently owns the fixture."""
+        fixture_id = (light['start_address'] - 1) // 8
+        if self.interrupt_handler.is_interrupted(fixture_id):
+            return
+        light_model = self.light_config_manager.get_light_config(light['model'])
+        fixture_values = [0] * 8
+        for channel, value in channels.items():
+            if channel in light_model['channels']:
+                fixture_values[light_model['channels'][channel]] = value
+        self.dmx_state_manager.update_fixture(fixture_id, fixture_values)
+
     def pause_theme_for_room(self, room):
         self.paused_rooms.add(room)
         logger.info(f"Theme paused for room: {room}")
@@ -502,11 +632,23 @@ class ThemeManager:
         self._apply_room_theme_now(room)
 
     def _apply_room_theme_now(self, room):
-        if not self.current_theme:
-            return
         room_layout = self.light_config_manager.get_room_layout()
         lights = room_layout.get(room)
         if not lights:
+            return
+        if room in self.win_hold_rooms:
+            # A won room resumes to its held solid look, theme or no theme —
+            # this is what makes the victory effect hand off seamlessly.
+            with self._step_lock:
+                self._apply_win_hold(room, lights)
+            return
+        if room in self.occupied_rooms and room in ROOM_OCCUPIED_GRADIENTS:
+            # An occupied gradient room resumes straight onto its cycle (a
+            # press flash just ended); the theme loop keeps it moving.
+            with self._step_lock:
+                self._apply_room_gradient(room, lights)
+            return
+        if not self.current_theme:
             return
         theme_data = self.themes.get(self.current_theme)
         if not theme_data:

@@ -10,6 +10,40 @@ EMBER = (255, 95, 10)      # torch flame
 COPPER = (230, 80, 20)     # old fittings, bike lock
 JADE = (0, 255, 80)        # victory green
 
+# THE no-yellow arc — one definition, used by the theme clamp
+# (theme_manager._enforce_palette), the effect-registration clamp
+# (effects_manager._enforce_effect_palette) and the playback clamp
+# (palette_clamp_frame) so none of the three can drift from the others.
+#
+# Yellow starts about 41 deg and yellow-green runs to about 108 deg, where the
+# room greens begin (Vertical Moop March, 118 deg). Everything below 41 deg is
+# the maze's INTENDED warm band — torch, ember, copper, dust, rust all live at
+# 14-35 deg — so the arc must start above them, not inside them.
+#
+# 2026-08-17, two passes: the band used to be 32-68 deg escaping UPWARD to
+# 74 deg, but 74 deg IS yellow-green, so the clamp emitted the colour it existed
+# to remove (13 effects and nearly every attract frame measured there) and
+# 68-108 deg was unguarded. The first fix over-corrected the other way: an arc
+# from 25 deg swallowed the whole warm band and flattened every torch tone in
+# the maze onto one orange (Tim: "rapidly flashing... most of them yellow/
+# orange"). Hence these edges — wide enough to cover real yellow, tight enough
+# to leave the torches alone.
+YELLOW_ARC = (0.115, 0.300)     # 41 deg .. 108 deg — forbidden
+YELLOW_EDGE_LO = 0.070          # 25 deg, torch orange — where the rule this
+                                # replaced (g = 0.42*r) used to land a yellow
+YELLOW_EDGE_HI = 0.325          # 117 deg, unambiguous green
+YELLOW_SPLIT = 0.190            # 68 deg — below goes amber, above goes green
+
+
+def snap_hue_out_of_yellow(hue, side=None):
+    """(hue, changed) with the forbidden arc removed. `side` ('lo'/'hi') lets a
+    caller with hysteresis pin which way it goes; otherwise the split decides."""
+    if not YELLOW_ARC[0] <= hue <= YELLOW_ARC[1]:
+        return hue, False
+    if side is None:
+        side = 'lo' if hue < YELLOW_SPLIT else 'hi'
+    return (YELLOW_EDGE_LO if side == 'lo' else YELLOW_EDGE_HI), True
+
 OFF_CHANNELS = {"total_dimming": 0, "r_dimming": 0, "g_dimming": 0, "b_dimming": 0,
                 "w_dimming": 0, "total_strobe": 0, "function_selection": 0, "function_speed": 0}
 
@@ -186,9 +220,8 @@ def palette_clamp_frame(vals, sat_floor=0.5):
     if s < sat_floor:
         s = sat_floor
         changed = True
-    if 0.09 <= h <= 0.19:
-        h = 0.075 if h < 0.1425 else 0.205
-        changed = True
+    h, snapped = snap_hue_out_of_yellow(h)
+    changed = changed or snapped
     if changed:
         r2, g2, b2 = colorsys.hsv_to_rgb(h, s, v)
         vals[1], vals[2], vals[3] = int(r2 * 255), int(g2 * 255), int(b2 * 255)

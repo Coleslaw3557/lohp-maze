@@ -8,6 +8,11 @@ import vlc
 
 logger = logging.getLogger(__name__)
 
+# Bed track changes fade rather than hard-cut. The server sends the configured
+# fade in ambience payloads (`fade_s`); this is the fallback when it doesn't.
+DEFAULT_AMBIENCE_FADE_S = 2.0
+FADE_TICK_S = 0.1
+
 
 class ZonePlayer:
     """VLC playback bound to one audio output device (one zone of rooms)."""
@@ -21,6 +26,13 @@ class ZonePlayer:
         # Room beds (the Cuddle floor show's lava rumble): their own player per
         # room so effect audio mixes OVER them and stop_effects never cuts them.
         self.ambience_players = {}  # room key -> player
+        # Volume-ramp tasks. Fade-ins are tracked per slot so a stop/replace
+        # can cancel them BEFORE releasing the player (a ramp step on a
+        # released libVLC player is use-after-free). Fade-outs own their
+        # detached player outright and release it themselves.
+        self._fade_tasks = set()
+        self._maze_fade_in = None
+        self._bed_fade_ins = {}  # room key -> fade-in task
 
     def _initialize_vlc(self):
         # vlc.Instance returns None on failure rather than raising
@@ -62,38 +74,92 @@ class ZonePlayer:
             media.add_option('input-repeat=65535')
         return media
 
-    def start_maze_ambience(self, full_path, volume, loop=True):
-        self.stop_maze_ambience()
-        self.maze_ambience_player = self.vlc_instance.media_player_new()
-        media = self._new_media(full_path, loop)
-        self.maze_ambience_player.set_media(media)
-        media.release()  # the player holds its own reference
-        self.maze_ambience_player.audio_set_volume(int(volume * 100))
-        self.maze_ambience_player.play()
+    # --- fades ---
 
-    def stop_maze_ambience(self):
-        if self.maze_ambience_player:
-            self.maze_ambience_player.stop()
-            self.maze_ambience_player.release()
-            self.maze_ambience_player = None
+    @staticmethod
+    def _cancel_fade(task):
+        if task is not None and not task.done():
+            task.cancel()
 
-    def play_ambience(self, room_key, full_path, volume, loop=True):
-        """Start (or replace) this zone's bed for one room."""
-        self.stop_ambience(room_key)
+    def _track_fade(self, coro):
+        task = asyncio.create_task(coro)
+        self._fade_tasks.add(task)
+        task.add_done_callback(self._fade_tasks.discard)
+        return task
+
+    async def _ramp(self, player, start_pct, end_pct, fade_s):
+        """Step a player's volume start->end over fade_s. start_pct None reads
+        the player's current volume (fade-outs)."""
+        current = player.audio_get_volume() if start_pct is None else start_pct
+        if current < 0:  # unreadable (output not up yet): land on the target
+            current = end_pct
+        steps = max(1, int(fade_s / FADE_TICK_S))
+        for i in range(1, steps + 1):
+            await asyncio.sleep(fade_s / steps)
+            player.audio_set_volume(int(round(current + (end_pct - current) * i / steps)))
+
+    def _retire(self, player, fade_s):
+        """Fade a detached player out, then stop and release it. The task holds
+        the only reference, so nothing else can touch the player mid-ramp."""
+        async def run():
+            try:
+                await self._ramp(player, None, 0, fade_s)
+            finally:
+                player.stop()
+                player.release()
+        self._track_fade(run())
+
+    def _start_player(self, full_path, volume, loop, fade_s):
+        """New playing player; at target volume, or at 0 ramping up to it."""
         player = self.vlc_instance.media_player_new()
         media = self._new_media(full_path, loop)
         player.set_media(media)
         media.release()  # the player holds its own reference
-        player.audio_set_volume(int(volume * 100))
+        target = int(volume * 100)
+        player.audio_set_volume(0 if fade_s > 0 else target)
         player.play()
+        fade_in = self._track_fade(self._ramp(player, 0, target, fade_s)) if fade_s > 0 else None
+        return player, fade_in
+
+    # --- beds ---
+
+    def start_maze_ambience(self, full_path, volume, loop=True, fade_s=0.0):
+        self.stop_maze_ambience(fade_s)
+        self.maze_ambience_player, self._maze_fade_in = self._start_player(
+            full_path, volume, loop, fade_s)
+
+    def stop_maze_ambience(self, fade_s=0.0):
+        player = self.maze_ambience_player
+        if not player:
+            return
+        self.maze_ambience_player = None
+        self._cancel_fade(self._maze_fade_in)
+        self._maze_fade_in = None
+        if fade_s > 0:
+            self._retire(player, fade_s)
+        else:
+            player.stop()
+            player.release()
+
+    def play_ambience(self, room_key, full_path, volume, loop=True, fade_s=0.0):
+        """Start (or replace) this zone's bed for one room."""
+        self.stop_ambience(room_key, fade_s)
+        player, fade_in = self._start_player(full_path, volume, loop, fade_s)
         self.ambience_players[room_key] = player
+        if fade_in:
+            self._bed_fade_ins[room_key] = fade_in
         return player
 
-    def stop_ambience(self, room_key=None):
+    def stop_ambience(self, room_key=None, fade_s=0.0):
         keys = [room_key] if room_key is not None else list(self.ambience_players)
         for key in keys:
             player = self.ambience_players.pop(key, None)
-            if player:
+            if not player:
+                continue
+            self._cancel_fade(self._bed_fade_ins.pop(key, None))
+            if fade_s > 0:
+                self._retire(player, fade_s)
+            else:
                 player.stop()
                 player.release()
 
@@ -137,6 +203,10 @@ class AudioManager:
         # the zone rejoins it when the room bed stops.
         self.current_maze_ambience_file = None
         self.current_maze_ambience_loop = True
+        # Fades remembered per slot: stop commands carry no payload, so they
+        # reuse the fade the bed was started with.
+        self.maze_ambience_fade_s = DEFAULT_AMBIENCE_FADE_S
+        self.room_bed_fade_s = {}  # room key -> fade_s
 
         zones_config = config.get('zones') or {
             'default': {'rooms': config.get('associated_rooms', []), 'alsa_device': None}
@@ -209,7 +279,8 @@ class AudioManager:
             zone.stop_effects()
         logger.info(f"Stopped effect audio ({'room ' + room if room else 'all zones'})")
 
-    async def play_room_ambience(self, file_name, volume=1.0, loop=True, room=None):
+    async def play_room_ambience(self, file_name, volume=1.0, loop=True, room=None,
+                                 fade_s=None):
         """Start a looping bed for one room (the floor show's rumble under
         Cuddle Cross). Mixes under effect audio and survives audio_stop."""
         full_path = (
@@ -224,13 +295,15 @@ class AudioManager:
             logger.warning(f"No audio zone covers room: {room}")
             return False
         key = (room or '__all__').lower()
+        fade = self._fade_or_default(fade_s)
+        self.room_bed_fade_s[key] = fade
         started = []
         for zone in zones:
             if zone.vlc_instance is None:
                 logger.warning(f"Zone '{zone.name}' has no audio output; skipping ambience {file_name}")
                 continue
             try:
-                zone.play_ambience(key, full_path, volume, loop)
+                zone.play_ambience(key, full_path, volume, loop, fade)
                 started.append(zone.name)
             except Exception as e:
                 logger.error(f"Zone '{zone.name}': failed to start ambience {file_name}: {e}",
@@ -239,7 +312,7 @@ class AudioManager:
             # A room's own background overrides the maze-wide ambience on its
             # speaker (it comes back in stop_room_ambience when the bed ends).
             if zone.maze_ambience_player:
-                zone.stop_maze_ambience()
+                zone.stop_maze_ambience(fade)
                 logger.info(f"Zone '{zone.name}': room background overrides maze ambience")
         if not started:
             return False
@@ -250,10 +323,22 @@ class AudioManager:
     def stop_room_ambience(self, room=None):
         key = (room or '__all__').lower()
         for zone in self.zones_for_room(room):
-            zone.stop_ambience(key if room else None)
+            if room:
+                zone.stop_ambience(key, self.room_bed_fade_s.get(key, DEFAULT_AMBIENCE_FADE_S))
+            else:
+                for bed_key in list(zone.ambience_players):
+                    zone.stop_ambience(
+                        bed_key, self.room_bed_fade_s.get(bed_key, DEFAULT_AMBIENCE_FADE_S))
             self._resume_maze_ambience_if_due(zone)
         logger.info(f"Stopped ambience ({'room ' + room if room else 'all zones'})")
         return True
+
+    @staticmethod
+    def _fade_or_default(fade_s):
+        try:
+            return max(0.0, float(fade_s))
+        except (TypeError, ValueError):
+            return DEFAULT_AMBIENCE_FADE_S
 
     def _resume_maze_ambience_if_due(self, zone):
         """A bed just ended in this zone: if no other room bed holds the zone,
@@ -267,12 +352,13 @@ class AudioManager:
             return
         try:
             zone.start_maze_ambience(
-                full_path, self.maze_ambience_volume, self.current_maze_ambience_loop)
+                full_path, self.maze_ambience_volume, self.current_maze_ambience_loop,
+                self.maze_ambience_fade_s)
             logger.info(f"Zone '{zone.name}': maze ambience resumes after the room background")
         except Exception as e:
             logger.error(f"Zone '{zone.name}': failed to resume maze ambience: {e}", exc_info=True)
 
-    async def start_maze_ambience(self, file_name, volume=None, loop=True):
+    async def start_maze_ambience(self, file_name, volume=None, loop=True, fade_s=None):
         full_path = (
             self.preloaded_audio.get(file_name)
             or self.preloaded_audio.get(os.path.basename(file_name))
@@ -284,6 +370,7 @@ class AudioManager:
         logger.info(f"Starting maze ambience: {file_name}")
         self.current_maze_ambience_file = file_name
         self.current_maze_ambience_loop = bool(loop)
+        self.maze_ambience_fade_s = self._fade_or_default(fade_s)
         vol = self.maze_ambience_volume if volume is None else volume
         started_zones = []
         deferred = []
@@ -297,7 +384,7 @@ class AudioManager:
                 deferred.append(zone.name)
                 continue
             try:
-                zone.start_maze_ambience(full_path, vol, loop)
+                zone.start_maze_ambience(full_path, vol, loop, self.maze_ambience_fade_s)
                 started_zones.append(zone)
             except Exception as e:
                 logger.error(f"Zone '{zone.name}': failed to start maze ambience: {e}", exc_info=True)
@@ -319,7 +406,7 @@ class AudioManager:
 
     async def stop_maze_ambience(self):
         for zone in self.zones.values():
-            zone.stop_maze_ambience()
+            zone.stop_maze_ambience(self.maze_ambience_fade_s)
         self.current_maze_ambience_file = None
         self.current_maze_ambience_loop = True
         logger.info("Maze ambience stopped")

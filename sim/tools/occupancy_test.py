@@ -16,7 +16,11 @@ needs, which the effect-duration timeout used to do by accident:
   5. a whole visit never touches maze ambience: effect audio MIXES over it
      rather than replacing it, so the maze bed playing before someone walked
      in is still playing after they leave
-  6. a leave with no room is rejected
+  6. between the entry effect ending and the leave, the room wears its
+     OCCUPIED colour lock: the theme keeps animating it, but pinned to the
+     room's own profile colour (theme_manager.OCCUPIED_MIX); the leave
+     releases it back to the plain room blend
+  7. a leave with no room is rejected
 
 Run with the sim running: sim/.venv/bin/python sim/tools/occupancy_test.py [host]
 """
@@ -216,7 +220,44 @@ async def main():
               f'({len(stops)} stop_maze_ambience during the visit)')
         post('/api/stop_maze_ambience', {})
 
-    print("6) malformed leave")
+    print("6) occupied room holds its own colour after the effect; leave releases it")
+    import colorsys
+    profile_hue = colorsys.rgb_to_hsv(35 / 255, 75 / 255, 230 / 255)[0]  # Cop Dodge profile rgb
+
+    async def room_hue_distance(seconds=2.0):
+        """Mean hue distance of the room's lit frames from its profile colour."""
+        frames = []
+        await collect_frames(seconds, frames)
+        dists = []
+        for f in frames:
+            r, g, b = f[channel + 1], f[channel + 2], f[channel + 3]
+            if max(r, g, b) < 5:
+                continue
+            h = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)[0]
+            dists.append(abs((h - profile_hue + 0.5) % 1.0 - 0.5))
+        return (sum(dists) / len(dists)) if dists else None
+
+    enter = await post_bg('/api/run_effect', {'room': ROOM, 'effect_name': effect})
+    enter_status, _ = await asyncio.wait_for(enter, 60)  # runs the whole entry effect
+    check('entry effect ran to completion', enter_status == 200)
+    await asyncio.sleep(1.5)  # smoother settles onto the held look
+    occ_dist = await room_hue_distance()
+    check('room pinned near its profile colour while occupied',
+          occ_dist is not None and occ_dist <= 0.07, f'(hue dist {occ_dist})')
+    distinct = await theme_animates(channel)
+    check('held look still breathes with the theme', distinct > 1,
+          f'({distinct} distinct values on ch {channel + 1})')
+    post('/api/room_vacated', {'room': ROOM})
+    await asyncio.sleep(2.0)  # smoother walks back to the plain blend
+    plain_dist = await room_hue_distance(3.0)
+    # Relative, not absolute: where the theme hue happens to be wandering
+    # decides the absolute distances, but a released room must sit clearly
+    # farther from its profile colour than a pinned one.
+    check('leave releases the room to the plain theme blend',
+          plain_dist is not None and plain_dist >= occ_dist + 0.03,
+          f'(hue dist pinned {occ_dist:.3f} -> released {plain_dist:.3f})')
+
+    print("7) malformed leave")
     status, body = post('/api/room_vacated', {})
     check('leave with no room is rejected', status == 400, body.get('message', ''))
 

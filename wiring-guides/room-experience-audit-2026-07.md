@@ -105,8 +105,14 @@ Legend: **DONE** = themed audio pack wired + lights redesigned to it.
   current and correct; its light hits are synced to the sampled fanfare
   (0.06 s / 1.56 s) — keep those onsets in any future retheme. Night-dance
   win condition is a documented TBD (LD2450 jitter candidate).
-- **Temple Room** (par @113): no trigger, no effect, no audio — future spec
-  only per `room-games-plan.md`; node stays an API bench node.
+- **Temple Room** (par @113): radar entry → `TempleWake` — built 2026-08-17
+  (`effects/temple_room.py`, 18th effect), closing the last room with no show
+  at all: cold stone breath, a wall torch catching, the jade idol waking and
+  holding its look, settling back to the watch. Slowest room in the maze on
+  purpose (profile `rate` 0.58) so it reads as watching, not ambushing, beside
+  the Monkey Room guard next door. Light-only — its pool is registered empty,
+  so audio dropped in from the console plays over the timeline unchanged. Game
+  spec is still open per `room-games-plan.md`.
 - **No Friends Monday** (par @105 + the truck's 5V addressable lamp chain):
   laser + lights-out win → `NoFriendsMonday` — rethemed 07-29 (lonely indigo
   → survival disco), disco capped at 220 because the truck lamps are the

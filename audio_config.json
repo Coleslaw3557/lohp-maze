@@ -765,6 +765,11 @@
             ],
             "volume": 0.9
         },
+        "TempleWake": {
+            "_comment": "Temple Room entry (2026-08-17). Light-only for now — the room's first show; drop files in from the audio console and they play over the timeline unchanged.",
+            "audio_files": [],
+            "volume": 0.7
+        },
         "DeepPlaya-BG": {
             "_comment": "Doorway entry swell — LIGHTS ONLY since 2026-08-01 evening (Tim): dance-distance-muffled moved into the DeepPlayaHandshake-Background pool so entries never lay a second bed over the always-on bed.",
             "audio_files": [],
@@ -816,11 +821,12 @@
     },
     "default_volume": 0.7,
     "ambience_playback": {
-        "_comment": "Default bed playback policy. Files at or under loop_under_s loop for loop_for_s, then the server rotates to a fresh anti-repeat pick. Longer files play once, then rotate after duration + once_pad_s.",
+        "_comment": "Default bed playback policy. Files at or under loop_under_s loop for loop_for_s, then the server rotates to a fresh anti-repeat pick. Longer files play once, then rotate after duration + once_pad_s. fade_s: bed track changes fade out/in over this many seconds (VLC/sim clients ramp live; node streams get it baked into the generated MP3's head and tail). 0 = hard cut.",
         "loop_under_s": 45,
         "loop_for_s": 180,
         "once_pad_s": 2,
-        "unknown_loop": true
+        "unknown_loop": true,
+        "fade_s": 2
     },
     "maze_ambience": "MazeAmbience-Bed",
     "room_backgrounds": {

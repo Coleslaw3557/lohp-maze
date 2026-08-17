@@ -1,5 +1,5 @@
 {
-  "_comment": "Canonical sensor-trigger map: which sensor in which room fires which action. Sensors live in the per-room ESP32-S3 node boxes (wiring-guides/room-node-enclosure-plan.md); sim/esphome/rooms/*.yaml and the sim's trigger panel are both built from this file. Promoted 2026-07-20 from the retired client/config-unit-*.json (units A/B/C decommissioned); thresholds are the bench-proven ADC/piezo values carried over as node-tuning reference. 2026-07-30: 13 rooms sense with an LD2410C radar and Entrance/Exit with a TOF200C ToF module, so doorway triggers are type \"presence\", not the historical \"laser\". Radar presence triggers are an OCCUPANCY PAIR: `action` fires when the radar first sees a moving target (enter) and `leave_action` fires when it has seen nothing at all for the room's absence timeout (leave), which stops anything still running and hands the room back to the theme. ToF presence triggers are trigger-only because beam clear is not room-vacated; once ToF fires, the room routine finishes normally. Trigger NAMES are identifiers referenced from sim/maze_layout.json sensors and its projection `cue` \u2014 don't rename them.",
+  "_comment": "Canonical sensor-trigger map: which sensor in which room fires which action. Sensors live in the per-room ESP32-S3 node boxes (wiring-guides/room-node-enclosure-plan.md); sim/esphome/rooms/*.yaml and the sim's trigger panel are both built from this file. Promoted 2026-07-20 from the retired client/config-unit-*.json (units A/B/C decommissioned); thresholds are the bench-proven ADC/piezo values carried over as node-tuning reference. 2026-07-30: 13 rooms sense with an LD2410C radar and Entrance/Exit with a TOF200C ToF module, so doorway triggers are type \"presence\", not the historical \"laser\". Radar presence triggers are an OCCUPANCY PAIR: `action` fires when the radar first sees a moving target (enter) and `leave_action` fires when it has seen nothing at all for the room's absence timeout (leave), which stops anything still running, releases the room's occupied colour lock (theme_manager OCCUPIED_MIX pins an occupied room to its own profile colour), and hands the room back to the theme. ToF presence triggers are trigger-only because beam clear is not room-vacated; once ToF fires, the room routine finishes normally. Trigger NAMES are identifiers referenced from sim/maze_layout.json sensors and its projection `cue` \u2014 don't rename them.",
   "piezo_settings": {
     "attempts_required": 3,
     "correct_answer_probability": 0.25
@@ -309,6 +309,33 @@
         },
         "method": "POST",
         "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Monkey Room"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
+      }
+    },
+    {
+      "name": "Temple Room Radar",
+      "type": "presence",
+      "room": "Temple Room",
+      "action": {
+        "data": {
+          "effect_name": "TempleWake",
+          "room": "Temple Room"
+        },
+        "method": "POST",
+        "path": "/api/run_effect"
+      },
+      "leave_action": {
+        "data": {
+          "room": "Temple Room"
+        },
+        "method": "POST",
+        "path": "/api/room_vacated"
       }
     },
     {

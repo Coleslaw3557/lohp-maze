@@ -18,7 +18,9 @@ from .photobomb_spot import create_photobomb_spot_effect
 from .photobomb_shot import create_photobomb_shot_effect
 from .monkey_business import create_monkey_business_effect
 from .monkey_shrine import create_shrine_guard_effect
-from .moop_march import create_moop_march_effect
+from .moop_march import (create_moop_march_effect, create_moop_victory_effect,
+                         create_moop_press_flash_effect)
+from .temple_room import create_temple_wake_effect
 from .deep_playa_bg import create_deep_playa_bg_effect
 from .deep_playa_hit import create_deep_playa_hit_effect
 from .image_enhancement import create_image_enhancement_effect

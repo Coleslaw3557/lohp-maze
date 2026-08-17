@@ -16,6 +16,13 @@ discipline the WS client path got in the 2026-07 concurrency hardening).
 
 Per-effect volume is BAKED into the generated cue WAVs, so a runtime
 audio_params volume override (no effect uses one today) is ignored here.
+
+Cues play as ANNOUNCEMENTS over the streaming bed: the node's mixer ducks the
+media pipeline 12 dB under a cue and recovers (audio_s3.yaml) — the bed is
+never stopped for a cue. Because the speaker media_player has ONE entity
+volume shared by both pipelines, bed gain is baked into the generated node
+stream (remote_host_manager -> audio_manager.prepare_node_ambience_stream)
+and the entity volume stays pinned at 1.0.
 """
 import asyncio
 import json
@@ -40,8 +47,6 @@ STALE_AFTER = 5       # a command that waited this long behind the node lock is
                       # dropped — a thunder cue arriving after a reconnect backlog
                       # would fire long after its lightning
 NODE_GLOBAL_MAZE_AMBIENCE = True
-CUE_RESUME_PAD_S = 0.75
-RESUME_MEDIA_RESET_GAP_S = 0.15
 
 
 class _BackingOff(Exception):
@@ -170,7 +175,6 @@ class NodeAudioManager:
         self.maze_ambience_data = None
         self._tasks = set()      # keep fire-and-forget tasks referenced
         self._repeat_tasks = {}  # _NodeConn -> bounded maze-loop repeat task
-        self._resume_tasks = {}  # _NodeConn -> delayed post-cue maze-bed resume
         self._conn_factory = conn_factory or _NodeConn
         self._load(config_file)
 
@@ -236,6 +240,19 @@ class NodeAudioManager:
             volume = default
         return max(0.0, min(1.0, volume))
 
+    @classmethod
+    def _bed_volume(cls, data):
+        """Entity volume for a bed play. The speaker media_player has ONE
+        volume shared by both pipelines (media AND announcement), so a bed
+        played at 0.35 entity volume would jump to full the moment a cue
+        sets 1.0. Beds whose gain was baked into the generated node stream
+        (`node_gain_baked`, remote_host_manager) pin the entity at 1.0 —
+        the same level every cue uses; only legacy un-baked payloads still
+        ride the entity volume."""
+        if (data or {}).get('node_gain_baked'):
+            return 1.0
+        return cls._volume(data, 0.35)
+
     @staticmethod
     def _node_file(data):
         return data.get('node_file_name') or data['file_name']
@@ -282,7 +299,6 @@ class NodeAudioManager:
             self.maze_ambience_file = None
             self.maze_ambience_data = None
             self._cancel_repeats()
-            self._cancel_resumes()
         if room is None:
             conns = list(self.rooms.values())
         elif self.enabled_for(room):
@@ -309,22 +325,12 @@ class NodeAudioManager:
             if data.get('loop'):
                 logger.warning(f"Node audio [{conn.room}]: loop requested for "
                                f"{data.get('file_name')} — embedded cues don't loop")
-            # Cue WAVs are already volume-baked by make_node_audio.py. Keep the
-            # media-player gain at full foreground level so beds stay lower.
-            async def play_cue():
-                # A long HTTP media stream can delay or starve announcement
-                # playback on ESPHome speaker nodes. Cues are timing-critical;
-                # clear stale/noncritical media before starting the cue.
-                self._cancel_repeat(conn)
-                self._cancel_resume(conn)
-                await conn.stop(announcement=False)
-                ok = await conn.play_announcement(self.cue_url(data['file_name']),
-                                                  volume=1.0)
-                if ok and self.maze_ambience_file and not conn.bed_active:
-                    delay_s = self._cue_duration_s(data.get('file_name')) + CUE_RESUME_PAD_S
-                    self._arm_maze_resume(conn, delay_s)
-                return ok
-            return play_cue()
+            # Cue WAVs are volume-baked by make_node_audio.py and play as
+            # announcements: the mixer ducks the bed 12 dB under them and
+            # recovers (audio_s3.yaml) — the media pipeline is NOT stopped, so
+            # ambience keeps playing straight through a cue. volume=1.0 keeps
+            # the shared entity volume pinned at the level beds are baked for.
+            return conn.play_announcement(self.cue_url(data['file_name']), volume=1.0)
         if command == 'play_room_ambience':
             # A bed belongs on the media pipeline, so effect cues duck it as
             # announcements instead of replacing it. The pipeline is single —
@@ -334,13 +340,12 @@ class NodeAudioManager:
             # the bed streams through once instead of looping.
             conn.bed_active = True
             self._cancel_repeat(conn)
-            self._cancel_resume(conn)
             node_file = self._node_file(data)
             if self._node_loop(data):
                 logger.warning(f"Node audio [{conn.room}]: ambience "
                                f"{data.get('file_name')} streams once — the node media "
                                f"player has no repeat")
-            return conn.play_url(self.audio_url(node_file), volume=self._volume(data, 0.35))
+            return conn.play_url(self.audio_url(node_file), volume=self._bed_volume(data))
         if command == 'stop_room_ambience':
             conn.bed_active = False
             if (NODE_GLOBAL_MAZE_AMBIENCE and self.maze_ambience_file
@@ -348,7 +353,7 @@ class NodeAudioManager:
                 # The freed pipeline goes back to the maze ambience.
                 self._arm_maze_repeat(conn, self.maze_ambience_data)
                 return conn.play_url(self._maze_audio_url(self.maze_ambience_data),
-                                     volume=self._volume(self.maze_ambience_data, 0.35))
+                                     volume=self._bed_volume(self.maze_ambience_data))
             return conn.stop(announcement=False)
         if command == 'start_maze_ambience':
             if not NODE_GLOBAL_MAZE_AMBIENCE:
@@ -362,7 +367,7 @@ class NodeAudioManager:
                 return None
             self._arm_maze_repeat(conn, data)
             return conn.play_url(self._maze_audio_url(data),
-                                 volume=self._volume(data, 0.35))
+                                 volume=self._bed_volume(data))
         if command == 'stop_maze_ambience':
             if conn.bed_active:
                 return None  # the pipeline is playing the room's bed, not maze ambience
@@ -406,23 +411,6 @@ class NodeAudioManager:
         for conn in list(self._repeat_tasks):
             self._cancel_repeat(conn)
 
-    def _cancel_resume(self, conn):
-        task = self._resume_tasks.pop(conn, None)
-        if task is not None:
-            task.cancel()
-
-    def _cancel_resumes(self):
-        for conn in list(self._resume_tasks):
-            self._cancel_resume(conn)
-
-    def _cue_duration_s(self, audio_file):
-        if self.audio_manager is None or not audio_file:
-            return 3.0
-        duration = self.audio_manager.get_audio_duration_s(f"cues/{cue_id(audio_file)}.wav")
-        if duration is None:
-            duration = self.audio_manager.get_audio_duration_s(audio_file)
-        return max(0.25, float(duration or 3.0))
-
     def _arm_maze_repeat(self, conn, data):
         self._cancel_repeat(conn)
         if not data.get('loop'):
@@ -440,50 +428,13 @@ class NodeAudioManager:
         self._repeat_tasks[conn] = task
         task.add_done_callback(lambda done, c=conn: self._drop_repeat(c, done))
 
-    def _arm_maze_resume(self, conn, delay_s):
-        if not NODE_GLOBAL_MAZE_AMBIENCE or not self.maze_ambience_data:
-            return
-        self._cancel_resume(conn)
-        task = asyncio.create_task(
-            self._resume_maze_after_cue(conn, self.maze_ambience_file,
-                                        dict(self.maze_ambience_data), delay_s))
-        self._resume_tasks[conn] = task
-        task.add_done_callback(lambda done, c=conn: self._drop_resume(c, done))
-
-    def _drop_resume(self, conn, task):
-        if self._resume_tasks.get(conn) is task:
-            self._resume_tasks.pop(conn, None)
-
     def _drop_repeat(self, conn, task):
         if self._repeat_tasks.get(conn) is task:
             self._repeat_tasks.pop(conn, None)
 
-    async def _resume_maze_after_cue(self, conn, file_name, data, delay_s):
-        try:
-            await asyncio.sleep(max(0.25, delay_s))
-            if self.maze_ambience_file != file_name or conn.bed_active:
-                return
-            url = self._maze_audio_url(data)
-            volume = self._volume(data, 0.35)
-            logger.info(f"Node audio [{conn.room}] resuming maze ambience "
-                        f"{self._node_file(data)}"
-                        f" @ {self._maze_offset_s(data) or 0.0:.1f}s")
-            await conn.stop(announcement=False)
-            await asyncio.sleep(RESUME_MEDIA_RESET_GAP_S)
-            self._arm_maze_repeat(conn, data)
-            ok = await conn.play_url(url, volume=volume)
-            if not ok:
-                logger.warning(f"Node audio [{conn.room}] maze ambience resume "
-                               f"did not start cleanly")
-        except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            logger.error(f"Node audio [{conn.room}] maze resume after cue failed: {e}",
-                         exc_info=True)
-
     async def _maze_repeat_loop(self, conn, data):
         file_name = data.get('file_name')
-        volume = self._volume(data, 0.35)
+        volume = self._bed_volume(data)
         deadline = time.monotonic() + float(data['play_for_s'])
         delay = max(1.0, float(self._node_duration(data)) + 0.25)
         try:

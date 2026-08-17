@@ -2,13 +2,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Entry sting for the climb-DOWN shaft. Both pars run the same timeline (the
-# step engine drives every fixture in a room identically — the true two-zone
-# top-to-bottom cascade is the documented future engine capability, same as
-# Guy Line Climb). Light-only for now: the Moop March audio pack is still on
-# the to-author list (room-experience-audit-2026-07.md); time any future pack
-# to this cadence rather than reflowing the lights.
-DURATION = 4.5
+# VMM room lighting, third spec (Tim 2026-08-17 late): NO flashing on entry —
+# while the room is occupied its pars run the medium-paced green/blue/red
+# gradient (theme_manager ROOM_OCCUPIED_GRADIENTS), each button press flashes
+# that button's own identity colour, and the win holds solid green till the
+# radar reports empty. (The original 4.5s march-cadence entry choreography
+# lived here until this rev — git history has it if the room ever wants an
+# entry sting again.)
 
 
 def _step(t, total, r, g, b, w):
@@ -23,47 +23,92 @@ def _step(t, total, r, g, b, w):
 
 
 def create_moop_march_effect():
-    """Vertical Moop March entry — the moop line falls in: leave-no-trace
-    green pop, then a descending march cadence (each stomp a shade dimmer —
-    the climb down), one hot amber moop-spotted snatch, and the line marches
-    out into the dark. No white (no-white sweep)."""
-    LNT_GREEN = (40, 230, 50)
-    DUST = (120, 90, 15)
-    KHAKI = (150, 110, 20)
-    SPOTTED = (255, 90, 0)
-
-    # Fall in! — green pop, dust settles
-    steps = [
-        _step(0.00, 255, *LNT_GREEN, 0),
-        _step(0.18, 70, *DUST, 0),
-    ]
-
-    # The march down: stomp/half-step strides at ~133/min, each stride a
-    # shade lower down the shaft
-    t = 0.45
-    for hi, lo in [(235, 110), (205, 95), (175, 80), (145, 65), (120, 55)]:
-        steps.append(_step(round(t, 3), hi, *LNT_GREEN, 0))
-        steps.append(_step(round(t + 0.22, 3), lo, *KHAKI, 0))
-        t += 0.45
-
-    # Moop spotted — hot amber snatch-and-grab double hit
-    steps.append(_step(2.92, 250, *SPOTTED, 0))
-    steps.append(_step(3.10, 90, 150, 60, 0, 0))
-    steps.append(_step(3.24, 230, 255, 120, 0, 0))
-
-    # Bag it, march on — fading strides out into the dark
-    steps.append(_step(3.55, 110, *LNT_GREEN, 0))
-    steps.append(_step(3.80, 55, *DUST, 0))
-    steps.append(_step(4.05, 70, 30, 160, 35, 0))
-    steps.append(_step(4.30, 25, 20, 90, 20, 0))
-    steps.append(_step(DURATION, 0, 0, 0, 0, 0))
-
+    """Vertical Moop March entry MARKER — no lights (Tim 2026-08-17: no
+    flashing on entry). The POST still matters: it fires room_entry telemetry,
+    route tracking, and the occupancy lock whose gradient owns the room's look
+    while someone is inside. `no_lights` makes effects_manager skip the
+    lighting takeover entirely."""
     effect = {
-        "duration": DURATION,
-        "description": "Vertical Moop March entry — leave-no-trace green "
-                       "fall-in pop, descending march cadence, amber "
-                       "moop-spotted snatch, march out dark",
+        "duration": 0.0,
+        "description": "Vertical Moop March entry marker — no lights; the "
+                       "occupied green/blue/red gradient owns the room "
+                       "(theme_manager)",
+        "steps": [],
+        "no_lights": True,
+    }
+    logger.info("MoopMarch entry marker created (no lights — occupied gradient owns the room)")
+    return effect
+
+
+# The game's victory green (Tim 2026-08-17: win = SOLID green until the room
+# empties; button 4's identity colour is the same green). Shared by the
+# victory bloom's final frame and the theme_manager win hold (main.py
+# registers the hook with these), so the effect->hold handoff is invisible.
+# Hue ~126 deg — clear of the no-yellow arc (ends 108 deg) with margin.
+MOOP_WIN_RGB = (30, 220, 50)
+MOOP_WIN_TOTAL = 200
+
+PRESS_FLASH_DURATION = 0.55
+VICTORY_DURATION = 1.1
+
+# Button identity colours (Tim 2026-08-17): each march button flashes ITS
+# colour so the group can see which buttons have spoken. (r, g, b, w) — the
+# white button drives the pars' W channel too; these flashes are
+# palette-exempt (a deliberate identity colour, including the one white the
+# no-white sweep would otherwise eat — Tim's call, exemption alongside
+# Lightning's).
+MOOP_BUTTON_COLORS = {
+    "Moop Button 1": ((255, 120, 0), 0, "orange"),
+    "Moop Button 2": ((30, 90, 255), 0, "blue"),
+    "Moop Button 3": ((255, 255, 255), 200, "white"),
+    "Moop Button 4": (MOOP_WIN_RGB, 0, "green"),
+}
+
+
+def create_moop_press_flash_effect(rgb=MOOP_WIN_RGB, w=0, label="green"):
+    """One hard whole-room flash in a button's identity colour (the generic
+    green build is the fallback for unlabeled presses). An instant
+    full-brightness pop held ~0.3s, then a hard dip to black before the
+    occupied gradient repaints. No fixture_role: both pars fire.
+    palette_exempt: identity colours ship EXACTLY as authored (button 3 is
+    white, which every clamp would otherwise rewrite)."""
+    steps = [
+        _step(0.00, 255, *rgb, w),
+        _step(0.30, 255, *rgb, w),
+        _step(0.42, 0, 0, 0, 0, 0),
+        _step(PRESS_FLASH_DURATION, 0, 0, 0, 0, 0),
+    ]
+    effect = {
+        "duration": PRESS_FLASH_DURATION,
+        "description": f"Vertical Moop March press — one hard whole-room "
+                       f"{label} flash with a blackout tail",
+        "steps": steps,
+        "palette_exempt": True,
+    }
+    logger.info(f"MoopMarch press flash ({label}) created with {len(steps)} "
+                f"steps over {PRESS_FLASH_DURATION} seconds")
+    return effect
+
+
+def create_moop_victory_effect():
+    """VerticalMoopMarch-RightAnswer — all four march buttons inside the 60s
+    round. A short whole-room double-pop that lands ON the solid victory
+    green: the effect's last frame equals the theme_manager win hold that the
+    main.py hook set at effect start, so when this ends the room simply stays
+    solid green until /api/room_vacated releases it."""
+    steps = [
+        _step(0.00, 255, *MOOP_WIN_RGB, 0),
+        _step(0.18, 130, *MOOP_WIN_RGB, 0),
+        _step(0.36, 255, *MOOP_WIN_RGB, 0),
+        _step(VICTORY_DURATION, MOOP_WIN_TOTAL, *MOOP_WIN_RGB, 0),
+    ]
+    effect = {
+        "duration": VICTORY_DURATION,
+        "description": "Vertical Moop March victory — whole-room green "
+                       "double-pop landing on the solid win hold (held until "
+                       "the room empties)",
         "steps": steps,
     }
-    logger.info(f"MoopMarch effect created with {len(steps)} steps over {DURATION} seconds")
+    logger.info(f"MoopMarch victory effect created with {len(steps)} steps "
+                f"over {VICTORY_DURATION} seconds")
     return effect

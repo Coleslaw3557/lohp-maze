@@ -81,6 +81,22 @@ pinouts and the pod recipe: `arcade-button-db9-prewire-guide.md`.
   `VerticalMoopMarch-WrongAnswer` and resets. Resolves **on the node**
   like the other games — the server's puck-era 60s aggregation in
   `main.py` is gone.
+- **Feedback** (Tim 2026-08-17, third spec — final): NO entry flash — the
+  MoopMarch entry effect is a `no_lights` marker (occupancy/route/telemetry
+  only) and while the room is OCCUPIED both pars run a medium-paced
+  green→blue→red hue cycle instead of the theme (`theme_manager
+  ROOM_OCCUPIED_GRADIENTS`, 12s round trip, pars phase-offset 1.8s).
+  Every press = ONE hard whole-room flash in THAT button's identity colour
+  (1 orange, 2 blue, 3 WHITE — a deliberate no-white-sweep exemption,
+  palette-exempt like Lightning — 4 green), resolved server-side from the
+  POST's `trigger_name` (`effects_manager.room_trigger_light_overrides`;
+  the node still POSTs `CorrectAnswer`, so the shared audio pool is
+  untouched; unlabeled presses fall back to the generic green flash).
+  The WIN slams both pars to SOLID victory green and HOLDS until
+  `/api/room_vacated` (theme_manager win hold, armed by the
+  `VerticalMoopMarch-RightAnswer` effect hook in `main.py`). Chime/victory
+  audio streams from the server like every other cue (embedded-cue variant
+  rejected 2026-08-17 — nothing stored on nodes).
 
 ## Monkey Room — button now, dance later
 

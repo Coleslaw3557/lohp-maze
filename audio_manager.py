@@ -17,6 +17,10 @@ DEFAULT_AMBIENCE_PLAYBACK = {
     "node_prepare_loop": True,
     "node_loop_crossfade_s": 1.0,
     "node_loop_max_copies": 64,
+    # Bed track changes fade out/in instead of hard-cutting. Browser/VLC
+    # clients ramp at runtime (the value rides the ambience payload); node
+    # streams get it baked into the generated MP3's head and tail.
+    "fade_s": 2.0,
 }
 
 # Global sound modes: 'unattended' (the default walk-through experience) and
@@ -168,7 +172,7 @@ class AudioManager:
                 return path
         return None
 
-    def _generated_loop_name(self, file_name, play_for_s, crossfade_s):
+    def _generated_loop_name(self, file_name, play_for_s, crossfade_s, gain, fade_s):
         path = self._audio_path(file_name)
         if not path:
             return None, None
@@ -182,6 +186,8 @@ class AudioManager:
             str(stat.st_size),
             f"{play_for_s:.3f}",
             f"{crossfade_s:.3f}",
+            f"gain{gain:.3f}",
+            f"fade{fade_s:.3f}",
         ])
         digest = hashlib.sha1(key.encode("utf-8")).hexdigest()[:16]
         stem = os.path.splitext(os.path.basename(file_name))[0]
@@ -190,7 +196,7 @@ class AudioManager:
                            f"{safe_stem or 'loop'}_{digest}.mp3")
         return path, rel
 
-    def _generated_node_stream_name(self, file_name):
+    def _generated_node_stream_name(self, file_name, gain, fade_desc=""):
         path = self._audio_path(file_name)
         if not path:
             return None, None
@@ -202,7 +208,7 @@ class AudioManager:
             file_name,
             str(stat.st_mtime_ns),
             str(stat.st_size),
-            "node-mono-44100-mp3-v1",
+            f"node-mono-44100-mp3-v2-gain{gain:.3f}{fade_desc}",
         ])
         digest = hashlib.sha1(key.encode("utf-8")).hexdigest()[:16]
         stem = os.path.splitext(os.path.basename(file_name))[0]
@@ -218,7 +224,18 @@ class AudioManager:
         policy.update(config.get("ambience_playback") or {})
         return policy
 
-    def prepare_node_ambience_loop(self, effect_name, file_name, playback):
+    @staticmethod
+    def _stream_fade_s(playback, policy, cap_s):
+        """The track-change fade baked into a generated node stream, clamped so
+        short assets aren't all edge. Below 50 ms it rounds to no fade."""
+        try:
+            fade_s = float(playback.get("fade_s", policy.get("fade_s", 0.0)) or 0.0)
+        except (TypeError, ValueError):
+            fade_s = 0.0
+        fade_s = max(0.0, min(fade_s, cap_s))
+        return round(fade_s, 3) if fade_s >= 0.05 else 0.0
+
+    def prepare_node_ambience_loop(self, effect_name, file_name, playback, gain=1.0):
         """Create a cached, longer crossfaded bed for ESP32 node playback.
 
         ESPHome's speaker media player does not expose a real repeat/crossfade
@@ -226,6 +243,10 @@ class AudioManager:
         crossfaded joins and let the node stream it once; any remaining restart
         boundary happens minutes apart instead of every source-file duration.
         Browser clients still receive the original file and loop locally.
+
+        `gain` (the bed pool's volume) is baked into the generated audio: the
+        node's media_player entity volume is shared with the announcement
+        pipeline, so beds must arrive pre-attenuated (node_audio_manager).
         """
         if not playback.get("loop"):
             return None
@@ -244,6 +265,7 @@ class AudioManager:
         crossfade_s = min(crossfade_s, max(0.0, duration_s / 3.0))
         if crossfade_s < 0.1:
             return None
+        fade_s = self._stream_fade_s(playback, policy, play_for_s / 4.0)
         step_s = duration_s - crossfade_s
         copies = int((play_for_s + crossfade_s + step_s - 0.001) // step_s) + 1
         copies = max(2, copies)
@@ -251,7 +273,8 @@ class AudioManager:
             logger.info(f"Node ambience loop prep skipped for {file_name}: "
                         f"{copies} copies exceeds cap {max_copies}")
             return None
-        source_path, rel_name = self._generated_loop_name(file_name, play_for_s, crossfade_s)
+        source_path, rel_name = self._generated_loop_name(file_name, play_for_s,
+                                                          crossfade_s, gain, fade_s)
         if not source_path or not rel_name:
             return None
         out_path = os.path.join(self.base_dir, "audio_files", rel_name)
@@ -275,7 +298,15 @@ class AudioManager:
                 f"c1=qsin:c2=qsin[{out}]"
             )
             current = out
-        filters.append(f"[{current}]atrim=0:{play_for_s:.3f},asetpts=N/SR/TB[out]")
+        # The rotation boundary is baked in: this stream ends at play_for_s and
+        # the server's next pick starts a fresh stream, so fading the head and
+        # tail here IS the node's track-change fade (runtime volume ramps are
+        # off the table — the entity volume is shared with the cue pipeline).
+        fade = (f",afade=t=in:st=0:d={fade_s:.3f}"
+                f",afade=t=out:st={play_for_s - fade_s:.3f}:d={fade_s:.3f}"
+                if fade_s else "")
+        filters.append(f"[{current}]atrim=0:{play_for_s:.3f},asetpts=N/SR/TB,"
+                       f"volume={gain:.3f}{fade}[out]")
         tmp_path = out_path + ".tmp"
         cmd = [
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
@@ -303,21 +334,34 @@ class AudioManager:
             logger.warning(f"Could not prepare node ambience loop for {file_name}: {stderr}")
             return None
 
-    def prepare_node_ambience_stream(self, effect_name, file_name, playback):
+    def prepare_node_ambience_stream(self, effect_name, file_name, playback, gain=1.0):
         """Return a node-friendly ambience asset for ESPHome speaker playback.
 
         Short loopable browser beds become longer crossfaded mono MP3s. Long
         one-shot beds are still normalized to mono 44.1 kHz MP3 so the ESP's
-        mono media pipeline never has to decode a stereo source.
+        mono media pipeline never has to decode a stereo source. Either way
+        `gain` (the pool volume) is baked in — see prepare_node_ambience_loop.
         """
-        loop_file = self.prepare_node_ambience_loop(effect_name, file_name, playback)
+        loop_file = self.prepare_node_ambience_loop(effect_name, file_name, playback, gain)
         if loop_file:
             return loop_file
 
         policy = self._node_policy(effect_name)
         if not policy.get("node_prepare_stream", True):
             return None
-        source_path, rel_name = self._generated_node_stream_name(file_name)
+        # Track-change fade for once-played beds: head fade always, tail fade
+        # only when the decoded duration says where the tail is.
+        try:
+            duration_s = float(playback.get("duration_s") or 0)
+        except (TypeError, ValueError):
+            duration_s = 0.0
+        cap_s = duration_s / 3.0 if duration_s > 0 else float("inf")
+        fade_s = self._stream_fade_s(playback, policy, cap_s)
+        fade = f",afade=t=in:st=0:d={fade_s:.3f}" if fade_s else ""
+        if fade_s and duration_s > 0:
+            fade += f",afade=t=out:st={duration_s - fade_s:.3f}:d={fade_s:.3f}"
+        source_path, rel_name = self._generated_node_stream_name(
+            file_name, gain, fade_desc=f"-fade{fade_s:.3f}" if fade_s else "")
         if not source_path or not rel_name:
             return None
         out_path = os.path.join(self.base_dir, "audio_files", rel_name)
@@ -328,7 +372,7 @@ class AudioManager:
         cmd = [
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
             "-i", source_path,
-            "-af", "aformat=channel_layouts=mono,aresample=44100",
+            "-af", f"aformat=channel_layouts=mono,aresample=44100,volume={gain:.3f}{fade}",
             "-f", "mp3",
             "-codec:a", "libmp3lame",
             "-q:a", "4",
@@ -348,6 +392,28 @@ class AudioManager:
             stderr = getattr(e, "stderr", "") or str(e)
             logger.warning(f"Could not prepare node ambience stream for {file_name}: {stderr}")
             return None
+
+    def warm_node_streams(self, effect_names):
+        """Pre-generate the gain-baked node streams for every file in the
+        given pools. BLOCKING (one ffmpeg transcode per uncached file — 30-60s
+        for a 15-minute bed track on the Pi): run via asyncio.to_thread from a
+        background task. Keeps bed rotations cache-hit, so a rotation never
+        has to transcode at pick time (2026-08-17: a cold rotation inline on
+        the event loop froze the whole server for 49s and ate VMM's button
+        POSTs; the payload build is threaded now, and this warmup keeps even
+        the threaded path instant)."""
+        prepared = 0
+        for effect_name in effect_names:
+            config = self.get_audio_config(effect_name)
+            if not config.get('audio_files'):
+                continue
+            volume = config.get('volume', self.audio_config.get('default_volume', 0.7))
+            for file_name in config.get('audio_files', []):
+                playback = self.ambience_playback(effect_name, file_name)
+                if self.prepare_node_ambience_stream(effect_name, file_name,
+                                                     playback, gain=volume):
+                    prepared += 1
+        return prepared
 
     def get_audio_duration_s(self, file_name):
         """Duration for a configured audio asset, or None when it cannot be read."""
@@ -406,8 +472,14 @@ class AudioManager:
         else:
             play_for = float(policy.get('unknown_once_s', policy.get('loop_for_s', 180.0)))
 
+        try:
+            fade_s = max(0.0, float(policy.get('fade_s', 0.0)))
+        except (TypeError, ValueError):
+            fade_s = 0.0
+
         return {
             'loop': loop,
             'duration_s': round(duration, 3) if duration is not None else None,
             'play_for_s': max(1.0, round(play_for, 3)),
+            'fade_s': round(fade_s, 3),
         }

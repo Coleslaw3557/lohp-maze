@@ -14,6 +14,10 @@ Background-images/
 audio_files/cues/
 # generated crossfaded ambience loop cache (audio_manager.py)
 audio_files/generated/
+# server/console terminal captures + stale root pidfile (sim's own live
+# pid/log are sim/sim.pid + sim/sim.log, already untracked)
+*.out
+sim.pid
 # audio console's one-deep undo copy (tools/audio_console.py) + its pidfile
 audio_config.json.bak
 audio_config.json.tmp

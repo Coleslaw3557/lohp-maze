@@ -4,15 +4,22 @@
   1. attract mode is on from boot and rotating the slow dark theme set
   2. every profiled room wears its own colour UNDER its cap with ZERO white
      (bright white/yellow is reserved for the flash/lightning/test effects)
-  3. an answer chirp in a two-fixture room plays on the ACCENT par only —
+  3. NO YELLOW on the wire — idle, and through a room's entry sting and the
+     occupied colour lock that follows it
+  4. an answer chirp in a two-fixture room plays on the ACCENT par only —
      the ambient par keeps breathing the theme underneath
 
 Run with the sim venv: sim/.venv/bin/python sim/tools/lighting_test.py [host]
 """
 import asyncio
+import colorsys
 import json
 import sys
+import os
 import urllib.request
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from effect_utils import YELLOW_ARC  # noqa: E402 — the one definition of the rule
 
 HOST = sys.argv[1] if len(sys.argv) > 1 else 'localhost'
 API = f'http://{HOST}:5000'
@@ -81,7 +88,47 @@ async def main():
               tot <= cap and white == 0 and lit,
               f'(peak {tot} <= {cap}, w {white})')
 
-    print("3) answer chirp -> accent par only; ambient par keeps the theme")
+    print("3) NO YELLOW: not idle, not while a room is occupied")
+    # The rule has one hard number (effect_utils.YELLOW_ARC): nothing the maze
+    # means to show lives between EMBER orange and the greenest room profile,
+    # so no lit fixture may sit in that arc. Checked on the WIRE, because the
+    # clamp used to escape the old narrow band *upward into* yellow-green.
+    yellow = []
+
+    def scan_yellow(frames, when):
+        for frame in frames:
+            for addr in range(1, 161, 8):        # the 20 maze pars
+                base = addr - 1
+                tot, r, g, b = (frame[base], frame[base + 1],
+                                frame[base + 2], frame[base + 3])
+                if tot < 20 or max(r, g, b) < 20:
+                    continue
+                h, s, _ = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+                if s > 0.2 and YELLOW_ARC[0] < h < YELLOW_ARC[1]:
+                    yellow.append((when, addr, round(h * 360), (r, g, b)))
+
+    frames = []
+    await collect(4.0, frames)
+    scan_yellow(frames, 'idle')
+    check('no yellow in the idle maze', not yellow,
+          f'({len(yellow)} frames, e.g. {yellow[0] if yellow else ""})')
+
+    held = []
+    hold_room, hold_effect = 'Temple Room', 'TempleWake'
+    collector = asyncio.create_task(collect(9.0, held))
+    await asyncio.sleep(0.3)
+    await asyncio.to_thread(post, '/api/run_effect',
+                            {'room': hold_room, 'effect_name': hold_effect})
+    await collector                              # entry sting AND the held look
+    before = len(yellow)
+    scan_yellow(held, 'occupied')
+    check(f'no yellow entering/holding {hold_room}', len(yellow) == before,
+          f'({len(yellow) - before} frames, e.g. {yellow[before] if len(yellow) > before else ""})')
+    lit = max(f[112] for f in held)              # Temple par @113 actually ran
+    check(f'{hold_room} entry drove its par', lit > 20, f'(peak total {lit})')
+    post('/api/room_vacated', {'room': hold_room})
+
+    print("4) answer chirp -> accent par only; ambient par keeps the theme")
     frames = []
     collector = asyncio.create_task(collect(3.5, frames))
     await asyncio.sleep(0.3)
