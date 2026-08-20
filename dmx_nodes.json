@@ -7,7 +7,7 @@
     "Entrance":             {"host": "lohp-node-entrance.local",             "enabled": true},
     "Cop Dodge":            {"host": "lohp-node-cop-dodge.local",            "enabled": true, "hardware": true},
     "Gate":                 {"host": "lohp-node-gate.local",                 "enabled": true},
-    "Guy Line Climb":       {"host": "lohp-node-guy-line-climb.local",       "enabled": true},
+    "Guy Line Climb":       {"host": "192.168.252.64",                       "enabled": true, "hardware": true},
     "Sparkle Pony Room":    {"host": "lohp-node-sparkle-pony.local",         "enabled": true},
     "Porto Room":           {"host": "192.168.252.66",                       "enabled": true, "hardware": true},
     "Cuddle Cross":         {"host": "192.168.252.67",                       "enabled": true, "hardware": true},

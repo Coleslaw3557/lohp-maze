@@ -6,7 +6,7 @@ After=multi-user.target
 # unbind fbcon so the console doesn't draw text/cursor over the show;
 # rebound on stop so a stopped service leaves a usable console
 ExecStartPre=/bin/sh -c 'for v in /sys/class/vtconsole/vtcon*; do grep -q frame "$v/name" && echo 0 > "$v/bind"; done; exit 0'
-ExecStart=/opt/lohp-projection-venv/bin/python /home/dietpi/lohp-server/projection_renderer.py --source demo --theme jungle --grid 192 --fps 20
+ExecStart=/opt/lohp-projection-venv/bin/python /home/dietpi/lohp-server/projection_renderer.py --source esphome --node 192.168.252.67 --node-port 6067 --theme jungle --grid 192 --fps 20
 ExecStopPost=/bin/sh -c 'for v in /sys/class/vtconsole/vtcon*; do grep -q frame "$v/name" && echo 1 > "$v/bind"; done; exit 0'
 WorkingDirectory=/home/dietpi/lohp-server
 Restart=always

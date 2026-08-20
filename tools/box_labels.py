@@ -100,17 +100,23 @@ def card(title, rows, out_path):
     draw.line((60, rule_y, W - 60, rule_y), fill="black", width=5)
 
     body_top, body_bot = rule_y + 18, H - 30
-    heights = []
+    heights, fitted = [], []
     for field, value, fpath, fsize in rows:
-        vf = ImageFont.truetype(fpath, fsize)
-        vb = draw.textbbox((0, 0), value, font=vf)
+        # Shrink to the row's printable width (thermal clip = unreadable card).
+        avail = (W - 40 - 330) if field else (W - 140)
+        while True:
+            vf = ImageFont.truetype(fpath, fsize)
+            vb = draw.textbbox((0, 0), value, font=vf)
+            if vb[2] - vb[0] <= avail or fsize <= 28:
+                break
+            fsize -= 2
         heights.append(vb[3] - vb[1])
+        fitted.append(vf)
     gap = max(10, (body_bot - body_top - sum(heights)) / (len(rows) + 1))
 
     label_font = ImageFont.truetype(SANS, 34)
     y = body_top + gap
-    for (field, value, fpath, fsize), h in zip(rows, heights):
-        vf = ImageFont.truetype(fpath, fsize)
+    for (field, value, fpath, fsize), h, vf in zip(rows, heights, fitted):
         vb = draw.textbbox((0, 0), value, font=vf)
         if field:
             draw.text((70, y + (h - 34) / 2), field.upper(), font=label_font, fill="black")

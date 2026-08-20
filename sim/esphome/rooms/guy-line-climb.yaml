@@ -1,19 +1,73 @@
 # Guy Line Climb sensor node — trigger map from triggers.json
+# REAL ROOM BOX (2026-08-20): LD2410C -> tripwire -> ImageEnhancement + DMX
+# out. **The box arrived on the bench with a XIAO ESP32-C6, not the fleet's
+# S3** — flashed as-is on hardware_c6.yaml. NO AUDIO on this board (no PSRAM;
+# audio_s3.yaml can't run), so the room has no node speaker and no entry in
+# node_audio_config.json. If the board is swapped for an S3: platform back to
+# hardware_s3.yaml, drop the C6 pin/uart overrides below, add
+# audio: audio_s3.yaml + the node_audio_config.json entry, and re-do the RUT
+# reservation (new MAC).
+# BENCH-VALIDATED same day: PHYSICAL radar entry (boot trip + re-trip 12 s
+# after a forced vacate) -> room_entry/ImageEnhancement in telemetry, vacate
+# -> room_vacated; module took the boot gate programming (read back over the
+# native API: timeout 5 / move 5 / still 6); ArtDMX ~1316 frames/min
+# signal=yes on uart1/GPIO23; Lightning fired at the room; OTA via the
+# Pi tunnel = this INFO flip. On-site: re-check gates at the 3.70 m mount.
+# Radar mounts at the TOP of the shaft pointed straight down (3.70 m above
+# the floor, room-node-wiring-guide.md): the cone covers the whole floor and
+# catches someone at the bottom however they arrived — doorway, ropes, or
+# scaffolding. GATES WIDENED for that mount (defaults 2/3 reach only 2.25 m
+# and would miss a walker at the floor): move gate 5 ~= 3.75 m spans the full
+# shaft, still gate 6 holds someone flat at the floor edge. Downward past the
+# floor is ground, not another bay, so the wide gates don't leak into
+# neighbours. Re-check numbers at the real mount.
+# To run this room in the sim again: platform back to sim_host.yaml, drop
+# radar/dmx/external_components/wifi/sensor/logger and the C6 pin/uart
+# substitutions (tripwire stays — harness trip/vacate drives it on the host
+# platform).
 substitutions:
   node_name: lohp-node-guy-line-climb
   room: "Guy Line Climb"
   effect: "ImageEnhancement"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.252.231
+  server_host: "192.168.252.231"   # the server Pi (maze-network.md)
   api_port: "6064"
-  host_mac: "06:35:69:00:00:04"
+  host_mac: "06:35:69:00:00:04"    # sim-only (sim_host.yaml); unused on hardware
+  ld2410_max_move_gate: "5"        # 3.75 m — top-down mount, floor at 3.70 m
+  ld2410_max_still_gate: "6"
+  # C6 overrides (hardware_c6.yaml pin map; wiring stays at Dx positions):
+  radar_tx_pin: GPIO16             # D6 -> radar Rx
+  radar_rx_pin: GPIO17             # D7 <- radar Tx
+  dmx_tx_pin: "23"                 # D5, radar room (dmx-over-wifi.md)
+  dmx_uart: "1"                    # C6 has no UART2; radar auto-assigns UART0
 
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
-  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
+  radar: !include ../packages/ld2410.yaml
+  dmx: !include ../packages/dmx_out.yaml
+  platform: !include ../packages/hardware_c6.yaml
 
-# FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "6"   # D5, radar room
-#   packages:           radar: !include ../packages/ld2410.yaml
-#                       dmx: !include ../packages/dmx_out.yaml
-#   external_components: [{source: {type: local, path: ../components}}]
+external_components:   # for dmx_out.yaml — path is main-config-relative
+  - source:
+      type: local
+      path: ../components
+
+# Joins LOHP-ESP (rooms/secrets.yaml, post-cutover 2026-08-10 creds). No bssid
+# pin and no fast_connect: single-AP LAN, and fast_connect + audio firmware
+# caused WPA handshake loops on the Cop Dodge box (07-25). Keep the rescue AP.
+wifi:
+  ap:
+    ssid: "LoHP-GuyLine"
+    password: "hiddenplaya"
+
+# On-playa diagnostics habit (bench-xiao-s3.yaml): RSSI visible from the server.
+sensor:
+  - platform: wifi_signal
+    name: "${room} node RSSI"
+    update_interval: 30s
+
+# Room live-verified 2026-08-20 -> back at INFO (logic.yaml default). DEBUG
+# was the bring-up setting; LD2410 frame spam at DEBUG also costs main-loop
+# time.
+logger:
+  level: INFO

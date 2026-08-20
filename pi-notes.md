@@ -101,8 +101,8 @@ http://lohp-server.local:5002/theme/<lava|jungle|temple>` (the sim Floor button
 does this for you), and the renderer remembers its last theme in
 `/home/dietpi/lohp-server/.floor_theme` — restarts and power cycles come back
 showing whatever was last playing (`--theme` in the unit is first-boot only).
-Flip `--source demo` to `--source esphome --node <cuddle-node>` in the unit
-file once the LD2450 is wired (hardware day).
+Production uses `--source esphome --node 192.168.252.67 --node-port 6067`
+so the floor follows the Cuddle LD2450 instead of demo walkers.
 Content plans: `wiring-guides/cuddle-lava-plan.md`,
 `wiring-guides/cuddle-jungle-plan.md`, `wiring-guides/cuddle-temple-plan.md`.
 

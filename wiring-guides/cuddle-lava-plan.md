@@ -105,8 +105,7 @@ positions in world meters; output is an RGB frame plus a JSON-able state dict.
     works TODAY with no sensor)
   - `--source esphome` — aioesphomeapi subscription to the cuddle node's
     LD2450 target entities (node live 2026-08-20, LD2450 on D2/D3 as built,
-    target_N_x/y streaming — source itself still unproven against the real
-    node until the projector rig day)
+    target_N_x/y streaming; production uses port 6067 on 192.168.252.67)
 
 ## Rollout
 
@@ -119,8 +118,8 @@ positions in world meters; output is an RGB frame plus a JSON-able state dict.
    reboot — then venv + unit), deploy, demo mode on the real projector.
 4. Hardware day: LD2450 into the cuddle node (`packages/ld2450.yaml` — since
    2026-08-20 it is the room's ONLY radar and carries presence too; the
-   LD2410C is gone from that box), flip the service to `--source esphome`,
-   tune stone count/cooldowns + the detection zone on the real deck.
+   LD2410C is gone from that box), service runs `--source esphome`, tune stone
+   count/cooldowns + the detection zone on the real deck.
 
 ## Sound and room light (2026-07-30)
 

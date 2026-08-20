@@ -1,0 +1,33 @@
+# Real-node platform: Seeed XIAO ESP32-C6 — NOT the fleet standard (that's
+# hardware_s3.yaml, chosen for PSRAM audio). This package exists because the
+# Guy Line Climb box arrived on the bench 2026-08-20 with a C6 on its USB
+# header. The C6 has NO PSRAM, so the audio_s3.yaml dual-pipeline speaker
+# stack cannot run here — radar/buttons/DMX/API only. To give a C6 room a
+# speaker, swap the board for an S3 and flash with hardware_s3.yaml (and
+# re-do the room's RUT DHCP reservation: new board = new MAC).
+#
+# XIAO pin-position note (wiring guides are keyed to Dx positions) — C6 map:
+#   D0=GPIO0  D1=GPIO1  D2=GPIO2  D3=GPIO21  D4=GPIO22  D5=GPIO23
+#   D6=GPIO16 D7=GPIO17 D8=GPIO19 D9=GPIO20  D10=GPIO18
+# Rooms flashing this platform must override the S3-default substitutions:
+#   radar D6/D7:  radar_tx_pin: GPIO16 / radar_rx_pin: GPIO17 (ld2410.yaml)
+#   DMX TX D5:    dmx_tx_pin: "23", and dmx_uart: "1" — the C6 has no UART2
+#   button D1:    button_pin: GPIO1
+esp32:
+  board: seeed_xiao_esp32c6
+  framework:
+    type: esp-idf
+
+# The C6's chip-default UART0 pins are GPIO16/17 — exactly the D6/D7 radar
+# wiring — so pin the logger to USB-JTAG explicitly rather than trusting the
+# default; a UART0 logger here would drive the radar lines.
+logger:
+  hardware_uart: USB_SERIAL_JTAG
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none   # keeps draw above power-bank auto-off thresholds
+
+ota:
+  - platform: esphome

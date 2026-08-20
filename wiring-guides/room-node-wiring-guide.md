@@ -128,6 +128,16 @@ recipe above: D6/D7, DMX TX on D5. VMM additionally carries the 4 march-game
 buttons on D0–D3 through port A pins 3–6 (2026-08-16 — the wireless puck
 design is dead; `game_moop.yaml`, pod recipe in `db9-field-wiring.md`).
 
+**Guy Line AS BUILT 2026-08-20: the box carries a XIAO ESP32-C6, not the
+fleet's S3.** Wiring positions are unchanged (radar D6/D7, DMX TX D5) but the
+GPIO numbers differ — firmware follows the hardware via
+`packages/hardware_c6.yaml` (full C6 pin map in its header; radar =
+GPIO16/17, DMX TX = GPIO23 on uart1). The C6 has no PSRAM, so **this box has
+no speaker** until the board is swapped for an S3 (swap = reflash on
+hardware_s3.yaml + new MAC -> re-do the RUT reservation). Guy Line's radar
+gates are widened for the 3.70 m top-down mount: move 5 / still 6 (defaults
+would miss a walker at the floor).
+
 ## LD2450 tracking radar (Cuddle only — the room's ONE radar since 2026-08-20)
 
 Cuddle consolidated to the LD2450 alone (Tim, 2026-08-20): it does presence

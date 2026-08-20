@@ -8,7 +8,7 @@ framebuffer is the more playa-robust path anyway.
     python projection_renderer.py --source demo             # phantom walkers
     python projection_renderer.py --theme jungle            # snakes in the undergrowth
     python projection_renderer.py --source esphome \
-        --node 192.168.252.x [--api-key ...]                # real LD2450
+        --node 192.168.252.x --node-port 6067 [--api-key ...]  # real LD2450
     python projection_renderer.py --windowed                # desktop debug (pygame)
 
 Same engine as the sim (projection_engine.py); only the track source and the
@@ -103,13 +103,13 @@ class EsphomeTracks:
     Runs aioesphomeapi in a background thread; tracks() returns the latest.
     UNTESTED until the sensor exists — see the module docstring."""
 
-    def __init__(self, layout, node, api_key='', invert_x=False):
+    def __init__(self, layout, node, port=6053, api_key='', invert_x=False):
         t = layout['projection']['tracker']
         self.pos = t['pos']
         yaw = math.radians(t.get('yaw_deg', 0))
         self.rot = (math.sin(yaw), math.cos(yaw))
         self.invert = -1.0 if invert_x else 1.0
-        self.node, self.api_key = node, api_key
+        self.node, self.port, self.api_key = node, int(port), api_key
         self._lock = threading.Lock()
         self._raw = {}    # entity key -> value (mm)
         self._names = {}  # entity key -> object_id
@@ -120,7 +120,7 @@ class EsphomeTracks:
         import aioesphomeapi
 
         async def go():
-            cli = aioesphomeapi.APIClient(self.node, 6053, None, noise_psk=self.api_key or None)
+            cli = aioesphomeapi.APIClient(self.node, self.port, None, noise_psk=self.api_key or None)
             await cli.connect(login=True)
             entities = (await cli.list_entities_services())[0]
             for e in entities:
@@ -138,7 +138,7 @@ class EsphomeTracks:
             try:
                 asyncio.run(go())
             except Exception as e:
-                print(f"esphome source: {e}; retrying in 5 s", file=sys.stderr)
+                print(f"esphome source {self.node}:{self.port}: {e}; retrying in 5 s", file=sys.stderr)
                 time.sleep(5)
 
     def tracks(self, dt, engine):
@@ -401,7 +401,8 @@ def main():
     ap.add_argument('--ctl-port', type=int, default=5002,
                     help='HTTP theme control port (GET/POST /theme); 0 disables')
     ap.add_argument('--source', choices=['demo', 'esphome'], default='demo')
-    ap.add_argument('--node', default='', help='esphome: cuddle node host/IP')
+    ap.add_argument('--node', default='', help='esphome: cuddle node host/IP, optionally host:port')
+    ap.add_argument('--node-port', type=int, default=6053, help='esphome native API port')
     ap.add_argument('--api-key', default='', help='esphome: noise PSK if set')
     ap.add_argument('--invert-x', action='store_true')
     ap.add_argument('--server-url',
@@ -433,7 +434,15 @@ def main():
     if args.source == 'esphome':
         if not args.node:
             ap.error('--source esphome needs --node')
-        source = EsphomeTracks(layout, args.node, args.api_key, args.invert_x)
+        node = args.node
+        port = args.node_port
+        if ':' in node and node.count(':') == 1:
+            node, port_s = node.rsplit(':', 1)
+            try:
+                port = int(port_s)
+            except ValueError:
+                ap.error('--node host:port has a non-numeric port')
+        source = EsphomeTracks(layout, node, port, args.api_key, args.invert_x)
     else:
         source = DemoTracks(layout)
 
@@ -468,7 +477,13 @@ def main():
                         f.write(want)
                 except OSError:
                     pass
-            engine.set_tracks(source.tracks(dt, engine))
+            tracks = source.tracks(dt, engine)
+            if args.source == 'esphome':
+                # Production guard: the LD2450 may report clutter outside the
+                # projected floor. Only on-deck targets should wake or drive
+                # the Cuddle floor show.
+                tracks = [tr for tr in tracks if engine._on_deck(tr['x'], tr['z'])]
+            engine.set_tracks(tracks)
             engine.step(dt)
             if reporter is not None:
                 # one cursor per engine: a theme switch must not replay (or

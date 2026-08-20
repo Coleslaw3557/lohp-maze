@@ -63,6 +63,11 @@ substitutions:
   ld2410_module_timeout_s: "5"
   ld2410_max_move_gate: "2"
   ld2410_max_still_gate: "3"
+  # Radar UART sits at Dx positions D6/D7 fleet-wide; the GPIO numbers differ
+  # per XIAO chip. Defaults = S3 (the fleet standard); a C6 box overrides to
+  # GPIO16/GPIO17 (hardware_c6.yaml has the full map).
+  radar_tx_pin: GPIO43   # D6 -> radar Rx
+  radar_rx_pin: GPIO44   # D7 <- radar Tx
 
 esphome:
   on_boot:
@@ -82,8 +87,8 @@ esphome:
 
 uart:
   id: radar_uart
-  tx_pin: GPIO43
-  rx_pin: GPIO44
+  tx_pin: ${radar_tx_pin}
+  rx_pin: ${radar_rx_pin}
   baud_rate: 256000
 
 ld2410:
