@@ -539,20 +539,13 @@
             "volume": 0.8
         },
         "Cuddle-Lava-Ambient": {
-            "_comment": "LAVA floor theme: ambient one-shots at random intervals while the show is up (floor_show_manager THEME_SHOWS ambient, Tim 2026-08-01) — texture between the engine-event accents above, so same pool but quieter and uniform. Evening add (Tim): the seven hell rumbles deepen the low end (volcano_rumble moved to the BED pool 2026-08-01 — 21.9s is ambiance, not a one-shot).",
+            "_comment": "LAVA floor theme: ambient one-shots at random intervals while the show is up (floor_show_manager THEME_SHOWS ambient, Tim 2026-08-01) — texture between the engine-event accents above, so same pool but quieter and uniform. The seven hell_rumbles (evening add 2026-08-01) were REMOVED by Tim 2026-08-20: 60-94% of their energy sits below 150 Hz, which the Pebbles can't reproduce — on the real node speaker the audible remainder is a burst of static (live-confirmed on the Cuddle box; don't re-add for node playback). Files stay in uploads/Lava for any future full-range speaker. (volcano_rumble moved to the BED pool 2026-08-01 — 21.9s is ambiance, not a one-shot.)",
             "audio_files": [
                 "uploads/Lava/lava1.wav",
                 "uploads/Lava/lava2.wav",
                 "uploads/Lava/lava3.wav",
                 "uploads/Lava/lava4.wav",
-                "uploads/Lava/lava5.wav",
-                "uploads/Lava/hell_rumbles_01.wav",
-                "uploads/Lava/hell_rumbles_02.wav",
-                "uploads/Lava/hell_rumbles_03.wav",
-                "uploads/Lava/hell_rumbles_04.wav",
-                "uploads/Lava/hell_rumbles_05.wav",
-                "uploads/Lava/hell_rumbles_06.wav",
-                "uploads/Lava/hell_rumbles_07.wav"
+                "uploads/Lava/lava5.wav"
             ],
             "volume": 0.42
         },
