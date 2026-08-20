@@ -76,7 +76,7 @@ Constraints this plan is built around (decided 2026-07-17):
 |---|---|---|---|---|---|
 | Monkey / Temple / NFM / Cop Dodge / Gate | ground | LD2410C | +124° (into the room, at the far back corner) | 10° | move gate 2, still gate 3 |
 | Bike Lock / Deep Playa / Photo Bomb / Porto / Sparkle | upper | LD2410C | −124° (mirrored) | 5° | move gate 2, still gate 3 |
-| Cuddle Cross (hex back corner, 1.5 m) | upper | LD2410C | 0° (across the deck at the front corner) | 0° | gate 4, 3.0 m |
+| Cuddle Cross (hex back corner, 1.5 m) | upper | LD2450 | 0° (across the deck at the front corner) | 0° | detection zone to 3.0 m |
 | Entrance (back leg) | ground | TOF200C | −18° (out through the START arch) | 10° | range gate 2.1 m |
 | Exit (back leg) | ground | TOF200C | +18° (out through the FINISH arch) | 10° | range gate 2.1 m |
 | Guy Line Climb (**top of the room**, 3.70 m, centred on the entry face) | ground | LD2410C | n/a — pointed straight down | 90° | 1.93 m (floor footprint) |
@@ -136,8 +136,8 @@ immediately declared gone. If a room misses legitimate entries in testing, raise
 moving to gate 3 for that room only rather than broadening the whole fleet.
 Absence timeout: 5 s standard; 60 s on dwell rooms (No Friends Monday,
 Cuddle Cross) — this is the `absence_timeout` substitution the room's yaml
-passes to packages/ld2410.yaml, and it sets how long after the last
-detection the room reports a leave. Rooms with audible leave/send-off sounds
+passes to packages/ld2410.yaml (Cuddle: packages/ld2450.yaml), and it sets how
+long after the last detection the room reports a leave. Rooms with audible leave/send-off sounds
 use a fast leave profile (`ld2410_module_timeout_s: "1"`, `absence_timeout:
 0s`) so the sound lands close to the visitor's actual exit.
 Upper-floor variant: 5° tilt (keeps the lobe off the plywood deck — radar sees
@@ -148,7 +148,7 @@ than full-room diagonal coverage.
 
 | Room | Mount | Notes |
 |---|---|---|
-| **Cuddle Cross** | Back-corner frame pair (the skinned faces' shared corner), 1.5 m above deck, aimed at the front corner across the deck | Max gate 4 (3.0 m = front corner; street crowd beyond and below). The 20 ft center mast sits dead-center at gate 2 — constant static reflector, so gate-2 still threshold gets set *above* its measured energy in the mock pass. Timeout 60 s+: sustained still presence = cuddling, the effect hook this room actually wants. |
+| **Cuddle Cross** | Back-corner frame pair (the skinned faces' shared corner), 1.5 m above deck, aimed at the front corner across the deck | **LD2450 only since 2026-08-20** (Tim's consolidation — the LD2410C left the box; one radar does presence AND the projection/orb tracks, `packages/ld2450.yaml`). Range containment is the module's rectangular detection zone, programmed at boot to y 0–3.0 m (front corner; street crowd beyond and below) — no distance gates on this part. The 20 ft center mast mid-beam is static clutter a tracker never reports, so the old gate-2 threshold dance is moot. Timeout 60 s (module presence timeout + `absence_timeout`): the tracker WILL drop a perfectly still person eventually, and the timers are what keep that dropout from reading as a leave. |
 | **Entrance / Exit (hex)** | Node box on the back leg, **TOF200C inside the box** firing out through the START/FINISH arch (azimuth ∓18°, ~1.9 m to the arch, range gate 2.1 m) | **Radar was tried and rejected here 2026-07-30 — don't re-propose it.** It needs a foil layer behind the shared divider (bare ply passes 24 GHz, and no range gate separates the halves: the box is 1.26 m from the divider but its own far corner is 1.90 m out, so next door at 1.26–2.94 m overlaps its own room, with gates quantised at 0.75 m). Tim ruled the foil out, so this stays one-sided ToF: no cross-doorway alignment, empty = no return past the gate, street crowd beyond the arch sits past the 2.1 m threshold. The 27° cone is ~0.9 m wide at the arch — full coverage of the 0.8 m opening. Exit's cone also catches arrival from No Friends Monday, preserving the old entry-trigger timing. |
 | **Guy Line Climb / Vertical Moop March** | Box at the **top of the room, pointed straight down** (tilt 90°, 360° floor footprint, 1.93 m reach), centred on the entry face. Guy Line at 3.70 m; VMM at 1.80 m above the level-1 deck. **LD2410C radar.** | Tim's call 2026-07-30, and it sets the requirement: the ropes go in all directions and can't be arranged predictably, people arrive at the bottom either through the doorway or by climbing down the ropes or the scaffolding, and **the sensor needs to see them when they are at the bottom**. Top-of-room-pointed-down is the only placement that satisfies that — a doorway tripwire misses anyone who came down from above, and any horizontal beam can be stood beside. From 3.70 m the radar's cone covers the whole 2.13 × 1.52 m footprint, and a body on the deck is a large reflector against a known floor return. Practical note for whoever reflashes Guy Line: its box is 3.70 m up. VMM's is 1.80 m above the upper deck, hand-reachable. |
 | **Monkey Room** | Standard bay box + 2-wire run to the puzzle microswitch (GPIO3/GND, contract already in `packages/button_gpio_c3.example.yaml`) | Radar entry gets enabled only when a doorway effect is designed (placeholder was removed); the node + button ship regardless. |
@@ -156,18 +156,21 @@ than full-room diagonal coverage.
 
 ## Sensor allocation
 
-**15 positions, 2 sensor types** (settled 2026-07-30): **13 LD2410C** — the 10
-wing bays + Cuddle Cross + the two shafts (Guy Line, VMM) — and **2 TOF200C**,
-Entrance and Exit. Temple / Monkey / VMM / Exit doorway effects are still unwired
+**15 positions, 3 sensor types** (radar/ToF split settled 2026-07-30; Cuddle
+consolidated 2026-08-20): **12 LD2410C** — the 10 wing bays + the two shafts
+(Guy Line, VMM) — **1 LD2450** (Cuddle Cross: the projection-tracking radar is
+also the presence radar), and **2 TOF200C**, Entrance and Exit. Temple / Monkey / VMM / Exit doorway effects are still unwired
 (placeholders removed 2026-07-17), so **11 radar + 1 ToF covers every live
 trigger** and the four unwired rooms join as their effects get designed. The
 TOF200C modules are on hand; the TOF050C ones Tim also has are too short (0.5 m)
 to use from the back leg.
 
-Firmware pairs with this: `packages/ld2410.yaml` (radar) and `packages/tof.yaml`
-(Entrance/Exit) both feed `packages/tripwire.yaml`, but only radar rooms use
-both halves of the occupancy contract. Radar: enter on a moving-target edge,
-leave after `absence_timeout` with no target at all. ToF: enter when the range
+Firmware pairs with this: `packages/ld2410.yaml` (radar), `packages/ld2450.yaml`
+(Cuddle — same two-edge contract off the same-named outputs) and
+`packages/tof.yaml` (Entrance/Exit) all feed `packages/tripwire.yaml`, but only
+radar rooms use both halves of the occupancy contract. Radar: enter on a
+moving-target edge, leave after `absence_timeout` with no target at all. ToF:
+enter when the range
 drops inside the gate, then re-arm after the beam has been clear for the
 timeout; it does **not** call room-vacated, because left-the-beam is not the
 same as left-the-room. Absence timeout is **5 s standard, 60 s on the dwell

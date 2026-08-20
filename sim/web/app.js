@@ -1944,8 +1944,10 @@ function buildSensors(cfg) {
       }
       sensor.meshes.push(beam);
     } else if ((geo.kind === 'radar' || geo.kind === 'tof') && geo.pos) {
-      // Zone sensor firing from the room's node box: 13 rooms carry an LD2410C
-      // presence radar, Entrance and Exit a TOF200C ToF (they cannot use radar —
+      // Zone sensor firing from the room's node box: 12 rooms carry an LD2410C
+      // presence radar, Cuddle Cross an LD2450 tracker (sole radar there since
+      // 2026-08-20 — same wedge, presence + projection tracks), and
+      // Entrance and Exit a TOF200C ToF (they cannot use radar —
       // it would see through their shared divider, and the foil fix was ruled out
       // 2026-07-30). Horizontal wedge = detection footprint (range/fov/clip),
       // boresight line = exact aim (yaw + down-tilt).
@@ -2015,7 +2017,7 @@ function buildSensors(cfg) {
       && (trig.action.data || {}).effect_name === 'Lightning';
     b.textContent = trig.name + (isPlaceholder ? ' ⚠' : '');
     b.title = `${trig.type} → ${JSON.stringify(trig.action.data)}`
-      + (sensor.zone ? `\n${geo.kind === 'radar' ? 'LD2410C radar' : 'TOF200C ToF'} ${(geo.tilt_deg || 0) <= -85
+      + (sensor.zone ? `\n${geo.kind === 'radar' ? (trig.room === 'Cuddle Cross' ? 'LD2450 radar' : 'LD2410C radar') : 'TOF200C ToF'} ${(geo.tilt_deg || 0) <= -85
         ? `at the top of ${trig.room}, pointed straight down`
         : `in the ${trig.room} node box`} — yaw ${sensor.zone.yaw}°, `
         + `tilt ${geo.tilt_deg || 0}°, fov ${sensor.zone.fov}°, reach ${sensor.zone.range} m` : '')
@@ -2421,7 +2423,9 @@ function buildProjection(cfg) {
     yProj - bh / 2,
     P.projector.pos[1] + fwd[1] * lensAhead);
 
-  // LD2450 tracker wedge — faint blue, just under the LD2410 trigger wedge
+  // LD2450 tracker wedge — faint blue, just under the room trigger wedge
+  // (since 2026-08-20 both wedges are the SAME physical LD2450; the trigger
+  // wedge draws from `sensors`, this one from projection.tracker)
   const T = P.tracker;
   const fovR = (T.fov_deg || 120) * Math.PI / 180;
   const wedge = new THREE.Mesh(

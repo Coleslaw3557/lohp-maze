@@ -1,0 +1,150 @@
+# LD2450 tracking radar -> occupancy pair + projection tracks. CUDDLE CROSS ONLY.
+#
+# 2026-08-20 (Tim): Cuddle consolidates to the LD2450 ALONE — the LD2410C is
+# out of that box (reverses the 2026-07-18 "keep both" call). "Cuddle" is just
+# the room's name, not a still-presence detection requirement; the one thing
+# the 2410C did better (holding a perfectly still person) is bridged by timers:
+# the module's own presence timeout plus the 60s `absence_timeout` delayed_off
+# this room already ran. A statue-still visitor can drop off the tracker for
+# that long without the room reporting a leave.
+#
+# HARDWARE-FLASH package (like ld2410.yaml): real S3 builds only — the host
+# platform has no UART; the sim room drives the same two scripts through the
+# `trip` / `vacate` api actions instead. UNTESTED until Cuddle's bench day.
+#
+#   packages:
+#     radar: !include ../packages/ld2450.yaml   # alongside tripwire.yaml
+#   substitutions:
+#     absence_timeout: 60s
+#
+# Wiring (room-node-wiring-guide.md): STANDARD radar position, same as every
+# other radar room now that the 2410C is gone — radar Tx -> D7/GPIO44 (node RX),
+# radar Rx <- D6/GPIO43 (node TX), VCC <- 5V rail. Hi-Link manual: UART 256000
+# 8N1, 3.3V logic. D2/D3 are free again (the old second-radar UART1 plan).
+#
+# Same two-edge contract as ld2410.yaml, off the same-named outputs:
+#
+#   ENTER = has_moving_target rising edge -> pulses the shared tripwire.
+#     A person walking in is always moving; furniture can't produce it.
+#
+#   LEAVE = has_target falling edge, after `absence_timeout` of nothing.
+#     has_target covers moving OR still targets. The 2450 WILL eventually
+#     drop a perfectly still person (it's a tracker, not a still-energy
+#     radar) — the module presence timeout + delayed_off below are what
+#     turn that dropout into "no leave unless they're gone a while".
+#
+# Range containment: the 2450 has no distance gates; it has a programmable
+# rectangular DETECTION ZONE (targets outside it are ignored by the module).
+# Boot programs zone 1 to the deck: y 0..3.0 m (front corner; street crowd
+# beyond), x full width. The 20 ft center mast at ~1.5 m is static clutter a
+# tracker never reports — no threshold dance needed. Tune on the mock pass;
+# the module's Bluetooth is left ON so HLKRadarTool can watch live targets
+# during cal (same idea as the Porto knock cal).
+#
+# Multi-target stays ON: the floor projection wants up to 3 walkers.
+# Target 1-3 X/Y sensor names are PINNED by projection_renderer.py
+# (`--source esphome` matches object_id `target_N_x`/`target_N_y`, mm,
+# 0,0 = absent) — do not rename or room-prefix them.
+
+substitutions:
+  absence_timeout: 5s            # cuddle-cross.yaml overrides to 60s
+  ld2450_module_timeout_s: "5"   # module-side presence hold before targets clear
+  ld2450_zone_x1: "-3000"        # detection zone, mm, sensor frame:
+  ld2450_zone_y1: "0"            #  x lateral (+right facing out), y forward
+  ld2450_zone_x2: "3000"
+  ld2450_zone_y2: "3000"         # 3.0 m = the front corner across the deck
+
+esphome:
+  on_boot:
+    priority: -100
+    then:
+      # Program the radar module itself, not just the ESPHome-side debounce
+      # (same idiom as ld2410.yaml's gate programming — reflash = full config).
+      - number.set:
+          id: radar_module_timeout
+          value: ${ld2450_module_timeout_s}
+      - switch.turn_on: radar_multi_target
+      - select.set:
+          id: radar_zone_type
+          option: "Detection"
+      - number.set:
+          id: radar_zone_x1
+          value: ${ld2450_zone_x1}
+      - number.set:
+          id: radar_zone_y1
+          value: ${ld2450_zone_y1}
+      - number.set:
+          id: radar_zone_x2
+          value: ${ld2450_zone_x2}
+      - number.set:
+          id: radar_zone_y2
+          value: ${ld2450_zone_y2}
+
+uart:
+  id: radar_uart
+  tx_pin: GPIO43
+  rx_pin: GPIO44
+  baud_rate: 256000
+
+ld2450:
+  id: cuddle_radar
+  uart_id: radar_uart
+  throttle: 100ms   # track feed rate; the projection page/engine adds its own
+                    #  150 ms first-order lag, so faster than this buys nothing
+
+number:
+  - platform: ld2450
+    presence_timeout:
+      id: radar_module_timeout
+      name: "${room} radar module timeout"
+    zone_1:
+      x1: { id: radar_zone_x1, name: "${room} zone x1" }
+      y1: { id: radar_zone_y1, name: "${room} zone y1" }
+      x2: { id: radar_zone_x2, name: "${room} zone x2" }
+      y2: { id: radar_zone_y2, name: "${room} zone y2" }
+
+select:
+  - platform: ld2450
+    zone_type:
+      id: radar_zone_type
+      name: "${room} zone type"
+
+switch:
+  - platform: ld2450
+    multi_target:
+      id: radar_multi_target
+      name: "${room} multi target"
+
+binary_sensor:
+  - platform: ld2450
+    has_target:
+      name: "${room} radar presence"
+      id: radar_presence
+      filters:
+        - delayed_off: ${absence_timeout}
+      on_release:
+        then:
+          - script.execute: room_vacated
+    has_moving_target:
+      name: "${room} radar moving"
+      on_press:
+        then:
+          - binary_sensor.template.publish:
+              id: tripwire
+              state: ON
+          - delay: 250ms
+          - binary_sensor.template.publish:
+              id: tripwire
+              state: OFF
+
+sensor:
+  - platform: ld2450
+    target_1:
+      x: { name: "Target 1 X" }   # object_id target_1_x — pinned, see header
+      y: { name: "Target 1 Y" }
+    target_2:
+      x: { name: "Target 2 X" }
+      y: { name: "Target 2 Y" }
+    target_3:
+      x: { name: "Target 3 X" }
+      y: { name: "Target 3 Y" }

@@ -104,8 +104,8 @@ positions in world meters; output is an RGB frame plus a JSON-able state dict.
   - `--source demo` — phantom walkers wander the deck (bench/attract mode,
     works TODAY with no sensor)
   - `--source esphome` — aioesphomeapi subscription to the cuddle node's
-    LD2450 target entities (UNTESTED until the LD2450 is wired into the node
-    UART1 on hardware day)
+    LD2450 target entities (UNTESTED until the LD2450 is wired into the node's
+    radar UART, D6/D7, on hardware day)
 
 ## Rollout
 
@@ -116,9 +116,10 @@ positions in world meters; output is an RGB frame plus a JSON-able state dict.
 3. Pi: `tools/rpi-projection-setup.sh` (since 2026-07-23 this configures the
    LEGACY display stack: grid-sized firmware framebuffer + GPU scaler — one
    reboot — then venv + unit), deploy, demo mode on the real projector.
-4. Hardware day: LD2450 into the cuddle node (ESPHome `ld2450` component),
-   flip the service to `--source esphome`, tune stone count/cooldowns on the
-   real deck.
+4. Hardware day: LD2450 into the cuddle node (`packages/ld2450.yaml` — since
+   2026-08-20 it is the room's ONLY radar and carries presence too; the
+   LD2410C is gone from that box), flip the service to `--source esphome`,
+   tune stone count/cooldowns + the detection zone on the real deck.
 
 ## Sound and room light (2026-07-30)
 

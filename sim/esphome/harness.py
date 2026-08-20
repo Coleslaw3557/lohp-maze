@@ -8,7 +8,8 @@ template binary_sensor or runs the matching script — the node firmware then ru
 its real automation (debounce -> HTTP POST to the LoHP server), exactly as a
 physical sensor event would.
 
-On real radar hardware both edges come off the room's LD2410C: enter on a
+On real radar hardware both edges come off the room's radar (LD2410C; Cuddle's
+LD2450 exposes the same two outputs): enter on a
 moving target, leave after `absence_timeout` with no target at all. Entrance and
 Exit ToF hardware only trips; beam clear does not vacate the room. `visit`
 replays the full occupancy shape for radar rooms.

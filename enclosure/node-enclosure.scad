@@ -18,9 +18,10 @@
 // outline), back etch OUT. Burn the sheet as imported — etch face up.
 //
 // Holds the standard node build: XIAO ESP32-S3 + PCM5102A DAC + the room's
-// ranging sensor(s) against the window (LD2410C in 13 rooms, TOF200C in
-// Entrance/Exit, Cuddle's
-// 2410C+2450 pair — the pair needs the WIDER aperture: cuddle=true below;
+// ranging sensor(s) against the window (LD2410C in 12 rooms, TOF200C in
+// Entrance/Exit, Cuddle's single LD2450 — the 2410C left that box
+// 2026-08-20 (tracking radar does presence too), so the aperture is back
+// to standard width and only the window ETCH differs: cuddle=true below;
 // export.py emits both jobs). A THIRD variant (sign=true, 07-29) is the
 // CAMP SIGN controller box: same shell, sign parts only — XIAO S3 +
 // MAX485 (DMX IN fallback) + 74AHCT125 (3x pixel data) + 12->5V buck;
@@ -69,7 +70,10 @@
 //   part="3d" is the glued-up assembly preview.
 
 part = "3d";     // front|back|left|right|floor|lid|window|sheet|3d
-cuddle = false;  // true = Cuddle's wide-aperture one-off (2450 + 2410C)
+cuddle = false;  // true = Cuddle's one-off: LD2450 alone since 2026-08-20
+                 //  (was 2450+2410C wide-aperture; the 2410C is dropped —
+                 //  presence now derives from the 2450). Same box as
+                 //  standard; only the window-panel etch differs.
 sign = false;    // true = the CAMP SIGN controller box (one-off, 07-29):
                  //  same shell + joinery, sign port set — no sensor
                  //  window/acrylic, no DB9, no DAC/AUX, no strap slots
@@ -144,7 +148,8 @@ xiao_cy = (D - 2*t)/2 - 18;     //  end, +2 past the PCB -> that END butts the
                                 //  the tab seams at the joint line the
                                 //  board up on the bench
 ld2410_w = 22.14; ld2410_h = 16;   // radar, sensor side faces the window
-ld2450_w = 44.12; ld2450_h = 15.4; // Cuddle's second radar
+ld2450_w = 44.12; ld2450_h = 15.4; // Cuddle's radar (tracking + presence;
+                                   //  sole radar there since 2026-08-20)
 rs485_l = 49.22; rs485_w = 14.05;  // MAX485 breakout — the room's DMX
                                    //  driver. RECEIVED batch 2026-07-23 =
                                    //  the screw-terminal variant: the A/B
@@ -227,9 +232,13 @@ btn_cx = 45; btn_cz = t + 10;//  BTF 3-pin threads out to the LIT arcade
                              //  (main.py SIGN_STORM_COOLDOWN_S)
 
 // ---- features ----------------------------------------------------------
-win_w = cuddle ? 68 : 56;         // aperture (68 fits 2450+2410C side by side)
+win_w = 56;                       // aperture — standard for ALL rooms since
+                                  //  2026-08-20: Cuddle's lone LD2450 (44.12
+                                  //  wide) fits; the 68 was only for the
+                                  //  retired 2450+2410C pair
 win_h = 24;  win_cz = t + 17;     // aperture center height
-panel_w = cuddle ? 82 : 70;  panel_h = 32;   // acrylic window panel
+panel_w = 70;  panel_h = 32;      // acrylic window panel (Cuddle rejoined
+                                  //  the standard panel size 2026-08-20)
 // window screws: 2x M2 self-tap ON THE MIDLINE near the panel ends — never
 // the corners (corner screws leave <1mm acrylic web -> CRACKS). No etched
 // positions; drill 2mm pilots through acrylic + ply on the bench
@@ -599,12 +608,10 @@ module panel_window() difference() {             // cut this one in acrylic
 module window_etch() {
   // sensor footprints: the sensor VHBs to THIS panel's inner face (tape at
   // the board edges, clear of the antennas), looking out the wall aperture
-  if (cuddle) {                                  // the radar pair, side by side
-    cud_t = ld2450_w + 1 + ld2410_w;
-    translate([(ld2450_w - cud_t)/2, 0]) oline(ld2450_w, ld2450_h);
-    translate([(cud_t - ld2410_w)/2, 0]) oline(ld2410_w, ld2410_h);
+  if (cuddle) {                                  // LD2450 alone (2026-08-20)
+    oline(ld2450_w, ld2450_h);
   } else {
-    oline(ld2410_w, ld2410_h);                   // LD2410C footprint (13 rooms)
+    oline(ld2410_w, ld2410_h);                   // LD2410C footprint (12 rooms)
     oline(16, 16);                               // ToF aperture — Entrance +
   }                                              //  Exit cut this through
 }

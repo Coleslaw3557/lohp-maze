@@ -31,12 +31,12 @@ yellow**, pin 1 = black.
 |---|---|---|
 | D0 | 1 | per-room: buttons / NFM ladder ADC / Porto piezo 1 / **Gate: DMX TX** |
 | D1 | 2 | button contract (Photo Bomb, Monkey) / NFM lamp data / DPH+Bike button 2 / Porto piezo 2 |
-| D2 | 3 | Cuddle: LD2450 (node Tx) / DPH+Bike button 3 / Porto piezo 3 |
-| D3 | 4 | Cuddle: LD2450 (node Rx) / DPH+Bike button 4 |
+| D2 | 3 | DPH+Bike button 3 / Porto piezo 3 |
+| D3 | 4 | DPH+Bike button 4 |
 | D4 | 5 | I2C SDA — TOF200C (Entrance/Exit), MCP23017 (Gate) / DPH button 5 |
 | D5 | 6 | **DMX TX (default)** / I2C SCL in Entrance/Exit + Gate |
-| D6 | 43 | LD2410C Rx (node Tx) — the 13 radar rooms |
-| D7 | 44 | LD2410C Tx (node Rx) / **DMX TX in Entrance + Exit** |
+| D6 | 43 | radar Rx (node Tx) — LD2410C in 12 rooms, Cuddle's LD2450 |
+| D7 | 44 | radar Tx (node Rx) / **DMX TX in Entrance + Exit** |
 | D8 | 7 | I2S BCLK → DAC BCK |
 | D9 | 8 | I2S LRCLK → DAC LCK |
 | D10 | 9 | I2S DOUT → DAC DIN |
@@ -81,7 +81,7 @@ back pads **FLT→L, DEMP→L, XSMT→H, FMT→L**; front pads **SCK→GND**.
 | SCK | no wire (bridged to GND on-board) |
 | 3.5mm jack | line out → Pebble speaker through the AUX hole |
 
-## LD2410C radar (13 rooms — all but Entrance/Exit; Cuddle has a second, the LD2450)
+## LD2410C radar (12 rooms — all but Entrance/Exit and Cuddle, which runs the LD2450)
 
 Hi-Link manual Table 1 pin order **Tx, Rx, OUT, GND, VCC** — wire by the board
 silk. UART 256000 baud 8N1, 3.3V logic, 5V supply (~79 mA).
@@ -128,18 +128,24 @@ recipe above: D6/D7, DMX TX on D5. VMM additionally carries the 4 march-game
 buttons on D0–D3 through port A pins 3–6 (2026-08-16 — the wireless puck
 design is dead; `game_moop.yaml`, pod recipe in `db9-field-wiring.md`).
 
-## LD2450 tracking radar (Cuddle only, second radar)
+## LD2450 tracking radar (Cuddle only — the room's ONE radar since 2026-08-20)
+
+Cuddle consolidated to the LD2450 alone (Tim, 2026-08-20): it does presence
+(same two-edge contract as the LD2410C rooms, `packages/ld2450.yaml`) AND the
+floor-projection / orb-gaze target tracks. With the 2410C gone it takes the
+**standard radar position D6/D7** — the old D2/D3 second-UART plan is dead and
+those pads are free again. Still-target dropout (a tracker losing a statue-still
+person) is bridged by the module presence timeout + the room's 60 s
+`absence_timeout`, not by a second radar.
 
 Hi-Link manual pins **5V, GND, Tx, Rx**. UART 256000 baud, 3.3V logic.
-Dx assignment fixed HERE (the Cuddle ESPHome source isn't written yet —
-keep the yaml matching): node Tx = D2, node Rx = D3.
 
 | LD2450 pin | Wire to |
 |---|---|
 | 5V | 5V rail |
 | GND | GND |
-| Tx | XIAO D3 (GPIO4) |
-| Rx | XIAO D2 (GPIO3) |
+| Tx | XIAO D7 (GPIO44) |
+| Rx | XIAO D6 (GPIO43) |
 
 ## DB9 port A (7 wired rooms; window blanked elsewhere)
 
@@ -209,7 +215,7 @@ notch pointing away, pin 1 is the far-RIGHT leg; paint-mark pin 1 before gluing.
 | Photo Bomb / Monkey | LD2410C + button D1 | D5 | pin 3 |
 | Porto | LD2410C + 3 piezos D0–D2 | D5 | pins 3–5 |
 | Cop Dodge / Sparkle Pony / Temple | LD2410C | D5 | blank |
-| Cuddle Cross | LD2410C + LD2450 (D2/D3) — wide window variant | D5 | blank |
+| Cuddle Cross | LD2450 on D6/D7 (sole radar 2026-08-20) — own window etch | D5 | blank |
 
 Every room: MAX485+XLR (DMX out) and, if it's an audio room, the DAC on
 D8–D10. WiFi antenna stays inside. (2026-08-16: the wireless Moop pucks are

@@ -13,8 +13,10 @@ packages:
   platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
 
 # FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      absence_timeout: 60s   # dwell room: standing still IS the point
-#                       dmx_tx_pin: "6"   # D5, radar pair room
-#   packages:           radar: !include ../packages/ld2410.yaml
+#   substitutions:      absence_timeout: 60s   # dwell room; also bridges LD2450 still-target dropout
+#                       dmx_tx_pin: "6"   # D5, radar room
+#   packages:           radar: !include ../packages/ld2450.yaml   # NOT ld2410 —
+#                         the tracking radar IS the presence radar here
+#                         (2026-08-20 consolidation; D6/D7, standard position)
 #                       dmx: !include ../packages/dmx_out.yaml
 #   external_components: [{source: {type: local, path: ../components}}]

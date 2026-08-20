@@ -21,8 +21,10 @@ demo: two phantom walkers wander the deck, biased toward stones so the
 mischief mechanic fires as an attract loop. Presence never lapses, so the
 show stays on — bench/attract behavior until the LD2450 exists.
 
-esphome: UNTESTED until the LD2450 is wired into the cuddle node's UART1
-(hardware day). Subscribes to the node's `target N x/y` sensors (mm, sensor
+esphome: UNTESTED until the LD2450 is wired into the cuddle node's radar UART
+(D6/D7 — standard position; since 2026-08-20 it is the room's ONLY radar and
+also does presence, sim/esphome/packages/ld2450.yaml). Subscribes to the
+node's `target N x/y` sensors (mm, sensor
 frame) and maps them through the tracker pose in maze_layout.json; flip axes
 with --invert-x if the real mounting disagrees.
 """

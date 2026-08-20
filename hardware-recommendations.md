@@ -66,7 +66,7 @@ only gives you sluggish PIR blobs — skip it.
 | Use case | Primary | Fallback |
 |---|---|---|
 | Doorway crossing (**Entrance/Exit only** — every other room uses radar presence) | **TOF200C ToF (VL53L0X, on hand)**: one-sided "virtual tripwire" on the jamb — beam across at hip height, trigger when range < doorway width. Invisible, eye-safe, nothing to align, I2C straight into the node. Recess it behind a small aperture and threshold generously (e.g. <60cm across a 90cm doorway) so dust-shortened readings don't false-trigger. | IR break-beam pair — Adafruit #2168-style ($6) for narrow dark doorways; industrial M18 through-beam pair (E3F-5DN1, ~$15 with brackets, needs a $1.50 5V→12V boost) where you want modulated, never-think-about-it-again certainty over longer spans. LED cone beam = far more alignment-tolerant than a laser. |
-| Room presence (**13 of 15 rooms**) | **HLK-LD2410C mmWave radar (~$4)**: sees moving *and stationary* people through plastic, so it lives **fully sealed inside the dust-proof box**. Dark-immune, zero alignment. Native ESPHome support. Tune max-gate distance so it doesn't see through thin walls into the next room. | AM312 PIR (~$1.50) where "someone moved, roughly" is enough — degraded on hot afternoons and slow to re-trigger, fine on cool nights. |
+| Room presence (**12 of 15 rooms**; Cuddle's presence comes from its LD2450 tracking radar since 2026-08-20) | **HLK-LD2410C mmWave radar (~$4)**: sees moving *and stationary* people through plastic, so it lives **fully sealed inside the dust-proof box**. Dark-immune, zero alignment. Native ESPHome support. Tune max-gate distance so it doesn't see through thin walls into the next room. | AM312 PIR (~$1.50) where "someone moved, roughly" is enough — degraded on hot afternoons and slow to re-trigger, fine on cool nights. |
 | Buttons / knock stations | Arcade buttons straight to node GPIOs (internal pull-ups + ESPHome debounce). **Implemented**: `sim/esphome/packages/button.yaml` + `button_gpio_c3.example.yaml` (GPIO3→GND) drive the Photo Bomb shutter button and the Monkey puzzle completion switch. Piezo discs to a node ADC pin with a 1MΩ bleed resistor, or a $1 LM393 knock module to a GPIO. | — |
 
 The Monkey puzzle switch is just a button in disguise: a lever microswitch under the
@@ -149,7 +149,7 @@ One firmware family; a room's YAML just picks its sensor package.
 | Rooms | Sensor pack |
 |---|---|
 | 10 wing bays (Monkey, Temple, NFM, Cop Dodge, Gate, Bike Lock, Deep Playa, Photo Bomb, Porto, Sparkle) | LD2410C radar |
-| Cuddle Cross | LD2410C (+ LD2450 later, projection subsystem) — no wall buttons: the orb IS the room's control surface (2026-07-23) |
+| Cuddle Cross | **LD2450 only** (2026-08-20 consolidation: one radar does presence + projection/orb tracks; still-dropout bridged by the 60 s timeout) — no wall buttons: the orb IS the room's control surface (2026-07-23) |
 | Entrance / Exit | **TOF200C** ToF (VL53L0X inside, ESPHome-native), 2.1 m gate through the START/FINISH arch. Radar rejected 2026-07-30 — needs the shared divider foiled and that was ruled out |
 | Guy Line Climb / Vertical Moop March | LD2410C radar at the **top of the room pointed straight down** — sees someone at the bottom whether they came through the doorway or down the ropes/scaffolding (2026-07-30) |
 | Monkey (add-on) | puzzle microswitch, 2-wire to the box |
@@ -161,7 +161,8 @@ One firmware family; a room's YAML just picks its sensor package.
 | Item | Qty | Ext |
 |---|---|---|
 | XIAO ESP32-S3 (15 rooms + 3 flashed spares) | 18 | $135 |
-| LD2410C mmWave (13 rooms + spares) | 16 | $72 |
+| LD2410C mmWave (12 rooms + spares; qty unchanged — Cuddle's dropped 2410C becomes another spare) | 16 | $72 |
+| LD2450 mmWave tracker (Cuddle — presence + projection/orb tracks) | 1 | $14 |
 | TOF200C ToF (Entrance/Exit — **on hand**, with TOF050C spares too short to use) | 2 | $0 |
 | M18 through-beam pairs (problem doorways) | 2 | $31 |
 | AM312 PIR (spares/backup) | 5 | $7 |

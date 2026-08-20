@@ -1,5 +1,7 @@
 # LD2410C presence radar -> the room's occupancy pair (packages/tripwire.yaml).
-# 13 of the 15 rooms use this. Entrance and Exit use packages/tof.yaml instead —
+# 12 of the 15 rooms use this. Cuddle Cross runs packages/ld2450.yaml instead
+# (2026-08-20: its tracking radar took over presence; the 2410C left that box).
+# Entrance and Exit use packages/tof.yaml instead —
 # radar can't work there without foiling their shared divider, which was ruled out
 # 2026-07-30. Guy Line Climb and Vertical Moop March DID move to radar that day:
 # their boxes sit at the TOP of the room pointed straight down, so the cone covers
@@ -36,8 +38,9 @@
 #     dropout mid-visit can't fire a spurious leave.
 #
 # Absence timeout per room (room-node-enclosure-plan.md): 5s standard,
-# 60s on dwell rooms (No Friends Monday, Cuddle Cross) where standing still and
-# staying a while IS the point and an early leave would cut the room off.
+# 60s on dwell rooms where standing still and staying a while IS the point and
+# an early leave would cut the room off (No Friends Monday here; Cuddle gets
+# its 60s from the same substitution in ld2450.yaml).
 # Rooms with audible send-off stings may override both timeouts shorter so the
 # leave sound lands close to the visitor's actual exit.
 #
@@ -52,8 +55,8 @@
 #   gate 2 ~= 1.50 m  (entry-side trigger envelope)
 #   gate 3 ~= 2.25 m  (most of a 2.13 x 1.52 m bay)
 #
-# Cuddle Cross is wider and the climb shafts point down; room YAML can override
-# these substitutions when that hardware is flashed.
+# The climb shafts point down; room YAML can override these substitutions when
+# that hardware is flashed.
 
 substitutions:
   absence_timeout: 5s

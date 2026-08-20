@@ -22,8 +22,8 @@ PANELS = ['sheet', 'window', 'testfit']  # ply job + acrylic window job +
 HAS_ETCH = {'sheet', 'window', 'testfit'}
 OUTNAME = {'sheet': 'node-enclosure.svg', 'window': 'window-acrylic.svg',
            'testfit': 'node-enclosure-testfit.svg'}
-# 14 rooms cut the standard files; Cuddle's 2410C+2450 pair needs the wide
-# aperture -> a second pass with cuddle=true, suffixed filenames; the CAMP
+# 14 rooms cut the standard files; Cuddle cuts the -cuddle pass (same box,
+# window etch = its lone LD2450 — the 2410C left the box 2026-08-20); the CAMP
 # SIGN controller box is a third pass (sign=true) — ply sheet only: no
 # sensor window (acrylic job skipped) and no testfit net (its ports are
 # wire pass-throughs plus the already-validated XLR + USB cuts)

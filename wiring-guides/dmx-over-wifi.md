@@ -123,7 +123,7 @@ Entrance and Exit, which use D7 (GPIO44), and Gate, which uses D0 (GPIO1):**
 |---|---|---|---|
 | 11 radar rooms (not Gate, not Cuddle) | LD2410C on D6/D7 | **D5** (GPIO6) | I2C position unused — no ToF |
 | Entrance, Exit | TOF200C on D4/D5 (I2C) | **D7** (GPIO44) | radar position unused |
-| Cuddle Cross | LD2450 D2/D3 + LD2410C D6/D7 | **D5** (GPIO6) | I2C position unused |
+| Cuddle Cross | LD2450 on D6/D7 (sole radar since 2026-08-20) | **D5** (GPIO6) | I2C position unused |
 | Gate | LD2410C D6/D7 **+ 6 pads** | **D0** (GPIO1) | see below |
 
 **Gate was pin-full** (6 pads D0–D5 + radar D6/D7 + I2S D8–D10 = 11/11). Its

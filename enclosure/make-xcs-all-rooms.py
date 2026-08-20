@@ -12,9 +12,10 @@ rooms) + the room name as DM Serif Display outlines on the red etch layer,
 rotated to read top-to-bottom on the right wall like the USB/AUX labels
 (Cop Dodge precedent, cap height 5.59 mm, shrunk to fit long names).
 
-Cuddle Cross is the exception: its canvas is the dual-sensor wide-aperture
-sheet from node-enclosure-cuddle.svg (scad export, lid nested in-sheet, no
-plate system), name horizontal on the right wall exactly like Cop Dodge.
+Cuddle Cross is the exception: its canvas is the LD2450 sheet from
+node-enclosure-cuddle.svg (scad export, lid nested in-sheet, no plate
+system; single tracking radar since 2026-08-20 — the 2410C is gone and the
+aperture is standard again), name horizontal on the right wall like Cop Dodge.
 
 Rerun after edits to node-enclosure-jen.svg or node-enclosure-cuddle.svg.
 Cop Dodge is excluded (already cut).
@@ -39,7 +40,8 @@ PX2MM = 254.0 / 720.0  # 72 dpi art
 CUDDLE_DX, CUDDLE_DY = 6.0, 176.0  # scad viewBox y is -170..0; park at (6,6)
 
 # room -> sensor plate (13 radar + Entrance/Exit ToF; Cop Dodge already cut;
-# 'cuddle' = the dual LD2450+LD2410C wide-aperture sheet instead of the jen box)
+# 'cuddle' = the LD2450-only sheet instead of the jen box — different window
+# etch, standard aperture since 2026-08-20)
 ROOMS = [
     ('Entrance', 'tof'),
     ('Gate', 'mmwave'),

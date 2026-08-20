@@ -129,10 +129,10 @@ An unprepped board is silent; this is the #1 bring-up trap.
 
 | Dx | C3 GPIO | S3 GPIO | Reserved for |
 |---|---|---|---|
-| D0, D2, D3 | 2, 4, 5 | 1, 3, 4 | ADC / aux (Porto piezos; Cuddle LD2450 UART1 on D2/D3; **Gate: D0 = DMX TX**) |
+| D0, D2, D3 | 2, 4, 5 | 1, 3, 4 | ADC / aux (Porto piezos; **Gate: D0 = DMX TX**) |
 | D1 | 3 | 2 | Button contract (`button_gpio_c3.example.yaml`) |
 | D4 / D5 | 6 / 7 | 5 / 6 | I2C — TOF200C (Entrance/Exit) + Gate's MCP23017; **D5 = DMX512 TX in the 13 radar rooms** (`dmx-over-wifi.md`) |
-| D6 / D7 | 21 / 20 | 43 / 44 | UART — LD2410C (the 13 radar rooms); **D7 = DMX512 TX in Entrance + Exit** |
+| D6 / D7 | 21 / 20 | 43 / 44 | UART — radar (LD2410C in 12 rooms; Cuddle's LD2450 since 2026-08-20); **D7 = DMX512 TX in Entrance + Exit** |
 | **D8** | **8** | **7** | **I2S BCLK → PCM5102A BCK** |
 | **D9** | **9** | **8** | **I2S LRCLK → PCM5102A LCK** |
 | **D10** | **10** | **9** | **I2S DOUT → PCM5102A DIN** |
@@ -308,11 +308,15 @@ back-to-back cue replaces the one still playing.
 
 Consolidations checked against every sensor in the maze; what stays and why:
 
-- **Cuddle keeps BOTH radars.** Tempting to let the LD2450 (projection
+- **Cuddle keeps BOTH radars.** ~~Tempting to let the LD2450 (projection
   tracking) also do presence and drop the LD2410C — but the LD2450 is a
   motion tracker that loses perfectly still targets, and Cuddle's entire
   effect hook is *sustained still presence* via the LD2410C's still-energy
-  gates. Not consolidatable.
+  gates. Not consolidatable.~~ **REVERSED by Tim 2026-08-20: LD2450 only.**
+  "Cuddle" is just the room's name, not a still-detection requirement; the
+  still-target dropout is bridged by the module presence timeout + the 60 s
+  `absence_timeout` the room already ran (`packages/ld2450.yaml`, standard
+  D6/D7 radar position, D2/D3 freed, standard window aperture again).
 - **Hex 4-button station: REMOVED (2026-07-23).** The Cuddle orb took over
   all four functions (tap = next theme, long-press = storm, swipe = ambience
   on/off — `cuddle-orb-plan.md`), so the button rail and its four planned
