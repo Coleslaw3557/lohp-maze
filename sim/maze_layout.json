@@ -1335,7 +1335,7 @@
    "label": "Shake 5",
    "color": "f2f2f2"
   },
-  "Bike Q1 True": {
+  "Bike Option 1": {
    "kind": "button",
    "level": 1,
    "pos": [
@@ -1343,11 +1343,11 @@
     3.0,
     0.55
    ],
-   "label": "Q1 TRUE",
-   "color": "3dff70",
-   "note": "true/false sign with 2 questions - answer key TBD until the sign is made"
+   "label": "OPT 1",
+   "color": "e84545",
+   "note": "single multiple-choice sign; option 3 is true"
   },
-  "Bike Q1 False": {
+  "Bike Option 2": {
    "kind": "button",
    "level": 1,
    "pos": [
@@ -1355,10 +1355,10 @@
     3.0,
     0.55
    ],
-   "label": "Q1 FALSE",
+   "label": "OPT 2",
    "color": "e84545"
   },
-  "Bike Q2 True": {
+  "Bike Option 3": {
    "kind": "button",
    "level": 1,
    "pos": [
@@ -1366,10 +1366,10 @@
     3.0,
     0.55
    ],
-   "label": "Q2 TRUE",
+   "label": "OPT 3",
    "color": "3dff70"
   },
-  "Bike Q2 False": {
+  "Bike Option 4": {
    "kind": "button",
    "level": 1,
    "pos": [
@@ -1377,7 +1377,7 @@
     3.0,
     0.55
    ],
-   "label": "Q2 FALSE",
+   "label": "OPT 4",
    "color": "e84545"
   },
   "Moop Button 1": {

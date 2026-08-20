@@ -5,14 +5,13 @@ button_1,register,rapid/button_responses/01_button_1_quake.wav,1,0.12,Neutral im
 button_2,register,rapid/button_responses/02_button_2_quake.wav,1,0.12,Neutral immediate registration
 button_3,register,rapid/button_responses/03_button_3_quake.wav,1,0.12,Neutral immediate registration
 button_4,register,rapid/button_responses/04_button_4_quake.wav,1,0.12,Neutral immediate registration
-same_button_twice,duplicate,rapid/button_responses/05_duplicate_denied.wav,1,0.20,Do not advance selection
-wrong_pair,failure,rapid/failure/01_goldeneye_alarm.wav,5,0.20,Primary rejection; clear pair immediately
-wrong_pair,failure,rapid/failure/02_goldeneye_mission_fail.wav,2,0.20,Alternate rejection
-wrong_pair,failure,rapid/failure/03_quake_door_reject.wav,4,0.20,Mechanical rejection
-wrong_pair,failure,rapid/failure/04_double_denied.wav,4,0.20,Shortest electronic rejection
-wrong_pair,failure,rapid/failure/05_lock_and_denied.wav,3,0.20,Physical rejection
-correct_pair,victory,rapid/victory/01_doom_secret_unlock.wav,5,0.40,Primary victory; latch solved state
-correct_pair,victory,rapid/victory/02_diablo_quest_unlock.wav,4,0.40,Diablo victory
-correct_pair,victory,rapid/victory/03_diablo_quest_unlock_alt1.wav,3,0.40,Diablo alternate
-correct_pair,victory,rapid/victory/04_diablo_quest_unlock_alt2.wav,3,0.40,Diablo alternate
-correct_pair,victory,rapid/victory/05_diablo_quest_unlock_alt3.wav,3,0.40,Diablo alternate
+wrong_answer,failure,rapid/failure/01_goldeneye_alarm.wav,5,0.20,Primary rejection; options 1/2/4
+wrong_answer,failure,rapid/failure/02_goldeneye_mission_fail.wav,2,0.20,Alternate rejection
+wrong_answer,failure,rapid/failure/03_quake_door_reject.wav,4,0.20,Mechanical rejection
+wrong_answer,failure,rapid/failure/04_double_denied.wav,4,0.20,Shortest electronic rejection
+wrong_answer,failure,rapid/failure/05_lock_and_denied.wav,3,0.20,Physical rejection
+correct_answer,victory,rapid/victory/01_doom_secret_unlock.wav,5,0.40,Primary victory; option 3; latch solved state
+correct_answer,victory,rapid/victory/02_diablo_quest_unlock.wav,4,0.40,Diablo victory
+correct_answer,victory,rapid/victory/03_diablo_quest_unlock_alt1.wav,3,0.40,Diablo alternate
+correct_answer,victory,rapid/victory/04_diablo_quest_unlock_alt2.wav,3,0.40,Diablo alternate
+correct_answer,victory,rapid/victory/05_diablo_quest_unlock_alt3.wav,3,0.40,Diablo alternate

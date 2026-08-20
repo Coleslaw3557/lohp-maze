@@ -353,34 +353,32 @@ function askWhichAction(card, room, files) {
 
 function bikeAnswerEditor(room) {
   const bike = room.games && room.games.bike;
-  if (!bike || !bike.questions || !bike.questions.length) return null;
+  if (!bike || !bike.options || !bike.options.length) return null;
 
   const panel = el('div', { className: 'game-key bike-key' },
     el('span', { className: 'game-title' }, 'Answer key'));
 
-  for (const question of bike.questions) {
-    const group = el('div', { className: 'answer-row' },
-      el('span', { className: 'q' }, `Q${question.question}`));
-    for (const option of question.options) {
-      const button = el('button', {
-        className: 'tiny' + (option.value === question.correct ? ' selected' : ''),
-        title: option.trigger,
-      }, option.label);
-      button.onclick = async () => {
-        try {
-          await api('/api/games/bike', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ answers: { [question.question]: option.value } }),
-          });
-          toast(`Bike Q${question.question}: ${option.label} is right`, 'ok');
-          await load();
-        } catch (e) { toast(e.message, 'err'); }
-      };
-      group.append(button);
-    }
-    panel.append(group);
+  const group = el('div', { className: 'answer-row' },
+    el('span', { className: 'q' }, 'Correct'));
+  for (const option of bike.options) {
+    const button = el('button', {
+      className: 'tiny' + (option.value === bike.correct_option ? ' selected' : ''),
+      title: option.trigger,
+    }, option.label);
+    button.onclick = async () => {
+      try {
+        await api('/api/games/bike', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ correct_option: option.value }),
+        });
+        toast(`Bike: ${option.label} is right`, 'ok');
+        await load();
+      } catch (e) { toast(e.message, 'err'); }
+    };
+    group.append(button);
   }
+  panel.append(group);
   return panel;
 }
 

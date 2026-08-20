@@ -90,8 +90,8 @@ Legend: **DONE** = themed audio pack wired + lights redesigned to it.
 
 - **Bike Lock Room** (par @137): **DONE** 07-29 — victory unlocks →
   `BikeLockRoom`, entry prompts → new `BikeLock-Entry`; the pack's rapid
-  four-button pair game (per-button acks, duplicate-denied, wrong-pair
-  failure) is the node-firmware spec; answer key TBD until the sign is made.
+  four-option game (per-button acks, wrong-answer failure) is the
+  node-firmware spec; option 3 is the true answer.
 - **Vertical Moop March** (shaft down, pars @145/@153): 4 wireless button
   pucks. **Fixed 07-29**: pucks fired shared `WrongAnswer` in `triggers.json`
   while the plan of record and the sim both chime — all four now fire

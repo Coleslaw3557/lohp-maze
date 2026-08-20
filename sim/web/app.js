@@ -2037,7 +2037,6 @@ const GAME = {
   portoAttempts: 0,
   portoSolved: false,
   dphWinner: Math.floor(Math.random() * 5),
-  bike: {},
   moop: { pressed: new Set(), at: null, timer: null },
   lamps: null,
 };
@@ -2157,22 +2156,14 @@ function resolveGame(sensor, source) {
       return { effect: 'WrongAnswer' };
     }
     case 'bike': {
-      if (GAME.bike.at && now - GAME.bike.at > 60) GAME.bike = {};
+      const option = g.option;
       if (!g.correct) {
-        GAME.bike = {};
-        toast(`Bike Q${g.question}: wrong — start over`);
+        toast(`Bike option ${option}: wrong`);
         return { effect: 'WrongAnswer' };
       }
-      GAME.bike['q' + g.question] = true;
-      GAME.bike.at = now;
-      if (GAME.bike.q1 && GAME.bike.q2) {
-        GAME.bike = {};
-        toast('Bike: both questions right!');
-        chimeThen(sensor, 'BikeLockRoom', source);
-        return null;
-      }
-      toast(`Bike Q${g.question}: correct`);
-      return { effect: 'CorrectAnswer' };
+      toast(`Bike option ${option}: correct`);
+      chimeThen(sensor, 'BikeLockRoom', source);
+      return null;
     }
     case 'moop': {
       // Mirror game_moop.yaml on the room node: first press opens a 60s

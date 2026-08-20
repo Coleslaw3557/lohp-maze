@@ -229,7 +229,7 @@
             "volume": 0.8
         },
         "BikeLockRoom-RightAnswer": {
-            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Weights = Bike Lock Room TRIGGER_MAP.csv correct_pair.",
+            "_comment": "Room-local right-answer audio pool. The audio console shows this even before a room game/action targets it; shared CorrectAnswer calls use it once files are assigned, otherwise they fall back to the shared CorrectAnswer pool. Weights = Bike Lock Room TRIGGER_MAP.csv correct_answer.",
             "audio_files": [
                 "rooms/Bike Lock Room/rapid/victory/01_doom_secret_unlock.wav",
                 "rooms/Bike Lock Room/rapid/victory/02_diablo_quest_unlock.wav",
@@ -239,7 +239,7 @@
             "volume": 0.8
         },
         "BikeLockRoom-WrongAnswer": {
-            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Weights = Bike Lock Room TRIGGER_MAP.csv wrong_pair.",
+            "_comment": "Room-local wrong-answer audio pool. The audio console shows this even before a room game/action targets it; shared WrongAnswer calls use it once files are assigned, otherwise they fall back to the shared WrongAnswer pool. Weights = Bike Lock Room TRIGGER_MAP.csv wrong_answer.",
             "audio_files": [
                 "growl1.mp3"
             ],
@@ -785,7 +785,7 @@
             "volume": 0.7
         },
         "BikeLockRoom": {
-            "_comment": "Victory payoff — the bike game fires chime-then-BikeLockRoom on the correct pair. Weights = pack TRIGGER_MAP.csv. Per-button acks / duplicate-denied / wrong-pair failure files are node-firmware phase (pack README controller logic); failure stays shared WrongAnswer meanwhile",
+            "_comment": "Victory payoff — the bike game fires chime-then-BikeLockRoom when option 3 is pressed. Weights = pack TRIGGER_MAP.csv. Per-button acks / wrong-answer failure files are node-firmware phase (pack README controller logic); failure stays shared WrongAnswer meanwhile",
             "audio_files": [
                 "rooms/Bike Lock Room/rapid/victory/01_doom_secret_unlock.wav",
                 "rooms/Bike Lock Room/rapid/victory/02_diablo_quest_unlock.wav"

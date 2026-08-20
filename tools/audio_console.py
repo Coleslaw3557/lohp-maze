@@ -227,28 +227,28 @@ def save_triggers(config):
     logger.info("wrote %s", TRIGGERS_PATH)
 
 
-def save_bike_room_answers(answers):
+def save_bike_room_option(correct_option):
     """Mirror the static Bike Lock answer key into the room node substitutions."""
     if not BIKE_ROOM_YAML.exists():
         logger.warning("Bike room yaml not found: %s", BIKE_ROOM_YAML)
         return
+    try:
+        option = int(correct_option)
+    except (TypeError, ValueError):
+        logger.warning("bad Bike Lock correct option: %r", correct_option)
+        return
+
     text = BIKE_ROOM_YAML.read_text()
-    replacements = {
-        'bike_q1_correct': answers.get(1),
-        'bike_q2_correct': answers.get(2),
-    }
-    for key, value in replacements.items():
-        if value not in {'true', 'false'}:
-            continue
-        line = f'  {key}: "{value}"'
-        pattern = re.compile(rf'^\s+{re.escape(key)}:\s*".*"$', re.M)
-        if pattern.search(text):
-            text = pattern.sub(line, text)
-        else:
-            room_line = re.search(r'^\s+room:\s*".*"$', text, re.M)
-            if not room_line:
-                raise ValueError(f'could not find substitutions block in {BIKE_ROOM_YAML}')
-            text = text[:room_line.end()] + '\n' + line + text[room_line.end():]
+    key = 'bike_correct_option'
+    line = f'  {key}: "{option}"'
+    pattern = re.compile(rf'^\s+{re.escape(key)}:\s*".*"$', re.M)
+    if pattern.search(text):
+        text = pattern.sub(line, text)
+    else:
+        room_line = re.search(r'^\s+room:\s*".*"$', text, re.M)
+        if not room_line:
+            raise ValueError(f'could not find substitutions block in {BIKE_ROOM_YAML}')
+        text = text[:room_line.end()] + '\n' + line + text[room_line.end():]
 
     tmp = BIKE_ROOM_YAML.with_name(BIKE_ROOM_YAML.name + '.tmp')
     tmp.write_text(text)
@@ -357,38 +357,35 @@ def action_kind(trigger):
 
 
 def bike_option(trigger):
-    """True/False option represented by one Bike Lock Room button."""
-    match = re.search(r'\b(true|false)$', trigger.get('name', ''), re.IGNORECASE)
-    return match.group(1).lower() if match else None
+    """Numbered option represented by one Bike Lock Room button."""
+    game = trigger.get('game') or {}
+    try:
+        return int(game['option'])
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def bike_answer_key(triggers):
-    questions = {}
+    options = []
+    correct_option = None
     for trigger in triggers:
         game = trigger.get('game') or {}
         if game.get('id') != 'bike':
             continue
-        question = game.get('question')
         option = bike_option(trigger)
-        if question is None or option not in {'true', 'false'}:
+        if option is None:
             continue
-        entry = questions.setdefault(int(question), {'question': int(question), 'options': []})
-        entry['options'].append({
+        options.append({
             'value': option,
-            'label': option.title(),
+            'label': f'Option {option}',
             'trigger': trigger.get('name'),
             'correct': bool(game.get('correct')),
         })
         if game.get('correct') is True:
-            entry['correct'] = option
+            correct_option = option
 
-    out = []
-    for question in sorted(questions):
-        entry = questions[question]
-        entry['options'].sort(key=lambda o: o['value'] != 'true')
-        entry.setdefault('correct', None)
-        out.append(entry)
-    return {'room': 'Bike Lock Room', 'questions': out}
+    options.sort(key=lambda o: o['value'])
+    return {'room': 'Bike Lock Room', 'options': options, 'correct_option': correct_option}
 
 
 def trigger_pool_effect(trigger, fallback_effect):
@@ -696,49 +693,40 @@ async def api_state():
 
 
 @app.route('/api/games/bike', methods=['PUT'])
-async def api_save_bike_answers():
-    """Update the Bike Lock Room true/false answer key in triggers.json."""
+async def api_save_bike_option():
+    """Update the Bike Lock Room correct option in triggers.json."""
     body = await request.json or {}
-    answers = body.get('answers') or {}
-    normalized = {}
-    for question, answer in answers.items():
-        try:
-            q = int(question)
-        except (TypeError, ValueError):
-            return jsonify({'status': 'error', 'message': f'bad question: {question}'}), 400
-        value = str(answer).lower()
-        if value not in {'true', 'false'}:
-            return jsonify({'status': 'error',
-                            'message': f'question {q}: answer must be true or false'}), 400
-        normalized[q] = value
-
-    if not normalized:
-        return jsonify({'status': 'error', 'message': 'no bike answers supplied'}), 400
+    raw_option = body.get('correct_option')
+    try:
+        correct_option = int(raw_option)
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error', 'message': 'correct_option must be 1-4'}), 400
+    if correct_option not in {1, 2, 3, 4}:
+        return jsonify({'status': 'error', 'message': 'correct_option must be 1-4'}), 400
 
     config = load_json(TRIGGERS_PATH)
-    found = {q: set() for q in normalized}
+    found = set()
     changed = False
     for trigger in config.get('triggers', []):
         game = trigger.get('game') or {}
         if game.get('id') != 'bike':
             continue
-        question = game.get('question')
         option = bike_option(trigger)
-        if question in normalized and option in {'true', 'false'}:
-            correct = option == normalized[question]
+        if option in {1, 2, 3, 4}:
+            correct = option == correct_option
             if game.get('correct') is not correct:
                 game['correct'] = correct
                 changed = True
-            found[question].add(option)
+            found.add(option)
 
-    missing = [q for q, options in found.items() if options != {'true', 'false'}]
+    missing = sorted({1, 2, 3, 4} - found)
     if missing:
         return jsonify({'status': 'error',
-                        'message': f'missing true/false bike triggers for question(s): {missing}'}), 400
+                        'message': f'missing bike option trigger(s): {missing}'}), 400
 
     if changed:
         save_triggers(config)
-        save_bike_room_answers(normalized)
+        save_bike_room_option(correct_option)
     return jsonify({'status': 'success', 'bike': bike_answer_key(config.get('triggers', []))})
 
 

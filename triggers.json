@@ -539,30 +539,12 @@
       }
     },
     {
-      "name": "Bike Q1 True",
+      "name": "Bike Option 1",
       "type": "button",
       "room": "Bike Lock Room",
       "game": {
         "id": "bike",
-        "question": 1,
-        "correct": true
-      },
-      "action": {
-        "method": "POST",
-        "path": "/api/run_effect",
-        "data": {
-          "room": "Bike Lock Room",
-          "effect_name": "WrongAnswer"
-        }
-      }
-    },
-    {
-      "name": "Bike Q1 False",
-      "type": "button",
-      "room": "Bike Lock Room",
-      "game": {
-        "id": "bike",
-        "question": 1,
+        "option": 1,
         "correct": false
       },
       "action": {
@@ -575,12 +557,12 @@
       }
     },
     {
-      "name": "Bike Q2 True",
+      "name": "Bike Option 2",
       "type": "button",
       "room": "Bike Lock Room",
       "game": {
         "id": "bike",
-        "question": 2,
+        "option": 2,
         "correct": false
       },
       "action": {
@@ -593,13 +575,31 @@
       }
     },
     {
-      "name": "Bike Q2 False",
+      "name": "Bike Option 3",
       "type": "button",
       "room": "Bike Lock Room",
       "game": {
         "id": "bike",
-        "question": 2,
+        "option": 3,
         "correct": true
+      },
+      "action": {
+        "method": "POST",
+        "path": "/api/run_effect",
+        "data": {
+          "room": "Bike Lock Room",
+          "effect_name": "WrongAnswer"
+        }
+      }
+    },
+    {
+      "name": "Bike Option 4",
+      "type": "button",
+      "room": "Bike Lock Room",
+      "game": {
+        "id": "bike",
+        "option": 4,
+        "correct": false
       },
       "action": {
         "method": "POST",
@@ -794,5 +794,5 @@
       }
     }
   ],
-  "_games_comment": "Triggers with a `game` key resolve through per-room game logic (mirrored in sim/web/app.js and the room node firmware, wiring-guides/room-games-plan.md): gate = two banks of 3 simultaneous body-pressed arcade buttons (bank 1 -> CorrectAnswer chime, then bank 2 -> CorrectAnswer chime, then leave on the room occupancy trigger); porto = 1 random winning knock pad of 3 per room entry, attempt 1 always fails, attempts 2-3 pass on the winner, attempt 4 force-passes; dph = 1 random winner of 5 per room entry (CorrectAnswer on winner; others WrongAnswer); bike = 2 static true/false answers for this room (both right -> chime then BikeLockRoom); moop = 4 buttons on the room node, wired via the DB9-A button pod (each press -> CorrectAnswer, all four unique buttons in a 60s round -> chime then VerticalMoopMarch-RightAnswer, timeout after partial set -> VerticalMoopMarch-WrongAnswer); lightsout = 5 lit truck buttons, press toggles self+neighbors, all lit -> chime then NoFriendsMonday."
+  "_games_comment": "Triggers with a `game` key resolve through per-room game logic (mirrored in sim/web/app.js and the room node firmware, wiring-guides/room-games-plan.md): gate = two banks of 3 simultaneous body-pressed arcade buttons (bank 1 -> CorrectAnswer chime, then bank 2 -> CorrectAnswer chime, then leave on the room occupancy trigger); porto = 1 random winning knock pad of 3 per room entry, attempt 1 always fails, attempts 2-3 pass on the winner, attempt 4 force-passes; dph = 1 random winner of 5 per room entry (CorrectAnswer on winner; others WrongAnswer); bike = 1 static four-option question for this room (option 3 -> chime then BikeLockRoom; other options -> WrongAnswer); moop = 4 buttons on the room node, wired via the DB9-A button pod (each press -> CorrectAnswer, all four unique buttons in a 60s round -> chime then VerticalMoopMarch-RightAnswer, timeout after partial set -> VerticalMoopMarch-WrongAnswer); lightsout = 5 lit truck buttons, press toggles self+neighbors, all lit -> chime then NoFriendsMonday."
 }

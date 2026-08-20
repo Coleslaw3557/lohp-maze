@@ -88,7 +88,7 @@ now it can't happen in the field.
 |---|---|---|---|---|---|---|---|
 | Gate | pad 1 | pad 2 | pad 3 | pad 4 | pad 5 | pad 6 | — |
 | Deep Playa Handshake | btn 1 | btn 2 | btn 3 | btn 4 | btn 5 | — | — |
-| Bike Lock | Q1-TRUE | Q1-FALSE | Q2-TRUE | Q2-FALSE | — | — | — |
+| Bike Lock | Option 1 | Option 2 | Option 3 TRUE | Option 4 | — | — | — |
 | No Friends Monday | ladder ADC | WS2812 data | — | — | — | — | — |
 | Photo Bomb | shutter (→ **D1**, button contract) | — | — | — | — | — | — |
 | Monkey | pedestal switch (→ **D1**, button contract) | — | — | — | — | — | — |

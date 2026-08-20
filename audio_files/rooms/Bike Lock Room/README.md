@@ -12,16 +12,13 @@ This version replaces the rejected Skyrim/Tomb Raider trigger direction.
 
 ## Controller logic
 
-The room has four buttons representing four statements. Exactly two statements are true.
+The room has four buttons representing one multiple-choice question. Option 3 is true; all other options are false.
 
 1. The entry radar plays one file from `rapid/entry/`. Entry playback must not block button input.
 2. Buttons 1–4 immediately play their corresponding `rapid/button_responses/` files.
-3. Store the first unique button selection.
-4. A repeated button plays `05_duplicate_denied.wav` and does not advance.
-5. After the second unique selection, evaluate the unordered pair immediately.
-6. A wrong pair starts one `rapid/failure/` file and clears the pair after a 0.20-second debounce.
-7. The correct pair starts one `rapid/victory/` file, energizes the physical unlock output, and latches the solved state.
-8. Do not wait for the second button sound to finish before starting failure or victory playback.
+3. Button 3 starts one `rapid/victory/` file, energizes the physical unlock output, and latches the solved state.
+4. Buttons 1, 2, and 4 start one `rapid/failure/` file and clear immediately after a 0.20-second debounce.
+5. Do not wait for the button acknowledgment sound to finish before starting failure or victory playback.
 
 ## Entry sensor
 
@@ -38,11 +35,10 @@ The room has four buttons representing four statements. Exactly two statements a
 | Button 2 | `rapid/button_responses/02_button_2_quake.wav` | 0.62 s |
 | Button 3 | `rapid/button_responses/03_button_3_quake.wav` | 0.62 s |
 | Button 4 | `rapid/button_responses/04_button_4_quake.wav` | 0.62 s |
-| Duplicate | `rapid/button_responses/05_duplicate_denied.wav` | 0.61 s |
 
 The four acknowledgments are different Quake item/rune sounds. They identify which physical input registered without revealing correctness.
 
-## Wrong-pair responses
+## Wrong-answer responses
 
 | File | Length | Purpose |
 |---|---:|---|
@@ -52,7 +48,7 @@ The four acknowledgments are different Quake item/rune sounds. They identify whi
 | `rapid/failure/04_double_denied.wav` | 1.15 s | Two hard denied-input sounds. |
 | `rapid/failure/05_lock_and_denied.wav` | 1.45 s | Combination movement ending in a denied cue. |
 
-## Correct-pair / final victory
+## Correct answer / final victory
 
 | File | Length | Purpose |
 |---|---:|---|

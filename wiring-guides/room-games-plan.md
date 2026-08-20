@@ -52,15 +52,14 @@ pinouts and the pod recipe: `arcade-button-db9-prewire-guide.md`.
 - **Hardware front-end** (`game_porto_hw.yaml`): each piezo ADC channel thresholds
   into the same `porto_press` script used by the sim/harness action.
 
-## Bike Lock Room — two-question true/false quiz
+## Bike Lock Room — one-question four-option quiz
 
-- **Hardware:** 4 buttons on **D0–D3** (9/11): Q1-TRUE, Q1-FALSE, Q2-TRUE,
-  Q2-FALSE, under a sign with two true/false questions (sign to be made).
-- **Logic** (`game_bike.yaml`): correct button → CorrectAnswer and latches
-  that question for 60s; wrong button → WrongAnswer and resets progress;
-  both questions correct → chime then **BikeLockRoom**.
+- **Hardware:** 4 buttons on **D0–D3** (9/11): options 1-4 under a sign with
+  one multiple-choice question (sign to be made).
+- **Logic** (`game_bike.yaml`): option 3 → CorrectAnswer then
+  **BikeLockRoom**; options 1, 2, and 4 → WrongAnswer.
 - **Answer key:** static for the room, not randomized. The `correct` flags in
-  `triggers.json` drive the sim, and the audio console mirrors them into
+  `triggers.json` drive the sim, and the audio console mirrors option 3 into
   `sim/esphome/rooms/bike-lock.yaml` for the node firmware.
 
 ## Vertical Moop March — four buttons, one 60s round

@@ -1,8 +1,6 @@
-# Bike Lock Room quiz — a sign with TWO true/false questions, 4 arcade
-# buttons: Q1-TRUE(1) Q1-FALSE(2) Q2-TRUE(3) Q2-FALSE(4).
-#   correct button              -> CorrectAnswer chime, question latched 60s
-#   wrong button                -> WrongAnswer, progress reset
-#   both questions correct      -> chime then ${bike_complete_effect}
+# Bike Lock Room quiz — one multiple-choice question, 4 arcade buttons.
+#   option 3                    -> CorrectAnswer chime, then ${bike_complete_effect}
+#   options 1/2/4               -> WrongAnswer
 # The answer key is static for the room and supplied by the room yaml
 # substitutions, mirrored from triggers.json by the audio console.
 # Spec: wiring-guides/room-games-plan.md.
@@ -10,19 +8,7 @@
 # Real S3 wiring: buttons on D0-D3, LEDs hardwired to the 5V rail.
 substitutions:
   bike_complete_effect: "BikeLockRoom"
-  bike_q1_correct: "true"
-  bike_q2_correct: "false"
-
-globals:
-  - id: bike_q1_ok
-    type: bool
-    initial_value: 'false'
-  - id: bike_q2_ok
-    type: bool
-    initial_value: 'false'
-  - id: bike_at_ms
-    type: uint32_t
-    initial_value: '0'
+  bike_correct_option: "3"
 
 api:
   actions:
@@ -40,43 +26,20 @@ script:
     parameters:
       n: int
     then:
-      - lambda: |-
-          // 60s window: both answers must land close together
-          if (id(bike_at_ms) != 0 && (millis() - id(bike_at_ms)) > 60000) {
-            id(bike_q1_ok) = false; id(bike_q2_ok) = false; id(bike_at_ms) = 0;
-          }
       - if:
           condition:
-            lambda: |-
-              return (n == 1 && ${bike_q1_correct})
-                  || (n == 2 && !${bike_q1_correct})
-                  || (n == 3 && ${bike_q2_correct})
-                  || (n == 4 && !${bike_q2_correct});
+            lambda: 'return n == ${bike_correct_option};'
           then:
-            - lambda: |-
-                if (n <= 2) id(bike_q1_ok) = true; else id(bike_q2_ok) = true;
-                id(bike_at_ms) = millis();
-            - if:
-                condition:
-                  lambda: 'return id(bike_q1_ok) && id(bike_q2_ok);'
-                then:
-                  - logger.log: "Bike quiz: both right — complete"
-                  - lambda: 'id(bike_q1_ok) = false; id(bike_q2_ok) = false; id(bike_at_ms) = 0;'
-                  - script.execute:
-                      id: bike_fire
-                      effect: "CorrectAnswer"
-                  - delay: 2500ms   # let the chime land before the big effect
-                  - script.execute:
-                      id: bike_fire
-                      effect: "${bike_complete_effect}"
-                else:
-                  - logger.log: "Bike quiz: correct"
-                  - script.execute:
-                      id: bike_fire
-                      effect: "CorrectAnswer"
+            - logger.log: "Bike quiz: correct option"
+            - script.execute:
+                id: bike_fire
+                effect: "CorrectAnswer"
+            - delay: 2500ms   # let the chime land before the big effect
+            - script.execute:
+                id: bike_fire
+                effect: "${bike_complete_effect}"
           else:
-            - logger.log: "Bike quiz: wrong — reset"
-            - lambda: 'id(bike_q1_ok) = false; id(bike_q2_ok) = false; id(bike_at_ms) = 0;'
+            - logger.log: "Bike quiz: wrong option"
             - script.execute:
                 id: bike_fire
                 effect: "WrongAnswer"
