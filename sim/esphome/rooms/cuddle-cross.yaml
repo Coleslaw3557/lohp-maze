@@ -53,6 +53,10 @@ sensor:
     name: "${room} node RSSI"
     update_interval: 30s
 
-# Validated 2026-08-20 -> INFO (logic.yaml default level, kept explicit).
+# Validated 2026-08-20 -> INFO. (Same-evening DEBUG round trip: the intermittent
+# "static" was chased with pipeline logs + a live API log watcher and turned out
+# to be CONTENT, not a fault — the volcano_rumble bed is ~pure sub-150 Hz, which
+# the Pebbles render as 24 s of hiss; removed from the bed pool in
+# audio_config.json. The pipeline logged clean through a live event.)
 logger:
   level: INFO

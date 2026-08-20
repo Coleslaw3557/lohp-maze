@@ -506,10 +506,9 @@
             "volume": 0.7
         },
         "Cuddle-Lava-Bed": {
-            "_comment": "LAVA floor theme: the room's looping bed, on the ambience channel (survives effect audio_stop, accents mix over it). Tim's Lava pool, 2026-07-30. lava.wav = 8.2s loop — the seam steps up in level slightly, so if it pulses on the deck, crossfade a longer master rather than raising the volume. volcano_rumble (21.9s) joined from the ambient pool 2026-08-01 per Tim's 10s rule: over 10s = ambiance, so it's a bed alternate (one picked per bed start), not a one-shot over the bed.",
+            "_comment": "LAVA floor theme: the room's looping bed, on the ambience channel (survives effect audio_stop, accents mix over it). Tim's Lava pool, 2026-07-30. lava.wav = 8.2s loop — the seam steps up in level slightly, so if it pulses on the deck, crossfade a longer master rather than raising the volume. volcano_rumble (bed alternate 2026-08-01, per the 10s rule) REMOVED 2026-08-20: it IS the intermittent 'static' Tim chased on the real box — 98% of its energy is below 150 Hz, under the Pebble rolloff, so 24s of near-pure hiss whenever the bed picked it (confirmed by a blind replay he reported as 'the static just happened'). It also framed the hell_rumbles one-shots: cues duck the bed but play OVER it, so cues landing on a volcano window got blamed for the hiss underneath. Don't re-add sub-150Hz-only files to node-played pools — bench-listen on a Pebble first.",
             "audio_files": [
-                "uploads/Lava/lava.wav",
-                "uploads/Lava/volcano_rumble.wav"
+                "uploads/Lava/lava.wav"
             ],
             "volume": 0.35,
             "ambience_playback": {
