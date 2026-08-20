@@ -31,12 +31,12 @@ yellow**, pin 1 = black.
 |---|---|---|
 | D0 | 1 | per-room: buttons / NFM ladder ADC / Porto piezo 1 / **Gate: DMX TX** |
 | D1 | 2 | button contract (Photo Bomb, Monkey) / NFM lamp data / DPH+Bike button 2 / Porto piezo 2 |
-| D2 | 3 | DPH+Bike button 3 / Porto piezo 3 |
-| D3 | 4 | DPH+Bike button 4 |
+| D2 | 3 | Cuddle: LD2450 (node Tx) / DPH+Bike button 3 / Porto piezo 3 |
+| D3 | 4 | Cuddle: LD2450 (node Rx) / DPH+Bike button 4 |
 | D4 | 5 | I2C SDA — TOF200C (Entrance/Exit), MCP23017 (Gate) / DPH button 5 |
 | D5 | 6 | **DMX TX (default)** / I2C SCL in Entrance/Exit + Gate |
-| D6 | 43 | radar Rx (node Tx) — LD2410C in 12 rooms, Cuddle's LD2450 |
-| D7 | 44 | radar Tx (node Rx) / **DMX TX in Entrance + Exit** |
+| D6 | 43 | LD2410C Rx (node Tx) — the 12 LD2410C rooms; unused in Cuddle |
+| D7 | 44 | LD2410C Tx (node Rx) / **DMX TX in Entrance + Exit** |
 | D8 | 7 | I2S BCLK → DAC BCK |
 | D9 | 8 | I2S LRCLK → DAC LCK |
 | D10 | 9 | I2S DOUT → DAC DIN |
@@ -132,11 +132,14 @@ design is dead; `game_moop.yaml`, pod recipe in `db9-field-wiring.md`).
 
 Cuddle consolidated to the LD2450 alone (Tim, 2026-08-20): it does presence
 (same two-edge contract as the LD2410C rooms, `packages/ld2450.yaml`) AND the
-floor-projection / orb-gaze target tracks. With the 2410C gone it takes the
-**standard radar position D6/D7** — the old D2/D3 second-UART plan is dead and
-those pads are free again. Still-target dropout (a tracker losing a statue-still
-person) is bridged by the module presence timeout + the room's 60 s
-`absence_timeout`, not by a second radar.
+floor-projection / orb-gaze target tracks. Still-target dropout (a tracker
+losing a statue-still person) is bridged by the module presence timeout + the
+room's 60 s `absence_timeout`, not by a second radar.
+
+**AS BUILT 2026-08-20: the box keeps the ORIGINAL D2/D3 assignment** (Tim had
+already wired it when the consolidation briefly moved the plan to D6/D7;
+firmware follows the hardware — bench-validated same day). D6/D7 sit unused
+in this box.
 
 Hi-Link manual pins **5V, GND, Tx, Rx**. UART 256000 baud, 3.3V logic.
 
@@ -144,8 +147,8 @@ Hi-Link manual pins **5V, GND, Tx, Rx**. UART 256000 baud, 3.3V logic.
 |---|---|
 | 5V | 5V rail |
 | GND | GND |
-| Tx | XIAO D7 (GPIO44) |
-| Rx | XIAO D6 (GPIO43) |
+| Tx | XIAO D3 (GPIO4) |
+| Rx | XIAO D2 (GPIO3) |
 
 ## DB9 port A (7 wired rooms; window blanked elsewhere)
 
@@ -215,7 +218,7 @@ notch pointing away, pin 1 is the far-RIGHT leg; paint-mark pin 1 before gluing.
 | Photo Bomb / Monkey | LD2410C + button D1 | D5 | pin 3 |
 | Porto | LD2410C + 3 piezos D0–D2 | D5 | pins 3–5 |
 | Cop Dodge / Sparkle Pony / Temple | LD2410C | D5 | blank |
-| Cuddle Cross | LD2450 on D6/D7 (sole radar 2026-08-20) — own window etch | D5 | blank |
+| Cuddle Cross | LD2450 on D2/D3 (sole radar 2026-08-20, as built) — own window etch | D5 | blank |
 
 Every room: MAX485+XLR (DMX out) and, if it's an audio room, the DAC on
 D8–D10. WiFi antenna stays inside. (2026-08-16: the wireless Moop pucks are

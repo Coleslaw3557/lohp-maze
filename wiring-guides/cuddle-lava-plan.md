@@ -104,8 +104,9 @@ positions in world meters; output is an RGB frame plus a JSON-able state dict.
   - `--source demo` — phantom walkers wander the deck (bench/attract mode,
     works TODAY with no sensor)
   - `--source esphome` — aioesphomeapi subscription to the cuddle node's
-    LD2450 target entities (UNTESTED until the LD2450 is wired into the node's
-    radar UART, D6/D7, on hardware day)
+    LD2450 target entities (node live 2026-08-20, LD2450 on D2/D3 as built,
+    target_N_x/y streaming — source itself still unproven against the real
+    node until the projector rig day)
 
 ## Rollout
 

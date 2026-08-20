@@ -21,9 +21,10 @@ demo: two phantom walkers wander the deck, biased toward stones so the
 mischief mechanic fires as an attract loop. Presence never lapses, so the
 show stays on — bench/attract behavior until the LD2450 exists.
 
-esphome: UNTESTED until the LD2450 is wired into the cuddle node's radar UART
-(D6/D7 — standard position; since 2026-08-20 it is the room's ONLY radar and
-also does presence, sim/esphome/packages/ld2450.yaml). Subscribes to the
+esphome: the cuddle node is LIVE as of 2026-08-20 (LD2450 on D2/D3 as built —
+the room's ONLY radar, presence + tracks, sim/esphome/packages/ld2450.yaml;
+target_N_x/y verified streaming over the native API). This source is still
+unproven against it until the projector rig day. Subscribes to the
 node's `target N x/y` sensors (mm, sensor
 frame) and maps them through the tracker pose in maze_layout.json; flip axes
 with --invert-x if the real mounting disagrees.
@@ -147,10 +148,18 @@ class EsphomeTracks:
         for i in (1, 2, 3):
             x_mm = raw.get(f'target_{i}_x')
             y_mm = raw.get(f'target_{i}_y')
-            if not x_mm and not y_mm:  # LD2450 reports 0,0 for absent targets
+            # Absent targets: 0,0 in the raw LD2450 protocol, but the ESPHome
+            # ld2450 component (2026.7) publishes NaN for untracked slots —
+            # and NaN is truthy, so it must be filtered explicitly or an empty
+            # room feeds the engine a walker at (nan, nan).
+            if x_mm is None or y_mm is None:
                 continue
-            lx = (x_mm or 0) / 1000.0 * self.invert
-            ly = (y_mm or 0) / 1000.0
+            if not (math.isfinite(x_mm) and math.isfinite(y_mm)):
+                continue
+            if not x_mm and not y_mm:
+                continue
+            lx = x_mm / 1000.0 * self.invert
+            ly = y_mm / 1000.0
             sx, cy = self.rot
             out.append({'id': f'ld{i}',
                         'x': self.pos[0] + lx * cy + ly * sx,

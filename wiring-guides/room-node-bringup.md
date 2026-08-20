@@ -155,3 +155,4 @@ the Pi.
 | Monkey Room | 2026-08-16 | button + radar + ShrineGuard; first post-cutover |
 | Vertical Moop March | 2026-08-17 | 4-button game + radar + MoopMarch; pod pending cut |
 | Porto Room | 2026-08-20 | radar + 3-piezo knock game + audio; API + physical knocks validated (3 separate pads, ~0.3s knock→sound; hostapd-restart gotcha hit on the reflash); piezo thresholds recalibrate on-site behind the plywood; logger still DEBUG |
+| Cuddle Cross | 2026-08-20 | first LD2450 box (sole radar: presence + projection tracks) + DMX + audio; API + PHYSICAL radar entry validated, target_1 x/y streaming, zone/multi-target boot programming; **LD2450 on D2/D3 as built** (D6/D7 dead — guide updated); hostapd gotcha ×2; OTA-tunnel proven with the INFO flip; zone + timeouts re-tune at the mount |

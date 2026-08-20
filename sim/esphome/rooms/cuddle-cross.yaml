@@ -1,22 +1,58 @@
 # Cuddle Cross sensor node — trigger map from triggers.json
+# REAL ROOM BOX (2026-08-20): flashed per the FLASH ADDS recipe — first box on
+# packages/ld2450.yaml (the room's ONE radar since the 08-20 consolidation:
+# presence two-edge contract + Target 1-3 X/Y tracks for the floor projection
+# and orb gaze) + DMX out + audio. Detection zone boot-programs to y 0-3.0 m;
+# tune zone + presence timeout at the mount (HLKRadarTool over the module's BT
+# works for live target watching). 60 s absence_timeout = dwell room AND the
+# still-target-dropout bridge — do not shorten it for a snappier bench leave.
+# BENCH-VALIDATED same day: WiFi .67 join (hostapd-restart gotcha hit on
+# reflash, twice), node audio attach + bed/cue pipelines, 902 ArtDMX
+# frames/min signal=yes, API trip->CuddlePuddle->telemetry + vacate,
+# PHYSICAL radar-driven room_entry 17:35Z, target_1_x/y streaming ~5 Hz,
+# zone/multi-target boot programming read back. LD2450 UART = D2/D3 AS
+# BUILT (ld2450.yaml; D6/D7 dead ends — module never answers there).
+# OTA path proven via the Pi tunnel (this INFO flip was the OTA push).
+# To run this room in the sim again: platform back to sim_host.yaml, drop
+# radar/dmx/audio/external_components/wifi/sensor/logger (tripwire stays —
+# harness trip/vacate drives it on the host platform).
 substitutions:
   node_name: lohp-node-cuddle-cross
   room: "Cuddle Cross"
   effect: "CuddlePuddle"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.252.231
+  server_host: "192.168.252.231"   # the server Pi (maze-network.md)
   api_port: "6067"
-  host_mac: "06:35:69:00:00:07"
+  host_mac: "06:35:69:00:00:07"    # sim-only (sim_host.yaml); unused on hardware
+  absence_timeout: 60s             # dwell room; bridges LD2450 still-target dropout
+  dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)
 
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
-  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
+  radar: !include ../packages/ld2450.yaml
+  dmx: !include ../packages/dmx_out.yaml
+  audio: !include ../packages/audio_s3.yaml
+  platform: !include ../packages/hardware_s3.yaml
 
-# FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      absence_timeout: 60s   # dwell room; also bridges LD2450 still-target dropout
-#                       dmx_tx_pin: "6"   # D5, radar room
-#   packages:           radar: !include ../packages/ld2450.yaml   # NOT ld2410 —
-#                         the tracking radar IS the presence radar here
-#                         (2026-08-20 consolidation; D6/D7, standard position)
-#                       dmx: !include ../packages/dmx_out.yaml
-#   external_components: [{source: {type: local, path: ../components}}]
+external_components:   # for dmx_out.yaml — path is main-config-relative
+  - source:
+      type: local
+      path: ../components
+
+# Joins LOHP-ESP (rooms/secrets.yaml, post-cutover 2026-08-10 creds). No bssid
+# pin and no fast_connect: single-AP LAN, and fast_connect + audio firmware
+# caused WPA handshake loops on the Cop Dodge box (07-25). Keep the rescue AP.
+wifi:
+  ap:
+    ssid: "LoHP-Cuddle"
+    password: "hiddenplaya"
+
+# On-playa diagnostics habit (bench-xiao-s3.yaml): RSSI visible from the server.
+sensor:
+  - platform: wifi_signal
+    name: "${room} node RSSI"
+    update_interval: 30s
+
+# Validated 2026-08-20 -> INFO (logic.yaml default level, kept explicit).
+logger:
+  level: INFO
