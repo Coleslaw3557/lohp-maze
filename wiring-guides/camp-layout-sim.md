@@ -43,7 +43,7 @@ out, true distance ≈950 m ≈ the B-ring radius — approximate).
 | Small Generator | Predator 5000 inverter | red box + 5×5 pad |
 | pink strip + circles | 18' band + fuel depot shared with Blazing Death Ship | tinted strip, pad + 25' dashed ring |
 | Car ×6, OSS Container, Shower & Evap, Bike Rack ×2 | — | boxes at drawn spots |
-| — (not in the drawing) | 4 extension cord home runs off the generator + the water→kitchen daisy-chain branch (wiring-guides/camp-power-cords.md) | colored ground bars + 1px overlay lines, drop markers, length·gauge labels; camp-side ends track the bake, maze end = audio_power battery bus constant, kitchen = communal rear carport |
+| — (not in the drawing) | 4 extension cord home runs off the generator + the water→kitchen daisy-chain branch (wiring-guides/camp-power-cords.md) | routed colored ground bars + 1px overlay lines, drop markers, length·gauge labels; camp-side ends track the bake, maze end = audio_power battery bus constant, kitchen = communal rear carport |
 
 The maze, towers, and camp sign are NOT drawn by this layer — the sim already
 has the real ones; the drawing's maze/sign marks are used only for anchoring.

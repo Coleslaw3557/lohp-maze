@@ -9,7 +9,7 @@
     "Gate":                 {"host": "lohp-node-gate.local",                 "enabled": true},
     "Guy Line Climb":       {"host": "lohp-node-guy-line-climb.local",       "enabled": true},
     "Sparkle Pony Room":    {"host": "lohp-node-sparkle-pony.local",         "enabled": true},
-    "Porto Room":           {"host": "lohp-node-porto.local",                "enabled": true},
+    "Porto Room":           {"host": "192.168.252.66",                       "enabled": true, "hardware": true},
     "Cuddle Cross":         {"host": "lohp-node-cuddle-cross.local",         "enabled": true},
     "Exit":                 {"host": "lohp-node-exit.local",                 "enabled": true},
     "Photo Bomb Room":      {"host": "lohp-node-photo-bomb.local",           "enabled": true},

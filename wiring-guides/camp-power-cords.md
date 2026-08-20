@@ -1,4 +1,4 @@
-# Camp extension cord runs (straight runs + the water→kitchen chain)
+# Camp extension cord runs (routed runs + the water→kitchen chain)
 
 Four home runs from the Predator 5000 plus one daisy chain: the water cord
 branches at the tank into a 20 ft stinger to the kitchen — the communal's
@@ -7,26 +7,27 @@ Distances measured in the baked sim world frame: drop coordinates from
 `sim/web/camp_layout_data.js` (the LotHP-26-v3 bake, reality-oriented) and
 `sim/maze_layout.json` (`audio_power.battery` = the 12 V bus behind the hex —
 the evening charger cord lands there). Rotated-zone math follows the sim
-renderer's convention (THREE rotation.y). Straight lines center to drop; GFCI
-is handled separately and is not covered here.
+renderer's convention (THREE rotation.y). Maze/tent routes dogleg around the
+tent-camper BRS side; trailer+BRS and water dogleg around the communal
+carport edges. GFCI is handled separately and is not covered here.
 
 Visual plan (to-scale map + this table): the "Camp power — extension cord
 runs" artifact. The runs also render in the sim's camp layer (Camp button,
-overhead plan view): colored ground lines with length·gauge labels, drawn
+overhead plan view): routed colored ground lines with length·gauge labels, drawn
 by the cords block at the end of `sim/web/camp_layout.js`.
 
 ## Cord schedule
 
-| Run | Drop (world x,z) | Straight | Buy | Branch | Planning load | V-drop @ load |
+| Run | Drop (world x,z) | Route | Buy | Branch | Planning load | V-drop @ load |
 |---|---|---|---|---|---|---|
-| Maze rear (center) — battery bus + charger | 10.04, −0.72 | 98 ft | 100 ft + 25 ft **10/3** | A (TT-30R side) | 15 A sustained | 3.1% |
-| Water 500 gal — pump at tank | 13.83, −46.10 | 61 ft | 75 ft **12/3** | C | 10 A | 2.0% |
+| Maze rear (center) — battery bus + charger | 10.04, −0.72 | 123 ft | 150 ft **10/3** | A (TT-30R side) | 15 A sustained | 3.7% |
+| Water 500 gal — pump at tank | 13.83, −46.10 | 65 ft | 75 ft **12/3** | C | 10 A | 2.0% |
 | Kitchen — rear carport, branch at the tank | 15.12, −40.17 | +20 ft | 25 ft **12/3** stinger | C (chained) | 12 A brews | 3.2% at the pot |
-| Trailer + BRS | 24.79, −29.40 | 67 ft | 100 ft **10/3** | B, alone | 12.5 A, hours at a time | 2.1% |
-| Black Rock shade — tent campers (rent) | 7.34, −15.24 | 50 ft | 75 ft **12/3** | D | 4 A | 0.8% |
-| **Total** | | **296 ft** | **225 ft 10/3 + 175 ft 12/3** | | | |
+| Trailer + BRS | 24.79, −29.40 | 82 ft | 100 ft **10/3** | B, alone | 12.5 A, hours at a time | 2.1% |
+| Black Rock shade — tent campers side strip | 14.98, −11.43 | 84 ft | 100 ft **12/3** | D | 4 A | 1.1% |
+| **Total** | | **374 ft** | **250 ft 10/3 + 200 ft 12/3** | | | |
 
-Buy length = straight + ~6 ft end allowances + reroute margin. V-drop:
+Buy length = routed length + end allowances and dry-box slack. V-drop:
 V = 2·L·R·I at 120 V copper (12 AWG 1.588 Ω/kft, 10 AWG 0.999 Ω/kft), full
 purchased length. Trailer run is 10/3 because 12.5 A for hours sits at ~83%
 of a 100 ft 12/3 cord's 15 A rating — no margin for hot-ground derating.
@@ -36,23 +37,21 @@ multiple hours (largest single draw); communal = a coffee pot, very
 intermittent; water pump intermittent; everything else low-wattage. The maze
 is the longest sustained load — all the DMX LED fixtures are AC-powered.
 
-## What the straight lines cross (from the sim geometry)
+## Routing notes (from the sim geometry)
 
-- **Maze feed**: runs lengthwise through the tent-camper structure — dead
-  center through the two excluded middle spots, but crossing the sleeping rows
-  and under the ground-reaching shade skirts twice. Detour around either
-  tie-down edge is only +8–10 ft; that's why the buy is 100+25 (98 ft straight
-  leaves nothing for end drops on a bare 100 ft cord).
-- **Water**: straight line passes under the communal's west carport; skirting
-  the communal's outside edge is +3 ft (64 ft total). Branch point (12 AWG
-  2-fer in a dry box) at the tank.
+- **Maze feed**: doglegs around the B-street side of the tent-camper BRS,
+  outside the tie-down edge, then lands at the maze rear battery bus. This
+  avoids the sleeping rows instead of cutting through the shade.
+- **Water**: doglegs around the communal west edge instead of passing under
+  the carport. Branch point (12 AWG 2-fer in a dry box) at the tank.
 - **Kitchen stinger**: tank → rear carport is 20 ft of clear ground, and the
   communal's rear 8 ft entrance faces the tank — the cord walks in the door.
   Center-square lights/music (low-wattage) daisy off the kitchen strip.
-- **Trailer**: clips the communal north carport corner; around the north side
-  is +1 ft.
-- **Tent campers**: drop lands at the two excluded middle 10×10 spots — a
-  power strip there serves all 10 rented edge spots.
+- **Trailer**: doglegs around the communal front/north edge, just outside the
+  carport footprint, before crossing to the trailer+BRS.
+- **Tent campers**: the run follows the same tent-BRS side detour and lands a
+  power strip on the side edge instead of crossing the sleeping rows to the
+  excluded middle spots.
 
 ## Generator branches
 
@@ -86,8 +85,8 @@ show hours if the trailer device will be on.
 
 ## Buy list
 
-- 2× 100 ft + 1× 25 ft 10/3 SJTW (maze pair + trailer; SJEOOW nicer in cold)
-- 2× 75 ft + 1× 25 ft 12/3 SJTW (tents; gen→water; tank→kitchen stinger)
+- 1× 150 ft + 1× 100 ft 10/3 SJTW (maze + trailer; SJEOOW nicer in cold)
+- 1× 100 ft + 1× 75 ft + 1× 25 ft 12/3 SJTW (tents; gen→water; tank→kitchen stinger)
 - 1× 12 AWG 2-fer at the tank branch point, in a dry box
 - Generator-end connections covered by the existing GFCI + breakout rig
 - 4× dry boxes/bags — every mid-run connection off the ground, latched (dust/rain)

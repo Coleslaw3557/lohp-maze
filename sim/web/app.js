@@ -442,12 +442,10 @@ function carve(a0, a1, gaps) {
 
 function roomLevels(r) { return r.floor === 'both' ? [0, 1] : [r.floor || 0]; }
 
-// The 12 V day-power bus, drawn as built (wiring-guides/maze-12v-day-bus.md):
-// battery + charger behind the hex corner, 15 A breaker + bus bars on the corner
-// frame, two 14/2 legs wrapping the hex back faces then running the back wall
-// at bus_y, a converter at every stacked bay pair (pigtail drops off the bus),
-// the rack riser up the Cuddle/Photo-Bomb shared frame, and the RUT140 on 12 V
-// at the top of it. Geometry comes from layout audio_power — nothing computed.
+// The 12 V day-power bus, drawn from layout audio_power: battery/distribution
+// at the maze center line, 14 AWG bus running both directions between floors,
+// inline +/− terminal blocks per room, quadrant USB chargers for 10 ft USB
+// drops, RUT140 on 12 V, and Pi power via a 12 V→PoE adapter.
 function buildAudioPowerLayer(L) {
   const cfg = L.audio_power;
   if (!cfg || cfg.enabled === false) return;
@@ -462,17 +460,19 @@ function buildAudioPowerLayer(L) {
   const cableMat = new THREE.MeshStandardMaterial({ color: 0x86301a, roughness: 0.8, metalness: 0.05, emissive: 0x2a0a05 });
   const convMat = new THREE.MeshStandardMaterial({ color: 0x3d4652, roughness: 0.45, metalness: 0.55 });
   const gearMat = new THREE.MeshStandardMaterial({ color: 0x14171c, roughness: 0.55, metalness: 0.3 });
+  const terminalMat = new THREE.MeshStandardMaterial({ color: 0xddd3bd, roughness: 0.65, metalness: 0.04 });
+  const usbMat = new THREE.MeshStandardMaterial({ color: 0x0f253f, roughness: 0.75, metalness: 0.04, emissive: 0x03101c });
   const busY = cfg.bus_y || 0.2;
   const backZ = cfg.back_z || 0.28;
   const J = cfg.bus_bars && cfg.bus_bars.pos;
   const Jy = cfg.bus_bars && cfg.bus_bars.y != null ? cfg.bus_bars.y : busY;
 
-  const cable = (ax, ay, az, bx, by, bz, r = 0.012) => {
+  const cable = (ax, ay, az, bx, by, bz, r = 0.012, material = cableMat) => {
     const a = new THREE.Vector3(ax, ay, az);
     const d = new THREE.Vector3(bx - ax, by - ay, bz - az);
     const len = d.length();
     if (len < 0.02) return;
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 6), cableMat);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 6), material);
     m.position.copy(a).addScaledVector(d, 0.5);
     m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
     power.add(m);
@@ -549,6 +549,37 @@ function buildAudioPowerLayer(L) {
     }
   }
 
+  // inline +/− terminal blocks, ring-connected in series on the 14 AWG bus
+  const td = (cfg.terminal_block && cfg.terminal_block.dim_m) || [0.09, 0.035, 0.045];
+  for (const tb of (cfg.terminal_blocks || [])) {
+    const y = tb.y != null ? tb.y : busY;
+    const [x, z] = tb.pos;
+    const block = new THREE.Mesh(new THREE.BoxGeometry(td[0], td[1], td[2]), terminalMat);
+    block.position.set(x, y, z);
+    power.add(block);
+    tag('+/- TERM', x, y + 0.13, z, 0.085);
+  }
+
+  // 10 ft USB drops from the quadrant chargers to each ESP32 enclosure
+  const groups = [
+    ['USB-Q1', ['Vertical Moop March', 'Monkey Room', 'Bike Lock Room']],
+    ['USB-Q2', ['Temple Room', 'Deep Playa Handshake', 'No Friends Monday', 'Photo Bomb Room']],
+    ['USB-Q3', ['Exit', 'Entrance', 'Cuddle Cross', 'Cop Dodge']],
+    ['USB-Q4', ['Porto Room', 'Gate', 'Sparkle Pony Room', 'Guy Line Climb']],
+  ];
+  const convById = new Map((cfg.converters || []).map(c => [c.id, c]));
+  for (const [cid, rooms] of groups) {
+    const cv = convById.get(cid);
+    if (!cv) continue;
+    const cy = cv.y != null ? cv.y : busY;
+    for (const roomName of rooms) {
+      const enc = L.rooms[roomName] && L.rooms[roomName].enclosure;
+      if (!enc) continue;
+      const lv = enc.level != null ? enc.level : ((L.rooms[roomName].floor || 0) === 1 ? 1 : 0);
+      cable(cv.pos[0], cy, cv.pos[1], enc.pos[0], lv * (L.level_height || 1.93) + (enc.h || 1.55), enc.pos[1], 0.004, usbMat);
+    }
+  }
+
   // RUT140 on 12 V at the top of the riser, antenna up
   if (cfg.rut140) {
     const [x, z] = cfg.rut140.pos;
@@ -559,6 +590,17 @@ function buildAudioPowerLayer(L) {
     ant.position.set(x + 0.04, cfg.rut140.y + 0.095, z);
     power.add(ant);
     tag(cfg.rut140.label || 'RUT140', x, cfg.rut140.y + 0.24, z, 0.12);
+    if (J) cable(J[0], Jy, J[1], x, cfg.rut140.y, z, 0.006);
+  }
+  if (cfg.poe_adapter) {
+    const [x, z] = cfg.poe_adapter.pos;
+    const y = cfg.poe_adapter.y != null ? cfg.poe_adapter.y : 0.45;
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.045, 0.055), gearMat);
+    p.position.set(x, y, z);
+    power.add(p);
+    tag(cfg.poe_adapter.label || '12V→PoE', x, y + 0.19, z, 0.11);
+    if (J) cable(J[0], Jy, J[1], x, y, z, 0.006);
+    if (L.server_rack) cable(x, y, z, L.server_rack.pos[0], (L.server_rack.h || 0.28), L.server_rack.pos[1], 0.005, usbMat);
   }
 }
 
@@ -840,6 +882,25 @@ function buildMaze(cfg) {
     led.position.set(0.06, 0.085, 0.0505);
     eg.add(led);
     grp(lv).add(eg);
+  }
+
+  // Photo Bomb webcam: metal standoff arm from open face, camera outside looking inward
+  for (const r of Object.values(L.rooms)) {
+    const cm = r.camera_mount;
+    if (!cm) continue;
+    const lv = cm.level != null ? cm.level : (r.floor === 1 ? 1 : 0);
+    const y = lv * LH + (cm.h || 1.45);
+    const [x, z] = cm.pos;
+    const armLen = cm.arm_len || 0.4;
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, armLen, 10), matGalv);
+    arm.position.set(x, y, z + armLen / 2);
+    arm.rotation.x = Math.PI / 2;
+    grp(lv).add(arm);
+    const cam = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.07, 0.06),
+      new THREE.MeshStandardMaterial({ color: 0x0c1018, roughness: 0.45, metalness: 0.35 }));
+    cam.position.set(x, y, z + armLen);
+    cam.rotation.y = (cm.yaw_deg || 180) * Math.PI / 180;
+    grp(lv).add(cam);
   }
 
   buildAudioPowerLayer(L);

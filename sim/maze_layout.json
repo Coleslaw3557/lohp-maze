@@ -31,74 +31,76 @@
   ]
  },
  "server_rack": {
-  "note": "NO rack (Tim 2026-08-09) \u2014 the Pi enclosure sits on the floor at the service cluster under the riser, beside the crate and the RUT140 enclosure",
+  "note": "NO rack. The Pi enclosure sits by the center distribution cluster and is powered by a 12 VDC to PoE adapter; PoE powers the Pi ethernet port. USB-DMX stays in the Pi enclosure.",
   "pos": [
    9.28,
    -0.03
   ],
   "level": 0,
   "h": 0.28,
-  "label": "RPi + USB-DMX"
+  "label": "PoE \u2192 RPi + USB-DMX"
  },
  "audio_power": {
-  "note": "Back-side day-power layer, AS BUILT rev 2026-08-09(c): NO rack, NO low bus. Service cluster ON THE FLOOR at the hex SW corner, directly under the riser: a vented ply CRATE (battery + charger + breaker + the two BBS43-P bus bars), the Pi enclosure, and the RUT140 enclosure beside it. ONE 14/2 riser climbs from the bars to the HIGH BUS at 2.515 m (8ft3in above ground = 22in above the deck line) \u2014 the height where ground and upper node boxes are the SAME routed USB distance (~11ft2in), so every wing room uses one 12 ft cable SKU (Tim's equal-distance requirement). West and east runs split at the riser-top tee (bench-soldered): WEST straight to x=1.269; EAST wraps the hex back faces (8 cm stand-off) to x=16.689. Hubs S1-S8 clamp AT bus height; S5 posi-taps the east run at the hex S corner (serves Entrance/Exit/Cuddle nodes + Cuddle Pebble); S9 sits on the crate off the bars (Pi + Entrance/Exit Pebbles). RUT140 12 V direct off the bars. Cut sheet: wiring-guides/maze-12v-day-bus.md. Speakers and 5 V USB drops intentionally not drawn.",
+  "note": "Back-side day-power layer, field-setout rev 2026-08-19: 14 AWG 12 VDC bus leaves the battery/distribution block in BOTH directions from the maze center line between the two floors. Each room gets one inline +/− terminal block on the bus with ring connectors; terminal blocks are in series along the run. Four 12 VDC to USB chargers are spaced by maze quadrant; 10 ft USB cables run from the chargers to ESP32 enclosures. RUT140 lands directly on the 12 VDC bus. Raspberry Pi is fed by a 12 VDC to PoE adapter; PoE powers the Pi.",
   "enabled": true,
   "back_z": 0.46,
-  "bus_y": 2.515,
+  "bus_y": 1.93,
   "bus_bars": {
    "pos": [
-    8.9,
-    0.18
+    10.044,
+    0.43
    ],
-   "y": 0.3,
-   "label": "15 A \u2192 bus bars (crate)",
-   "note": "inside the floor crate with battery/charger/breaker; riser rises from here"
+   "y": 1.93,
+   "label": "12 V distro + breaker",
+   "note": "center distribution point at the bus center line between floors"
   },
   "bus_routes": [
    [
     [
-     8.7,
+     10.044,
      0.43
     ],
     [
-     1.269,
-     0.44
+     0.204,
+     0.455
     ]
    ],
    [
     [
-     8.7,
+     10.044,
      0.43
     ],
     [
-     10.044,
-     -0.356
-    ],
-    [
-     11.404,
-     0.429
-    ],
-    [
-     16.689,
-     0.44
+     17.754,
+     0.455
     ]
    ]
   ],
-  "routes_note": "runs are at bus_y=2.515 m, split at the riser-top tee; the east hex-face spans keep the 8 cm stand-off outside the skinned Cuddle back walls; cut-list lengths in the build sheet",
+  "routes_note": "14 AWG 12 V bus runs at bus_y=1.93 m along the back side from center distribution to west and east ends; inline room terminal blocks are landed with ring connectors in series.",
   "riser": {
-   "x": 8.7,
+   "x": 10.044,
    "z": 0.43,
    "y0": 0.3,
-   "y1": 2.515,
-   "note": "ONE trunk riser, crate bars -> riser-top tee; carries the whole bus, protected by the 15 A breaker (no ATC fuses anywhere, Tim 2026-08-09)"
+   "y1": 1.93,
+   "note": "short feed from floor battery crate to center distribution block"
   },
   "rut140": {
    "pos": [
-    9.62,
-    -0.22
+    9.72,
+    0.05
    ],
-   "y": 0.18,
-   "label": "RUT140"
+   "y": 0.45,
+   "feed": "12v_bus",
+   "label": "RUT140 12V"
+  },
+  "poe_adapter": {
+   "pos": [
+    9.42,
+    0.05
+   ],
+   "y": 0.45,
+   "feed": "12v_bus",
+   "label": "12V\u2192PoE"
   },
   "speaker": {
    "model": "Creative Pebble 2.0",
@@ -114,104 +116,189 @@
   },
   "battery": {
    "pos": [
-    8.9,
-    0.18
+    10.044,
+    0.12
    ],
    "dim_m": [
     0.55,
     0.4,
     0.35
    ],
-   "label": "crate: battery + charger + bus bars"
+   "label": "battery + 12V distribution"
   },
-  "converters": [
+  "terminal_blocks": [
    {
-    "id": "S1",
+    "id": "TB-VMM",
+    "room": "Vertical Moop March",
     "pos": [
      1.269,
      0.455
     ],
-    "y": 2.515,
-    "ports": "VMM node + Pebble (2 spare)"
+    "y": 1.93
    },
    {
-    "id": "S2",
+    "id": "TB-MONKEY",
+    "room": "Monkey Room",
     "pos": [
      3.399,
      0.455
     ],
-    "y": 2.515,
-    "ports": "Monkey + Bike Lock nodes/Pebbles"
+    "y": 1.93
    },
    {
-    "id": "S3",
+    "id": "TB-BIKE",
+    "room": "Bike Lock Room",
+    "pos": [
+     3.399,
+     0.405
+    ],
+    "y": 2.08
+   },
+   {
+    "id": "TB-TEMPLE",
+    "room": "Temple Room",
     "pos": [
      5.529,
      0.455
     ],
-    "y": 2.515,
-    "ports": "Temple + Deep Playa nodes/Pebbles"
+    "y": 1.93
    },
    {
-    "id": "S4",
+    "id": "TB-DPH",
+    "room": "Deep Playa Handshake",
+    "pos": [
+     5.529,
+     0.405
+    ],
+    "y": 2.08
+   },
+   {
+    "id": "TB-NFM",
+    "room": "No Friends Monday",
     "pos": [
      7.659,
      0.455
     ],
-    "y": 2.515,
-    "ports": "No Friends + Photo Bomb nodes/Pebbles"
+    "y": 1.93
    },
    {
-    "id": "S5",
+    "id": "TB-PHOTO",
+    "room": "Photo Bomb Room",
     "pos": [
-     10.39,
-     -0.17
+     7.659,
+     0.405
     ],
-    "y": 2.515,
-    "yaw_deg": -30,
-    "ports": "Entrance/Exit/Cuddle nodes + Cuddle Pebble",
-    "note": "posi-tapped on the east run at the hex S corner, 8 cm off the face",
-    "tap": [
-     10.044,
-     -0.356
-    ]
+    "y": 2.08
    },
    {
-    "id": "S6",
+    "id": "TB-EXIT",
+    "room": "Exit",
+    "pos": [
+     9.384,
+     0.455
+    ],
+    "y": 1.93
+   },
+   {
+    "id": "TB-ENTRANCE",
+    "room": "Entrance",
+    "pos": [
+     10.704,
+     0.455
+    ],
+    "y": 1.93
+   },
+   {
+    "id": "TB-CUDDLE",
+    "room": "Cuddle Cross",
+    "pos": [
+     10.044,
+     0.36
+    ],
+    "y": 2.08
+   },
+   {
+    "id": "TB-COP",
+    "room": "Cop Dodge",
     "pos": [
      12.429,
      0.455
     ],
-    "y": 2.515,
-    "ports": "Cop Dodge + Porto nodes/Pebbles"
+    "y": 1.93
    },
    {
-    "id": "S7",
+    "id": "TB-PORTO",
+    "room": "Porto Room",
+    "pos": [
+     12.429,
+     0.405
+    ],
+    "y": 2.08
+   },
+   {
+    "id": "TB-GATE",
+    "room": "Gate",
     "pos": [
      14.559,
      0.455
     ],
-    "y": 2.515,
-    "ports": "Gate + Sparkle nodes/Pebbles"
+    "y": 1.93
    },
    {
-    "id": "S8",
+    "id": "TB-SPARKLE",
+    "room": "Sparkle Pony Room",
+    "pos": [
+     14.559,
+     0.405
+    ],
+    "y": 2.08
+   },
+   {
+    "id": "TB-GUY",
+    "room": "Guy Line Climb",
     "pos": [
      16.689,
      0.455
     ],
-    "y": 2.515,
-    "ports": "Guy Line node + Pebble (2 spare)"
+    "y": 1.93
+   }
+  ],
+  "converters": [
+   {
+    "id": "USB-Q1",
+    "pos": [
+     2.334,
+     0.455
+    ],
+    "y": 1.93,
+    "ports": "VMM, Monkey, Bike ESP32 enclosures via 10 ft USB"
    },
    {
-    "id": "S9",
+    "id": "USB-Q2",
     "pos": [
-     8.62,
-     0.05
+     6.594,
+     0.455
     ],
-    "y": 0.35,
-    "feed": "riser",
-    "ports": "Pi + Entrance/Exit Pebbles (1 spare)"
+    "y": 1.93,
+    "ports": "Temple, Deep Playa, No Friends, Photo Bomb ESP32 enclosures via 10 ft USB"
+   },
+   {
+    "id": "USB-Q3",
+    "pos": [
+     11.364,
+     0.455
+    ],
+    "y": 1.93,
+    "ports": "Exit, Entrance, Cuddle, Cop Dodge ESP32 enclosures via 10 ft USB"
+   },
+   {
+    "id": "USB-Q4",
+    "pos": [
+     15.624,
+     0.455
+    ],
+    "y": 1.93,
+    "ports": "Porto, Gate, Sparkle, Guy Line ESP32 enclosures via 10 ft USB"
    }
   ],
   "converter": {
@@ -507,12 +594,24 @@
     ]
    ],
    "enclosure": {
-    "pos": [
+   "pos": [
      8.624,
      1.94
     ],
     "level": 1,
     "yaw_deg": -124
+   },
+   "camera_mount": {
+    "note": "USB webcam on the outside end of a metal standoff arm projecting out from the open face of the Photo Bomb Room, aimed inward to capture the room and printed backdrop.",
+    "pos": [
+     7.659,
+     2.02
+    ],
+    "level": 1,
+    "h": 1.45,
+    "arm_len": 0.42,
+    "yaw_deg": 180,
+    "label": "USB webcam on metal arm"
    }
   },
   "Exit": {
@@ -1605,7 +1704,7 @@
   }
  ],
  "projection": {
-  "note": "PLANNED Cuddle Cross floor-projection rig (sim preview only, no production config behind it): used ViewSonic LS625X (laser-phosphor DLP, 20k-hr solid-state source, SEALED optical engine + waveform dust filter - the playa-relevant feature; XGA 4:3, 3200 lm, TR 0.49:1, lens offset 118%, native focus 60-300in; ~$395 used on eBay 2026-07) mounted FACE-DOWN = NOSE-DOWN (0.22 m chassis depth hangs vertically; body top 3.82 kisses the 3.83 roof slab, so the window rides at ~1.53 m - the biggest image the roof allows: 3.112 m wide x 2.334 m along-throw) on a STUB ARM just INSIDE the hexagon's NE corner (paired legs at (11.364, 2.022); lens plumb 10 cm inboard of the vertex, body rear face ~1.5 cm off the leg cluster, arm_deg 60 out to the legs - the legs sit BEHIND the aperture so no scaffold steel touches a single ray), throwing SW down the long diagonal (yaw -120). 2026-07-18 MAX-COVERAGE revision - Tim's call: coverage math wins over the rear-leg placement preference. The geometry: with height roof-capped the image rect is fixed, so coverage is pure plumb+yaw placement; the 118% offset pins the near image edge 0.42 m from the lens plumb, and the far edge reaches only 2.754 m - short of the 3.048 m corner-to-corner diagonal - so some dark deck is unavoidable and the corner throw minimizes it. KEY OBSTRUCTION PHYSICS (caught by Tim): the ideal unobstructed plumb is ~6 cm OUTSIDE the vertex (92.7%, image dead-centered), but from there the paired corner legs stand 6 cm in front of the lens and every ray crosses them at 1.30-1.49 m height - one 43 mm tube at that range shadows a +-20 deg wedge through the FULL image depth, so any outboard aperture is optically dead; inboard-of-the-legs is the real optimum: 91.2% of the 6.03 m2 deck. All six corners tie; NE chosen because the S corner is blocked (canvas + node box in the near field), SE had the button rail in the beam (rail removed 2026-07-23 - the orb is the Cuddle control surface), SW rides the canvas end seam, and N hangs over the front lean-out corner. Unlit: the near corner wedge under the body (~0.52 m deep - the body hangs over the deck's darkest dead corner, bottom at 1.53 m) and the ~0.19 m SW far tip; the east-arch jamb clips only rays that land off-deck (masked). Fallbacks: rolling the body to yaw -63 at the OLD rear-leg clamp gets 89.8% with zero new hardware (the due-west throw was 75.8%; legs/arch clear there too); a roof-top doghouse over a beam porthole reaches 100% but means roof surgery. Offset tolerance now cuts both ways: 118%+-5% spans 88.2-92.6% (low-offset units win), so slot the arm bracket +-8 cm radially and set the final plumb on-site; every 25 mm of lost mount height costs ~0.4pt. MASKED to the deck outline as always (off-deck pixels black); mast base in-image (content island; its shadow wedge now falls SW toward the back-west corner, clear of the old button-station corner). Supersedes the rear-leg placement, the Casio XJ-ST145 pick (kept as budget fallback) and the earlier 595Wi scheme. LD2450/LD2410C node box unchanged at the back corner. Render Pi 3B outputs 1024x768. Playa care: ply shroud with open downward aperture, filter cloth over the intake, daily brush-out, power off by day. An LD2450 position radar joins the LD2410C inside the node box (UART1 on the XIAO C3) and streams up to 3 target positions to the projection Pi 3B at the rack; the sim reacts to the walker through the tracker's real coverage wedge with ~150 ms sensor+render latency. Show starts on the room's entry trigger (or tracked presence) and times out like the planned cue daemon. 2026-07-29 MOUNT DIMS for the arm/enclosure build: pos/h made mm-exact from the optics (window height above deck = TR 0.49 x 3.112 m image width = 1.525 m; pos = BODY-CENTER plumb, drawn lens window bd/2-0.03 = 27.5 mm ahead of it, which lands the lens plumb exactly 100 mm in from the NE deck corner ON the corner-to-corner string line) and the sim's Mount button overlays the calculated build position dimensioned off tape-measurable datums: lens plumb 100 mm from the corner along the string line, window 1525 mm above deck, body top 1745 mm (15 mm under the 1760 roof-slab soffit), rear face 15 mm off the leg pair, image near/far edges 520 / 2854 mm from the corner as deck verification marks. Fab spec + on-site calibration: wiring-guides/cuddle-projector-mount.md. 2026-07-29 STAND-OFF REVISION (Tim caught the body drawn through the frame bars): the walk-thru frames carry a TOP RAIL 75 mm below the leg tops and a full-width HEADER 190 mm down (the real PSV-610 members the sim frames model) - at the old 15 mm-off-the-legs position the body's rear corners overhung the frame planes ~60 mm straight through both bands, a REAL collision the 07-18 roof-cap math missed (it only checked the 3.83 roof slab; dropping under the header instead would gut the image - the 220 mm body can't thread the 77 mm rail-header gap). Fix: the whole rig slides 120 mm INBOARD down the throw diagonal - window height and image size unchanged, the mapping only translates: lens plumb now 220 mm from the corner, near/far image edges 640/2974 mm (far tip 74 mm shy - nearly closed), rear face 135 mm off the corner datum, rear corners 44 mm inside the worst-case frame plane = 25 mm clear of the rail tube even if the frames stand ON the deck edge. Coverage 91.2 -> 88.1% nominal; the fab-drawing leg ring stands ~3% (~40 mm) outside the idealized hex, so on-site the arm's +-80 mm slot slides the body back OUTBOARD to ~25 mm shy of the actual steel and recovers ~1-2 pt. Mount hardware now drawn for real: YOKE plate (280 mm tall, 3-ply lamination) hose-clamped to the paired corner legs in the two clean bands (~1540 above deck = below the brace studs, and ~1755 = above the top-rail weld under the coupling collar), box-BEAM arm threading the 77 mm rail-header gap at ~1658 above deck on the corner bisector (60 deg to each frame face) with a +-80 mm carriage slot, and the laser-cut ply SHROUD sleeve around the nose-down body (open bottom, top panel ~6 mm under the roof slab; cut files enclosure/projector-shroud.scad, export-shroud.py). 2026-08-01 REAL-DIMS + OFFSET CORRECTION (official LS625X user guide + datasheet pulled; Tim confirmed the model): (1) chassis corrected to the guide p.56 figures - 383.7 w x 291.5 d x 147.7 h mm, net 6.2 kg, 305 W normal, ceiling bosses 4x M4 on 223.0 x 150.0 - the 07-18 body (293 x 221.5 x 114.6) was a bad source, ~0.76x in every axis; (2) the offset convention was misread - the guide p.13 throw table puts the image near edge 8.95% of image height from the lens axis (118% means center over HALF-height), while the July math used 18% of full height, double the truth. Consequences, all applied here: the 291.5 mm nose-down body no longer fits under the 1760 soffit at window 1525 -> window drops to 1455 mm (soffit 1760 - 6 service - 2.9 top - 4.5 headroom - 291.5 body), image 2969 x 2227 mm (TR 0.49), lens plumb 250 mm from the corner (shroud rear corners 25 mm clear of the rail tube worst-case, same standard as 07-29), near/far deck marks 449/2676 (far tip 372 shy), image center 1563 from the corner, lit coverage 90.2% nominal - BETTER than the misread 88.1% because the corrected offset re-centers the smaller image. pos = body-center plumb = lens plumb (lens assumed CENTERED along-throw on the 147.7 face - MEASURE from the unit; its lateral off-center in the 383.7 width is handled at the bench: drill the carriage plate so the LENS, not the chassis, lands on the string line). Carriage re-sized for the real boss pattern (PI-shaped plate 260 x 240 around the beam, 4x M4x16 with washers), beam adjustment slots re-centered on the carriage bolt line (the 07-29 sheet had them at the far inboard end where the carriage never rides - latent, never built), shroud cavity 391.7 x 156.1 x 296, side vents 90 x 160. Cut files re-exported; fab spec rewritten. Delete this key to remove the whole rig from the sim.",
+  "note": "Cuddle Cross floor-projection rig: used ViewSonic LS625X (laser-phosphor DLP, 20k-hr solid-state source, SEALED optical engine + waveform dust filter - the playa-relevant feature; XGA 4:3, 3200 lm, TR 0.49:1, lens offset 118%, native focus 60-300in; ~$395 used on eBay 2026-07) mounted FACE-DOWN = NOSE-DOWN (0.22 m chassis depth hangs vertically; body top 3.82 kisses the 3.83 roof slab, so the window rides at ~1.53 m - the biggest image the roof allows: 3.112 m wide x 2.334 m along-throw) on a STUB ARM just INSIDE the hexagon's NE corner (paired legs at (11.364, 2.022); lens plumb 10 cm inboard of the vertex, body rear face ~1.5 cm off the leg cluster, arm_deg 60 out to the legs - the legs sit BEHIND the aperture so no scaffold steel touches a single ray), throwing SW down the long diagonal (yaw -120). 2026-07-18 MAX-COVERAGE revision - Tim's call: coverage math wins over the rear-leg placement preference. The geometry: with height roof-capped the image rect is fixed, so coverage is pure plumb+yaw placement; the 118% offset pins the near image edge 0.42 m from the lens plumb, and the far edge reaches only 2.754 m - short of the 3.048 m corner-to-corner diagonal - so some dark deck is unavoidable and the corner throw minimizes it. KEY OBSTRUCTION PHYSICS (caught by Tim): the ideal unobstructed plumb is ~6 cm OUTSIDE the vertex (92.7%, image dead-centered), but from there the paired corner legs stand 6 cm in front of the lens and every ray crosses them at 1.30-1.49 m height - one 43 mm tube at that range shadows a +-20 deg wedge through the FULL image depth, so any outboard aperture is optically dead; inboard-of-the-legs is the real optimum: 91.2% of the 6.03 m2 deck. All six corners tie; NE chosen because the S corner is blocked (canvas + node box in the near field), SE had the button rail in the beam (rail removed 2026-07-23 - the orb is the Cuddle control surface), SW rides the canvas end seam, and N hangs over the front lean-out corner. Unlit: the near corner wedge under the body (~0.52 m deep - the body hangs over the deck's darkest dead corner, bottom at 1.53 m) and the ~0.19 m SW far tip; the east-arch jamb clips only rays that land off-deck (masked). Fallbacks: rolling the body to yaw -63 at the OLD rear-leg clamp gets 89.8% with zero new hardware (the due-west throw was 75.8%; legs/arch clear there too); a roof-top doghouse over a beam porthole reaches 100% but means roof surgery. Offset tolerance now cuts both ways: 118%+-5% spans 88.2-92.6% (low-offset units win), so slot the arm bracket +-8 cm radially and set the final plumb on-site; every 25 mm of lost mount height costs ~0.4pt. MASKED to the deck outline as always (off-deck pixels black); mast base in-image (content island; its shadow wedge now falls SW toward the back-west corner, clear of the old button-station corner). Supersedes the rear-leg placement, the Casio XJ-ST145 pick (kept as budget fallback) and the earlier 595Wi scheme. LD2450/LD2410C node box unchanged at the back corner. Render Pi 3B outputs 1024x768. Playa care: ply shroud with open downward aperture, filter cloth over the intake, daily brush-out, power off by day. An LD2450 position radar joins the LD2410C inside the node box (UART1 on the XIAO C3) and streams up to 3 target positions to the projection Pi 3B at the rack; the sim reacts to the walker through the tracker's real coverage wedge with ~150 ms sensor+render latency. Show starts on the room's entry trigger (or tracked presence) and times out like the cue daemon. 2026-07-29 MOUNT DIMS for the arm/enclosure build: pos/h made mm-exact from the optics (window height above deck = TR 0.49 x 3.112 m image width = 1.525 m; pos = BODY-CENTER plumb, drawn lens window bd/2-0.03 = 27.5 mm ahead of it, which lands the lens plumb exactly 100 mm in from the NE deck corner ON the corner-to-corner string line) and the sim's Mount button overlays the calculated build position dimensioned off tape-measurable datums: lens plumb 100 mm from the corner along the string line, window 1525 mm above deck, body top 1745 mm (15 mm under the 1760 roof-slab soffit), rear face 15 mm off the leg pair, image near/far edges 520 / 2854 mm from the corner as deck verification marks. Fab spec + on-site calibration: wiring-guides/cuddle-projector-mount.md. 2026-07-29 STAND-OFF REVISION (Tim caught the body drawn through the frame bars): the walk-thru frames carry a TOP RAIL 75 mm below the leg tops and a full-width HEADER 190 mm down (the real PSV-610 members the sim frames model) - at the old 15 mm-off-the-legs position the body's rear corners overhung the frame planes ~60 mm straight through both bands, a REAL collision the 07-18 roof-cap math missed (it only checked the 3.83 roof slab; dropping under the header instead would gut the image - the 220 mm body can't thread the 77 mm rail-header gap). Fix: the whole rig slides 120 mm INBOARD down the throw diagonal - window height and image size unchanged, the mapping only translates: lens plumb now 220 mm from the corner, near/far image edges 640/2974 mm (far tip 74 mm shy - nearly closed), rear face 135 mm off the corner datum, rear corners 44 mm inside the worst-case frame plane = 25 mm clear of the rail tube even if the frames stand ON the deck edge. Coverage 91.2 -> 88.1% nominal; the fab-drawing leg ring stands ~3% (~40 mm) outside the idealized hex, so on-site the arm's +-80 mm slot slides the body back OUTBOARD to ~25 mm shy of the actual steel and recovers ~1-2 pt. Mount hardware now drawn for real: YOKE plate (280 mm tall, 3-ply lamination) hose-clamped to the paired corner legs in the two clean bands (~1540 above deck = below the brace studs, and ~1755 = above the top-rail weld under the coupling collar), box-BEAM arm threading the 77 mm rail-header gap at ~1658 above deck on the corner bisector (60 deg to each frame face) with a +-80 mm carriage slot, and the laser-cut ply SHROUD sleeve around the nose-down body (open bottom, top panel ~6 mm under the roof slab; cut files enclosure/projector-shroud.scad, export-shroud.py). 2026-08-01 REAL-DIMS + OFFSET CORRECTION (official LS625X user guide + datasheet pulled; Tim confirmed the model): (1) chassis corrected to the guide p.56 figures - 383.7 w x 291.5 d x 147.7 h mm, net 6.2 kg, 305 W normal, ceiling bosses 4x M4 on 223.0 x 150.0 - the 07-18 body (293 x 221.5 x 114.6) was a bad source, ~0.76x in every axis; (2) the offset convention was misread - the guide p.13 throw table puts the image near edge 8.95% of image height from the lens axis (118% means center over HALF-height), while the July math used 18% of full height, double the truth. Consequences, all applied here: the 291.5 mm nose-down body no longer fits under the 1760 soffit at window 1525 -> window drops to 1455 mm (soffit 1760 - 6 service - 2.9 top - 4.5 headroom - 291.5 body), image 2969 x 2227 mm (TR 0.49), lens plumb 250 mm from the corner (shroud rear corners 25 mm clear of the rail tube worst-case, same standard as 07-29), near/far deck marks 449/2676 (far tip 372 shy), image center 1563 from the corner, lit coverage 90.2% nominal - BETTER than the misread 88.1% because the corrected offset re-centers the smaller image. pos = body-center plumb = lens plumb (lens assumed CENTERED along-throw on the 147.7 face - MEASURE from the unit; its lateral off-center in the 383.7 width is handled at the bench: drill the carriage plate so the LENS, not the chassis, lands on the string line). Carriage re-sized for the real boss pattern (PI-shaped plate 260 x 240 around the beam, 4x M4x16 with washers), beam adjustment slots re-centered on the carriage bolt line (the 07-29 sheet had them at the far inboard end where the carriage never rides - latent, never built), shroud cavity 391.7 x 156.1 x 296, side vents 90 x 160. Cut files re-exported; fab spec rewritten. Delete this key to remove the whole rig from the sim.",
   "room": "Cuddle Cross",
   "level": 1,
   "cue": "Cuddle Cross LT",
@@ -1624,7 +1723,7 @@
     0.2915,
     0.1477
    ],
-   "label": "LS625X floor projection (planned)"
+   "label": "LS625X floor projection"
   },
   "image": {
    "center": [

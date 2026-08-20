@@ -1,23 +1,53 @@
 # Porto Room sensor node — trigger map from triggers.json
+# REAL ROOM BOX (2026-08-20): flashed per the FLASH ADDS recipe — the 3-pad
+# knock game lives on THIS node (game_porto.yaml + game_porto_hw.yaml, piezos
+# on D0-D2 via DB9 port A pins 3-5; 1MΩ bleed resistors to GND at the XIAO so
+# the ADC pins rest quiet with the pod unplugged) + LD2410C radar -> tripwire
+# -> PortoStandBy + DMX out + audio.
+# To run this room in the sim again: platform back to sim_host.yaml, drop
+# game_hw/radar/dmx/audio/external_components/wifi/sensor/logger (tripwire +
+# game stay — harness trip/vacate/press_porto drives them on the host platform).
 substitutions:
   node_name: lohp-node-porto
   room: "Porto Room"
   effect: "PortoStandBy"
   entry_hook: "id(porto_randomize)->execute();"
   leave_hook: "id(porto_entry_seeded) = false; id(porto_attempts) = 0; id(porto_solved) = false;"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.252.231
+  server_host: "192.168.252.231"   # the server Pi (maze-network.md)
   api_port: "6066"
-  host_mac: "06:35:69:00:00:06"
+  host_mac: "06:35:69:00:00:06"    # sim-only (sim_host.yaml); unused on hardware
+  dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)
 
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
+  radar: !include ../packages/ld2410.yaml
   game: !include ../packages/game_porto.yaml
-  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
+  game_hw: !include ../packages/game_porto_hw.yaml
+  dmx: !include ../packages/dmx_out.yaml
+  audio: !include ../packages/audio_s3.yaml
+  platform: !include ../packages/hardware_s3.yaml
 
-# FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "6"   # D5, radar room
-#   packages:           radar: !include ../packages/ld2410.yaml
-#                       game_hw: !include ../packages/game_porto_hw.yaml
-#                       dmx: !include ../packages/dmx_out.yaml
-#   external_components: [{source: {type: local, path: ../components}}]
+external_components:   # for dmx_out.yaml — path is main-config-relative
+  - source:
+      type: local
+      path: ../components
+
+# Joins LOHP-ESP (rooms/secrets.yaml, post-cutover 2026-08-10 creds). No bssid
+# pin and no fast_connect: single-AP LAN, and fast_connect + audio firmware
+# caused WPA handshake loops on the Cop Dodge box (07-25). Keep the rescue AP.
+wifi:
+  ap:
+    ssid: "LoHP-Porto"
+    password: "hiddenplaya"
+
+# On-playa diagnostics habit (bench-xiao-s3.yaml): RSSI visible from the server.
+sensor:
+  - platform: wifi_signal
+    name: "${room} node RSSI"
+    update_interval: 30s
+
+# Bring-up visibility: piezo/game + POST logs at DEBUG. Drop back to INFO
+# (logic.yaml default) via OTA once validated.
+logger:
+  level: DEBUG

@@ -16,8 +16,8 @@
 //   Water                        250-gallon water tank
 //   Small Generator              Predator 5000 inverter
 //   plus: 6 cars, OSS container, shower & evap, 2 bike racks, shared fuel
-//   depot circles (Blazing Death Ship), maze tie-down margin, and the five
-//   extension cord home runs off the generator (wiring-guides/camp-power-cords.md).
+//   depot circles (Blazing Death Ship), maze tie-down margin, and the
+//   extension cord routes from the generator (wiring-guides/camp-power-cords.md).
 window.CAMP_LAYOUT = (() => {
   const FT = 0.3048;
 
@@ -74,6 +74,16 @@ window.CAMP_LAYOUT = (() => {
       if (dashed) line.computeLineDistances();
       g.add(line);
     };
+    const polyline = (pts, color, y, { dashed = false, opacity = 0.9 } = {}) => {
+      const v = pts.map(([x, z]) => new THREE.Vector3(x, y, z));
+      const geo = new THREE.BufferGeometry().setFromPoints(v);
+      const m = dashed
+        ? new THREE.LineDashedMaterial({ color, dashSize: 0.5, gapSize: 0.35, transparent: true, opacity })
+        : new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+      const line = new THREE.Line(geo, m);
+      if (dashed) line.computeLineDistances();
+      g.add(line);
+    };
     const circlePts = (cx, cz, r, n = 48) => Array.from({ length: n },
       (_, i) => [cx + r * Math.cos(i / n * 2 * Math.PI), cz + r * Math.sin(i / n * 2 * Math.PI)]);
     // an OBB's local frame: +x spans w, +z spans d, origin at the center
@@ -86,6 +96,11 @@ window.CAMP_LAYOUT = (() => {
       const c = Math.cos(o.rot || 0), s = Math.sin(o.rot || 0);
       return [[-o.w / 2, -o.d / 2], [o.w / 2, -o.d / 2], [o.w / 2, o.d / 2], [-o.w / 2, o.d / 2]]
         .map(([x, z]) => [o.cx + x * c + z * s, o.cz - x * s + z * c]);
+    };
+    const localFt = (o, xFt, zFt) => {
+      const c = Math.cos(o.rot || 0), s = Math.sin(o.rot || 0);
+      const x = xFt * FT, z = zFt * FT;
+      return [o.cx + x * c + z * s, o.cz - x * s + z * c];
     };
     const label = (text, x, y, z, h = 0.62, color = '#ffe9c9') => {
       const pad = 8, font = '600 34px system-ui, sans-serif';
@@ -378,36 +393,64 @@ window.CAMP_LAYOUT = (() => {
       const MAZE_BUS = [10.044, -0.72];
       const zoneC = (k) => { const z = D.zones.find((x) => x.key === k); return z && [z.cx, z.cz]; };
       const itemC = (k) => { const i = D.items.find((x) => x.kind === k); return i && [i.cx, i.cz]; };
+      const zone = (k) => D.zones.find((x) => x.key === k);
+      const item = (k) => D.items.find((x) => x.kind === k);
       const genAt = itemC('generator');
       const waterAt = itemC('water');
+      const tents = zone('brs_tents');
+      const communal = zone('communal');
+      const trailer = item('trailer_brs');
+      const tentSideDrop = tents && localFt(tents, 28, 0);
       const kitchenAt = (() => { // rear carport center, zone-local (0, -15 ft)
         const z = D.zones.find((x) => x.key === 'communal');
         if (!z) return null;
         const lz = -15 * FT;
         return [z.cx + lz * Math.sin(z.rot || 0), z.cz + lz * Math.cos(z.rot || 0)];
       })();
+      const aroundTentSide = tents ? [localFt(tents, 28, -24), localFt(tents, 28, 24)] : [];
+      const aroundCommunalFront = communal ? [localFt(communal, -21, 21), localFt(communal, 21, 21)] : [];
+      const aroundCommunalWest = communal ? [localFt(communal, -21, 21), localFt(communal, -21, -21)] : [];
       const cords = [
-        { from: genAt, to: MAZE_BUS, gauge: '10/3', color: 0xe06a50 },  // maze battery bus
-        { from: genAt, to: itemC('trailer_brs'), gauge: '10/3', color: 0x7fb086 },
-        { from: genAt, to: zoneC('brs_tents'), gauge: '12/3', color: 0xa68ac9 }, // strip at the excluded middle spots
-        { from: genAt, to: waterAt, gauge: '12/3', color: 0xcfa53d },
+        { from: genAt, via: aroundTentSide, to: MAZE_BUS, gauge: '10/3', color: 0xe06a50 },  // maze battery bus
+        { from: genAt, via: aroundCommunalFront, to: trailer && [trailer.cx, trailer.cz], gauge: '10/3', color: 0x7fb086 },
+        { from: genAt, via: tents ? [localFt(tents, 28, -24)] : [], to: tentSideDrop || zoneC('brs_tents'), gauge: '12/3', color: 0xa68ac9 },
+        { from: genAt, via: aroundCommunalWest, to: waterAt, gauge: '12/3', color: 0xcfa53d },
         { from: waterAt, to: kitchenAt, gauge: '12/3', color: 0x62a7c0 }, // kitchen stinger off the tank
       ];
       for (const c of cords) {
         if (!c.from || !c.to) continue; // a bake rev renamed an endpoint — skip, don't crash
-        const dx = c.to[0] - c.from[0], dz = c.to[1] - c.from[1], len = Math.hypot(dx, dz);
+        const pts = [c.from, ...(c.via || []).filter(Boolean), c.to];
+        let len = 0;
+        const segments = [];
         const m = mat(c.color, { emissiveIntensity: 0.5, roughness: 0.6 });
-        const bar = new THREE.Mesh(new THREE.BoxGeometry(len, 0.035, 0.14), m);
-        bar.position.set(c.from[0] + dx / 2, 0.05, c.from[1] + dz / 2);
-        bar.rotation.y = Math.atan2(-dz, dx);
-        g.add(bar);
+        for (let i = 0; i < pts.length - 1; i++) {
+          const a = pts[i], b = pts[i + 1];
+          const dx = b[0] - a[0], dz = b[1] - a[1], segLen = Math.hypot(dx, dz);
+          if (segLen < 0.05) continue;
+          len += segLen;
+          segments.push({ a, dx, dz, len: segLen });
+          const bar = new THREE.Mesh(new THREE.BoxGeometry(segLen, 0.035, 0.14), m);
+          bar.position.set(a[0] + dx / 2, 0.05, a[1] + dz / 2);
+          bar.rotation.y = Math.atan2(-dz, dx);
+          g.add(bar);
+        }
         // 1px overlay line so the run stays visible at overview zoom
-        outline([[c.from[0], c.from[1]], [c.to[0], c.to[1]]], c.color, 0.065, { opacity: 0.95 });
+        polyline(pts, c.color, 0.065, { opacity: 0.95 });
         const dot = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 12), m);
         dot.position.set(c.to[0], 0.06, c.to[1]);
         g.add(dot);
+        let walk = len * 0.55;
+        let labelAt = pts[pts.length - 1];
+        for (const s of segments) {
+          if (walk <= s.len) {
+            const t = walk / s.len;
+            labelAt = [s.a[0] + s.dx * t, s.a[1] + s.dz * t];
+            break;
+          }
+          walk -= s.len;
+        }
         label(`${Math.round(len / FT)}′ · ${c.gauge}`,
-          c.from[0] + dx * 0.55, 0.55, c.from[1] + dz * 0.55,
+          labelAt[0], 0.55, labelAt[1],
           0.42, '#' + c.color.toString(16).padStart(6, '0'));
       }
     }

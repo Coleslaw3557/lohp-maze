@@ -14,6 +14,10 @@
         "Vertical Moop March": {
             "host": "192.168.252.74",
             "port": 6074
+        },
+        "Porto Room": {
+            "host": "192.168.252.66",
+            "port": 6066
         }
     }
 }
