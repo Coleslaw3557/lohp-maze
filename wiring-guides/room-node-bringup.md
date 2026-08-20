@@ -102,6 +102,11 @@ host route).
    entry effect. Real gate numbers are an on-site pass at the mount.
 7. **After validation**: logger DEBUG→INFO via OTA; stamp the room
    yaml header REAL ROOM BOX + date + what was validated.
+8. **Print the box cards**: `tools/box_labels.py "<Room>" --print` —
+   QL-820NWB die-cut card for the enclosure (room/IP/server/Art-Net/
+   fixtures/DMX range, read live from the configs) + a DB9-A wiring card
+   for rooms with an external button/piezo box (POD_WIRING table in the
+   script). One batched job; proof the PNGs before `--print`.
 
 ## OTA updates after install (no USB — the field path)
 
