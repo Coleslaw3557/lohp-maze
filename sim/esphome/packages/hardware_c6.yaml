@@ -1,10 +1,11 @@
 # Real-node platform: Seeed XIAO ESP32-C6 — NOT the fleet standard (that's
-# hardware_s3.yaml, chosen for PSRAM audio). This package exists because the
-# Guy Line Climb box arrived on the bench 2026-08-20 with a C6 on its USB
-# header. The C6 has NO PSRAM, so the audio_s3.yaml dual-pipeline speaker
-# stack cannot run here — radar/buttons/DMX/API only. To give a C6 room a
-# speaker, swap the board for an S3 and flash with hardware_s3.yaml (and
-# re-do the room's RUT DHCP reservation: new board = new MAC).
+# hardware_s3.yaml, chosen for PSRAM audio) and NOT currently in any room.
+# Kept like hardware_c3.yaml, as a known-good platform for spares/mix-ups:
+# a distributor shipped a C6 in place of an S3 for the Guy Line Climb box
+# (2026-08-20, visually identical — esptool's chip check catches it); it ran
+# that room for an hour before the correct S3 went in. The C6 has NO PSRAM,
+# so the audio_s3.yaml dual-pipeline speaker stack cannot run here —
+# radar/buttons/DMX/API only.
 #
 # XIAO pin-position note (wiring guides are keyed to Dx positions) — C6 map:
 #   D0=GPIO0  D1=GPIO1  D2=GPIO2  D3=GPIO21  D4=GPIO22  D5=GPIO23

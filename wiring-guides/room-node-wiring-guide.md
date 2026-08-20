@@ -128,15 +128,18 @@ recipe above: D6/D7, DMX TX on D5. VMM additionally carries the 4 march-game
 buttons on D0–D3 through port A pins 3–6 (2026-08-16 — the wireless puck
 design is dead; `game_moop.yaml`, pod recipe in `db9-field-wiring.md`).
 
-**Guy Line AS BUILT 2026-08-20: the box carries a XIAO ESP32-C6, not the
-fleet's S3.** Wiring positions are unchanged (radar D6/D7, DMX TX D5) but the
-GPIO numbers differ — firmware follows the hardware via
-`packages/hardware_c6.yaml` (full C6 pin map in its header; radar =
-GPIO16/17, DMX TX = GPIO23 on uart1). The C6 has no PSRAM, so **this box has
-no speaker** until the board is swapped for an S3 (swap = reflash on
-hardware_s3.yaml + new MAC -> re-do the RUT reservation). Guy Line's radar
-gates are widened for the 3.70 m top-down mount: move 5 / still 6 (defaults
-would miss a walker at the floor).
+Guy Line's radar gates are widened for the 3.70 m top-down mount: move 5 /
+still 6 (defaults would miss a walker at the floor). AS BUILT 2026-08-20 the
+box runs the standard S3 recipe — but its FIRST board was a
+**distributor-substituted XIAO ESP32-C6** (visually identical to the S3;
+esptool's chip check is what catches it). It ran the room briefly with no
+audio (no PSRAM) before Tim swapped the correct S3 in the same day.
+`packages/hardware_c6.yaml` keeps the C6 pin map in case another one sneaks
+into a shipment. **Board-swap lessons (any room):** new board = new MAC —
+update the RUT reservation AND purge the old board's line from the RUT's
+`/tmp/dhcp.leases` (dnsmasq will not hand the reserved IP to the new MAC
+while the old lease holds it; the node lands on a pool address), and expect
+the stale-hostapd Auth Expired loop on rejoin (restart hostapd on the Pi).
 
 ## LD2450 tracking radar (Cuddle only — the room's ONE radar since 2026-08-20)
 

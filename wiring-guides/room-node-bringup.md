@@ -38,6 +38,11 @@ XIAO S3 is on the bench USB.
        uci set dhcp.node_<room>.name='lohp-node-<room>'; \
        uci commit dhcp; /etc/init.d/dnsmasq restart\""
    ```
+   **Board swap on an existing room** (RMA, wrong chip, dead board): update
+   this reservation's `mac` AND purge the OLD board's line from the RUT's
+   `/tmp/dhcp.leases` (stop dnsmasq, `sed -i` the MAC out, start) — dnsmasq
+   won't hand the reserved IP to the new MAC while the old lease holds it,
+   and the new board silently lands on a pool address (Guy Line 2026-08-20).
 4. **`dmx_nodes.json`**: replace the room's `.local` host with the
    reserved IP + `"hardware": true`. NOT optional — the production
    container is bridge-networked and can never resolve mDNS; a `.local`
@@ -156,4 +161,4 @@ the Pi.
 | Vertical Moop March | 2026-08-17 | 4-button game + radar + MoopMarch; pod pending cut |
 | Porto Room | 2026-08-20 | radar + 3-piezo knock game + audio; API + physical knocks validated (3 separate pads, ~0.3s knock→sound; hostapd-restart gotcha hit on the reflash); piezo thresholds recalibrate on-site behind the plywood; logger still DEBUG |
 | Cuddle Cross | 2026-08-20 | first LD2450 box (sole radar: presence + projection tracks) + DMX + audio; API + PHYSICAL radar entry validated, target_1 x/y streaming, zone/multi-target boot programming; **LD2450 on D2/D3 as built** (D6/D7 dead — guide updated); hostapd gotcha ×2; OTA-tunnel proven with the INFO flip; zone + timeouts re-tune at the mount |
-| Guy Line Climb | 2026-08-20 | **box arrived with a XIAO ESP32-C6, not an S3** — flashed as-is on the new `hardware_c6.yaml` (radar GPIO16/17, DMX GPIO23/uart1; no PSRAM = NO AUDIO until an S3 swap, room left out of node_audio_config); gates widened for the 3.70 m top-down mount (move 5 / still 6, read back from the module); physical radar entry + vacate + re-trip in telemetry, ArtDMX ~1316/min, Lightning fired; OTA-tunnel INFO flip proven; fresh MAC joined clean (no hostapd gotcha) |
+| Guy Line Climb | 2026-08-20 | radar + DMX + audio on the standard S3 recipe; gates widened for the 3.70 m top-down mount (move 5 / still 6, read back from the module); physical entries + vacate + re-trip in telemetry, ArtDMX signal=yes, node audio attached (bed PLAYING + live cue on serial), Lightning fired, OTA-tunnel INFO flip proven. **The box's first board was a distributor-substituted ESP32-C6** (ran an hour, no audio possible; `hardware_c6.yaml` kept for reference) — the same-day S3 swap hit BOTH board-swap gotchas: old board's dnsmasq lease blocked .64 (purge `/tmp/dhcp.leases` on the RUT) and the stale-hostapd Auth Expired loop (restart hostapd) |

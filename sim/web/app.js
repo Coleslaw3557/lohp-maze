@@ -4137,7 +4137,7 @@ function setupControls(cfg) {
     if (!S.projection) { log('err', 'projection: rig not in the layout — no mount dims'); return; }
     setMountDims(!S.projection.mountG.visible);
   };
-  $('btn-floor').onclick = () => {
+  $('btn-floor').onclick = async () => {
     // server-side shared state, deliberately NOT localStorage: every tab (and
     // production, were it wired) shows one theme, like the one real deck
     const pr = S.projection;
@@ -4147,6 +4147,16 @@ function setupControls(cfg) {
     }
     const next = FLOOR_THEMES[(FLOOR_THEMES.indexOf(pr.theme) + 1) % FLOOR_THEMES.length];
     pr.ws.send(JSON.stringify({ theme: next }));
+    try {
+      const r = await fetch(`${API}/api/next_floor_theme`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: next })
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    } catch (e) {
+      log('warn', `projection: production floor relay failed (${e.message || e})`);
+    }
     log('info', `projection: floor theme → ${next.toUpperCase()}`);
   };
   $('btn-vidbase').onclick = () => {

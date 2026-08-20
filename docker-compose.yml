@@ -12,6 +12,9 @@ services:
     # NOTE bridge networking cannot resolve .local — dmx_nodes.json hosts must
     # be IPs (DHCP reservations) in production.
     privileged: true  # required for /api/shutdown (sysrq power-off)
+    environment:
+      # The projector renderer runs on the Pi host, outside this Docker network.
+      - FLOOR_CTL_URL=http://172.18.0.1:5002
     volumes:
       - .:/app
     restart: always
