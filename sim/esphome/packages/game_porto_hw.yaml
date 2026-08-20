@@ -37,6 +37,7 @@ sensor:
             if (x > ${porto_piezo_threshold} &&
                 now - id(porto_pad1_last_ms) > ${porto_piezo_cooldown_ms}) {
               id(porto_pad1_last_ms) = now;
+              ESP_LOGI("porto", "pad 1 hit (%.2fV)", x);
               id(porto_press)->execute(1);
             }
   - platform: adc
@@ -52,6 +53,7 @@ sensor:
             if (x > ${porto_piezo_threshold} &&
                 now - id(porto_pad2_last_ms) > ${porto_piezo_cooldown_ms}) {
               id(porto_pad2_last_ms) = now;
+              ESP_LOGI("porto", "pad 2 hit (%.2fV)", x);
               id(porto_press)->execute(2);
             }
   - platform: adc
@@ -67,5 +69,6 @@ sensor:
             if (x > ${porto_piezo_threshold} &&
                 now - id(porto_pad3_last_ms) > ${porto_piezo_cooldown_ms}) {
               id(porto_pad3_last_ms) = now;
+              ESP_LOGI("porto", "pad 3 hit (%.2fV)", x);
               id(porto_press)->execute(3);
             }

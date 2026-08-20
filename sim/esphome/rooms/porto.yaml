@@ -4,6 +4,12 @@
 # on D0-D2 via DB9 port A pins 3-5; 1MΩ bleed resistors to GND at the XIAO so
 # the ADC pins rest quiet with the pod unplugged) + LD2410C radar -> tripwire
 # -> PortoStandBy + DMX out + audio.
+# PHYSICAL KNOCKS VALIDATED same day, all 3 pads read as separate channels
+# (bare discs: 0.5-1.3V per knock; knock->sound ~0.3s). ON-SITE INSTALL:
+# discs bond BEHIND PLYWOOD — recalibrate porto_piezo_threshold (0.5 now;
+# pad 2 grazed it bare) and porto_piezo_cooldown_ms (600; pad 1 rang past
+# it once — ply sustains longer, try 900) from the "pad N hit (x.xxV)"
+# INFO logs over OTA.
 # To run this room in the sim again: platform back to sim_host.yaml, drop
 # game_hw/radar/dmx/audio/external_components/wifi/sensor/logger (tripwire +
 # game stay — harness trip/vacate/press_porto drives them on the host platform).

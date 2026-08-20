@@ -154,4 +154,4 @@ the Pi.
 | Cop Dodge | 2026-07-25 | first real box; pre-cutover — needs reflash (stale WiFi + bssid pin) |
 | Monkey Room | 2026-08-16 | button + radar + ShrineGuard; first post-cutover |
 | Vertical Moop March | 2026-08-17 | 4-button game + radar + MoopMarch; pod pending cut |
-| Porto Room | 2026-08-20 | radar + 3-piezo knock game + audio; API-validated end-to-end; physical knock test pending (piezo pod not plugged in), logger still DEBUG |
+| Porto Room | 2026-08-20 | radar + 3-piezo knock game + audio; API + physical knocks validated (3 separate pads, ~0.3s knock→sound; hostapd-restart gotcha hit on the reflash); piezo thresholds recalibrate on-site behind the plywood; logger still DEBUG |
