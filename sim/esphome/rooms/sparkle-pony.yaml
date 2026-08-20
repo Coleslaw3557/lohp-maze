@@ -1,24 +1,63 @@
 # Sparkle Pony Room sensor node — trigger map from triggers.json
+# REAL ROOM BOX (2026-08-20): flashed per the FLASH ADDS recipe — LD2410C ->
+# tripwire -> SparkPony + DMX out + audio, on the fleet-standard XIAO S3
+# (esptool-verified genuine S3, 8MB PSRAM — no C6 substitution this time).
+# BENCH-VALIDATED 2026-08-20 evening: PHYSICAL radar entry at first boot ->
+# SparkPony + occupied colour lock + room_entry telemetry; vacate ->
+# room_vacated + MGS leave sting fired + lock off; re-trip after vacate ->
+# fresh run_effect (trip-while-occupied correctly suppressed); ArtDMX
+# 1025/min signal=yes + Lightning fired; node audio attached @ .65:6065
+# (bed PLAYING 44.1k MP3, live cue ANNOUNCING 22.05k WAV duck + resume on
+# serial); fresh MAC joined clean, no hostapd gotcha. OTA-tunnel INFO flip
+# proven. On-site: nothing pending beyond the usual mount sanity check.
+# Standard bay, standard gates 2/3; this room's ONLY radar tweak is the
+# prompt-vacate pair below so the MGS door-sting send-off
+# (room_leave_sounds -> SparklePonyRoom-Leave) lands as the visitor exits.
+# To run this room in the sim again: platform back to sim_host.yaml, drop
+# radar/dmx/audio/external_components/wifi/sensor/logger (tripwire stays —
+# harness trip/vacate drives it on the host platform).
 substitutions:
   node_name: lohp-node-sparkle-pony
   room: "Sparkle Pony Room"
   effect: "SparkPony"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.252.231
+  server_host: "192.168.252.231"   # the server Pi (maze-network.md)
   api_port: "6065"
-  host_mac: "06:35:69:00:00:05"
-  # This room has an audible leave sting. When flashed with radar, report empty
-  # promptly so the send-off lands as the visitor exits.
+  host_mac: "06:35:69:00:00:05"    # sim-only (sim_host.yaml); unused on hardware
+  dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)
+  # This room has an audible leave sting. Report empty promptly so the
+  # send-off lands as the visitor exits.
   ld2410_module_timeout_s: "1"
   absence_timeout: 0s
 
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
-  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
+  radar: !include ../packages/ld2410.yaml
+  dmx: !include ../packages/dmx_out.yaml
+  audio: !include ../packages/audio_s3.yaml
+  platform: !include ../packages/hardware_s3.yaml
 
-# FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "6"   # D5, radar room
-#                       server_host: "192.168.252.231"
-#   packages:           radar: !include ../packages/ld2410.yaml
-#                       dmx: !include ../packages/dmx_out.yaml
-#   external_components: [{source: {type: local, path: ../components}}]
+external_components:   # for dmx_out.yaml — path is main-config-relative
+  - source:
+      type: local
+      path: ../components
+
+# Joins LOHP-ESP (rooms/secrets.yaml, post-cutover 2026-08-10 creds). No bssid
+# pin and no fast_connect: single-AP LAN, and fast_connect + audio firmware
+# caused WPA handshake loops on the Cop Dodge box (07-25). Keep the rescue AP.
+wifi:
+  ap:
+    ssid: "LoHP-SparklePony"
+    password: "hiddenplaya"
+
+# On-playa diagnostics habit (bench-xiao-s3.yaml): RSSI visible from the server.
+sensor:
+  - platform: wifi_signal
+    name: "${room} node RSSI"
+    update_interval: 30s
+
+# Room live-verified 2026-08-20 -> back at INFO (logic.yaml default). DEBUG
+# was the bring-up setting; LD2410 frame spam at DEBUG also costs main-loop
+# time.
+logger:
+  level: INFO

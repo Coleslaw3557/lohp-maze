@@ -23,6 +23,10 @@
             "host": "192.168.252.64",
             "port": 6064
         },
+        "Sparkle Pony Room": {
+            "host": "192.168.252.65",
+            "port": 6065
+        },
         "Cuddle Cross": {
             "host": "192.168.252.67",
             "port": 6067
