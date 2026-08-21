@@ -1,22 +1,66 @@
 # Gate sensor node — trigger map from triggers.json
+# REAL ROOM BOX (2026-08-21): flashed per the FLASH ADDS recipe — series-bank
+# game (game_gate.yaml + game_gate_hw.yaml: banks on D0/D1 via DB9-A pins
+# 8/9, 2026-08-21 redraw, no MCP23017) + LD2410C -> tripwire ->
+# GateInspection + DMX out on the fleet-default D5 + audio, fleet-standard
+# XIAO S3. First box brought up entirely on the RUT140 AP era (radio swap
+# 2026-08-21, maze-network.md).
+# BENCH-VALIDATED 2026-08-21: joined the RUT AP at reserved .63 first DHCP;
+# radar entry -> GateInspection + colour lock (boot-time physical trip);
+# game via API all four paths (press_bank: B un-armed -> WrongAnswer/HL2
+# cue, A -> CorrectAnswer/gate-open cue, B in-window -> CorrectAnswer/
+# passport-stamp cue); node audio attached + every cue streamed; field-OTA
+# tunnel + post-OTA smoke. PHYSICAL bank closures (3 pads in series at
+# once): PENDING body-press check at the pod — the API drives the template
+# sensors, not the GPIOs. DMX intentionally dark (see note above).
+# DMX (Tim 2026-08-21): this enclosure's XLR out is UNUSED for now — the
+# Gate room's fixtures will daisy-chain from another room's node. dmx_out
+# stays compiled (D5 idle, signal=HOLDING is expected); dmx_nodes.json has
+# Gate enabled:false so the server doesn't stream Art-Net at it.
+# To run this room in the sim again: platform back to sim_host.yaml, drop
+# game_hw/radar/dmx/audio/external_components/wifi/sensor/logger (tripwire +
+# game stay — harness trip/vacate/press_bank drive them on the host
+# platform).
 substitutions:
   node_name: lohp-node-gate
   room: "Gate"
   effect: "GateInspection"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.252.231
+  server_host: "192.168.252.231"   # the server Pi (maze-network.md)
   api_port: "6063"
-  host_mac: "06:35:69:00:00:03"
+  host_mac: "06:35:69:00:00:03"    # sim-only (sim_host.yaml); unused on hardware
+  dmx_tx_pin: "6"                  # D5, fleet default (dmx-over-wifi.md)
 
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
+  radar: !include ../packages/ld2410.yaml
   game: !include ../packages/game_gate.yaml
-  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
+  game_hw: !include ../packages/game_gate_hw.yaml
+  dmx: !include ../packages/dmx_out.yaml
+  audio: !include ../packages/audio_s3.yaml
+  platform: !include ../packages/hardware_s3.yaml
 
-# FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   packages:           radar: !include ../packages/ld2410.yaml
-#                       game_hw: !include ../packages/game_gate_hw.yaml   # banks on D0/D1
-#                       dmx: !include ../packages/dmx_out.yaml           # default dmx_tx_pin "6" = D5
-#   external_components: [{source: {type: local, path: ../components}}]
-# (2026-08-21 series-bank redraw: the MCP23017/I2C flash add is dead — the
-#  two banks are plain gpio D0/D1 and DMX TX is back on the fleet-default D5.)
+external_components:   # for dmx_out.yaml — path is main-config-relative
+  - source:
+      type: local
+      path: ../components
+
+# Joins LOHP-ESP (broadcast by the RUT140 since the 2026-08-21 radio swap).
+# No bssid pin and no fast_connect: single-AP LAN, and fast_connect + audio
+# firmware caused WPA handshake loops on the Cop Dodge box (07-25). Keep the
+# rescue AP.
+wifi:
+  ap:
+    ssid: "LoHP-Gate"
+    password: "hiddenplaya"
+
+# On-playa diagnostics habit (bench-xiao-s3.yaml): RSSI visible from the server.
+sensor:
+  - platform: wifi_signal
+    name: "${room} node RSSI"
+    update_interval: 30s
+
+# Room live-verified 2026-08-21 -> back at INFO (logic.yaml default); DEBUG
+# was the bring-up setting.
+logger:
+  level: INFO

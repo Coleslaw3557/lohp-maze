@@ -50,6 +50,13 @@ POD_WIRING = {
         ("pin 2", "GND"),
         ("pin 1", "5V — button LEDs"),
     ]),
+    "Gate": ("SERIES BANKS ×2 — PINS 8/9 (3 pads each, NO→COM chain)", [
+        ("pin 8", "BANK A = PADS 1-3 in series"),
+        ("pin 9", "BANK B = PADS 4-6 in series"),
+        ("pin 2", "GND — both bank returns"),
+        ("pin 1", "5V — all six pad LEDs"),
+        ("", "bank conducts ONLY with all 3 held"),
+    ]),
     "Monkey Room": ("PUZZLE BUTTON", [
         ("pin 3", "button (node D1)"),
         ("pin 2", "GND"),

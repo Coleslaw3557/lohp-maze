@@ -6,7 +6,7 @@
   "nodes": {
     "Entrance":             {"host": "lohp-node-entrance.local",             "enabled": true},
     "Cop Dodge":            {"host": "192.168.252.62",                       "enabled": true, "hardware": true},
-    "Gate":                 {"host": "lohp-node-gate.local",                 "enabled": true},
+    "Gate":                 {"host": "192.168.252.63",                       "enabled": false, "hardware": true},
     "Guy Line Climb":       {"host": "192.168.252.64",                       "enabled": true, "hardware": true},
     "Sparkle Pony Room":    {"host": "192.168.252.65",                       "enabled": true, "hardware": true},
     "Porto Room":           {"host": "192.168.252.66",                       "enabled": true, "hardware": true},
