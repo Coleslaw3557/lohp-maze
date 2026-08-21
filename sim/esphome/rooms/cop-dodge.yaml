@@ -2,6 +2,14 @@
 # FIRST REAL ROOM BOX (2026-07-25): flashed per the FLASH ADDS recipe below +
 # packages/ld2410.yaml (radar -> tripwire). To run this room in the sim again:
 # platform back to sim_host.yaml, drop radar/dmx/external_components/wifi.
+# REFLASHED 2026-08-21 (the pending post-cutover reflash): fleet-standard
+# WiFi (house-AP bssid pin + fast_connect dropped), first box flashed
+# straight onto the RUT140 AP (radio swap same day) — reserved .62 on first
+# DHCP, server keepalive attached in ~1s. VALIDATED: trip -> PoliceLights +
+# occupied colour lock, vacate -> leave sting 0x84 + lock off, ArtDMX
+# 817/min signal=yes, Lightning + thunder cue, cue WAV fetches live.
+# Line-out listen check = Tim's ears at the box (the standing dead-channel
+# hardware question). Logger DEBUG->INFO via the field-OTA smoke same day.
 substitutions:
   node_name: lohp-node-cop-dodge
   room: "Cop Dodge"
@@ -33,19 +41,11 @@ external_components:   # for dmx_out.yaml — path is main-config-relative
       type: local
       path: ../components
 
-# Bench-bay RF treatment: pin the stronger mesh AP (bench-xiao-s3.yaml).
-# fast_connect DROPPED 07-25: with the audio firmware this box hit endless
-# 'Handshake Failed'/'4-Way Handshake Timeout' loops; full scan-assoc paces
-# the WPA exchange. REMOVE the bssid pin for playa (different AP); keep the
-# rescue AP.
+# Fleet-standard WiFi (reflash 2026-08-21): the old house-AP bssid pin and
+# fast_connect are gone — single-AP LAN (LOHP-ESP, on the RUT140 since the
+# 08-21 radio swap), and fast_connect + audio firmware caused WPA handshake
+# loops on this very box (07-25). Keep the rescue AP.
 wifi:
-  ssid: !remove
-  password: !remove
-  networks:
-    - ssid: !secret wifi_ssid
-      password: !secret wifi_password
-      bssid: 70:58:A4:5E:16:29
-  fast_connect: true
   ap:
     ssid: "LoHP-Cop-Dodge"
     password: "hiddenplaya"
@@ -56,7 +56,7 @@ sensor:
     name: "${room} node RSSI"
     update_interval: 30s
 
-# Bring-up visibility: tripwire's logger.log + binary_sensor state changes are
-# DEBUG-level. Drop back to INFO (logic.yaml default) via OTA once validated.
+# Room live-verified 2026-08-21 -> back at INFO (logic.yaml default); DEBUG
+# was the bring-up setting.
 logger:
-  level: DEBUG
+  level: INFO
