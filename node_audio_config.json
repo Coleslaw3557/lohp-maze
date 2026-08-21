@@ -38,6 +38,10 @@
         "Bike Lock Room": {
             "host": "192.168.252.73",
             "port": 6073
+        },
+        "Photo Bomb Room": {
+            "host": "192.168.252.68",
+            "port": 6068
         }
     }
 }

@@ -62,6 +62,11 @@ POD_WIRING = {
         ("pin 2", "GND"),
         ("pin 1", "5V — button LED"),
     ]),
+    "Photo Bomb Room": ("SHUTTER BUTTON", [
+        ("pin 3", "button (node D1)"),
+        ("pin 2", "GND"),
+        ("pin 1", "5V — button LED"),
+    ]),
 }
 
 

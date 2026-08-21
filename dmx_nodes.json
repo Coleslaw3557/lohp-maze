@@ -12,7 +12,7 @@
     "Porto Room":           {"host": "192.168.252.66",                       "enabled": true, "hardware": true},
     "Cuddle Cross":         {"host": "192.168.252.67",                       "enabled": true, "hardware": true},
     "Exit":                 {"host": "lohp-node-exit.local",                 "enabled": true},
-    "Photo Bomb Room":      {"host": "lohp-node-photo-bomb.local",           "enabled": true},
+    "Photo Bomb Room":      {"host": "192.168.252.68",                       "enabled": true, "hardware": true},
     "Deep Playa Handshake": {"host": "lohp-node-deep-playa-handshake.local", "enabled": true},
     "No Friends Monday":    {"host": "lohp-node-no-friends-monday.local",    "enabled": true},
     "Temple Room":          {"host": "lohp-node-temple.local",               "enabled": true},
