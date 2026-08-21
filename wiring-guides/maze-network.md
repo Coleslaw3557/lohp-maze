@@ -1,23 +1,27 @@
-# Maze network — RUT140 router + Pi bridge AP (as built 2026-08-10)
+# Maze network — RUT140 router **and AP** (radio-role swap 2026-08-21; original build 2026-08-10)
 
 One flat LAN, `192.168.252.0/24`, for everything in the maze: the server Pi,
 every ESP32 node, the orb, the sign bridge, and any laptop that joins
-`LOHP-ESP`. The Teltonika RUT140 owns the network — upstream selection,
-routing, DHCP, DNS, NAT. The Pi is a **transparent Layer-2 wireless access
-point** bridged onto the RUT's LAN; it does no DHCP and no NAT.
+`LOHP-ESP`. The Teltonika RUT140 owns the network — **the `LOHP-ESP` AP**
+(MT7628 radio, rated 50 clients — the Pi's Broadcom AP had a murky ~8–16
+station ceiling, no good for the 15-node fleet + printer), DHCP, DNS, NAT.
+The Pi is a wired LAN host that runs the server; its own radio is now the
+**upstream internet client** (house/camp WiFi) so each radio has one job.
 
-## Topology
+## Topology (since 2026-08-21)
 
 ```text
-Upstream Wi-Fi (camp)
-      │
-RUT140 Wi-Fi WAN / Multi AP        ← picks the upstream by priority, NATs
-      │ LAN 192.168.252.1/24
-      │ RUT LAN port ── ethernet ── Pi eth0
-Raspberry Pi  eth0 ↔ br0 ↔ wlan0   ← transparent L2 bridge, hostapd AP
-      │
-LOHP-ESP 2.4 GHz                   ← ESP32 nodes, orb, sign bridge, laptops
+Upstream Wi-Fi (house/camp)
+      │  (wlan0 STA, DHCP — internet for the Pi only)
+Raspberry Pi  eth0(br0) ── ethernet ── RUT LAN port
+                                        │ LAN 192.168.252.1/24
+                              RUT140 radio = LOHP-ESP AP, ch 6
+                                        │
+                              ESP32 nodes, orb, sign bridge, laptops
 ```
+
+Nodes and their DHCP reservations were untouched by the swap — same SSID,
+same PSK (= the OTA password), same `.252` addresses; zero node reflashes.
 
 ## Credentials
 
@@ -30,83 +34,74 @@ bench box or the laminated cut sheet.
 
 | Device | Address |
 |---|---|
-| RUT from LAN | `https://192.168.252.1` |
-| RUT from current upstream | `https://192.168.253.219` (upstream DHCP — **may change**) |
-| Pi (RUT DHCP reservation) | `192.168.252.231` — MAC `b8:27:eb:08:0c:24`, hostname `lohp-server` |
+| RUT from LAN | `https://192.168.252.1` (from the Pi or any LOHP-ESP client) |
+| Pi on the maze LAN (RUT DHCP reservation) | `192.168.252.231` — MAC `b8:27:eb:08:0c:24`, hostname `lohp-server` |
+| Pi on the upstream network (its wlan0 client lease) | `192.168.253.187` (upstream DHCP — **may change**; if dead, scan `.253/24` for MAC `b8:27:eb:5d:59:71`) |
 
-**Normal ops: join `LOHP-ESP`.** You're then on the flat LAN — mDNS crosses
-the Pi's L2 bridge, so `lohp-server.local`, `tools/deploy-rpi.sh`, the sim's
-RPI dot, and the audio console all work unchanged.
+Since 2026-08-21 the RUT has **no upstream address** — its WiFi-WAN is
+disabled (`wireless.multiap_radio0.disabled=1`); the old
+`https://192.168.253.219` path is dead. Reach the RUT from the maze LAN
+only, e.g. through the Pi: `ssh root@192.168.252.231` then
+`sshpass ssh root@192.168.252.1`.
 
-**From the upstream network** the Pi is behind the RUT's NAT and needs the RUT
-as a jump host:
+**Normal ops: join `LOHP-ESP`.** You're then on the flat LAN;
+`tools/deploy-rpi.sh`, the sim's RPI dot, and the audio console all work.
+
+**From the upstream network** the jump host is now the **Pi itself** (root
+carries the bench box's ed25519 key):
 
 ```bash
-ssh -J root@192.168.253.219 dietpi@192.168.252.231
+ssh -J root@192.168.253.187 dietpi@192.168.252.231   # or root@
 ```
 
-or in `~/.ssh/config`:
+or in `~/.ssh/config` (as installed on the bench box — makes plain
+`ssh 192.168.252.231`, rsync, deploy-rpi.sh and the OTA tunnel all work
+despite vmnet1 squatting `.252/24` locally):
 
 ```
-Host lohp-pi
-    HostName 192.168.252.231
-    User dietpi
-    ProxyJump root@192.168.253.219
+Host 192.168.252.231
+    ProxyCommand ssh -o StrictHostKeyChecking=accept-new -W %h:%p root@192.168.253.187
 ```
 
-The Pi's former upstream-WiFi address `192.168.253.186` is **dead** — the Pi
-no longer joins any WiFi as a client.
+Reachability quirk that still holds after the swap:
 
-Two upstream-side reachability quirks (learned on the 2026-08-16 Monkey Room
-bring-up):
-
-- The RUT's own admin surfaces (WebUI + ssh) answer from upstream **only at
-  the WAN address** `192.168.253.219`. `192.168.252.1` pings from upstream
-  but refuses admin — use it only from the maze LAN.
-- Upstream traffic is forwarded to **wired** LAN hosts (the Pi) but **not to
-  WLAN clients** — ESP nodes are unreachable from the upstream network. To
-  drive a node from an upstream bench box, go through the Pi:
+- ESP nodes are **unreachable from the upstream network** (and from the
+  bench box, whose vmnet1 also squats the subnet) — everything node-facing
+  goes through the Pi. To drive a node from an upstream bench box:
   `scp sim/esphome/harness.py root@192.168.252.231:/home/dietpi/lohp-server/`
   then `ssh root@192.168.252.231 "docker exec lohp-server python
   /app/harness.py call <node-ip>:<api_port> press_button"` (the container has
   aioesphomeapi; the copy is cleaned by the next deploy's rsync).
 
-**Reflash gotcha — stale hostapd station entry.** Reflashing a node kills its
-WiFi client without a deauth frame, and the Pi's brcmfmac AP then refuses the
-node's re-association: the node loops `reason='Auth Expired'` at strong RSSI
-while `iw dev wlan0 station dump` on the Pi still shows the old session's
-`connected time` climbing. Fix: `systemctl restart hostapd` on the Pi (brief
-AP blip for every WLAN client), then the node joins within ~30 s. Hit on the
-Monkey Room radar reflash 2026-08-16 — expect it on every node reflash.
-FIXED same day: `hostapd.conf` now carries `ctrl_interface=/run/hostapd`
-(surgical kick: `hostapd_cli -p /run/hostapd deauthenticate <mac>`) and
-`ap_max_inactivity=60`, so a dead session ages out and the reflashed node
-re-associates on its own within ~1 min — the manual restart is only the
-impatient path now. Backup of the pre-change conf:
-`/etc/hostapd/hostapd.conf.bak-20260816` on the Pi (config is Pi-local,
-not in this repo — re-apply by hand if the SD is ever re-imaged).
+**HISTORICAL (Pi-AP era, retired 2026-08-21) — stale hostapd station entry.**
+Reflashing a node used to hit `Auth Expired` loops on the Pi's brcmfmac AP;
+the fix was `ap_max_inactivity=60` + `hostapd_cli deauthenticate`. hostapd
+is now stopped and disabled (config kept at `/etc/hostapd/` for rollback).
+On the RUT AP the first post-swap OTA reflash re-associated clean; if a
+reflashed node ever loops on auth, kick it on the RUT:
+`ubus call hostapd.wlan0-1 del_client '{"addr":"<mac>","deauth":true}'`
+(or WebUI → Wireless → clients).
 
 ## RUT140 (FW `RUT14X_R_00.07.20.3`)
 
-- LAN `192.168.252.1/24`; internal RUT AP **disabled** — the Pi is the AP
-  - ⚠ **GOTCHA (hit 2026-08-17):** found silently re-enabled
-    (`wireless.default_radio0`, same `LOHP-ESP`/psk2 as the Pi, cause
-    unknown — possibly the 08-14 config session). TWO same-SSID APs a
-    meter apart = nodes roam Pi↔RUT; every roam is a ~seconds TCP
-    blackout that eats in-flight `run_effect`/`room_vacated` POSTs and
-    kills the node's ambience stream mid-flow, while Art-Net UDP sails
-    through — looks like "random lost triggers", VMM bench hit it twice
-    in 10 min. Re-disabled via
-    `uci set wireless.default_radio0.disabled=1; uci commit wireless;
-    wifi`. If triggers ever go flaky again, `iwinfo` on the RUT and an
-    empty `iw dev wlan0 station dump` on the Pi is the 30-second check.
-- WiFi configured exclusively as **Multi AP station** (WiFi WAN), scan
-  interval 60 s, priority order per the credentials file. Priority 1 tested
-  live; priority 2 stored but untested (network was unavailable)
-- WiFi WAN logical interface `wwan`, DHCP metric 10; wired WAN stays DHCP
-  at metric 1
-- IPv4 masquerading/NAT on; LAN→WAN and WAN→LAN forwarding enabled
-- Current upstream lease: `192.168.253.219/24`, gateway `192.168.253.1`
+- LAN `192.168.252.1/24`; internal AP `wireless.default_radio0` **ENABLED
+  since 2026-08-21** — SSID `LOHP-ESP`, psk2/CCMP, channel 6, network=lan,
+  MT7628 radio (rated 50 clients). This is THE maze AP now.
+  - ⚠ The 2026-08-17 dual-AP gotcha is **inverted**: two same-SSID APs a
+    meter apart = node roam blackouts that eat POSTs and kill ambience
+    streams. The AP that must stay OFF is now the **Pi's hostapd**
+    (stopped + disabled 2026-08-21). If triggers ever go flaky:
+    `systemctl is-active hostapd` on the Pi must say `inactive`, and
+    `iwinfo` on the RUT should be the only `LOHP-ESP`.
+- WiFi-WAN (**`wireless.multiap_radio0`**, Multi AP station to the
+  upstream) **disabled 2026-08-21** — upstream internet moved to the Pi's
+  own radio; the RUT radio is a pure AP. Re-enable it only if the maze LAN
+  itself ever needs internet again (`uci set
+  wireless.multiap_radio0.disabled=0; uci commit wireless; wifi`) — and
+  expect the AP to hop to the upstream's channel while both roles share
+  the radio.
+- IPv4 masquerading/NAT config remains (harmless with no active WAN);
+  wired WAN port unused
 
 ### DHCP
 
@@ -133,13 +128,22 @@ running on shared camp WiFi.
 
 ## Pi (DietPi / Debian 12, hostname `lohp-server`)
 
-- `br0` bridges `eth0` + `wlan0`; `br0` is a DHCP client of the RUT
-  (reservation → always `192.168.252.231`), default gw `192.168.252.1`,
-  route metric 100
-- `hostapd`: SSID `LOHP-ESP`, 2.4 GHz, channel 6, WPA2-PSK CCMP/AES,
-  country US — active and enabled at boot; `networking` enabled at boot
-- Old WiFi-client processes removed; Docker networking untouched
-- Pi→RUT and Pi→internet verified
+- `br0` (ports: `eth0` only) is a DHCP client of the RUT (reservation →
+  always `192.168.252.231`), gw `192.168.252.1` at route metric 100 —
+  the maze-LAN leg, wire only
+- `wlan0` = **upstream WiFi client** since 2026-08-21 (wpa_supplicant in
+  `/etc/wpa_supplicant/wpa_supplicant.conf`: upstream priority 1 then 2,
+  same list/order the RUT's WiFi-WAN used — SSIDs + passwords in the
+  gitignored credentials file), DHCP at route metric 50, so the default
+  route goes out the house WiFi while `.252/24` stays on the wire.
+  Current lease `192.168.253.187`
+- `hostapd` **stopped + disabled** (2026-08-21) — config kept in
+  `/etc/hostapd/` only as rollback; it must never run alongside the RUT AP
+- `/etc/dhcp/dhclient.conf` carries `supersede domain-name-servers
+  1.1.1.1, 8.8.8.8;` so the RUT's (internet-less) DNS can't shadow the
+  upstream's
+- Reboot-tested 2026-08-21 (both boxes): AP, reservations, wlan0 rejoin,
+  docker server autostart, node re-association all came back unaided
 
 ## Migration gotchas (2026-08-10 cutover)
 
