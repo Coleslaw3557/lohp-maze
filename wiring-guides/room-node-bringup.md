@@ -80,7 +80,7 @@ host route).
    `ssh root@192.168.252.231 "docker exec lohp-server python \
    sim/esphome/harness.py call <ip>:<api_port> <action> [k=v]"` —
    actions: `trip` / `vacate` (occupancy pair), `press_button`,
-   `press_moop n=1..4`, `press_pad pad=`, `press_bike n=`,
+   `press_moop n=1..4`, `press_bank bank=` (gate), `press_bike n=`,
    `press_shake n=`, `press_truck n=`. Then the physical version
    (walk-in, real button, piezo knock) while watching both ends.
 5. **Watch both ends**:

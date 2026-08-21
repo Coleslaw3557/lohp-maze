@@ -2107,9 +2107,10 @@ function resolveGame(sensor, source) {
   const now = clock.getElapsedTime();
   switch (g.id) {
     case 'gate': {
-      // Mirror the node firmware: a single pad press is silent. A bank only
-      // resolves when all three pads in that bank are held within the 350 ms
-      // delayed-off window.
+      // Mirror the node behavior (2026-08-21 series banks): a single pad
+      // press is silent — a lone pad can't close its bank's series circuit.
+      // The world's mouse stand-in for a body press: all three pads of a
+      // bank clicked within 350 ms = one bank closure.
       if (GAME.gate.stage === 1 && now - GAME.gate.at > 30) resetGateGame();
       const pad = gatePadNumber(sensor);
       if (!pad) return 'silent';

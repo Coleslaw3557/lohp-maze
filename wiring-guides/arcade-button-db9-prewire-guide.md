@@ -34,6 +34,11 @@ Use one 4-pin JST-SM pigtail per arcade button.
 Use bulk 22 AWG 4-conductor stranded cable between the pod JST and the button
 JST. Keep the pinout straight through.
 
+⚠ Gate exception (series banks, 2026-08-21): the straight-through recipe
+covers only Gate's LED pairs (JST pins 1/2). Its switch conductors (JST pins
+3/4) daisy-chain between buttons inside the pod — see the Gate block under
+Pod Breakout Wiring. The button-end pigtail itself is unchanged.
+
 Recommended color map for common RGB cable:
 
 | Cable color | JST pin | Use |
@@ -70,6 +75,21 @@ pin 8 signal 6 ---------- JST for button 6 pin 4 / switch NO
 pin 9 spare ------------- leave empty unless the room map uses it
 ```
 
+Gate pod (series banks, 2026-08-21 — switch circuit only; LED pairs still
+follow the standard buses above):
+
+```text
+pin 8 bank A -- GATE-1 NO . COM -- GATE-2 NO . COM -- GATE-3 NO . COM -- GND bus
+pin 9 bank B -- GATE-4 NO . COM -- GATE-5 NO . COM -- GATE-6 NO . COM -- GND bus
+pins 3-7 ------ unused (high-end signal convention, like Bike Lock)
+```
+
+Each bank's three switches daisy-chain NO→COM before the chain's ends land
+on the bank's signal screw and the GND bus, so the bank conducts only while
+all three buttons are held — one closure per bank, firmware sees two inputs
+(D0/D1). The COM screws on the GND bus stay for the OTHER rooms' buttons;
+Gate's switch COMs land mid-chain instead.
+
 Bench labels: label both ends of every JST with room and button number, for
 example `GATE-1`, `GATE-2`, `DPH-1`.
 
@@ -77,7 +97,7 @@ example `GATE-1`, `GATE-2`, `DPH-1`.
 
 | Room | Buttons / inputs | DB9 signals |
 |---|---:|---|
-| Gate | 6 buttons | pin 3 pad 1, pin 4 pad 2, pin 5 pad 3, pin 6 pad 4, pin 7 pad 5, pin 8 pad 6 |
+| Gate | 6 buttons, 2 series banks | **pins 8-9**: pin 8 bank A (pads 1-3 in series), pin 9 bank B (pads 4-6 in series); pins 3-7 unused |
 | Deep Playa Handshake | 5 buttons | pin 3 btn 1, pin 4 btn 2, pin 5 btn 3, pin 6 btn 4, pin 7 btn 5 |
 | Bike Lock Room | 4 buttons | **pins 6-9**: pin 6 option 1, pin 7 option 2, pin 8 option 3 TRUE, pin 9 option 4 |
 | Vertical Moop March | 4 buttons | pin 3 btn 1, pin 4 btn 2, pin 5 btn 3, pin 6 btn 4 |
@@ -91,6 +111,9 @@ resistor ladder and 5V addressable lamp chain from `room-games-plan.md`.
 Bike Lock keeps DB9 pins 1/2 for lamp power/common but moves its four button
 signals to pins 6-9; wire those option leads directly to those breakout screws,
 not to the standard signal-1-through-signal-4 screws.
+Gate keeps pins 1/2 for its six LED pairs but lands only two switch signals,
+on pins 8-9 — the banks are series chains (see the Gate pod block above), so
+none of its switch leads use the one-signal-per-screw recipe.
 
 ## Recommended Exact Listings
 

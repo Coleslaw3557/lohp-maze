@@ -86,7 +86,7 @@ now it can't happen in the field.
 
 | Room | Pin 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 |---|---|---|---|---|---|---|---|
-| Gate | pad 1 | pad 2 | pad 3 | pad 4 | pad 5 | pad 6 | — |
+| Gate | — | — | — | — | — | bank A (pads 1–3 series) | bank B (pads 4–6 series) |
 | Deep Playa Handshake | btn 1 | btn 2 | btn 3 | btn 4 | btn 5 | — | — |
 | Bike Lock | — | — | — | Option 1 | Option 2 | Option 3 TRUE | Option 4 |
 | No Friends Monday | ladder ADC | WS2812 data | — | — | — | — | — |
@@ -95,20 +95,29 @@ now it can't happen in the field.
 | Porto | piezo 1 + | piezo 2 + | piezo 3 + | — | — | — | — |
 | Vertical Moop March | btn 1 | btn 2 | btn 3 | btn 4 | — | — | — |
 
-Gate banks: pads 1–3 = bank A, 4–6 = bank B. NFM's resistor ladder and
+Gate banks (series, 2026-08-21): pads 1–3 = bank A → pin 8 → D0, pads 4–6 =
+bank B → pin 9 → D1; each bank's three switches are wired in series, so the
+whole bank is one closure. NFM's resistor ladder and
 lamp chain live at the truck; pins 1/2 power the lamps — **5V addressable
 strip only (from Tim's stash), never 12V sign stock**, and the 74AHCT125
 data shifter sits in the box so pin 4 carries 5V-level data down the cable
 (ladder values + decode: `room-games-plan.md` / `game_lightsout_hw.yaml`).
 Porto piezo − legs all common to pin 2.
-Bike Lock is the deliberate exception to the low-numbered signal convention:
-pins 1/2 still carry 5V/GND, but options 1-4 ride DB9 pins 6-9.
+Bike Lock and Gate are the deliberate exceptions to the low-numbered signal
+convention: pins 1/2 still carry 5V/GND, but Bike's options 1-4 ride DB9
+pins 6-9 and Gate's two banks ride pins 8-9.
 
-**Gate's pads land on an MCP23017 (GPA0–5), not XIAO pads** — the DMX plan
-found Gate pin-full (6 pads + radar + I2S = 11/11), so it opens the
-expander path early: I2C on D4/D5, cable and pin map above unchanged, DMX
-TX takes the freed D0. See `dmx-over-wifi.md` and
-`sim/esphome/packages/game_gate_hw_mcp.yaml`.
+**Gate pod recipe (series banks, redrawn 2026-08-21 — the MCP23017 is
+dead):** the one-JST-per-button straight-through recipe applies only to
+Gate's six LED pairs (JST pins 1/2 → the pod's 5V/GND buses as usual). The
+switch circuit is different: inside the pod, each bank's three switches
+**daisy-chain NO→COM** — the bank's signal screw (pin 8 or 9) → the first
+pad's NO, its COM → the next pad's NO, and the third pad's COM → the GND
+bus. A bank
+conducts only while all three pads are held, so the node needs just two
+standard pull-up inputs (D0/D1) instead of six; the old expander, its I2C
+run, and the 3V3 feed are deleted, and Gate's DMX TX is back on the default
+D5. See `dmx-over-wifi.md` and `sim/esphome/packages/game_gate_hw.yaml`.
 
 Rooms with no wired inputs (Entrance, Exit, Guy Line, Cuddle,
 Cop Dodge, Sparkle Pony, Temple) leave port A's pre-cut window empty —
@@ -131,4 +140,6 @@ is dead; its 4 buttons ride pins 3–6 like any other room.)
 | MAX485 TTL→RS485 module (DE/RE broken out) | 17 | the DMX driver — 15 + 2 spares |
 | DB9 dust caps (M+F) | ~20 | playa — port A box + pod ends |
 | XLR female dust cover | 16 | playa — the jack sits open when the room cable's out |
-| MCP23017 breakout | 2 | Gate now + 1 spare (the growth path arrived early) |
+
+(The MCP23017 rows are gone — Gate's 2026-08-21 series-bank redraw removed
+the only expander in the fleet; the growth path is unclaimed again.)

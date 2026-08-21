@@ -110,7 +110,7 @@ async def main():
         target, action = sys.argv[2], sys.argv[3]
         host, _, port = target.partition(':')
         # digit values -> int: ESPHome int service args (press_moop n=2,
-        # press_pad pad=1, ...) reject strings at the API layer
+        # press_bank bank=1, ...) reject strings at the API layer
         data = {}
         for arg in sys.argv[4:]:
             k, _, v = arg.partition('=')

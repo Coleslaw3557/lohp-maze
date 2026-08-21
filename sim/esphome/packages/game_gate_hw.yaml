@@ -1,0 +1,62 @@
+# REAL-HARDWARE companion to game_gate.yaml: Gate's two series banks on the
+# room S3. Redrawn 2026-08-21 — the MCP23017 expander design is DEAD (no part
+# on hand, and series wiring needs none): each bank's three N.O. switches
+# daisy-chain NO->COM inside the button pod, so a bank conducts ONLY while
+# all three pads are held — the whole bank is one closure to GND.
+# Gate joins Bike Lock on the high-end DB9 signal convention: pins 1/2 =
+# LED power (all six lamps, always lit), pins 3-7 unused, pin 8 -> D0 =
+# bank A (pads 1-3), pin 9 -> D1 = bank B (pads 4-6)
+# (db9-field-wiring.md / room-node-wiring-guide.md). Dropping the MCP frees
+# I2C D4/D5, so DMX TX sits back on the fleet-default D5; the box fills
+# 8/11 pads (banks D0/D1 + radar D6/D7 + DMX D5 + I2S D8-D10).
+# Each GPIO edge publishes into the same gate_bank_* template sensors the
+# sim/harness press_bank action drives, so the game logic is one code path.
+# Standard gpio pull-up inputs, pressed = LOW; 30ms delayed_on = the fleet
+# debounce. XIAO S3 Dx -> GPIO: D0=1 D1=2 (hardware_s3.yaml note).
+# NOT validated by validate_all.sh (gpio needs the esp32 platform, sim nodes
+# are host-platform).
+substitutions:
+  gate_bank_a_pin: GPIO1   # D0 — DB9-A pin 8 (pads 1-3 in series)
+  gate_bank_b_pin: GPIO2   # D1 — DB9-A pin 9 (pads 4-6 in series)
+
+binary_sensor:
+  - platform: gpio
+    id: gate_bank_a_hw
+    pin:
+      number: ${gate_bank_a_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - binary_sensor.template.publish:
+            id: gate_bank_a
+            state: ON
+    on_release:
+      then:
+        - binary_sensor.template.publish:
+            id: gate_bank_a
+            state: OFF
+  - platform: gpio
+    id: gate_bank_b_hw
+    pin:
+      number: ${gate_bank_b_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - binary_sensor.template.publish:
+            id: gate_bank_b
+            state: ON
+    on_release:
+      then:
+        - binary_sensor.template.publish:
+            id: gate_bank_b
+            state: OFF

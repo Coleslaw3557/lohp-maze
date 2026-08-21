@@ -14,7 +14,9 @@ packages:
   platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
 
 # FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "1"   # D0 — pads live on the MCP23017, add game_gate_hw_mcp.yaml too
 #   packages:           radar: !include ../packages/ld2410.yaml
-#                       dmx: !include ../packages/dmx_out.yaml
+#                       game_hw: !include ../packages/game_gate_hw.yaml   # banks on D0/D1
+#                       dmx: !include ../packages/dmx_out.yaml           # default dmx_tx_pin "6" = D5
 #   external_components: [{source: {type: local, path: ../components}}]
+# (2026-08-21 series-bank redraw: the MCP23017/I2C flash add is dead — the
+#  two banks are plain gpio D0/D1 and DMX TX is back on the fleet-default D5.)

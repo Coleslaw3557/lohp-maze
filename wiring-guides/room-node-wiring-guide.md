@@ -16,7 +16,7 @@ Common rails: **5V** = the XIAO's 5V pin (fed by its USB-C, the box supply).
 |---|---|
 | Red | 5V rail: every VCC/VIN, DB9 pin 1, the DE+RE tie to VCC |
 | Black | GND: every module GND, XLR pin 1, DB9 pin 2 |
-| White | 3V3: MCP23017 VCC + RESET (Gate), NFM ladder 10k feed |
+| White | 3V3: NFM ladder 10k feed |
 | Green | data OUT of the XIAO: UART Tx (D6, D2), MAX485 DI, I2S DIN, AHCT 1A in / 1Y out |
 | Yellow | data INTO the XIAO: radar Tx lines (→ D7 / D3), every DB9 signal jumper (buttons, piezos, ladder) |
 | Blue | clock/bus pairs: I2C SDA + SCL, I2S BCK + LCK — pair identity comes from the labeled module pins |
@@ -29,24 +29,24 @@ yellow**, pin 1 = black.
 
 | Pad | GPIO | Used for |
 |---|---|---|
-| D0 | 1 | per-room: buttons / NFM ladder ADC / Porto piezo 1 / **Gate: DMX TX** |
-| D1 | 2 | button contract (Photo Bomb, Monkey) / NFM lamp data / DPH+Bike button 2 / Porto piezo 2 |
+| D0 | 1 | per-room: buttons / NFM ladder ADC / Porto piezo 1 / **Gate: bank A (pads 1–3 in series)** |
+| D1 | 2 | button contract (Photo Bomb, Monkey) / NFM lamp data / DPH+Bike button 2 / Porto piezo 2 / **Gate: bank B (pads 4–6 in series)** |
 | D2 | 3 | Cuddle: LD2450 (node Tx) / DPH+Bike button 3 / Porto piezo 3 |
 | D3 | 4 | Cuddle: LD2450 (node Rx) / DPH+Bike button 4 |
-| D4 | 5 | I2C SDA — TOF200C (Entrance/Exit), MCP23017 (Gate) / DPH button 5 |
-| D5 | 6 | **DMX TX (default)** / I2C SCL in Entrance/Exit + Gate |
+| D4 | 5 | I2C SDA — TOF200C (Entrance/Exit) / DPH button 5 |
+| D5 | 6 | **DMX TX (default)** / I2C SCL in Entrance + Exit |
 | D6 | 43 | LD2410C Rx (node Tx) — the 12 LD2410C rooms; unused in Cuddle |
 | D7 | 44 | LD2410C Tx (node Rx) / **DMX TX in Entrance + Exit** |
 | D8 | 7 | I2S BCLK → DAC BCK |
 | D9 | 8 | I2S LRCLK → DAC LCK |
 | D10 | 9 | I2S DOUT → DAC DIN |
 | 5V | — | rail: MAX485 VCC, DAC VIN, radar VCC, DB9 pin 1 |
-| 3V3 | — | Gate: MCP23017 VCC+RESET; NFM: ladder 10k top resistor |
+| 3V3 | — | NFM: ladder 10k top resistor |
 | GND | — | common: every module GND, XLR pin 1, DB9 pin 2 |
 
-DMX TX per room: **D5** in the 13 radar rooms, **D7** in Entrance + Exit
-(their I2C ToF owns D4/D5, and with no radar D6/D7 is free), **D0** at Gate
-(pads moved to the MCP23017) — `dmx-over-wifi.md`.
+DMX TX per room: **D5** in all 13 radar rooms — Gate included since the
+2026-08-21 series-bank redraw — and **D7** in Entrance + Exit (their I2C ToF
+owns D4/D5, and with no radar D6/D7 is free) — `dmx-over-wifi.md`.
 
 ## MAX485 → XLR jack (every box — the DMX out)
 
@@ -58,7 +58,7 @@ screw-terminal end = **VCC / B / A / GND**; far-end header = **RO / RE / DE / DI
 | VCC | 5V rail |
 | DE + RE | tied together → VCC (always transmitting) |
 | GND | GND + XLR pin 1 pigtail |
-| DI | XIAO DMX TX pad (D5 / D7 / D0 per room) |
+| DI | XIAO DMX TX pad (D5 / D7 per room) |
 | RO | not connected (5V logic — never to the XIAO) |
 | A screw | XLR pin 3 pigtail (Data+) |
 | B screw | XLR pin 2 pigtail (Data−) |
@@ -170,7 +170,7 @@ across 1/2, always lit; buttons close their signal to GND, internal pull-ups).
 
 | Room | DB9 3 | DB9 4 | DB9 5 | DB9 6 | DB9 7 | DB9 8 | DB9 9 |
 |---|---|---|---|---|---|---|---|
-| Gate | MCP GPA0 | GPA1 | GPA2 | GPA3 | GPA4 | GPA5 | — |
+| Gate | — | — | — | — | — | D0 (bank A) | D1 (bank B) |
 | Deep Playa Handshake | D0 | D1 | D2 | D3 | D4 | — | — |
 | Bike Lock | — | — | — | D0 | D1 | D2 | D3 |
 | No Friends Monday | D0 (ladder) | ← AHCT 1Y via 33–100Ω | — | — | — | — | — |
@@ -186,23 +186,31 @@ NFM: **10k from 3V3 → D0** in the box (ladder top resistor); the ladder
 resistors + lamp chain live at the truck.
 Bike Lock deliberately skips DB9 pins 3-5: pins 1/2 are still 5V/GND, and
 option buttons 1-4 land on pins 6/7/8/9 -> D0/D1/D2/D3.
+Gate (redrawn 2026-08-21) joins Bike Lock on the high-end signal
+convention: pins 1/2 = LED power for all six lamps, pins 3–7 unused,
+pin 8 → D0 = bank A (pads 1–3 **in series**), pin 9 → D1 = bank B
+(pads 4–6 in series). A bank reads pressed only while all three of its
+switches are down — the series chain does the simultaneity in copper
+(pod recipe: `db9-field-wiring.md`).
 
-## MCP23017 (Gate only — Waveshare board)
+## Gate series banks (redrawn 2026-08-21 — MCP23017 deleted)
 
-Address 0x27 = A0/A1/A2 left open (they float high; shorting = low).
-I2C at 100 kHz. Buttons close GPA pins to GND, internal pull-ups on.
+The 2026-07 sheet ran Gate's 6 pads through an MCP23017 on I2C D4/D5 with a
+3V3 white run and DMX TX displaced to D0. All of that is gone: no part on
+hand, and the game (press a whole bank of 3 at once) never needed six
+individual inputs. Each bank's three switches wire **in series** at the pod,
+so a bank is one closure that conducts only while all three pads are held —
+two standard gpio pull-up inputs, no expander, no I2C, no 3V3 run, and DMX
+TX back on the fleet-default **D5**.
 
-| MCP23017 pin | Wire to |
+| Gate input | Wire to |
 |---|---|
-| VCC | 3V3 |
-| GND | GND |
-| SDA | XIAO D4 (GPIO5) |
-| SCL | XIAO D5 (GPIO6) |
-| RESET | 3V3 |
-| GPA0–GPA5 | DB9 pins 3–8 |
-| INTA, INTB, GPA6–7, GPB0–7 | not connected |
+| DB9 pin 8 (bank A = pads 1–3 in series) | XIAO D0 (GPIO1) |
+| DB9 pin 9 (bank B = pads 4–6 in series) | XIAO D1 (GPIO2) |
 
-Gate's DMX TX is **D0** (pads moved here freed it).
+Fill: banks D0/D1 + DMX D5 + radar D6/D7 + I2S D8–D10 = **8/11** — Gate is
+no longer a pin-full box. Firmware: `packages/game_gate_hw.yaml` (closure =
+whole bank pressed).
 
 ## 74AHCT125 level shifter (No Friends Monday only — dead-bug at the AHCT zone)
 
@@ -226,7 +234,7 @@ notch pointing away, pin 1 is the far-RIGHT leg; paint-mark pin 1 before gluing.
 | Entrance / Exit | TOF200C (D4/D5) | D7 | blank |
 | Guy Line Climb | LD2410C, top of room pointed down | D5 | blank |
 | Vertical Moop March | LD2410C top-down + 4 buttons D0–D3 | D5 | pins 3–6 |
-| Gate | LD2410C + 6 pads via MCP23017 | D0 | pins 3–8 |
+| Gate | LD2410C + 2 series banks D0/D1 | D5 | pins 8–9 |
 | Deep Playa Handshake | LD2410C + 5 buttons D0–D4 | D5 | pins 3–7 |
 | Bike Lock | LD2410C + 4 buttons D0–D3 | D5 | pins 6–9 |
 | No Friends Monday | LD2410C + ladder D0 + lamp data D1 | D5 | pins 3–4 |
@@ -254,7 +262,6 @@ Draw on the 5V pin: radar + DAC + MAX485 ≈ 135 mA — within the pin budget.
   confirm silk on the received units.
 - SN74AHCT125: TI datasheet (quad 3-state buffer; 1OE̅/1A/1Y = pins 1/2/3,
   GND = 7, VCC = 14).
-- MCP23017 board: Waveshare wiki — A0/A1/A2 open = high = address 0x27.
 - MAX485 module pin order: photo-verified against the received batch 07-24
   (`dmx-over-wifi.md`), which beats any generic module drawing.
 - XLR DMX pinout: DMX512 (ANSI E1.11) transmitter convention, per

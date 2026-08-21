@@ -113,27 +113,28 @@ packages:
   dmx: !include ../packages/dmx_out.yaml
 ```
 
-### The pin, per room — D5 standard, two exceptions
+### The pin, per room — D5 standard, one exception
 
 The `room-node-audio-plan.md` pin map leaves exactly one clean output pin per
 room, and it differs by sensor type. **DMX TX is D5 (GPIO6) everywhere except
-Entrance and Exit, which use D7 (GPIO44), and Gate, which uses D0 (GPIO1):**
+Entrance and Exit, which use D7 (GPIO44):**
 
 | Rooms | Sensor pins in use | DMX TX | why |
 |---|---|---|---|
-| 11 radar rooms (not Gate, not Cuddle) | LD2410C on D6/D7 | **D5** (GPIO6) | I2C position unused — no ToF |
+| 12 radar rooms (not Cuddle) | LD2410C on D6/D7 (Gate adds its 2 bank inputs on D0/D1) | **D5** (GPIO6) | I2C position unused — no ToF |
 | Entrance, Exit | TOF200C on D4/D5 (I2C) | **D7** (GPIO44) | radar position unused |
 | Cuddle Cross | LD2450 on D2/D3 (sole radar since 2026-08-20, as built) | **D5** (GPIO6) | I2C position unused |
-| Gate | LD2410C D6/D7 **+ 6 pads** | **D0** (GPIO1) | see below |
 
-**Gate was pin-full** (6 pads D0–D5 + radar D6/D7 + I2S D8–D10 = 11/11). Its
-pads move to an **MCP23017 on I2C D4/D5** — the exact growth path
-`db9-field-wiring.md` planned for, arriving one room early. The DB9-A cable and
-per-pin map are unchanged; inside the box the 6 signal wires land on MCP GPA0–5
-instead of XIAO pads. `packages/game_gate_hw_mcp.yaml` provides the six
-binary_sensors under the same ids `game_gate.yaml` expects, so the
-bench-verified game logic is untouched — **re-run the gate bench test after
-flashing anyway.** This frees D0–D3, and D0 becomes Gate's DMX TX.
+**Gate rejoined the D5 default 2026-08-21.** The 2026-07 plan had it pin-full
+(6 pads D0–D5 + radar D6/D7 + I2S D8–D10 = 11/11), pushing its pads onto an
+MCP23017 over I2C D4/D5 with DMX TX displaced to D0. The series-bank redraw
+deleted all of that: each bank's 3 switches wire in series (one closure per
+bank, `db9-field-wiring.md`), so Gate's game needs only **D0/D1** — 8/11
+used, no expander, no I2C, DMX TX on the default D5.
+`packages/game_gate_hw.yaml` feeds the two bank sensors `game_gate.yaml`
+expects — the gate bench test (`sim/tools/gate_game_test.py`) re-ran ALL
+PASS against the bank inputs in sim 2026-08-21; **run it again after
+flashing the real box.**
 
 UART allocation: the component defaults to **UART2**, which is free fleet-wide
 under the S3's USB-JTAG logger — sensor UARTs auto-assign 0/1 (Cuddle uses both;
@@ -251,7 +252,7 @@ order:
 | Short wood screws (#4-ish, 6–10mm) | ~34 | 2 per jack through its flange holes — **from stash**; jacks ship with no screws |
 | XLR3 M-F cable, 6 ft | 17 | box → first fixture, used WHOLE; 2 spares double as fixture hops |
 | DMX 120Ω XLR terminator plug | 17 | one per room chain + spares |
-| MCP23017 breakout | 2 | Gate now + 1 spare (was "0 now" — the growth path arrived) |
+| ~~MCP23017 breakout~~ | 0 | dropped 2026-08-21 — Gate's series-bank redraw needs no expander |
 
 (The 2026-07-22 jack rev also *removes* the port-B rows an earlier draft
 added: the +16/+16 DB9 screw-terminal breakouts. DB9 hardware is back to

@@ -18,22 +18,30 @@ pinouts and the pod recipe: `arcade-button-db9-prewire-guide.md`.
 
 ## Gate — two-bank body press ("the pat-down")
 
-- **Hardware:** 6 buttons in two banks of 3. The visitor lines their body up
-  and presses a whole bank at once. Wiring: pads on **D0–D5** of the room S3.
-  Pin budget: 6 buttons + LD2410C UART (2) + I2S (3) = **11/11 — this is the
-  second exactly-full box after Cuddle** (relief valve if a pin is ever
-  needed: bank LEDs could move off-rail, or the radar could go — decide then).
-- **Logic** (`game_gate.yaml`, **bench-verified 2026-07-20** — 4-path harness
-  test `sim/tools/gate_game_test.py`): pads carry a 350ms `delayed_off` hold,
-  so "simultaneous" = all 3 of a bank ON together. Bank 1 → CorrectAnswer
-  chime and arms a 30s stage window; bank 2 inside the window → CorrectAnswer
-  chime; bank 2 un-armed → WrongAnswer. Room entry/exit stays on the Gate
-  radar occupancy trigger.
+- **Hardware (redrawn 2026-08-21 — series banks, no MCP23017):** 6 buttons
+  in two banks of 3; each bank's three N.O. switches wire **in series**
+  (NO→COM daisy-chain in the button pod, `db9-field-wiring.md`), so a bank
+  conducts only while all three pads are held at once — the
+  press-them-together check happens in copper and the node sees two inputs.
+  Bank A (pads 1–3) → **D0** via DB9-A pin 8, bank B (pads 4–6) → **D1** via
+  pin 9 (high-end signal convention, second room after Bike Lock; pins 1/2 =
+  LED power, pins 3–7 unused). Standard gpio pull-up inputs
+  (`game_gate_hw.yaml`). Pin budget: 2 banks + LD2410C UART (2) + DMX D5 +
+  I2S (3) = **8/11** — Gate is no longer pin-full and its DMX TX is back on
+  the fleet-default D5. (The 2026-07 build put 6 individual pads on an
+  MCP23017 over I2C; deleted — no part on hand, and the series trick needs
+  none.)
+- **Logic** (`game_gate.yaml`, two binary sensors): bank A closure →
+  CorrectAnswer chime and arms a 30s stage window; bank B inside the window
+  → CorrectAnswer chime; bank B un-armed → WrongAnswer. The old 350ms
+  `delayed_off` simultaneity hold left with the per-pad inputs. Room
+  entry/exit stays on the Gate radar occupancy trigger.
 - **Placement: PENDING** — the sim shows the 6 pads side by side as a
   placeholder row only. The doorway radar trigger (GateInspection on entry)
   stays as-is alongside the game.
-- Sim note: individual pad clicks are silent unless all three pads in the bank
-  are clicked inside the same 350ms hold window, matching the real node.
+- Sim note: world pad clicks still resolve per bank — all three pads of a
+  bank clicked within 350ms counts as one bank closure (the mouse stand-in
+  for a body press); the harness closes whole banks directly (`press_bank`).
 
 ## Deep Playa Handshake — five buttons, one winner
 
@@ -164,9 +172,14 @@ tab + a tab per room). Summary:
 ## Bench & sim
 
 - Sim: all 24 game triggers live in the panel/world now; games play with the
-  same logic (Gate's one-click-per-bank simplification aside).
-- Harness pokes: `call <host>:<port> press_pad pad=1..6` (gate),
+  same logic (and since 2026-08-21 Gate's one-click-per-bank is literal — the
+  banks are series circuits).
+- Harness pokes: `call <host>:<port> press_bank bank=1..2` (gate),
   `press_shake n=1..5`, `press_bike n=1..4`, `press_truck n=1..5`,
   `press_moop n=1..4`, `press <room>` (single-button rooms).
 - `sim/tools/gate_game_test.py` = the 4-path gate regression (needs
-  `run_node.sh gate -d` first).
+  `run_node.sh gate -d` first). The 2026-07-20 bench verification covered
+  the dead per-pad build — the test now drives the two bank inputs
+  (bank2-first fail / bank1 chime / bank1→bank2 chime / 30s stage-expiry
+  fail) and **re-ran ALL PASS against them in sim 2026-08-21**. Still owed:
+  the same run against the flashed box + pod when Gate is built.

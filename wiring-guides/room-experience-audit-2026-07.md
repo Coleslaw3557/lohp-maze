@@ -24,7 +24,7 @@ Legend: **DONE** = themed audio pack wired + lights redesigned to it.
 - Audio: **DONE** — 5 HL2 pursuit mixes, anti-repeat.
 - Lights: **DONE** — scanner sweeps → beacon rotation → pursuit w/ searchlights → strobe climax.
 
-### 3. Gate — ground. Par @17. Gate game (2 banks × 3 body-press pads, MCP23017)
+### 3. Gate — ground. Par @17. Gate game (2 banks × 3 body-press pads, wired in series since 2026-08-21)
 - Laser → `GateInspection`; game: bank 1 → `CorrectAnswer` chime → bank 2 → `GateInspection`.
 - Audio: **DONE** — 2 legacy tickets-please (Tim: keep) + 5 checkpoint mixes.
 - Lights: **DONE** — HALT flash → amber inspection → passport stamps → green gate-open.

@@ -129,9 +129,9 @@ An unprepped board is silent; this is the #1 bring-up trap.
 
 | Dx | C3 GPIO | S3 GPIO | Reserved for |
 |---|---|---|---|
-| D0, D2, D3 | 2, 4, 5 | 1, 3, 4 | ADC / aux (Porto piezos; Cuddle LD2450 on D2/D3; **Gate: D0 = DMX TX**) |
+| D0, D2, D3 | 2, 4, 5 | 1, 3, 4 | ADC / aux (Porto piezos; Cuddle LD2450 on D2/D3; **Gate: D0 = bank A**, D1 = bank B) |
 | D1 | 3 | 2 | Button contract (`button_gpio_c3.example.yaml`) |
-| D4 / D5 | 6 / 7 | 5 / 6 | I2C — TOF200C (Entrance/Exit) + Gate's MCP23017; **D5 = DMX512 TX in the 13 radar rooms** (`dmx-over-wifi.md`) |
+| D4 / D5 | 6 / 7 | 5 / 6 | I2C — TOF200C (Entrance/Exit); **D5 = DMX512 TX in the 13 radar rooms** (`dmx-over-wifi.md`) |
 | D6 / D7 | 21 / 20 | 43 / 44 | UART — radar (LD2410C in 12 rooms; Cuddle's LD2450 since 2026-08-20); **D7 = DMX512 TX in Entrance + Exit** |
 | **D8** | **8** | **7** | **I2S BCLK → PCM5102A BCK** |
 | **D9** | **9** | **8** | **I2S LRCLK → PCM5102A LCK** |
@@ -140,9 +140,10 @@ An unprepped board is silent; this is the #1 bring-up trap.
 D8–D10 (the unused SPI trio) is conflict-free in every room type. Post-DMX
 pin budgets (`dmx-over-wifi.md`): Cuddle = 2 radar UARTs + DMX on D5 + I2S
 (the old hex-button-station idea is superseded — the games plan gives Cuddle
-no wired inputs, `db9-field-wiring.md` agrees); **Gate hit 11/11 full**, so
-its 6 pads move to an MCP23017 on I2C D4/D5
-(`sim/esphome/packages/game_gate_hw_mcp.yaml`) and DMX TX takes the freed D0.
+no wired inputs, `db9-field-wiring.md` agrees); Gate's old 11/11 crunch
+ended with the 2026-08-21 series-bank redraw — its 6 pads collapse to two
+series banks on D0/D1 (`sim/esphome/packages/game_gate_hw.yaml`), 8/11 used,
+DMX TX on the default D5.
 C3 note: GPIO8/9 are strapping pins but the DAC's inputs are Hi-Z, so boot is
 unaffected. C3 Porto note: GPIO5/D3 is ADC2 (unusable with WiFi) — the three
 piezos sit on D0/D1/D2.
@@ -322,8 +323,9 @@ Consolidations checked against every sensor in the maze; what stays and why:
   all four functions (tap = next theme, long-press = storm, swipe = ambience
   on/off — `cuddle-orb-plan.md`), so the button rail and its four planned
   pins are gone. Cuddle's box drops from 11/11 pins to 7/11 — the old
-  resistor-ladder relief valve is moot there. (Gate's box remains the full
-  one: 6 game pads + radar + I2S, `room-games-plan.md`.)
+  resistor-ladder relief valve is moot there. (Gate briefly took over as the
+  full box — until the 2026-08-21 series-bank redraw dropped it to 8/11,
+  `room-games-plan.md`; no box is pin-full anymore.)
 - **Porto keeps 3 separate piezo ADC pins** — pad identity is free there (no
   button, no I2C) and helps debugging.
 - **Photo Bomb camera stays on the server Pi.** The XIAO S3-Sense camera is a
