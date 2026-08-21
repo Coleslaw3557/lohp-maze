@@ -785,7 +785,7 @@
             "volume": 0.7
         },
         "BikeLockRoom": {
-            "_comment": "Victory payoff — the bike game fires chime-then-BikeLockRoom when option 3 is pressed. Weights = pack TRIGGER_MAP.csv. Per-button acks / wrong-answer failure files are node-firmware phase (pack README controller logic); failure stays shared WrongAnswer meanwhile",
+            "_comment": "Victory payoff, the ONLY effect a correct press fires since 2026-08-21 (lights + audio together, instantly — the old chime-then-show double-played the same victory file because BikeLockRoom-RightAnswer lists these same WAVs). Weights = pack TRIGGER_MAP.csv.",
             "audio_files": [
                 "rooms/Bike Lock Room/rapid/victory/01_doom_secret_unlock.wav",
                 "rooms/Bike Lock Room/rapid/victory/02_diablo_quest_unlock.wav"

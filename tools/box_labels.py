@@ -42,6 +42,14 @@ POD_WIRING = {
         ("pin 2", "GND"),
         ("pin 1", "5V — button LEDs"),
     ]),
+    "Bike Lock Room": ("QUIZ BUTTONS ×4 — PINS 6-9, NOT 3-6", [
+        ("pin 6", "OPTION 1"),
+        ("pin 7", "OPTION 2"),
+        ("pin 8", "OPTION 3 — TRUE"),
+        ("pin 9", "OPTION 4"),
+        ("pin 2", "GND"),
+        ("pin 1", "5V — button LEDs"),
+    ]),
     "Monkey Room": ("PUZZLE BUTTON", [
         ("pin 3", "button (node D1)"),
         ("pin 2", "GND"),

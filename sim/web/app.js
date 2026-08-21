@@ -2074,11 +2074,16 @@ function actionData(sensor, effect) {
   return data;
 }
 
-function chimeThen(sensor, finalEffect, source) {
-  // maze-wide victory chime, then the room's big effect once the chime lands
+function chimeThen(sensor, finalEffect, source, delayMs = 2500) {
+  // maze-wide victory chime, then the room's big effect once the chime lands.
+  // delayMs 0 = fire both together (bike: lights+sound on the press itself).
   post(sensor.action.path, actionData(sensor, 'CorrectAnswer'), source);
+  if (delayMs <= 0) {
+    post(sensor.action.path, actionData(sensor, finalEffect), source);
+    return;
+  }
   setTimeout(() => post(sensor.action.path,
-    actionData(sensor, finalEffect), source), 2500);
+    actionData(sensor, finalEffect), source), delayMs);
 }
 
 function gatePadNumber(sensor) {
@@ -2162,8 +2167,9 @@ function resolveGame(sensor, source) {
         return { effect: 'WrongAnswer' };
       }
       toast(`Bike option ${option}: correct`);
-      chimeThen(sensor, 'BikeLockRoom', source);
-      return null;
+      // One effect only, instantly (game_bike.yaml 2026-08-21): a chime effect
+      // followed by the show would be audio_stopped by the takeover.
+      return { effect: 'BikeLockRoom' };
     }
     case 'moop': {
       // Mirror game_moop.yaml on the room node: first press opens a 60s

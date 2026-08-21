@@ -168,15 +168,15 @@ Hi-Link manual pins **5V, GND, Tx, Rx**. UART 256000 baud, 3.3V logic.
 Universal: **pin 1 = 5V rail, pin 2 = GND, pins 3–9 = signals** (button LEDs
 across 1/2, always lit; buttons close their signal to GND, internal pull-ups).
 
-| Room | DB9 3 | DB9 4 | DB9 5 | DB9 6 | DB9 7 | DB9 8 |
-|---|---|---|---|---|---|---|
-| Gate | MCP GPA0 | GPA1 | GPA2 | GPA3 | GPA4 | GPA5 |
-| Deep Playa Handshake | D0 | D1 | D2 | D3 | D4 | — |
-| Bike Lock | D0 | D1 | D2 | D3 | — | — |
-| No Friends Monday | D0 (ladder) | ← AHCT 1Y via 33–100Ω | — | — | — | — |
-| Photo Bomb | **D1** | — | — | — | — | — |
-| Monkey | **D1** | — | — | — | — | — |
-| Porto | D0 | D1 | D2 | — | — | — |
+| Room | DB9 3 | DB9 4 | DB9 5 | DB9 6 | DB9 7 | DB9 8 | DB9 9 |
+|---|---|---|---|---|---|---|---|
+| Gate | MCP GPA0 | GPA1 | GPA2 | GPA3 | GPA4 | GPA5 | — |
+| Deep Playa Handshake | D0 | D1 | D2 | D3 | D4 | — | — |
+| Bike Lock | — | — | — | D0 | D1 | D2 | D3 |
+| No Friends Monday | D0 (ladder) | ← AHCT 1Y via 33–100Ω | — | — | — | — | — |
+| Photo Bomb | **D1** | — | — | — | — | — | — |
+| Monkey | **D1** | — | — | — | — | — | — |
+| Porto | D0 | D1 | D2 | — | — | — | — |
 
 ⚠ Photo Bomb + Monkey land on **D1**, not D0 — D1 is the fleet button
 contract (`button_gpio_c3.example.yaml`, `button_pin: GPIO2` on S3).
@@ -184,6 +184,8 @@ Porto: piezo + on the signal pins, all piezo − to pin 2; **1MΩ bleed
 resistor from each of D0/D1/D2 to GND at the XIAO** (bench-soldered).
 NFM: **10k from 3V3 → D0** in the box (ladder top resistor); the ladder
 resistors + lamp chain live at the truck.
+Bike Lock deliberately skips DB9 pins 3-5: pins 1/2 are still 5V/GND, and
+option buttons 1-4 land on pins 6/7/8/9 -> D0/D1/D2/D3.
 
 ## MCP23017 (Gate only — Waveshare board)
 
@@ -226,7 +228,7 @@ notch pointing away, pin 1 is the far-RIGHT leg; paint-mark pin 1 before gluing.
 | Vertical Moop March | LD2410C top-down + 4 buttons D0–D3 | D5 | pins 3–6 |
 | Gate | LD2410C + 6 pads via MCP23017 | D0 | pins 3–8 |
 | Deep Playa Handshake | LD2410C + 5 buttons D0–D4 | D5 | pins 3–7 |
-| Bike Lock | LD2410C + 4 buttons D0–D3 | D5 | pins 3–6 |
+| Bike Lock | LD2410C + 4 buttons D0–D3 | D5 | pins 6–9 |
 | No Friends Monday | LD2410C + ladder D0 + lamp data D1 | D5 | pins 3–4 |
 | Photo Bomb / Monkey | LD2410C + button D1 | D5 | pin 3 |
 | Porto | LD2410C + 3 piezos D0–D2 | D5 | pins 3–5 |

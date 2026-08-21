@@ -88,7 +88,7 @@ now it can't happen in the field.
 |---|---|---|---|---|---|---|---|
 | Gate | pad 1 | pad 2 | pad 3 | pad 4 | pad 5 | pad 6 | — |
 | Deep Playa Handshake | btn 1 | btn 2 | btn 3 | btn 4 | btn 5 | — | — |
-| Bike Lock | Option 1 | Option 2 | Option 3 TRUE | Option 4 | — | — | — |
+| Bike Lock | — | — | — | Option 1 | Option 2 | Option 3 TRUE | Option 4 |
 | No Friends Monday | ladder ADC | WS2812 data | — | — | — | — | — |
 | Photo Bomb | shutter (→ **D1**, button contract) | — | — | — | — | — | — |
 | Monkey | pedestal switch (→ **D1**, button contract) | — | — | — | — | — | — |
@@ -101,6 +101,8 @@ strip only (from Tim's stash), never 12V sign stock**, and the 74AHCT125
 data shifter sits in the box so pin 4 carries 5V-level data down the cable
 (ladder values + decode: `room-games-plan.md` / `game_lightsout_hw.yaml`).
 Porto piezo − legs all common to pin 2.
+Bike Lock is the deliberate exception to the low-numbered signal convention:
+pins 1/2 still carry 5V/GND, but options 1-4 ride DB9 pins 6-9.
 
 **Gate's pads land on an MCP23017 (GPA0–5), not XIAO pads** — the DMX plan
 found Gate pin-full (6 pads + radar + I2S = 11/11), so it opens the

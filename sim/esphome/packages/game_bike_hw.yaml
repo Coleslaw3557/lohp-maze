@@ -1,0 +1,80 @@
+# REAL-HARDWARE companion to game_bike.yaml: the four quiz-option buttons on
+# the room S3, D0-D3 -> DB9 port A **pins 6-9** -> the room's button pod.
+# Bike Lock is the deliberate exception to the low-numbered signal convention
+# (as built 2026-08-20): pins 1/2 still carry 5V/GND, but options 1-4 ride
+# DB9 pins 6/7/8/9 (db9-field-wiring.md / room-node-wiring-guide.md). The
+# GPIO side is unchanged from the fleet standard — the swap lives entirely in
+# the cable/pod lands.
+# Each GPIO edge feeds the same `bike_press` script the sim/harness uses, so
+# the quiz logic stays identical. Buttons are closures to GND (internal
+# pull-up, pressed = LOW); 30ms delayed_on = the fleet debounce. XIAO S3
+# Dx -> GPIO: D0=1 D1=2 D2=3 D3=4 (hardware_s3.yaml note).
+# NOT validated by validate_all.sh (gpio needs the esp32 platform, sim nodes
+# are host-platform).
+substitutions:
+  bike_btn1_pin: GPIO1   # D0 — DB9-A pin 6 (option 1)
+  bike_btn2_pin: GPIO2   # D1 — DB9-A pin 7 (option 2)
+  bike_btn3_pin: GPIO3   # D2 — DB9-A pin 8 (option 3 TRUE)
+  bike_btn4_pin: GPIO4   # D3 — DB9-A pin 9 (option 4)
+
+binary_sensor:
+  - platform: gpio
+    id: bike_btn1_hw
+    pin:
+      number: ${bike_btn1_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - script.execute:
+            id: bike_press
+            n: 1
+  - platform: gpio
+    id: bike_btn2_hw
+    pin:
+      number: ${bike_btn2_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - script.execute:
+            id: bike_press
+            n: 2
+  - platform: gpio
+    id: bike_btn3_hw
+    pin:
+      number: ${bike_btn3_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - script.execute:
+            id: bike_press
+            n: 3
+  - platform: gpio
+    id: bike_btn4_hw
+    pin:
+      number: ${bike_btn4_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - script.execute:
+            id: bike_press
+            n: 4

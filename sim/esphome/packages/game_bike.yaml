@@ -1,5 +1,12 @@
 # Bike Lock Room quiz — one multiple-choice question, 4 arcade buttons.
-#   option 3                    -> CorrectAnswer chime, then ${bike_complete_effect}
+#   option 3                    -> ${bike_complete_effect} ONLY (lights + victory
+#                                  audio in one effect, instantly on the press —
+#                                  Tim 2026-08-21. The old chime-then-show fired
+#                                  TWO effects: with the 2500ms gap removed, the
+#                                  second takeover audio_stops the first's cue
+#                                  (effects_manager takeover semantics), so the
+#                                  chime is gone entirely and the victory pool
+#                                  lives on the BikeLockRoom effect itself)
 #   options 1/2/4               -> WrongAnswer
 # The answer key is static for the room and supplied by the room yaml
 # substitutions, mirrored from triggers.json by the audio console.
@@ -31,10 +38,6 @@ script:
             lambda: 'return n == ${bike_correct_option};'
           then:
             - logger.log: "Bike quiz: correct option"
-            - script.execute:
-                id: bike_fire
-                effect: "CorrectAnswer"
-            - delay: 2500ms   # let the chime land before the big effect
             - script.execute:
                 id: bike_fire
                 effect: "${bike_complete_effect}"

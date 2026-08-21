@@ -54,8 +54,9 @@ pinouts and the pod recipe: `arcade-button-db9-prewire-guide.md`.
 
 ## Bike Lock Room — one-question four-option quiz
 
-- **Hardware:** 4 buttons on **D0–D3** (9/11): options 1-4 under a sign with
-  one multiple-choice question (sign to be made).
+- **Hardware:** 4 buttons on **D0–D3** (9/11), landed on **DB9 pins 6-9**
+  instead of the standard pins 3-6: options 1-4 under a sign with one
+  multiple-choice question (sign to be made).
 - **Logic** (`game_bike.yaml`): option 3 → CorrectAnswer then
   **BikeLockRoom**; options 1, 2, and 4 → WrongAnswer.
 - **Answer key:** static for the room, not randomized. The `correct` flags in

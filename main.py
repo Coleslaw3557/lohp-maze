@@ -71,6 +71,11 @@ logging.basicConfig(level=logging.INFO,
                     handlers=[logging.StreamHandler(sys.stdout)])
 logger = logging.getLogger(__name__)
 logging.getLogger('pyftdi.ftdi').setLevel(logging.WARNING)
+# aioesphomeapi logs its own WARNING for every failed connect attempt. The
+# node-audio keepalive already reports connected/lost transitions at INFO, so
+# a powered-off room box must not spam the log on each retry (the 2026-08-21
+# storm: 5 benched boxes ~ 40 warnings/min, drowning the ring buffer).
+logging.getLogger('aioesphomeapi.connection').setLevel(logging.ERROR)
 
 app = Quart(__name__, static_folder='frontend/static')
 app = cors(app)

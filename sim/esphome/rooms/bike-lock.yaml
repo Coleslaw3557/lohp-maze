@@ -1,21 +1,76 @@
 # Bike Lock Room sensor node — trigger map from triggers.json
+# REAL ROOM BOX (2026-08-21): flashed per the FLASH ADDS recipe — the
+# one-question four-option quiz lives on THIS node (game_bike.yaml +
+# game_bike_hw.yaml, buttons D0-D3; **DB9-A pins 6-9, NOT the standard 3-6**
+# — as built, see db9-field-wiring.md) + LD2410C -> tripwire ->
+# BikeLock-Entry + DMX out + audio, on the fleet-standard XIAO S3
+# (esptool-verified genuine S3, 8MB PSRAM).
+# BENCH-VALIDATED 2026-08-21: the box's FIRST harness had a short (USB
+# flap loop, device 42->102, descriptor error -71; bare-board self-test
+# clean — chip/flash/eFuses/4-min WiFi-load soak all passed, so the board
+# survived); Tim rewired and everything came up. PHYSICAL radar
+# entry/vacate/re-trip cycles in telemetry (BikeLock-Entry); quiz via API:
+# n=1 -> WrongAnswer, n=3 -> CorrectAnswer + 2.5s -> BikeLockRoom victory,
+# every POST in telemetry (zero lost, even antenna-less); node audio @
+# .73:6073 (bed PLAYING 44.1k MP3, cues ANNOUNCING duck + bed follows
+# occupancy); ArtDMX signal=yes 746/min + Lightning fired; OTA-tunnel INFO
+# flip proven; box + pod cards printed. PHYSICAL BUTTONS VERIFIED at the
+# pod 2026-08-21 evening (Tim pressed all four: three WrongAnswer + one
+# victory in telemetry, map confirmed fine by Tim).
+# NOTE 2026-08-21: entry effect corrected BikeLockRoom -> BikeLock-Entry to
+# match triggers.json (canonical); BikeLockRoom is the quiz victory show the
+# game fires (bike_complete_effect in game_bike.yaml), not the door effect.
+# NOTE 2026-08-21 (2): correct press now fires BikeLockRoom ONLY, instantly
+# (Tim: lights+sound together, fast; the old chime-then-show also double-
+# played the same victory WAV — BikeLockRoom-RightAnswer lists the same
+# files). Chime-then-show with no gap does NOT work: the second effect's
+# takeover audio_stops the first's cue (effects_manager). OTA-flashed same
+# day, victory pool restored on the BikeLockRoom effect in audio_config.json.
+# Standard bay, standard gates 2/3, default absence timeout (no leave sting).
+# To run this room in the sim again: platform back to sim_host.yaml, drop
+# game_hw/radar/dmx/audio/external_components/wifi/sensor/logger (tripwire
+# stays — harness trip/vacate drives it on the host platform).
 substitutions:
   node_name: lohp-node-bike-lock
   room: "Bike Lock Room"
-  effect: "BikeLockRoom"
+  effect: "BikeLock-Entry"
   bike_correct_option: "3"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.252.231
+  server_host: "192.168.252.231"   # the server Pi (maze-network.md)
   api_port: "6073"
-  host_mac: "06:35:69:00:00:0d"
+  host_mac: "06:35:69:00:00:0d"    # sim-only (sim_host.yaml); unused on hardware
+  dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)
 
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
+  radar: !include ../packages/ld2410.yaml
   game: !include ../packages/game_bike.yaml
-  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
+  game_hw: !include ../packages/game_bike_hw.yaml
+  dmx: !include ../packages/dmx_out.yaml
+  audio: !include ../packages/audio_s3.yaml
+  platform: !include ../packages/hardware_s3.yaml
 
-# FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "6"   # D5, radar room
-#   packages:           radar: !include ../packages/ld2410.yaml
-#                       dmx: !include ../packages/dmx_out.yaml
-#   external_components: [{source: {type: local, path: ../components}}]
+external_components:   # for dmx_out.yaml — path is main-config-relative
+  - source:
+      type: local
+      path: ../components
+
+# Joins LOHP-ESP (rooms/secrets.yaml, post-cutover 2026-08-10 creds). No bssid
+# pin and no fast_connect: single-AP LAN, and fast_connect + audio firmware
+# caused WPA handshake loops on the Cop Dodge box (07-25). Keep the rescue AP.
+wifi:
+  ap:
+    ssid: "LoHP-BikeLock"
+    password: "hiddenplaya"
+
+# On-playa diagnostics habit (bench-xiao-s3.yaml): RSSI visible from the server.
+sensor:
+  - platform: wifi_signal
+    name: "${room} node RSSI"
+    update_interval: 30s
+
+# Room live-verified 2026-08-21 -> back at INFO (logic.yaml default). DEBUG
+# was the bring-up setting; LD2410 frame spam at DEBUG also costs main-loop
+# time.
+logger:
+  level: INFO

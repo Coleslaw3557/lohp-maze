@@ -79,7 +79,7 @@ example `GATE-1`, `GATE-2`, `DPH-1`.
 |---|---:|---|
 | Gate | 6 buttons | pin 3 pad 1, pin 4 pad 2, pin 5 pad 3, pin 6 pad 4, pin 7 pad 5, pin 8 pad 6 |
 | Deep Playa Handshake | 5 buttons | pin 3 btn 1, pin 4 btn 2, pin 5 btn 3, pin 6 btn 4, pin 7 btn 5 |
-| Bike Lock Room | 4 buttons | pin 3 option 1, pin 4 option 2, pin 5 option 3 TRUE, pin 6 option 4 |
+| Bike Lock Room | 4 buttons | **pins 6-9**: pin 6 option 1, pin 7 option 2, pin 8 option 3 TRUE, pin 9 option 4 |
 | Vertical Moop March | 4 buttons | pin 3 btn 1, pin 4 btn 2, pin 5 btn 3, pin 6 btn 4 |
 | Photo Bomb Room | 1 button | pin 3 shutter |
 | Monkey Room | 1 switch | pin 3 pedestal switch |
@@ -88,6 +88,9 @@ example `GATE-1`, `GATE-2`, `DPH-1`.
 
 No Friends Monday is not wired as five normal always-lit button LEDs. Use the
 resistor ladder and 5V addressable lamp chain from `room-games-plan.md`.
+Bike Lock keeps DB9 pins 1/2 for lamp power/common but moves its four button
+signals to pins 6-9; wire those option leads directly to those breakout screws,
+not to the standard signal-1-through-signal-4 screws.
 
 ## Recommended Exact Listings
 

@@ -47,6 +47,12 @@ STALE_AFTER = 5       # a command that waited this long behind the node lock is
                       # dropped — a thunder cue arriving after a reconnect backlog
                       # would fire long after its lightning
 KEEPALIVE_TICK_S = 7  # connection keepalive cadence (see _NodeConn._maintain)
+# A node that stays unreachable backs its keepalive off exponentially
+# (7-14-28-56s, capped here) instead of a full connect attempt every tick —
+# powered-off boxes are normal at the bench and must cost ~nothing. A box
+# powering back on is picked up by the next backed-off tick (<=60s) or
+# instantly by any dispatched command (_run connects lazily).
+KEEPALIVE_MAX_BACKOFF_S = 60
 NODE_GLOBAL_MAZE_AMBIENCE = True
 
 # aioesphomeapi MediaPlayerState values the bed watchdog cares about.
@@ -96,6 +102,7 @@ class _NodeConn:
         self.media_state = None
         self.media_state_at = 0.0
         self._maintain_task = None
+        self._down_ticks = 0  # consecutive keepalive ticks without a connection
 
     async def _ensure_connected(self):
         if self.client is not None:
@@ -182,7 +189,14 @@ class _NodeConn:
             except Exception as e:
                 logger.error(f"Node audio keepalive [{self.room}] tick failed: {e}",
                              exc_info=True)
-            await asyncio.sleep(KEEPALIVE_TICK_S)
+            if self.client is None:
+                self._down_ticks = min(self._down_ticks + 1, 8)
+                delay = min(KEEPALIVE_MAX_BACKOFF_S,
+                            KEEPALIVE_TICK_S * (2 ** (self._down_ticks - 1)))
+            else:
+                self._down_ticks = 0
+                delay = KEEPALIVE_TICK_S
+            await asyncio.sleep(delay)
 
     async def _run(self, what, call):
         """Run `call()` under the node lock; one reconnect-and-retry on failure.
