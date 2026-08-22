@@ -121,10 +121,11 @@ deployed). `packages/audio_s3.yaml` lost its 12dB duck — **every audio
 box still running pre-08-22 firmware dims the bed under cues until it
 gets one OTA** (all 10 were off-net when the change landed). At each
 box's next power-up: `esphome run rooms/<room>.yaml --device
-<ip>` (or the Pi tunnel below). OTA'd so far: none.
-Boxes: cop-dodge .62, gate .63, guy-line-climb .64, sparkle-pony .65,
-porto .66, cuddle-cross .67, photo-bomb .68, monkey .72, bike-lock .73,
-vertical-moop-march .74.
+<ip>` (or the Pi tunnel below). Done: **photo-bomb .68** (USB-flashed
+at the bench 08-22, RUT was down — rejoin unverified).
+Still pending: cop-dodge .62, gate .63, guy-line-climb .64,
+sparkle-pony .65, porto .66, cuddle-cross .67, monkey .72,
+bike-lock .73, vertical-moop-march .74.
 
 ## OTA updates after install (no USB — the field path)
 
