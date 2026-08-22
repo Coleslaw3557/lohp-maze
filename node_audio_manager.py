@@ -14,10 +14,12 @@ is fire-and-forget behind a per-node FIFO lock — a dead node never delays an
 effect's lights, and commands to one node can't reorder (same ordering
 discipline the WS client path got in the 2026-07 concurrency hardening).
 
-Per-effect volume is BAKED into the generated cue WAVs, so a runtime
-audio_params volume override (no effect uses one today) is ignored here.
+The global `effect_level` (audio_config / data/audio_levels.json) is BAKED
+into the generated cue WAVs (per-effect volume fields are legacy trim since
+2026-08-22), so a runtime audio_params volume override is ignored here.
 
-Cues play as ANNOUNCEMENTS over the streaming bed: the node's mixer ducks the
+Cues play as ANNOUNCEMENTS over the streaming bed: since 2026-08-22 (flat
+mix) the node's mixer just sums them — pre-08-22 firmware still ducks the
 media pipeline 12 dB under a cue and recovers (audio_s3.yaml) — the bed is
 never stopped for a cue. Because the speaker media_player has ONE entity
 volume shared by both pipelines, bed gain is baked into the generated node
@@ -232,7 +234,7 @@ class _NodeConn:
         return False
 
     async def play_announcement(self, url, volume=None):
-        """Effect cue: stream `url` through the announcement pipeline (ducks
+        """Effect cue: stream `url` through the announcement pipeline (plays over
         the active bed, which resumes when the cue ends)."""
         def call():
             if self.media_key is None:
@@ -441,13 +443,13 @@ class NodeAudioManager:
                 logger.warning(f"Node audio [{conn.room}]: loop requested for "
                                f"{data.get('file_name')} — embedded cues don't loop")
             # Cue WAVs are volume-baked by make_node_audio.py and play as
-            # announcements: the mixer ducks the bed 12 dB under them and
+            # announcements: the mixer plays them over the bed and
             # recovers (audio_s3.yaml) — the media pipeline is NOT stopped, so
             # ambience keeps playing straight through a cue. volume=1.0 keeps
             # the shared entity volume pinned at the level beds are baked for.
             return conn.play_announcement(self.cue_url(data['file_name']), volume=1.0)
         if command == 'play_room_ambience':
-            # A bed belongs on the media pipeline, so effect cues duck it as
+            # A bed belongs on the media pipeline, so effect cues mix over it as
             # announcements instead of replacing it. The pipeline is single —
             # while bed_active, maze ambience commands leave it alone (the bed
             # overrides maze ambience in its room). Remaining caveat until a

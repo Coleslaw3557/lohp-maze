@@ -62,15 +62,17 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
   + OTA (per-room audio revisit, `wiring-guides/room-node-audio-plan.md`).
 - `packages/audio_s3.yaml` — the speaker chain (I2S → PCM5102A → Pebble):
   mixer + dual media/announcement pipelines. Effect cues play as announcements;
-  the ambience bed keeps streaming on the media pipeline underneath and the
-  mixer ducks it 12 dB under a cue (2026-08-17: the server no longer stops the
-  bed around cues — bed gain is baked into the generated node stream and the
+  the ambience bed keeps streaming on the media pipeline underneath — and since
+  2026-08-22 it NEVER dims (flat mix, Tim: ducking removed; beds bake
+  `ambience_level`, cues bake `effect_level`, both runtime-set from the Pi via
+  `/api/audio_levels`; bed gain is baked into the generated node stream and the
   shared entity volume stays at 1.0). Maze-wide ambience starts/resumes from
   server-generated `offset_s` URLs, so real ESP speakers follow the same bed
   clock instead of each restart beginning at zero.
 - `make_node_audio.py` — generates the server-side cue streams from
   `node_audio_config.json` + `audio_config.json`: `audio_files/cues/*.wav`
-  (22.05kHz mono, per-effect volume baked in). Outputs are gitignored — rerun
+  (22.05kHz mono, the global `effect_level` baked in — per-effect volume
+  fields are legacy trim since 2026-08-22). Outputs are gitignored — rerun
   after config/mp3 changes so `/api/audio/cues/<cue_id>.wav` is current.
 - `rooms/*.yaml` — one node per room: substitutions only (room, effect, server,
   api port 6061–6075, MAC). Room→effect mapping matches `triggers.json` (repo root, the canonical map).
@@ -97,8 +99,10 @@ room build.**
    or replace it with the platform sensor keeping `id: tripwire` + the `on_press`.
 3. Speaker rooms: add `audio_s3.yaml` to the packages and map the room in
    `node_audio_config.json`. Nothing is stored on the node (2026-07-25,
-   reaffirmed 2026-08-17 — an embedded-cue variant was rejected) — cues
-   and beds stream from the server, so there is no per-node cues yaml; just
+   reaffirmed 2026-08-17 — an embedded-cue variant was rejected; ONE
+   sanctioned exception since 2026-08-22: Photo Bomb's shutter snap, embedded
+   at Tim's ask for press-edge latency) — cues and beds stream from the
+   server, so there is no per-node cues yaml; just
    make sure `./make_node_audio.py` has been run since the last pool change.
 4. Stage the node's RUT DHCP reservation BEFORE first boot: the S3's WiFi MAC
    is the USB-JTAG serial id (`ls /dev/serial/by-id/`), IP scheme

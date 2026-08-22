@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Manually play one audio file on a room node's speaker (announcement path —
-ducks the bed exactly like a show cue, then the bed recovers).
+plays over the bed exactly like a show cue (flat mix since 2026-08-22 — the bed holds level).
 
 Run INSIDE the server container (it has aioesphomeapi + LAN access):
 

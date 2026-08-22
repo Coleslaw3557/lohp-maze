@@ -5,7 +5,7 @@ RemoteHostManager integration. No server or hardware needed:
   1. cue ids match the WAV filenames make_node_audio.py generates
   2. WS command mirroring: play_effect_audio streams the announcement cue URL
      WITHOUT touching the media pipeline (the bed keeps playing; the node's
-     mixer ducks it); stop_maze_ambience -> media stop
+     mixer sums them — flat mix since 2026-08-22); stop_maze_ambience -> media stop
   3. room=None broadcasts to every node room; unmapped rooms are untouched
   4. a room's own background bed owns the shared media pipeline; global maze
      ambience commands do not steal it, and bed stop resumes the maze bed
@@ -98,7 +98,7 @@ async def run(tmp_path):
           and not m.enabled_for(None))
 
     # effect cue -> the mapped node only, announcement ONLY (media untouched:
-    # the bed keeps streaming and the node's mixer ducks it under the cue)
+    # the bed keeps streaming at level and the cue mixes over it — flat mix)
     ok = m.handle_command("Monkey Room", "play_effect_audio",
                           {"file_name": "monkey-shrine-complete.mp3", "loop": False})
     await drain(m)

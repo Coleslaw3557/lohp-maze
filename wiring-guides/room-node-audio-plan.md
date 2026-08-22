@@ -11,7 +11,10 @@ stream into the announcement pipeline as `GET /api/audio/cues/<cue_id>.wav`
 `audio_files/cues/`); ambience beds stream through the media pipeline. Anywhere this doc mentions
 embedded/on-chip cue files or the `play_cue` action, that design is
 superseded — firmware carries only the two-pipeline player
-(`packages/audio_s3.yaml`).
+(`packages/audio_s3.yaml`). **One sanctioned exception (Tim's own ask,
+2026-08-22): the Photo Bomb shutter SNAP is embedded in that node's firmware**
+and plays at the press edge (streamed, the click trailed the press by ~3s) —
+see `rooms/photo-bomb.yaml`. Everywhere else the rule stands.
 
 **2026-08-17: embedded cues re-proposed for the VMM march buttons and
 REJECTED by Tim the same day** ("I don't want sounds in flash") — the
@@ -19,15 +22,22 @@ nothing-stored rule stands absolute, game cues included. A working
 embedded-cue variant (per-room cues package + server `local_cues` skip) was
 built, verified, and fully reverted; press cues stream like everything else
 and press-to-sound stays at the streamed ~400–490 ms. Do not re-propose
-embedding; if streamed cues ever contend with the bed on marginal RF, tune
+embedding (the 2026-08-22 Photo Bomb snap above is the one exception Tim
+himself requested); if streamed cues ever contend with the bed on marginal RF, tune
 the stream (bed bitrate, buffers) instead.
 
 **2026-08-17 cue/bed mixing rework:** cues no longer stop the bed. The
 2026-08-05 "clear media before cues" workaround (and its resume-after-cue
 dance) audibly killed the ambience around every cue; it is removed. Cues play
-as announcements while the bed keeps streaming — the on-node mixer ducks the
-bed 12 dB and recovers (`audio_s3.yaml`). Because the speaker media_player has
-ONE entity volume shared by both pipelines, bed gain is now BAKED into the
+as announcements while the bed keeps streaming. **DUCKING RETIRED 2026-08-22
+(Tim): the bed never dims under cues — FLAT MIX.** Levels are global and
+runtime-settable from the Pi (`GET/POST /api/audio_levels` →
+`data/audio_levels.json`, deploy-protected): beds at `ambience_level` (0.65),
+every cue at `effect_level` (0.98, baked into the cue WAVs — rerun
+`make_node_audio.py` after changing it); the on-node mixer just sums the two
+pipelines. If simultaneous peaks ever clip, lower `ambience_level` — do not
+re-add ducking. Because the speaker media_player has
+ONE entity volume shared by both pipelines, bed gain is BAKED into the
 generated node stream (`audio_manager.prepare_node_ambience_stream(gain=...)`)
 and the entity volume stays pinned at 1.0 — a bed riding the entity volume
 would have jumped to cue level on the first cue.
@@ -64,7 +74,7 @@ The legacy Arduino `i2s_audio` media player is **removed** from ESPHome
 | Embedded one-shot cues | ✔ (~300–600 KB flash budget) | ✔ (roomy) |
 | Looping ambient from flash | ✔ (`speaker_source` + `repeat_one`) | ✔ |
 | Stream ambience beds from `/api/audio/` | shaky (tiny buffers; `buffer_size` ≤ ~20 KB) | ✔ (buffered) |
-| Ambience bed + stinger **mixed** | ✘ single pipeline — stinger interrupts bed | ✔ dual media+announcement pipeline w/ ducking |
+| Ambience bed + stinger **mixed** | ✘ single pipeline — stinger interrupts bed | ✔ dual media+announcement pipeline (ducking retired 2026-08-22 — flat mix) |
 | Sample rates | 16–22.05 kHz mono WAV/FLAC | 44.1 kHz fine |
 
 Today's behavior is ambience beds + effects mixing simultaneously, so **audio rooms
@@ -242,7 +252,7 @@ media_player:
       format: MP3
       sample_rate: 44100
       num_channels: 1
-    announcement_pipeline:    # streamed effect cues, mixed/ducked over ambience
+    announcement_pipeline:    # streamed effect cues, mixed over the ambience
       speaker: dac_out
       format: WAV
       sample_rate: 22050
@@ -254,9 +264,10 @@ media_player:
 ```
 
 The shipped package (`audio_s3.yaml`) additionally routes both pipelines
-through a `mixer` speaker with per-pipeline resamplers and the 12 dB ducking
-automations — this sketch omits them for brevity, but they're required:
-without the mixer a cue would seize the speaker instead of ducking the ambience.
+through a `mixer` speaker with per-pipeline resamplers — this sketch omits
+them for brevity, but the mixer is required: without it a cue would seize the
+speaker instead of playing over the ambience. (The mixer's 12 dB ducking
+automations were removed 2026-08-22 — flat mix, levels baked server-side.)
 
 ## Server changes — IMPLEMENTED 2026-07-18
 
