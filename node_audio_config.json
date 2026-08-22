@@ -42,6 +42,10 @@
         "Photo Bomb Room": {
             "host": "192.168.252.68",
             "port": 6068
+        },
+        "Deep Playa Handshake": {
+            "host": "192.168.252.70",
+            "port": 6070
         }
     }
 }

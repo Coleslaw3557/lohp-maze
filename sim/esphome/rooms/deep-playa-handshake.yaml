@@ -1,22 +1,53 @@
 # Deep Playa Handshake sensor node — trigger map from triggers.json
+# 5-button handshake game: ONE random winner per room entry (dph_randomize via
+# the tripwire entry_hook) -> CorrectAnswer; the rest -> WrongAnswer. Winner
+# persists across failed presses; leave_hook re-arms the lazy seed.
+# REAL ROOM BOX (2026-08-22): flashed per the FLASH ADDS recipe — LD2410C +
+# 5 handshake buttons D0-D4 (game_dph_hw.yaml, DB9-A pins 3-7) + DMX on D5 +
+# audio. IP 192.168.252.70 (RUT reservation). Ships with the 08-22 flat-mix
+# firmware (no duck) from birth.
+# To run this room in the sim again: platform back to sim_host.yaml, drop
+# game_hw/radar/dmx/audio/external_components/wifi/sensor/logger (tripwire +
+# game stay — harness trip/vacate/press_shake drive them on the host platform).
 substitutions:
   node_name: lohp-node-deep-playa-handshake
   room: "Deep Playa Handshake"
   effect: "DeepPlaya-BG"
   entry_hook: "id(dph_randomize)->execute();"
   leave_hook: "id(dph_seeded) = false;"
-  server_host: "127.0.0.1"   # sim: local server; real node: 192.168.252.231
+  server_host: "192.168.252.231"   # the server Pi (maze-network.md)
   api_port: "6070"
-  host_mac: "06:35:69:00:00:0a"
+  host_mac: "06:35:69:00:00:0a"    # sim-only (sim_host.yaml); unused on hardware
+  dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)
 
 packages:
   logic: !include ../packages/logic.yaml
   tripwire: !include ../packages/tripwire.yaml
+  radar: !include ../packages/ld2410.yaml
   game: !include ../packages/game_dph.yaml
-  platform: !include ../packages/sim_host.yaml   # -> hardware_s3.yaml when flashing (S3 = fleet standard)
+  game_hw: !include ../packages/game_dph_hw.yaml
+  dmx: !include ../packages/dmx_out.yaml
+  audio: !include ../packages/audio_s3.yaml
+  platform: !include ../packages/hardware_s3.yaml
 
-# FLASH ADDS (dmx-over-wifi.md): swap platform -> hardware_s3.yaml, then
-#   substitutions:      dmx_tx_pin: "6"   # D5, radar room
-#   packages:           radar: !include ../packages/ld2410.yaml
-#                       dmx: !include ../packages/dmx_out.yaml
-#   external_components: [{source: {type: local, path: ../components}}]
+external_components:   # for dmx_out.yaml — path is main-config-relative
+  - source:
+      type: local
+      path: ../components
+
+# Joins LOHP-ESP (rooms/secrets.yaml, post-cutover creds). No bssid pin and no
+# fast_connect: single-AP LAN (maze-network.md). Keep the rescue AP.
+wifi:
+  ap:
+    ssid: "LoHP-DeepPlaya"
+    password: "hiddenplaya"
+
+# On-playa diagnostics habit (bench-xiao-s3.yaml): RSSI visible from the server.
+sensor:
+  - platform: wifi_signal
+    name: "${room} node RSSI"
+    update_interval: 30s
+
+# Validated 2026-08-22 — INFO (logic.yaml default) via the OTA tunnel.
+logger:
+  level: INFO

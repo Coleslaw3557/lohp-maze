@@ -67,6 +67,15 @@ POD_WIRING = {
         ("pin 2", "GND"),
         ("pin 1", "5V — button LED"),
     ]),
+    "Deep Playa Handshake": ("HANDSHAKE BUTTONS ×5", [
+        ("pin 3", "BTN 1 (node D0)"),
+        ("pin 4", "BTN 2 (node D1)"),
+        ("pin 5", "BTN 3 (node D2)"),
+        ("pin 6", "BTN 4 (node D3)"),
+        ("pin 7", "BTN 5 (node D4)"),
+        ("pin 2", "GND"),
+        ("pin 1", "5V — button LEDs"),
+    ]),
 }
 
 

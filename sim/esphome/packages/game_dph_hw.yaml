@@ -1,0 +1,94 @@
+# REAL-HARDWARE companion to game_dph.yaml: the five handshake buttons on the
+# room S3, D0-D4 -> DB9 port A pins 3-7 -> the room's button pod (the fleet's
+# standard low-numbered signal convention — room-node-wiring-guide.md /
+# db9-field-wiring.md; pins 1/2 = 5V/GND, button LEDs hardwired to the 5V
+# rail at the pod).
+# Each GPIO edge feeds the same `dph_press` script the sim/harness uses, so
+# the winner logic stays identical. Buttons are closures to GND (internal
+# pull-up, pressed = LOW); 30ms delayed_on = the fleet debounce. XIAO S3
+# Dx -> GPIO: D0=1 D1=2 D2=3 D3=4 D4=5 (hardware_s3.yaml note).
+# NOT validated by validate_all.sh (gpio needs the esp32 platform, sim nodes
+# are host-platform).
+substitutions:
+  dph_btn1_pin: GPIO1   # D0 — DB9-A pin 3 (button 1)
+  dph_btn2_pin: GPIO2   # D1 — DB9-A pin 4 (button 2)
+  dph_btn3_pin: GPIO3   # D2 — DB9-A pin 5 (button 3)
+  dph_btn4_pin: GPIO4   # D3 — DB9-A pin 6 (button 4)
+  dph_btn5_pin: GPIO5   # D4 — DB9-A pin 7 (button 5)
+
+binary_sensor:
+  - platform: gpio
+    id: dph_btn1_hw
+    pin:
+      number: ${dph_btn1_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - script.execute:
+            id: dph_press
+            n: 1
+  - platform: gpio
+    id: dph_btn2_hw
+    pin:
+      number: ${dph_btn2_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - script.execute:
+            id: dph_press
+            n: 2
+  - platform: gpio
+    id: dph_btn3_hw
+    pin:
+      number: ${dph_btn3_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - script.execute:
+            id: dph_press
+            n: 3
+  - platform: gpio
+    id: dph_btn4_hw
+    pin:
+      number: ${dph_btn4_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - script.execute:
+            id: dph_press
+            n: 4
+  - platform: gpio
+    id: dph_btn5_hw
+    pin:
+      number: ${dph_btn5_pin}
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+    on_press:
+      then:
+        - script.execute:
+            id: dph_press
+            n: 5
