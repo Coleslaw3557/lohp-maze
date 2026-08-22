@@ -113,6 +113,19 @@ host route).
    for rooms with an external button/piezo box (POD_WIRING table in the
    script). One batched job; proof the PNGs before `--print`.
 
+## PENDING FLEET OTA — flat mix (2026-08-22)
+
+Tim killed audio ducking: beds always 0.75, effects 0.98
+(`audio_config.json` ambience_level/effect_level; cues rebaked, server
+deployed). `packages/audio_s3.yaml` lost its 12dB duck — **every audio
+box still running pre-08-22 firmware dims the bed under cues until it
+gets one OTA** (all 10 were off-net when the change landed). At each
+box's next power-up: `esphome run rooms/<room>.yaml --device
+<ip>` (or the Pi tunnel below). OTA'd so far: none.
+Boxes: cop-dodge .62, gate .63, guy-line-climb .64, sparkle-pony .65,
+porto .66, cuddle-cross .67, photo-bomb .68, monkey .72, bike-lock .73,
+vertical-moop-march .74.
+
 ## OTA updates after install (no USB — the field path)
 
 Proven end-to-end on VMM 2026-08-17 (1.03 MB in ~5 s). Nodes are WLAN

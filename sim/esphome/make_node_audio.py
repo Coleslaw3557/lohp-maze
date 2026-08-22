@@ -40,14 +40,16 @@ def main():
     effects_cfg = config['effects']
     CUES_DIR.mkdir(parents=True, exist_ok=True)
 
+    # FLAT MIX (2026-08-22, Tim): every cue bakes at the config's
+    # effect_level — the per-effect volume fields are legacy trim, no longer
+    # applied (beds bake at ambience_level in remote_host_manager).
     # Attended-mode pool overrides (top-level effects_attended) bake too — a
-    # sound-mode flip must find its cue WAVs already on disk. An override
-    # without its own volume inherits its base pool's.
-    sources = [(effect, entry, entry.get('volume', 0.7))
+    # sound-mode flip must find its cue WAVs already on disk.
+    effect_level = config.get('effect_level', 0.98)
+    sources = [(effect, entry, effect_level)
                for effect, entry in effects_cfg.items()]
     sources += [
-        (f'{name} (attended)', entry,
-         entry.get('volume', effects_cfg.get(name, {}).get('volume', 0.7)))
+        (f'{name} (attended)', entry, effect_level)
         for name, entry in (config.get('effects_attended') or {}).items()
         if not name.startswith('_') and isinstance(entry, dict)]
 
