@@ -3,15 +3,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Shared timeline for the Photo Bomb camera sequence (seconds from effect start).
-# The trigger sound assigned to PhotoBomb-Shot in the audio console should fit
-# this: press -> 3 seconds to strike a pose -> shutter. main.py schedules the
-# webcam capture off SHUTTER_OFFSET and tools/make_photobomb_audio.py renders a
-# synthesized fallback from these numbers — change them here and everything
-# stays in sync.
-POWERUP_END = 0.4
-BEEP_TIMES = [0.75, 1.5, 2.25]  # countdown pops inside the 3s pose window
-SHUTTER_OFFSET = 3.0            # shutter click, white flash, photo capture
-DURATION = 4.4
+# INSTANT BOOTH (2026-08-22, Tim): the 3s pose countdown is gone — press IS the
+# shutter. The flash fires at t=0 and HOLDS ~2.2s: the real capture (fswebcam,
+# C930e) takes ~1.7-2.0s end to end — device open + 10 skipped auto-exposure
+# warm-up frames — and the frame is grabbed at the END of that, so the hold
+# must outlast it or night photos land in a dark room (bench-measured
+# 2026-08-22). Feels instant to the person: light hits at the press.
+# main.py schedules the webcam capture off SHUTTER_OFFSET and
+# tools/make_photobomb_audio.py renders a synthesized fallback from these
+# numbers — change them here and everything stays in sync.
+POWERUP_END = 0.05   # audio-tool anchor only; there is no power-up blink now
+BEEP_TIMES = []      # countdown removed — no pose window
+SHUTTER_OFFSET = 0.0            # shutter fires the moment the effect starts
+DURATION = 2.6
 
 
 def _step(t, total, r, g, b, w):
@@ -26,54 +30,28 @@ def _step(t, total, r, g, b, w):
 
 
 def create_photobomb_shot_effect():
-    """Fast camera sequence: a blink of studio power-up, countdown pops through
-    the 3-second pose window, white FLASH at the shutter, short sparkle outro.
-    Steps bracket each hit tightly because the engine linearly interpolates
-    between steps."""
-    steps = [_step(0.0, 20, 255, 180, 120, 0)]
+    """Instant camera sequence: white FLASH the moment the button lands, held
+    long enough that the real webcam's frame (grab starts immediately, lands
+    ~1.7-2.0s later) is taken under full light, then a quick sparkle outro. Steps
+    bracket each hit tightly because the engine linearly interpolates between
+    steps."""
+    steps = [
+        _step(SHUTTER_OFFSET, 255, 255, 255, 255, 255),   # FLASH at press
+        _step(2.20, 255, 255, 255, 255, 255),             # hold: real frame lands lit
+        _step(2.35, 90, 255, 240, 220, 60),               # decay
+    ]
 
-    # Power-up: one quick cyan/magenta studio blink ramping in
-    for t, bright, (r, g, b) in [
-        (0.14, 110, (0, 220, 255)), (0.28, 160, (255, 0, 220)),
-        (POWERUP_END, 120, (255, 230, 200)),
-    ]:
-        steps.append(_step(t - 0.05, 45, 120, 120, 140, 0))
-        steps.append(_step(t, bright, r, g, b, 20))
-
-    # Countdown: warm amber pop on each beep, settling between them
-    for beep in BEEP_TIMES:
-        steps.append(_step(beep - 0.03, 70, 255, 190, 60, 0))
-        steps.append(_step(beep, 255, 255, 190, 40, 120))
-        steps.append(_step(beep + 0.10, 200, 255, 190, 40, 60))
-        steps.append(_step(beep + 0.32, 90, 255, 200, 90, 10))
-
-    # Anticipation dip, then the FLASH
-    steps.append(_step(2.62, 45, 255, 210, 120, 0))
-    steps.append(_step(SHUTTER_OFFSET - 0.05, 25, 255, 220, 160, 0))
-    steps.append(_step(SHUTTER_OFFSET, 255, 255, 255, 255, 255))
-    steps.append(_step(SHUTTER_OFFSET + 0.15, 255, 255, 255, 255, 255))
-    steps.append(_step(SHUTTER_OFFSET + 0.40, 90, 255, 240, 220, 60))
-    steps.append(_step(SHUTTER_OFFSET + 0.60, 35, 255, 220, 180, 0))
-
-    # Sparkle outro: three quick decaying colour pops
-    for t, bright, (r, g, b) in [
-        (3.75, 160, (255, 200, 40)), (3.95, 120, (0, 220, 255)),
-        (4.12, 90, (255, 0, 220)),
-    ]:
-        steps.append(_step(t - 0.05, 30, 200, 180, 160, 0))
-        steps.append(_step(t, bright, r, g, b, 15))
-
-    steps.append(_step(4.3, 5, 120, 110, 100, 0))
+    # Sparkle outro: one quick gold pop on the way out
+    steps.append(_step(2.45, 160, 255, 200, 40, 15))
     steps.append(_step(DURATION, 0, 0, 0, 0, 0))
 
     effect = {
         "duration": DURATION,
-        "description": "Photo booth camera sequence: power-up blink, 3-second "
-                       "pose countdown, white FLASH at the shutter (photo "
-                       "taken), sparkle outro",
+        "description": "Photo booth camera sequence: instant white FLASH at "
+                       "the shutter (photo taken during the hold), sparkle "
+                       "outro",
         "steps": steps,
-        "palette_exempt_windows": [(SHUTTER_OFFSET - 0.05,
-                                    SHUTTER_OFFSET + 0.18)],
+        "palette_exempt_windows": [(SHUTTER_OFFSET, 2.25)],
     }
     logger.info(f"PhotoBomb-Shot effect created with {len(steps)} steps over {DURATION} seconds")
     return effect

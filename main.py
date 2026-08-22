@@ -26,7 +26,7 @@ from maze_ambient_manager import MazeAmbientManager
 from maze_ambience_manager import MazeAmbienceManager
 from camera_manager import CameraManager
 from telemetry_store import TelemetryStore
-from effects.photobomb_shot import SHUTTER_OFFSET, DURATION as PHOTOBOMB_SHOT_DURATION
+from effects.photobomb_shot import SHUTTER_OFFSET
 from effects.moop_march import MOOP_WIN_RGB, MOOP_WIN_TOTAL
 from photobooth import PhotoBoothSession
 
@@ -63,8 +63,11 @@ PHOTOBOMB_ENTRY_EFFECT = "PhotoBomb-BG"
 # assigns them files, and falls back to the shared chime/fail sounds until then.
 PHOTOBOMB_VICTORY_EFFECT = "CorrectAnswer"
 PHOTOBOMB_FAIL_EFFECT = "WrongAnswer"
-# the capture lands ~SHUTTER_OFFSET+0.25s in; the chime waits out the outro
-PHOTOBOMB_VICTORY_DELAY_S = round(PHOTOBOMB_SHOT_DURATION - SHUTTER_OFFSET, 2)
+# The chime fires a beat after the photo LANDS ON DISK (on_captured): the real
+# capture completes ~1.9s in (fswebcam open + warm-up), so +0.8s puts the click
+# right at the shot effect's tail. Synthetic captures land much earlier and the
+# chime overlaps the flash — cosmetic, sim/bench only.
+PHOTOBOMB_VICTORY_DELAY_S = 0.8
 # Set up logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',

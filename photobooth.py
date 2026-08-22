@@ -1,10 +1,10 @@
 """Photo Bomb room game state.
 
 The room is a fast-paced photo booth: entering starts the room bed
-(PhotoBomb-BG), and each shutter-button press runs the camera countdown —
+(PhotoBomb-BG), and each shutter-button press fires the camera flash —
 one "shot". A visitor gets MAX_SHOTS shots; presses past the budget are the
 cue to leave, so main.py swaps them to the failure effect instead of a
-countdown. The budget resets when the room turns over:
+flash. The budget resets when the room turns over:
 
   - the node reports the room vacated (leave_action in triggers.json), or
   - a fresh entry trigger fires (next visitor walked in), or
@@ -43,7 +43,7 @@ class PhotoBoothSession:
         self._last_press = None
 
     def press(self):
-        """Record a shutter press. True = run the countdown; False = budget
+        """Record a shutter press. True = run the shot; False = budget
         blown, run the failure cue instead. Over-budget presses keep failing
         (and keep the cooldown clock running) until a reset."""
         now = self._clock()
