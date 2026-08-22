@@ -13,8 +13,9 @@
 # Lightning; node audio attached (bed PLAYING); telemetry mirrored every POST.
 # PhotoBomb-Shot is lights-only BY DESIGN (countdown mp3 retired-by-console).
 # To run this room in the sim again: platform back to sim_host.yaml, drop
-# button_hw/radar/dmx/audio/external_components/wifi/sensor/logger (tripwire
-# stays — harness trip/vacate drives it on the host platform).
+# button_hw/radar/dmx/audio/external_components/wifi/sensor/logger AND the
+# media_player/binary_sensor snap extends (they reference audio_s3 ids;
+# tripwire stays — harness trip/vacate drives it on the host platform).
 substitutions:
   node_name: lohp-node-photo-bomb
   room: "Photo Bomb Room"
@@ -48,6 +49,30 @@ wifi:
   ap:
     ssid: "LoHP-PhotoBomb"
     password: "hiddenplaya"
+
+# INSTANT SNAP (2026-08-22, Tim): the camera-click WAV lives IN THE FLASH and
+# plays at the press edge — zero network in the loop (the streamed click landed
+# ~3s after the press). Room-local exception to audio_s3.yaml's
+# nothing-stored-on-nodes rule, Tim's explicit call for this one
+# latency-critical cue. EVERY press edge clicks (the 5s cooldown gates only the
+# shot POST — a real camera clicks even when it won't shoot); the server's
+# photo-landed confirmation is lights-only (PhotoBomb-Landed) so nothing
+# double-clicks. The WAV is a baked cue (22.05k mono, volume pre-mixed), played
+# on the announcement pipeline so it ducks the bed like streamed cues do.
+media_player:
+  - id: !extend room_audio
+    files:
+      - id: snap_wav
+        file: ../../../audio_files/cues/tf_camera_05.wav
+
+binary_sensor:
+  - id: !extend push_button
+    on_press:
+      then:
+        - media_player.speaker.play_on_device_media_file:
+            id: room_audio
+            media_file: snap_wav
+            announcement: true
 
 # On-playa diagnostics habit (bench-xiao-s3.yaml): RSSI visible from the server.
 sensor:

@@ -12,7 +12,8 @@ from effects import (
     create_photobomb_bg_effect, create_photobomb_spot_effect, create_deep_playa_bg_effect,
     create_deep_playa_hit_effect, create_image_enhancement_effect, create_bike_lock_room_effect,
     create_bike_lock_entry_effect, create_no_friends_monday_effect, create_lightning_storm_effect,
-    create_photobomb_shot_effect, create_monkey_business_effect,
+    create_photobomb_shot_effect, create_photobomb_landed_effect,
+    create_monkey_business_effect,
     create_shrine_guard_effect, create_moop_march_effect, create_moop_victory_effect,
     create_moop_press_flash_effect, create_temple_wake_effect,
 )
@@ -67,6 +68,7 @@ class EffectsManager:
             "NoFriendsMonday": create_no_friends_monday_effect(),
             "LightningStorm": create_lightning_storm_effect(),
             "PhotoBomb-Shot": create_photobomb_shot_effect(),
+            "PhotoBomb-Landed": create_photobomb_landed_effect(),
             "MonkeyBusiness": create_monkey_business_effect(),
             "ShrineGuard": create_shrine_guard_effect(),
             "MoopMarch": create_moop_march_effect(),

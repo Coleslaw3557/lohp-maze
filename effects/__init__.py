@@ -16,6 +16,7 @@ from .cuddle_puddle import (create_cuddle_puddle_effect, create_cuddle_lava_hit_
 from .photobomb_bg import create_photobomb_bg_effect
 from .photobomb_spot import create_photobomb_spot_effect
 from .photobomb_shot import create_photobomb_shot_effect
+from .photobomb_landed import create_photobomb_landed_effect
 from .monkey_business import create_monkey_business_effect
 from .monkey_shrine import create_shrine_guard_effect
 from .moop_march import (create_moop_march_effect, create_moop_victory_effect,

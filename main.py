@@ -61,7 +61,7 @@ PHOTOBOMB_ENTRY_EFFECT = "PhotoBomb-BG"
 # Victory/failure ride the shared answer cues: the audio layer swaps in the
 # room-local PhotoBombRoom-RightAnswer / -WrongAnswer pools once the console
 # assigns them files, and falls back to the shared chime/fail sounds until then.
-PHOTOBOMB_VICTORY_EFFECT = "CorrectAnswer"
+PHOTOBOMB_VICTORY_EFFECT = "PhotoBomb-Landed"   # lights-only: snap is on-node
 PHOTOBOMB_FAIL_EFFECT = "WrongAnswer"
 # The chime fires a beat after the photo LANDS ON DISK (on_captured): the real
 # capture completes ~1.9s in (fswebcam open + warm-up), so +0.8s puts the click
