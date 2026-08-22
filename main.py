@@ -295,8 +295,9 @@ effects_manager.register_effect_hooks(
         room, MOOP_WIN_RGB, MOOP_WIN_TOTAL),
 )
 
-# Photo Bomb game state: entry starts the room bed, MAX_SHOTS shots per
-# visitor, then presses fail until the room turns over (photobooth.py).
+# Photo Bomb game state: entry starts the room bed; shots are limited to
+# MAX_SHOTS per rolling WINDOW_S seconds (photobooth.py, Tim 2026-08-22) —
+# over-window presses fail until the window drains.
 photobooth = PhotoBoothSession()
 _photobomb_victory_task = None
 
@@ -695,8 +696,9 @@ async def run_effect():
             elif effect_name == PHOTOBOMB_SHOT_EFFECT:
                 _cancel_photobomb_victory()
                 if not photobooth.press():
-                    logger.info(f"Photo Bomb budget blown "
-                                f"({photobooth.max_shots} shots); firing failure cue")
+                    logger.info(
+                        f"Photo Bomb window full ({photobooth.max_shots} shots "
+                        f"in {photobooth.window_s:.0f}s); firing failure cue")
                     effect_name = PHOTOBOMB_FAIL_EFFECT
 
         effect_data = effects_manager.get_effect(effect_name)
