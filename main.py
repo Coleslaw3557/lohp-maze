@@ -1687,6 +1687,7 @@ if __name__ == '__main__':
             # Node connections are kept warm from boot: liveness (audio_rooms)
             # is real and the first bed start never races a cold connect.
             node_audio_manager.ensure_running()
+            camera_manager.ensure_warm_grabber()  # frame-at-the-snap (2026-08-22)
             maze_ambience_manager.ensure_running()
             room_background_manager.ensure_running()
             global _bed_cache_warmup_task
