@@ -46,6 +46,11 @@ def main():
     # Attended-mode pool overrides (top-level effects_attended) bake too — a
     # sound-mode flip must find its cue WAVs already on disk.
     effect_level = config.get('effect_level', 0.98)
+    try:  # runtime override (data/audio_levels.json — /api/audio_levels)
+        effect_level = float(json.load(
+            open(REPO / 'data' / 'audio_levels.json'))['effect_level'])
+    except (OSError, KeyError, ValueError, TypeError):
+        pass
     sources = [(effect, entry, effect_level)
                for effect, entry in effects_cfg.items()]
     sources += [

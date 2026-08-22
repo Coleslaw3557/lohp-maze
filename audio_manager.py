@@ -39,11 +39,49 @@ class AudioManager:
         self.base_dir = os.path.dirname(os.path.abspath(config_file)) or os.getcwd()
         self._rng = rng or random.SystemRandom()
         self.audio_config = self.load_config()
+        # Global flat-mix knobs (2026-08-22, Tim): runtime overrides live in
+        # data/audio_levels.json (deploy-protected — rsync protects /data), set
+        # via POST /api/audio_levels; audio_config's ambience_level/
+        # effect_level are only the defaults for a fresh install.
+        self.levels_file = os.path.join(self.base_dir, 'data', 'audio_levels.json')
+        self._runtime_levels = self._load_levels()
         # In-memory ON PURPOSE: every boot starts unattended, and a config
         # reload (the console's push) must not reset a live flip.
         self.sound_mode = SOUND_MODES[0]
         self._recent = {}  # (sound_mode, effect_name) -> deque of recent picks (anti-repeat)
         self._duration_cache = {}
+
+    def _load_levels(self):
+        try:
+            with open(self.levels_file) as f:
+                data = json.load(f)
+            return {k: float(data[k])
+                    for k in ('ambience_level', 'effect_level') if k in data}
+        except (OSError, ValueError, TypeError):
+            return {}
+
+    def level(self, name):
+        """Current global mix level ('ambience_level' or 'effect_level')."""
+        if name in self._runtime_levels:
+            return self._runtime_levels[name]
+        return float(self.audio_config.get(
+            name, {'ambience_level': 0.65, 'effect_level': 0.98}[name]))
+
+    def set_levels(self, ambience_level=None, effect_level=None):
+        """Persist runtime levels (clamped 0..1); returns the current pair.
+        Raises ValueError on a non-numeric value."""
+        for name, value in (('ambience_level', ambience_level),
+                            ('effect_level', effect_level)):
+            if value is None:
+                continue
+            self._runtime_levels[name] = max(0.0, min(1.0, float(value)))
+        os.makedirs(os.path.dirname(self.levels_file), exist_ok=True)
+        tmp = self.levels_file + '.tmp'
+        with open(tmp, 'w') as f:
+            json.dump(self._runtime_levels, f, indent=1)
+        os.replace(tmp, self.levels_file)
+        return {'ambience_level': self.level('ambience_level'),
+                'effect_level': self.level('effect_level')}
 
     def load_config(self):
         try:

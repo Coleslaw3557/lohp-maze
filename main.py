@@ -1060,6 +1060,55 @@ async def _reapply_beds_for_mode():
     return restarted
 
 
+async def _reapply_beds_for_levels():
+    """Restart every live bed so a level change is audible immediately
+    (nodes get a freshly gain-baked stream; clients get the new payload
+    volume). Cues pick the new effect_level up on their next draw."""
+    restarted = []
+    if maze_ambience_manager.effect and maze_ambience_manager.playing:
+        await maze_ambience_manager.apply_now(force=True)
+        restarted.append('maze_ambience')
+    rooms = await room_background_manager.restart_differing(lambda e: True)
+    restarted.extend(f'room_background:{room}' for room in rooms)
+    if floor_show_manager.bed:
+        if await floor_show_manager.restart_bed():
+            restarted.append('floor_bed')
+    return restarted
+
+
+@app.route('/api/audio_levels', methods=['GET'])
+async def get_audio_levels():
+    """The global flat-mix knobs (2026-08-22): beds at ambience_level,
+    every effect/cue at effect_level, no ducking anywhere."""
+    return jsonify({'ambience_level': audio_manager.level('ambience_level'),
+                    'effect_level': audio_manager.level('effect_level')})
+
+
+@app.route('/api/audio_levels', methods=['POST'])
+async def post_audio_levels():
+    """{"ambience_level": 0.65} and/or {"effect_level": 0.98} — persisted in
+    data/audio_levels.json (survives deploys), applied everywhere from the Pi:
+    live beds restart at the new level now; cues use effect_level on their
+    next play. CAVEAT: node cue WAVs are BAKED at effect_level — after
+    changing effect_level, rerun sim/esphome/make_node_audio.py (works inside
+    the container) so streamed cues actually change; Photo Bomb's in-flash
+    snap only follows with a reflash."""
+    data = await request.get_json() or {}
+    try:
+        levels = audio_manager.set_levels(
+            ambience_level=data.get('ambience_level'),
+            effect_level=data.get('effect_level'))
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error',
+                        'message': 'levels must be numbers 0..1'}), 400
+    restarted = await _reapply_beds_for_levels()
+    resp = {'status': 'success', **levels, 'beds_restarted': restarted}
+    if data.get('effect_level') is not None:
+        resp['note'] = ('cue WAVs bake effect_level: rerun '
+                        'sim/esphome/make_node_audio.py to apply it to cues')
+    return jsonify(resp)
+
+
 @app.route('/api/sound_mode', methods=['GET'])
 async def get_sound_mode():
     """unattended (power-up default) vs attended (staff-run fast pass)."""

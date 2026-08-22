@@ -812,8 +812,8 @@
         }
     },
     "default_volume": 0.7,
-    "_levels_comment": "2026-08-22 (Tim): FLAT MIX — no ducking anywhere. Ambience/background beds always play at ambience_level, every effect/cue/one-shot at effect_level; the per-effect volume fields above are legacy trim, no longer applied (kept for history/console). Change levels here, rerun sim/esphome/make_node_audio.py, redeploy, re-OTA nodes (cue WAVs + node bed streams bake these in).",
-    "ambience_level": 0.75,
+    "_levels_comment": "2026-08-22 (Tim): FLAT MIX — no ducking anywhere. Beds always at ambience_level, every effect/cue/one-shot at effect_level; per-effect volume fields above are legacy trim, no longer applied. These two values are only DEFAULTS: the live knobs are data/audio_levels.json on the Pi (deploy-protected), set via GET/POST /api/audio_levels — ambience changes apply to live beds instantly, effect_level changes ALSO need make_node_audio.py rerun (cue WAVs bake it; the Photo Bomb in-flash snap needs a reflash).",
+    "ambience_level": 0.65,
     "effect_level": 0.98,
     "ambience_playback": {
         "_comment": "Default bed playback policy. Files at or under loop_under_s loop for loop_for_s, then the server rotates to a fresh anti-repeat pick. Longer files play once, then rotate after duration + once_pad_s. fade_s: bed track changes fade out/in over this many seconds (VLC/sim clients ramp live; node streams get it baked into the generated MP3's head and tail). 0 = hard cut.",

@@ -189,7 +189,7 @@ class RemoteHostManager:
         if volume is None:  # an explicit 0 must stay 0, so no `or` fallback
             # FLAT MIX (2026-08-22, Tim): every effect/cue/one-shot plays at
             # effect_level; per-effect volume fields are legacy trim, ignored.
-            volume = self.audio_manager.audio_config.get('effect_level', 0.98)
+            volume = self.audio_manager.level('effect_level')
         data = {
             'effect_name': effect_name,
             'file_name': audio_file,
@@ -226,7 +226,7 @@ class RemoteHostManager:
         if volume is None:  # an explicit 0 must stay 0, so no `or` fallback
             # FLAT MIX (2026-08-22, Tim): beds always play at ambience_level —
             # constant under cues (ducking removed fleet-wide same day).
-            volume = self.audio_manager.audio_config.get('ambience_level', 0.75)
+            volume = self.audio_manager.level('ambience_level')
         playback = self.audio_manager.ambience_playback(effect_name, audio_file, audio_params)
         data = {
             'effect_name': effect_name,
