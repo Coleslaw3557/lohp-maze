@@ -66,6 +66,7 @@ def room_sensor_names(room, sensors, room_box):
         "Sparkle Pony Room": ["sparkle pony"],
         "Cuddle Cross": ["cuddle cross"],
         "Bike Lock Room": ["bike lock"],
+        "Monkey Room": ["monkey"],
     }.get(room, [room.lower()])
     x0, x1, z0, z1 = room_box
     for name, sensor in sensors.items():
@@ -103,6 +104,7 @@ def label_for_room(room, out_path):
         "Sparkle Pony Room": "68:EE:8F:50:B2:EC",
         "Cuddle Cross": "68:EE:8F:50:B0:18",
         "Bike Lock Room": "68:EE:8F:50:B9:AC",
+        "Monkey Room": "68:EE:8F:50:07:54",
     }.get(room)
 
     img = Image.new("RGB", (W, H), "white")

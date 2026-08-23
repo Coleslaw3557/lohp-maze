@@ -133,8 +133,7 @@ the Pi tunnel below). Done: **photo-bomb .68**, **guy-line-climb .64**,
 **sparkle-pony .65**, **cuddle-cross .67**, and
 **deep-playa-handshake .70** have been USB-flashed or re-flashed with the
 flat-mix build and verified back on `LOHP-ESP`.
-Still pending: cop-dodge .62, gate .63, porto .66, monkey .72,
-vertical-moop-march .74.
+Still pending: cop-dodge .62, gate .63, porto .66, vertical-moop-march .74.
 
 ## OTA updates after install (no USB — the field path)
 
@@ -178,7 +177,7 @@ Art-Net UDP can still look fine). Fix the extra AP, then retest.
 | Room | Date | Notes |
 |---|---|---|
 | Cop Dodge | 2026-07-25 | first real box; pre-cutover — needs reflash (stale WiFi + bssid pin) |
-| Monkey Room | 2026-08-16 | button + radar + ShrineGuard; first post-cutover |
+| Monkey Room | 2026-08-23 | button + radar + ShrineGuard; first post-cutover. 2026-08-23 final pass: USB flashed latest flat-mix build to MAC `68:EE:8F:50:07:54`, RUT lease/reservation `.72`, ping 3/3, serial showed Pi API connected and audio announcing, parts-can label printed |
 | Vertical Moop March | 2026-08-17 | 4-button game + radar + MoopMarch; pod pending cut |
 | Porto Room | 2026-08-20 | radar + 3-piezo knock game + audio; API + physical knocks validated (3 separate pads, ~0.3s knock→sound; hostapd-restart gotcha hit on the reflash); piezo thresholds recalibrate on-site behind the plywood; logger still DEBUG |
 | Cuddle Cross | 2026-08-23 | first LD2450 box (sole radar: presence + projection tracks) + DMX + audio; API + PHYSICAL radar entry validated, target_1 x/y streaming, zone/multi-target boot programming; **LD2450 on D2/D3 as built** (D6/D7 dead — guide updated); OTA-tunnel proven. 2026-08-23 final pass: USB flashed latest flat-mix build, rejoined `LOHP-ESP` as `.67`, ping/API smoke good, parts-can label printed |
