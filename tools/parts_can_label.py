@@ -70,6 +70,7 @@ def room_sensor_names(room, sensors, room_box):
         "Vertical Moop March": ["vertical moop", "moop march"],
         "Porto Room": ["porto"],
         "Gate": ["gate"],
+        "Cop Dodge": ["cop dodge"],
     }.get(room, [room.lower()])
     x0, x1, z0, z1 = room_box
     for name, sensor in sensors.items():
@@ -111,6 +112,7 @@ def label_for_room(room, out_path):
         "Vertical Moop March": "A4:CB:8F:DF:52:80",
         "Porto Room": "68:EE:8F:50:AF:C0",
         "Gate": "68:EE:8F:50:B2:F4",
+        "Cop Dodge": "A4:CB:8F:DF:52:48",
     }.get(room)
 
     img = Image.new("RGB", (W, H), "white")
