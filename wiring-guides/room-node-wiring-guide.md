@@ -138,8 +138,9 @@ audio (no PSRAM) before Tim swapped the correct S3 in the same day.
 into a shipment. **Board-swap lessons (any room):** new board = new MAC —
 update the RUT reservation AND purge the old board's line from the RUT's
 `/tmp/dhcp.leases` (dnsmasq will not hand the reserved IP to the new MAC
-while the old lease holds it; the node lands on a pool address), and expect
-the stale-hostapd Auth Expired loop on rejoin (restart hostapd on the Pi).
+while the old lease holds it; the node lands on a pool address). If a reflashed
+node loops on association now, kick that client on the RUT AP; Pi `hostapd`
+must stay stopped.
 
 ## LD2450 tracking radar (Cuddle only — the room's ONE radar since 2026-08-20)
 

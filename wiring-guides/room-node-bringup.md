@@ -66,10 +66,12 @@ Drive everything from the Pi — the RUT blocks upstream→WLAN clients, and
 the dev box's vmnet1 blackholes `192.168.252.0/24` (only `.231` has a
 host route).
 
-1. **Join**: Pi `iw dev wlan0 station dump` shows the MAC; ping the
-   reserved IP. REflash of a known box + endless `Auth Expired` = the
-   stale-hostapd-STA gotcha (`maze-network.md`) — restart hostapd on the
-   Pi. Fresh MACs join clean.
+1. **Join**: the RUT lease table shows the MAC on the reserved IP, and the Pi
+   can ping it. Example from the Pi:
+   `ssh root@192.168.252.1 "cat /tmp/dhcp.leases | grep -i <MAC>"` then
+   `ping -c 3 192.168.252.<node>`. If a reflashed node ever loops on
+   association, kick that client from the RUT AP (`maze-network.md`), not from
+   Pi `hostapd` (disabled in the current build).
 2. **Audio attach** (speaker rooms): server log prints
    `Node audio connected: <Room> @ <ip>:<port>`, ambience bed starts on
    the Pebble.
@@ -107,11 +109,16 @@ host route).
    entry effect. Real gate numbers are an on-site pass at the mount.
 7. **After validation**: logger DEBUG→INFO via OTA; stamp the room
    yaml header REAL ROOM BOX + date + what was validated.
-8. **Print the box cards**: `tools/box_labels.py "<Room>" --print` —
+8. **Print the enclosure card**: `tools/box_labels.py "<Room>" --print` —
    QL-820NWB die-cut card for the enclosure (room/IP/server/Art-Net/
    fixtures/DMX range, read live from the configs) + a DB9-A wiring card
    for rooms with an external button/piezo box (POD_WIRING table in the
    script). One batched job; proof the PNGs before `--print`.
+9. **Print the ammo-can parts label**:
+   `tools/parts_can_label.py "<Room>" --print` — QL-820NWB 62x100 label for
+   the room's parts can. It reads the room footprint and installed parts from
+   the sim, draws a top-down map, and only labels parts that actually exist in
+   the sim layout. Keep this legible: no footer note, no overlapping text.
 
 ## PENDING FLEET OTA — flat mix (2026-08-22)
 
@@ -119,15 +126,15 @@ Tim killed audio ducking — FLAT MIX: beds at `ambience_level`, effects
 at `effect_level`, runtime-set from the Pi (`GET/POST /api/audio_levels`
 → `data/audio_levels.json`, deploy-protected; current 0.65 / 0.98; an
 `effect_level` change also needs a `make_node_audio.py` rerun — cue
-WAVs bake it). `packages/audio_s3.yaml` lost its 12dB duck — **every
-audio box still running pre-08-22 firmware dims the bed under cues
-until it gets one OTA**. At each box's next power-up: `esphome run
-rooms/<room>.yaml --device <ip>` (or the Pi tunnel below). Done:
-**photo-bomb .68** (flashed 08-22 incl. its booth extras — on-node
-snap, 2s cooldown; rejoined, flat mix live-verified).
-Still pending: cop-dodge .62, gate .63, guy-line-climb .64,
-sparkle-pony .65, porto .66, cuddle-cross .67, monkey .72,
-bike-lock .73, vertical-moop-march .74.
+WAVs bake it). `packages/audio_s3.yaml` lost its 12dB duck — every audio box
+still running pre-08-22 firmware dims the bed under cues until it gets one OTA.
+At each box's next power-up: `esphome run rooms/<room>.yaml --device <ip>` (or
+the Pi tunnel below). Done: **photo-bomb .68**, **guy-line-climb .64**,
+**sparkle-pony .65**, **cuddle-cross .67**, and
+**deep-playa-handshake .70** have been USB-flashed or re-flashed with the
+flat-mix build and verified back on `LOHP-ESP`.
+Still pending: cop-dodge .62, gate .63, porto .66, monkey .72, bike-lock .73,
+vertical-moop-march .74.
 
 ## OTA updates after install (no USB — the field path)
 
@@ -154,19 +161,17 @@ own. Post-OTA smoke from the Pi:
 `docker exec lohp-server python sim/esphome/harness.py call
 <node-ip>:<api-port> press_moop n=1` (or `trip`/`press_button` per
 room) — then read the POST + effect in `docker logs lohp-server`.
-If it doesn't rejoin: stale hostapd association — `systemctl restart
-hostapd` on the Pi (maze-network.md reflash gotcha).
+If it doesn't rejoin: check the RUT lease table and kick the stale client on
+the RUT AP (maze-network.md). Pi `hostapd` must stay stopped.
 
 ## If triggers/audio go randomly flaky
 
-30-second network check BEFORE debugging firmware (cost VMM an evening,
-2026-08-17): `iwinfo` on the RUT — if a second `LOHP-ESP` AP is
-broadcasting, nodes roam Pi↔RUT and every roam is a ~seconds TCP
-blackout (POSTs vanish without telemetry rows, ambience streams die
-mid-flow and only recover on the next cue, Art-Net UDP keeps flowing so
-lights look fine). Fix: `uci set wireless.default_radio0.disabled=1;
-uci commit wireless; wifi` on the RUT. The as-built design is ONE AP —
-the Pi.
+30-second network check BEFORE debugging firmware: `iwinfo` on the RUT and
+`systemctl is-active hostapd` on the Pi. The current as-built design is ONE AP:
+the RUT broadcasting `LOHP-ESP`; Pi `hostapd` must be `inactive`. If both radios
+ever advertise the same SSID, nodes roam and every roam is a seconds-scale TCP
+blackout (POSTs vanish without telemetry rows, ambience streams die mid-flow,
+Art-Net UDP can still look fine). Fix the extra AP, then retest.
 
 ## Done so far
 
@@ -176,9 +181,9 @@ the Pi.
 | Monkey Room | 2026-08-16 | button + radar + ShrineGuard; first post-cutover |
 | Vertical Moop March | 2026-08-17 | 4-button game + radar + MoopMarch; pod pending cut |
 | Porto Room | 2026-08-20 | radar + 3-piezo knock game + audio; API + physical knocks validated (3 separate pads, ~0.3s knock→sound; hostapd-restart gotcha hit on the reflash); piezo thresholds recalibrate on-site behind the plywood; logger still DEBUG |
-| Cuddle Cross | 2026-08-20 | first LD2450 box (sole radar: presence + projection tracks) + DMX + audio; API + PHYSICAL radar entry validated, target_1 x/y streaming, zone/multi-target boot programming; **LD2450 on D2/D3 as built** (D6/D7 dead — guide updated); hostapd gotcha ×2; OTA-tunnel proven with the INFO flip; zone + timeouts re-tune at the mount |
-| Guy Line Climb | 2026-08-20 | radar + DMX + audio on the standard S3 recipe; gates widened for the 3.70 m top-down mount (move 5 / still 6, read back from the module); physical entries + vacate + re-trip in telemetry, ArtDMX signal=yes, node audio attached (bed PLAYING + live cue on serial), Lightning fired, OTA-tunnel INFO flip proven. **The box's first board was a distributor-substituted ESP32-C6** (ran an hour, no audio possible; `hardware_c6.yaml` kept for reference) — the same-day S3 swap hit BOTH board-swap gotchas: old board's dnsmasq lease blocked .64 (purge `/tmp/dhcp.leases` on the RUT) and the stale-hostapd Auth Expired loop (restart hostapd) |
-| Sparkle Pony Room | 2026-08-20 | standard recipe (LD2410C + DMX + audio, genuine S3), the cleanest bring-up yet — fresh MAC joined straight to .65, zero gotchas. Standard gates 2/3 + the room's prompt-vacate pair (module timeout 1 s / absence 0 s) so the MGS leave sting lands at the exit; PHYSICAL radar entry at first boot → SparkPony + colour lock + telemetry; vacate → leave sting fired + lock off; re-trip clean (trip-while-occupied suppressed); ArtDMX 1025/min signal=yes + Lightning; bed + cue duck/resume on serial; OTA-tunnel INFO flip + post-OTA smoke; box card printed |
-| Photo Bomb Room | 2026-08-21 | booth room on the standard S3 recipe (.68: LD2410C + shutter button on the D1 fleet contract / DB9-A pin 3 + DMX D5 + audio) — a Sparkle-Pony-clean bring-up: fresh MAC straight to .68, zero gotchas. Bench-physical radar entry/vacate/re-trip; all four booth paths via API: entry bed, press → PhotoBomb-Shot → synthetic capture (`/app/photos/`, camera_manager backend=synthetic without the C930e) + CorrectAnswer camera cue on the node, 6th press inside the window → `budget blown` + WrongAnswer (no capture), vacate → turnover reset → capture again. **Budget-test gotcha: >60 s between presses trips photobooth.py's cooldown failsafe and silently resets the count — space over-budget presses inside a minute.** PhotoBomb-Shot is lights-only BY DESIGN (countdown mp3 in `rejected/retired-by-console/`; don't re-assign). ArtDMX 840/min signal=yes + Lightning; bed PLAYING on the Pebble; telemetry mirrored every POST (zero lost); OTA-tunnel INFO flip (1.02 MB / 6 s) + post-OTA smoke; box + pod cards printed. Physical shutter press at the pod = Tim's hands. **08-22 addendum**: first human contact found two as-built faults the API pass can't see — DMX **A/B crossed** at the XLR (par seizure with clean node-side RX; Tim rewired) and **DAC header pins not fully seated** (pipeline PLAYING, zero sound; reseat fixed — PCM5102A has no readback, silence is invisible to firmware). Same night: C930e plugged + Pi restarted → backend=fswebcam, REAL photos; **shot went INSTANT** (Tim killed the 3s countdown): flash at press held 2.2s because the real capture takes ~1.7-2.0s and the frame lands at the END — hold must outlast it or night photos go dark; victory click = fixed 0.8s after the photo lands. **Snap moved ON-NODE same night (Tim — latency)**: the camera-click WAV is embedded in the firmware (`media_player: files:` + `!extend push_button` playing it on the press edge via the announcement pipeline, photo-bomb.yaml) so the click is instant and network-free; the server's photo-landed confirmation became lights-only (`PhotoBomb-Landed`, CorrectAnswer's jade accent chirp with no audio pool) so nothing double-clicks; a press edge always clicks, the 5s cooldown gates only the shot. First sanctioned exception to the nothing-stored-on-nodes rule. **08-22 late addendum**: WARM GRABBER — the C930e streams continuously (supervised ffmpeg, MJPEG passthrough → tmpfs), capture = file copy, frame lands ~0.25s after press ON the snap (was ~1.8s cold; cold fswebcam = degraded fallback), flash back to 1.0s; booth budget → ROLLING WINDOW 5 shots/15s (refusal temporary, drains on its own; turnover still clears) + node cooldown 5s→2s so a burst fits; `photobooth_test.py` rewritten to this design, ALL PASS |
-| Deep Playa Handshake | 2026-08-22 | 5-button handshake game on the standard S3 recipe (.70: LD2410C + buttons D0-D4 via **new `game_dph_hw.yaml`**, DB9-A pins 3-7 low-numbered convention + DMX D5 + audio) — zero-gotcha bring-up, fresh MAC straight to .70, **born with the 08-22 flat-mix firmware** (no duck, no OTA debt). Game validated via serial + API: entry seeds the winner (`entry_hook` → dph_randomize, serial logs "entry winner is button N"), wrong press → WrongAnswer, winner press → CorrectAnswer, all mirrored in telemetry zero-loss; bench-physical radar entries (incl. an unprompted post-OTA re-trip); bed PLAYING at 0.65 + ArtDMX 651/min signal=yes + Lightning on the par @97-104; OTA-tunnel INFO flip + post-OTA smoke; box + pod cards printed (pod = per-pin rows; ranged "pin 3-7" field collided with its value on the card — per-pin rows are the pattern for 5+ button pods). Physical button closures at the pod = Tim's hands |
+| Cuddle Cross | 2026-08-23 | first LD2450 box (sole radar: presence + projection tracks) + DMX + audio; API + PHYSICAL radar entry validated, target_1 x/y streaming, zone/multi-target boot programming; **LD2450 on D2/D3 as built** (D6/D7 dead — guide updated); OTA-tunnel proven. 2026-08-23 final pass: USB flashed latest flat-mix build, rejoined `LOHP-ESP` as `.67`, ping/API smoke good, parts-can label printed |
+| Guy Line Climb | 2026-08-23 | radar + DMX + audio on the standard S3 recipe; gates widened for the 3.70 m top-down mount (move 5 / still 6, read back from the module); physical entries + vacate + re-trip in telemetry, ArtDMX signal=yes, node audio attached, Lightning fired, OTA-tunnel proven. 2026-08-23 final pass: USB flashed latest flat-mix build, rejoined `LOHP-ESP` as `.64`, ping/API smoke good, parts-can label printed. The first board was a distributor-substituted ESP32-C6; `hardware_c6.yaml` kept for reference |
+| Sparkle Pony Room | 2026-08-23 | standard recipe (LD2410C + DMX + audio, genuine S3). Standard gates 2/3 + the room's prompt-vacate pair (module timeout 1 s / absence 0 s); physical radar entry/vacate/re-trip previously validated, ArtDMX + Lightning, bed + cue serial smoke. 2026-08-23 final pass: USB flashed latest flat-mix build, rejoined `LOHP-ESP` as `.65`, ping/API smoke good, parts-can label printed |
+| Photo Bomb Room | 2026-08-23 | booth room on the standard S3 recipe (.68: LD2410C + shutter button on the D1 fleet contract / DB9-A pin 3 + DMX D5 + audio). Warm grabber production design: C930e supervised ffmpeg MJPEG passthrough to tmpfs, capture=file copy, frame ~0.25 s after press, flash 1.0 s, rolling window 5 shots/15 s, on-node snap WAV, server photo-landed cue lights-only. 2026-08-23 final pass: USB flashed latest build, rejoined `LOHP-ESP` as `.68`, ping/API smoke good, enclosure label + parts-can labels printed |
+| Deep Playa Handshake | 2026-08-23 | 5-button handshake game on the standard S3 recipe (.70: LD2410C + buttons D0-D4 via `game_dph_hw.yaml`, DB9-A pins 3-7 low-numbered convention + DMX D5 + audio). Game validated via serial + API; physical button closures at the pod = Tim's hands. 2026-08-23 final pass: USB flashed latest flat-mix build, rejoined `LOHP-ESP` as `.70`, ping/API smoke good, parts-can label printed |
 | Bike Lock Room | 2026-08-21 | quiz room on the standard S3 recipe (.73: LD2410C + 4 quiz buttons D0–D3 via **DB9-A pins 6–9** + DMX + audio; new `game_bike_hw.yaml`). **The box's first harness had a 5V short**: USB flap loop (device 42→102, descriptor error −71, chip reset before joining); bare-board self-test all clean (esptool chip/flash/eFuses, 4-min WiFi-load soak, no phantom GPIO presses) so the board survived — Tim's rewire fixed it, a template for separating board-vs-harness faults. Entry effect corrected `BikeLockRoom`→`BikeLock-Entry` (triggers.json canonical). PHYSICAL radar entry/vacate/re-trip in telemetry; quiz via API n=1→WrongAnswer, n=3→CorrectAnswer+2.5s→BikeLockRoom, zero lost POSTs (ran antenna-less at bench range); bed PLAYING + cues duck + bed follows occupancy; ArtDMX 746/min signal=yes + Lightning; OTA-tunnel INFO flip + post-OTA smoke; box + pod cards printed (pod card carries the pins-6–9 map). Physical button closures still pending: pod was being assembled at validation (wiring per plan) — check at assembly |

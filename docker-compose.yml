@@ -5,6 +5,7 @@ services:
     ports:
       - "5000:5000"
       - "8765:8765"
+    pid: host
     # USB passthrough removed 2026-07-22: DMX is Art-Net to the room nodes now
     # (dmx_nodes.json / wiring-guides/dmx-over-wifi.md). If ftdi:true ever
     # resurrects the wired chain, restore:

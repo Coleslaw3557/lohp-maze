@@ -4,21 +4,21 @@
   "universe": 0,
   "port": 6454,
   "nodes": {
-    "Entrance":             {"host": "lohp-node-entrance.local",             "enabled": true},
+    "Entrance":             {"host": "192.168.252.61",                       "enabled": true},
     "Cop Dodge":            {"host": "192.168.252.62",                       "enabled": true, "hardware": true},
-    "Gate":                 {"host": "192.168.252.63",                       "enabled": false, "hardware": true},
+    "Gate":                 {"host": "192.168.252.63",                       "enabled": true, "hardware": true},
     "Guy Line Climb":       {"host": "192.168.252.64",                       "enabled": true, "hardware": true},
     "Sparkle Pony Room":    {"host": "192.168.252.65",                       "enabled": true, "hardware": true},
     "Porto Room":           {"host": "192.168.252.66",                       "enabled": true, "hardware": true},
     "Cuddle Cross":         {"host": "192.168.252.67",                       "enabled": true, "hardware": true},
-    "Exit":                 {"host": "lohp-node-exit.local",                 "enabled": true},
+    "Exit":                 {"host": "192.168.252.75",                       "enabled": true},
     "Photo Bomb Room":      {"host": "192.168.252.68",                       "enabled": true, "hardware": true},
     "Deep Playa Handshake": {"host": "192.168.252.70",                       "enabled": true, "hardware": true},
-    "No Friends Monday":    {"host": "lohp-node-no-friends-monday.local",    "enabled": true},
-    "Temple Room":          {"host": "lohp-node-temple.local",               "enabled": true},
+    "No Friends Monday":    {"host": "192.168.252.69",                       "enabled": true},
+    "Temple Room":          {"host": "192.168.252.71",                       "enabled": true},
     "Monkey Room":          {"host": "192.168.252.72",                       "enabled": true, "hardware": true},
     "Bike Lock Room":       {"host": "192.168.252.73",                       "enabled": true, "hardware": true},
     "Vertical Moop March":  {"host": "192.168.252.74",                       "enabled": true, "hardware": true},
-    "Camp Sign":            {"host": "lohp-sign-bridge.local",               "enabled": true, "hardware": true}
+    "Camp Sign":            {"host": "192.168.252.76",                       "enabled": true, "hardware": true}
   }
 }

@@ -21,7 +21,7 @@
 // stone action menu (menu_olmec.h) in place of the old blind-gesture
 // vocabulary. Wedges (gold glyphs, clockwise from the top):
 //   LIGHTS  sun         -> POST /api/set_theme {"next_theme": true}
-//   AMBIENCE pan pipes  -> POST /api/toggle_maze_ambience {}
+//   MODE    twin masks  -> POST /api/sound_mode {"toggle": true}
 //   STORM   bolt        -> POST /api/run_effect_all_rooms LightningStorm
 //                          (hold the wedge 1 s to charge — no accidental storms)
 //   FLOOR   serpent coil-> POST /api/next_floor_theme {} (lava/jungle/temple)
@@ -135,6 +135,21 @@ static int postJson(const char *path, const char *body) {
   return code;
 }
 
+static int getText(const char *path, String &out) {
+  out = "";
+  if (WiFi.status() != WL_CONNECTED) return -1;
+  HTTPClient http;
+  http.setConnectTimeout(800);
+  http.setTimeout(1800);
+  String url = String("http://") + SERVER_HOST + ":" + SERVER_PORT + path;
+  if (!http.begin(url)) return -2;
+  int code = http.GET();
+  if (code > 0) out = http.getString();
+  http.end();
+  Serial.printf("[orb] GET %s -> %d\n", path, code);
+  return code;
+}
+
 // ---------- state ----------
 uint32_t lastFrame = 0, bootMs = 0, lastBeat = 0;
 uint32_t frames = 0, frameMsAcc = 0;
@@ -165,6 +180,134 @@ float chargeDrawn = -1;        // last charge glow painted (skip tiny deltas)
 bool otaReady = false;
 int faceScene = olmec::SCENE_MOSS;
 uint32_t nextSceneAt = 0;
+int uiPage = 0; // 0 face, then operator pages
+bool uiDirty = true;
+uint32_t uiFetchedAt = 0;
+String uiText;
+int touchStartX = 0, touchStartY = 0;
+uint32_t touchStartAt = 0;
+bool touchStarted = false;
+
+static const char *const UI_PATHS[] = {
+    "",
+    "/api/orb/page/mode",
+    "/api/orb/page/health",
+    "/api/orb/page/maintenance",
+    "/api/orb/page/projector",
+};
+static const int UI_PAGE_COUNT = sizeof(UI_PATHS) / sizeof(UI_PATHS[0]);
+
+static int safeLineWidthForY(int y, int lineH) {
+  const float cx = LCD_W * 0.5f;
+  const float cy = LCD_H * 0.5f;
+  const float r = (LCD_W < LCD_H ? LCD_W : LCD_H) * 0.5f - 28.0f;
+  float yy = (float)y + lineH * 0.5f - cy;
+  float inside = r * r - yy * yy;
+  if (inside <= 0) return 0;
+  return (int)(2.0f * sqrtf(inside)) - 10;
+}
+
+static void drawCenteredLine(const String &line, int textSize, int y) {
+  int charW = 6 * textSize;
+  int textW = line.length() * charW;
+  int x = (LCD_W - textW) / 2;
+  gfx->setTextSize(textSize);
+  gfx->setCursor(x, y);
+  gfx->print(line);
+}
+
+static void drawOperatorPage(const String &text) {
+  if (!havePanel) return;
+  gfx->fillScreen(RGB565_BLACK);
+  gfx->setTextWrap(false);
+  gfx->setTextColor(RGB565_WHITE);
+  int y = 44;
+  int start = 0;
+  bool first = true;
+  while (start <= (int)text.length() && y < 304) {
+    int end = text.indexOf('\n', start);
+    if (end < 0) end = text.length();
+    String line = text.substring(start, end);
+    if (line.length() == 0) {
+      y += 18;
+      first = false;
+    }
+    while (line.length() > 0 && y < 304) {
+      int textSize = first ? 2 : 2;
+      int lineH = first ? 30 : 24;
+      int safeW = safeLineWidthForY(y, lineH);
+      int maxChars = safeW / (6 * textSize);
+      if (maxChars < 8) break;
+      int take = line.length() > maxChars ? maxChars : line.length();
+      if (take < (int)line.length()) {
+        int split = line.lastIndexOf(' ', take);
+        if (split > 6) take = split;
+      }
+      String part = line.substring(0, take);
+      part.trim();
+      drawCenteredLine(part, textSize, y);
+      y += lineH;
+      line = line.substring(take);
+      line.trim();
+      first = false;
+    }
+    start = end + 1;
+    if (end == (int)text.length()) break;
+  }
+  gfx->setTextSize(1);
+  gfx->setTextColor(RGB565_CYAN);
+  drawCenteredLine("< / > swipe", 1, 316);
+  gfx->flush();
+}
+
+static void loadOperatorPage(bool force = false) {
+  if (uiPage <= 0) return;
+  if (!force && !uiDirty && millis() - uiFetchedAt < 5000) return;
+  String text;
+  int code = getText(UI_PATHS[uiPage], text);
+  if (code < 200 || code >= 300 || text.length() == 0) {
+    text = "OPERATOR\nSERVER UNREACHABLE";
+  }
+  uiText = text;
+  uiFetchedAt = millis();
+  uiDirty = false;
+  drawOperatorPage(uiText);
+}
+
+static void showFacePage() {
+  uiPage = 0;
+  uiDirty = true;
+  if (!havePanel || !baseLayer || !jawTile) return;
+  uint16_t *fb = gfx->getFramebuffer();
+  memcpy(fb, baseLayer, (size_t)LCD_W * LCD_H * 2);
+  olmec::FaceState s;
+  olmec::drawEyes(fb, baseLayer, s);
+  olmec::drawJaw(fb, baseLayer, jawTile, s);
+  gfx->flush();
+  lastJawDrawn = lastTalkGlowDrawn = lastBreathDrawn = -1;
+}
+
+static void setOperatorPage(int page) {
+  if (page < 0) page = UI_PAGE_COUNT - 1;
+  if (page >= UI_PAGE_COUNT) page = 0;
+  if (page == 0) {
+    showFacePage();
+    return;
+  }
+  uiPage = page;
+  uiDirty = true;
+  loadOperatorPage(true);
+}
+
+static void fireOperatorAction(const char *action) {
+  char body[80];
+  snprintf(body, sizeof(body), "{\"action\":\"%s\"}", action);
+  drawOperatorPage(String("OPERATOR\nSENDING:\n") + action);
+  postJson("/api/orb/action", body);
+  delay(250);
+  uiDirty = true;
+  loadOperatorPage(true);
+}
 
 static const char *const FACE_SCENE_NAMES[olmec::SCENE_COUNT] = {
     "moss", "rain", "moon", "oracle",
@@ -199,7 +342,7 @@ struct MenuAction {
 };
 static const MenuAction MENU_ACTIONS[olmec::MENU_WEDGES] = {
     {"LIGHTS -> next theme", "/api/set_theme", "{\"next_theme\":true}", 0},
-    {"AMBIENCE -> toggle", "/api/toggle_maze_ambience", "{}", 0},
+    {"MODE -> attended/unattended", "/api/sound_mode", "{\"toggle\":true}", 0},
     {"STORM -> all rooms", "/api/run_effect_all_rooms", "{\"effect_name\":\"LightningStorm\"}", 1000},
     {"FLOOR -> next theme", "/api/next_floor_theme", "{}", 0},
     {"CALM -> stop effects", "/api/stop_effect", "{}", 0},
@@ -374,14 +517,55 @@ void loop() {
 
   bool cooled = now - lastGestureAt > 1000;
   bool spoke = false;
-  if (!menuOpen) {
-    if (down && !wasDown && cooled && menuLayer) {
-      Serial.println("[orb] menu: open");
-      menuOpen = true;
-      menuOpenerDown = true;
-      pressWedge = -2;
-      menuTouchAt = now;
-      menuShow();
+  if (!menuOpen && uiPage > 0) {
+    if (down && !wasDown) {
+      touchStartX = touch.x;
+      touchStartY = touch.y;
+      touchStartAt = now;
+      touchStarted = true;
+    } else if (!down && wasDown && touchStarted) {
+      int dx = touch.x - touchStartX;
+      int dy = touch.y - touchStartY;
+      touchStarted = false;
+      if (abs(dx) > 70 && abs(dx) > abs(dy) * 2) {
+        setOperatorPage(uiPage + (dx > 0 ? 1 : -1));
+        lastGestureAt = now;
+      } else if (now - touchStartAt < 1600) {
+        if (uiPage == 1) {
+          fireOperatorAction("toggle_mode");
+        } else if (uiPage == 2) {
+          uiDirty = true;
+          loadOperatorPage(true);
+        } else if (uiPage == 3) {
+          fireOperatorAction(touchStartY < LCD_H / 2 ? "restart_server" : "restart_projection");
+        } else if (uiPage == 4) {
+          fireOperatorAction(touchStartY < LCD_H / 2 ? "projector_on" : "projector_off");
+        }
+        lastGestureAt = now;
+      }
+    }
+    loadOperatorPage(false);
+  } else if (!menuOpen) {
+    if (down && !wasDown && cooled) {
+      touchStartX = touch.x;
+      touchStartY = touch.y;
+      touchStartAt = now;
+      touchStarted = true;
+    } else if (!down && wasDown && cooled && touchStarted) {
+      int dx = touch.x - touchStartX;
+      int dy = touch.y - touchStartY;
+      touchStarted = false;
+      if (abs(dx) > 70 && abs(dx) > abs(dy) * 2) {
+        setOperatorPage(dx > 0 ? 1 : UI_PAGE_COUNT - 1);
+        lastGestureAt = now;
+      } else if (menuLayer && now - touchStartAt < 1200) {
+        Serial.println("[orb] menu: open");
+        menuOpen = true;
+        menuOpenerDown = false;
+        pressWedge = -2;
+        menuTouchAt = now;
+        menuShow();
+      }
     }
   } else {
     if (down) menuTouchAt = now;
@@ -532,7 +716,7 @@ void loop() {
 
   float breath = 0.5f + 0.5f * sinf(t * 6.2832f / 5.2f);
 
-  if (havePanel && baseLayer && jawTile && !menuOpen) {
+  if (havePanel && baseLayer && jawTile && !menuOpen && uiPage == 0) {
     olmec::FaceState s;
     s.gx = gxS;
     s.gy = gyS;

@@ -119,7 +119,7 @@ and "speaks" through each POST, like every orb action.
 | Wedge (glyph)          | HTTP call                                                      | Effect            |
 |------------------------|---------------------------------------------------------------|-------------------|
 | **LIGHTS** (sun, top)  | `POST /api/set_theme` `{"next_theme":true}`                    | Next lighting theme |
-| **AMBIENCE** (pan pipes) | `POST /api/toggle_maze_ambience` `{}` | Maze ambience on / off |
+| **MODE** (twin masks)  | `POST /api/sound_mode` `{"toggle":true}`                       | Toggle attended / unattended sounds |
 | **STORM** (bolt) — hold 1 s to charge | `POST /api/run_effect_all_rooms` `{"effect_name":"LightningStorm"}` | Storm all rooms |
 | **FLOOR** (serpent coil) | `POST /api/next_floor_theme` `{}` (or `{"theme":"<name>"}`) — main.py relays to the floor renderer's `:5002` theme control (`POST /theme/next`; the sim serves the identical protocol on the bench, `sim_ui._start_floor_ctl`) | Floor projector theme (lava/jungle/temple) |
 | **CALM** (closed eye)  | `POST /api/stop_effect` `{}` — the menu finally gave calm a home (no dock/charge signal exists on this hardware for the original dock-to-calm idea) | Stop effects everywhere |
@@ -137,7 +137,41 @@ report at the firing moment, so an early lift can never phantom-fire the
 storm. (Before the fix, the storm charge canceled and restarted on every gap —
 visible as a sweep that never completes.)
 
-## Firmware (LANDED 2026-07-23 — `firmware/orb/`)
+## Operator pages (landed 2026-08-23)
+
+Swipe right from the Olmec face to leave guest mode and enter clearly labeled
+operator pages. Swipe left/right cycles pages; swipe back past the first page
+returns to the face. Each operator page is plain black-and-white text drawn
+inside a circular safe area: centered lines, per-row chord-width wrapping, and
+no reliance on the hidden square framebuffer corners.
+
+- **OPERATOR MODE**: shows the current sound mode (`ATTENDED` or
+  `UNATTENDED`). Tap toggles it via `POST /api/orb/action
+  {"action":"toggle_mode"}`. The server never persists this; a restart comes
+  back `unattended`.
+- **HEALTH CHECK**: shows only rooms that are down, derived from configured
+  node-audio rooms minus currently connected node speakers. It shows a down
+  count plus compact room labels so the page still fits when most boxes are
+  powered off; it intentionally does not list rooms that are healthy.
+- **MAINTENANCE**: tap the top half to queue `systemctl restart
+  lohp-server.service`; tap the bottom half to restart
+  `lohp-projection.service`.
+- **PROJECTOR**: shows RS232 power status, projector-power service state,
+  manual override state, renderer service state, and floor theme. Tap top for
+  projector power on, bottom for power off. Both force actions create
+  `.projector-manual` before calling `projector_power.py` so the night/day
+  reconciler does not immediately undo the operator.
+
+Server side, the orb consumes plain-text `GET /api/orb/page/<mode|health|
+maintenance|projector>` and `POST /api/orb/action`. These host-control calls
+run from inside Docker through `nsenter`, so the compose service uses
+`pid: host` and the image includes `util-linux`.
+
+Final field flash before travel: unit #2 (`fc:01:2c:d2:5d:d4`) USB-flashed on
+2026-08-23, joined `LOHP-ESP` as `192.168.252.246`, pinged from the Pi, and
+successfully fetched `/api/orb/page/projector`.
+
+## Firmware (LANDED 2026-07-23, operator update 2026-08-23 — `firmware/orb/`)
 
 Custom **Arduino** sketch (Arduino_GFX 1.6.7 — its bundled `JC3636W518`
 profile is this exact wiring — on esp32 core 3.3.11), **not ESPHome** — rich

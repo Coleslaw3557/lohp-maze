@@ -158,7 +158,8 @@ running on shared camp WiFi.
   value in `secrets.h`) or flash over USB; subsequent OTAs use the new WiFi
   password.
 - **SD reflash caveat**: the DietPi first-boot automation (pi-notes.md) still
-  bakes the *old* WiFi-client config. After any reflash, the bridge AP setup
-  (`br0` + hostapd, above) must be re-applied by hand — the automation has
-  not been updated for it.
+  bakes the old pre-field assumptions. After any reflash, re-apply this current
+  RUT-as-AP / Pi-as-upstream-client setup by hand — especially: RUT radio is
+  the only `LOHP-ESP`, Pi `hostapd` is stopped+disabled, Pi `wlan0` is the
+  upstream client, and Pi `eth0`/`br0` has the `192.168.252.231` reservation.
 - No RUT rollback archive exists — the temporary rollback files were deleted.

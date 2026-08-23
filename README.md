@@ -33,8 +33,9 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   slabs that grind open underfoot and a gripping quicksand pool) — rendered by the same
   server Pi straight to its HDMI framebuffer and thrown onto the upper deck by a face-down
   short-throw projector.
-  Its own systemd service outside the container; walker input is the room's LD2450 radar
-  (demo phantom walkers until it's wired). Plans: `wiring-guides/cuddle-lava-plan.md`,
+  Its own systemd service outside the container; production walker input is the Cuddle
+  Cross LD2450 radar at `192.168.252.67` (the renderer's demo walkers are bench-only).
+  Plans: `wiring-guides/cuddle-lava-plan.md`,
   `wiring-guides/cuddle-jungle-plan.md`, `wiring-guides/cuddle-temple-plan.md`,
   `wiring-guides/cuddle-water-plan.md`, `wiring-guides/cuddle-chamber-plan.md`.
 - **Fallback audio client** (`client/`): the retired Pi-unit stack (units A/B/C are
@@ -42,6 +43,9 @@ The maze in the simulator (`sim/` — the 3D representation is the layout refere
   (`client/config-single-pi.json`) speaking the same WebSocket protocol.
 - **Frontend**: a small control panel served at `http://<server>:5000/` (brightness, live theme
   tuning, next-theme).
+- **Cuddle orb operator UI** (`firmware/orb/`): the round Cuddle display still opens the
+  carved guest menu from the face. A right-swipe enters operator pages for sound mode,
+  rooms-down health, maintenance restarts, and projector power/status.
 
 Effects are defined in code in `effects/` and registered in `effects_manager.py`.
 Audio for each effect is mapped in `audio_config.json`; fixtures and rooms in
@@ -72,8 +76,9 @@ guides are historical), and `client/README.md` for the fallback audio client.
 The production box is a DietPi Raspberry Pi 3B+ flashed from a preconfigured SD image —
 first boot installs Docker and authorizes the bench box's SSH key unattended
 ([pi-notes.md](pi-notes.md)). It lives at `192.168.252.231` on the maze LAN behind the
-RUT140 router, doubling as the LAN's WiFi access point (**LOHP-ESP** — join it to reach
-the Pi; [wiring-guides/maze-network.md](wiring-guides/maze-network.md)). Then:
+RUT140 router. The RUT is the `LOHP-ESP` access point; the Pi is wired to that LAN and
+uses its own WiFi as the upstream internet client
+([wiring-guides/maze-network.md](wiring-guides/maze-network.md)). Then:
 
 ```bash
 tools/deploy-rpi.sh                  # target lohp-server.local (mDNS), or pass an IP
@@ -152,10 +157,11 @@ with no override keeps tracking its unattended twin — **shared until edited**.
 the Attended view creates the override as a copy, and per-pool **Revert** deletes it again.
 Lights/DMX and the floor projector are identical in both modes.
 
-Flip the live mode with `POST /api/sound_mode {"mode": "attended"}` — the sim panel's Sound
-Mode button and the console's `live:` pill both do this, and a physical switch at the
-Entrance enclosure will later. A flip restarts any playing beds whose pool differs between
-the modes; one-shots and cues pick the new mode up on their next play. Auditioning through
+Flip the live mode with `POST /api/sound_mode {"mode": "attended"}` or
+`POST /api/sound_mode {"toggle": true}` — the sim panel's Sound Mode button, the console's
+`live:` pill, and the Cuddle orb operator page all do this. A flip restarts any playing
+beds whose pool differs between the modes; one-shots and cues pick the new mode up on their
+next play. Auditioning through
 **Test in room** always plays under the server's *live* mode, not the Editing view. One node
 caveat: ESP32 cue WAVs are volume-baked per file, so give attended its own *files* rather
 than the same file at a different volume.

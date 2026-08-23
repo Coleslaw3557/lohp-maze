@@ -5,6 +5,7 @@ import time
 import json
 import logging
 import asyncio
+import subprocess
 import traceback
 import urllib.error
 import urllib.request
@@ -1119,17 +1120,130 @@ async def get_sound_mode():
 
 @app.route('/api/sound_mode', methods=['POST'])
 async def post_sound_mode():
-    """{"mode": "attended"|"unattended"} — flip which sound selections play
-    (audio only). Live beds whose pools differ restart with a fresh pick."""
+    """{"mode": "attended"|"unattended"} or {"toggle": true} — flip which
+    sound selections play (audio only). Live beds whose pools differ restart
+    with a fresh pick."""
     data = await request.get_json() or {}
-    mode = data.get('mode')
+    if data.get('toggle') is True:
+        mode = 'attended' if audio_manager.sound_mode == 'unattended' else 'unattended'
+    else:
+        mode = data.get('mode')
     if mode not in SOUND_MODES:
         return jsonify({'status': 'error',
-                        'message': f'mode must be one of {list(SOUND_MODES)}'}), 400
+                        'message': (
+                            f'mode must be one of {list(SOUND_MODES)}, '
+                            'or send {"toggle": true}'
+                        )}), 400
     changed = audio_manager.set_sound_mode(mode)
     restarted = await _reapply_beds_for_mode() if changed else []
     return jsonify({'status': 'success', 'changed': changed,
                     'restarted': restarted, **sound_mode_state()})
+
+
+def _down_room_names():
+    enabled = set(node_audio_manager.enabled_rooms())
+    connected = set(node_audio_manager.connected_rooms())
+    return sorted(enabled - connected)
+
+
+def _short_room_name(room):
+    aliases = {
+        'Bike Lock Room': 'BIKE',
+        'Cop Dodge': 'COP',
+        'Cuddle Cross': 'CUDDLE',
+        'Deep Playa Handshake': 'DPH',
+        'Gate': 'GATE',
+        'Guy Line Climb': 'GUY',
+        'Monkey Room': 'MONKEY',
+        'Photo Bomb Room': 'PHOTO',
+        'Porto Room': 'PORTO',
+        'Sparkle Pony Room': 'SPARKLE',
+        'Vertical Moop March': 'VMM',
+    }
+    return aliases.get(room, room.upper()[:8])
+
+
+def _packed_room_lines(rooms, width=19):
+    lines = []
+    current = ''
+    for room in rooms:
+        name = _short_room_name(room)
+        candidate = name if not current else f'{current} {name}'
+        if len(candidate) > width and current:
+            lines.append(current)
+            current = name
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    return lines
+
+
+def _plain_lines(lines):
+    return Response('\n'.join(str(x) for x in lines) + '\n', mimetype='text/plain')
+
+
+@app.route('/api/orb/page/<page>', methods=['GET'])
+async def orb_page(page):
+    """Plain-text operator pages for the tiny orb UI."""
+    page = page.lower()
+    if page == 'mode':
+        return _plain_lines([
+            'OPERATOR MODE',
+            f'CURRENT: {audio_manager.sound_mode.upper()}',
+            '',
+            'TAP TOGGLE',
+        ])
+    if page == 'health':
+        down = _down_room_names()
+        if not down:
+            return _plain_lines(['HEALTH CHECK', 'DOWN: 0', 'NONE'])
+        return _plain_lines(['HEALTH CHECK', f'DOWN: {len(down)}'] + _packed_room_lines(down))
+    if page == 'maintenance':
+        return _plain_lines([
+            'MAINTENANCE',
+            'TOP RESTART SERVER',
+            'BOTTOM RESTART PROJECTION',
+        ])
+    if page == 'projector':
+        lines = ['PROJECTOR']
+        lines.extend(await asyncio.to_thread(_projector_power_status))
+        lines.extend(await asyncio.to_thread(_projection_status_lines))
+        lines.extend(['', 'TOP POWER ON', 'BOTTOM POWER OFF'])
+        return _plain_lines(lines)
+    return _plain_lines(['UNKNOWN PAGE'])
+
+
+@app.route('/api/orb/action', methods=['POST'])
+async def orb_action():
+    """Operator actions from the orb. Most commands return before work starts."""
+    data = await request.get_json(silent=True) or {}
+    action = data.get('action')
+    if action == 'toggle_mode':
+        mode = 'attended' if audio_manager.sound_mode == 'unattended' else 'unattended'
+        changed = audio_manager.set_sound_mode(mode)
+        restarted = await _reapply_beds_for_mode() if changed else []
+        return jsonify({'status': 'success', 'changed': changed,
+                        'restarted': restarted, **sound_mode_state()})
+    if action == 'restart_server':
+        _host_fire_and_forget('sleep 1; systemctl restart lohp-server.service')
+        return jsonify({'status': 'success', 'message': 'server restart queued'})
+    if action == 'restart_projection':
+        _host_fire_and_forget('systemctl restart lohp-projection.service')
+        return jsonify({'status': 'success', 'message': 'projection restart queued'})
+    if action == 'projector_on':
+        _host_fire_and_forget(
+            'cd /home/dietpi/lohp-server && touch .projector-manual && '
+            'python3 projector_power.py --on'
+        )
+        return jsonify({'status': 'success', 'message': 'projector power-on queued'})
+    if action == 'projector_off':
+        _host_fire_and_forget(
+            'cd /home/dietpi/lohp-server && touch .projector-manual && '
+            'python3 projector_power.py --off'
+        )
+        return jsonify({'status': 'success', 'message': 'projector power-off queued'})
+    return jsonify({'status': 'error', 'message': f'unknown action {action!r}'}), 400
 
 
 @app.route('/api/maze_ambience', methods=['GET'])
@@ -1187,6 +1301,61 @@ async def stop_maze_ambience():
 # same-host on playa (the one Pi renders the projection); the sim serves the
 # identical protocol on the bench.
 FLOOR_CTL_URL = os.environ.get('FLOOR_CTL_URL', 'http://127.0.0.1:5002')
+HOST_NSENTER = ['nsenter', '--target', '1', '--mount', '--uts', '--ipc', '--net', '--pid', '--']
+
+
+def _host_run(args, timeout=4):
+    """Run a short command on the Pi host from inside the privileged container."""
+    cmd = HOST_NSENTER + list(args)
+    return subprocess.run(cmd, text=True, stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT, timeout=timeout)
+
+
+def _host_fire_and_forget(shell_cmd):
+    subprocess.Popen(
+        HOST_NSENTER + ['sh', '-lc', shell_cmd],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
+async def _host_run_async(args, timeout=4):
+    return await asyncio.to_thread(_host_run, args, timeout)
+
+
+def _projector_power_status():
+    out = []
+    try:
+        res = _host_run(['sh', '-lc', 'cd /home/dietpi/lohp-server && python3 projector_power.py --status'], timeout=5)
+        text = (res.stdout or '').strip()
+        out.append(text if text else f'status rc={res.returncode}')
+    except Exception as e:
+        out.append(f'status unavailable: {type(e).__name__}')
+    try:
+        res = _host_run(['systemctl', 'is-active', 'lohp-projector-power.service'], timeout=2)
+        out.append(f'power svc: {(res.stdout or "").strip() or "unknown"}')
+    except Exception:
+        out.append('power svc: unknown')
+    manual = os.path.exists('.projector-manual')
+    out.append(f'manual: {"yes" if manual else "no"}')
+    return out
+
+
+def _projection_status_lines():
+    lines = []
+    try:
+        res = _host_run(['systemctl', 'is-active', 'lohp-projection.service'], timeout=2)
+        lines.append(f'renderer: {(res.stdout or "").strip() or "unknown"}')
+    except Exception:
+        lines.append('renderer: unknown')
+    try:
+        with urllib.request.urlopen(f'{FLOOR_CTL_URL}/theme', timeout=1.5) as r:
+            body = json.loads(r.read())
+        lines.append(f'floor theme: {body.get("theme", "?")}')
+    except Exception:
+        lines.append('floor ctl: down')
+    return lines
 
 
 @app.route('/api/next_floor_theme', methods=['POST'])

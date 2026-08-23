@@ -1,23 +1,19 @@
 # Server Pi (DietPi) — provisioning + deploy
 
-## Network (as built 2026-08-10) — RUT140 + Pi bridge AP
+## Network (as built 2026-08-21) — RUT140 AP + Pi upstream client
 
 Full cut sheet: `wiring-guides/maze-network.md`. Short version: the RUT140
-owns the maze LAN (`192.168.252.1/24` — DHCP, DNS, NAT, upstream WiFi
-selection); the Pi no longer joins WiFi as a client — `br0` bridges `eth0`
-(wired to the RUT LAN port) and `wlan0` (hostapd AP **LOHP-ESP**, 2.4 GHz
-ch 6, WPA2), a transparent L2 bridge with a DHCP reservation:
+owns the maze LAN (`192.168.252.1/24`) and is the only **LOHP-ESP** access
+point. The Pi is a wired LAN host on `eth0`/`br0`; its `wlan0` is now the
+upstream internet client. `hostapd` on the Pi is stopped and disabled:
 
 - Pi: `dietpi@192.168.252.231` (`lohp-server.local` still works — mDNS
-  crosses the bridge — so deploy/sim/console are unchanged **when you're on
-  LOHP-ESP or the RUT LAN**)
-- RUT: `https://192.168.252.1` (admin), `root@` for ssh — **from the maze LAN
-  only**; from upstream its admin surfaces answer solely at the WAN address
-  (`192.168.253.219`), even though `.252.1` pings
-- From the upstream camp WiFi the Pi needs the RUT as a jump host:
-  `ssh -J root@192.168.253.219 dietpi@192.168.252.231` (the `253.219` is the
-  RUT's upstream DHCP lease — may change). The Pi's old upstream address
-  `192.168.253.186` is dead.
+  works when you're on LOHP-ESP or the RUT LAN)
+- RUT: `https://192.168.252.1` (admin), `root@` for ssh — from the maze LAN
+  only
+- From upstream camp WiFi, SSH to the Pi's upstream lease and hop back to the
+  maze LAN from there. Current bench lease: `192.168.253.187` (may change;
+  scan for Pi wlan0 MAC if it does).
 
 ## Automated path (2026-07-22)
 
@@ -28,10 +24,11 @@ The SD card is flashed from `DietPi_RPi234-ARMv8-Bookworm` (Raspberry Pi
 - joins the bench WiFi (credentials from `sim/esphome/secrets.yaml`, the same
   LAN the ESP32 nodes use), country `US`, DHCP, hostname `lohp-server`
   (mDNS `lohp-server.local` via avahi-daemon).
-  **SUPERSEDED 2026-08-10**: the Pi is now a bridge AP behind the RUT140, not
-  a WiFi client — after any reflash from this image, the `br0` + hostapd
-  setup must be re-applied by hand (`wiring-guides/maze-network.md`); the
-  first-boot automation has NOT been updated for it
+  **SUPERSEDED 2026-08-21**: the Pi is now a wired maze-LAN host plus upstream
+  WiFi client, and the RUT is the LOHP-ESP AP. After any reflash from this
+  image, re-apply the current RUT-AP/Pi-client network setup from
+  `wiring-guides/maze-network.md`; the first-boot automation has NOT been
+  updated for it.
 - OpenSSH with the bench box's `~/.ssh/id_ed25519.pub` (tlister@rio) authorized
   for `root` and `dietpi`; password logins still allowed, login password is the
   DietPi default `dietpi`
@@ -54,8 +51,9 @@ tools/deploy-rpi.sh                  # target lohp-server.local (mDNS)
 tools/deploy-rpi.sh 192.168.252.231  # or by IP (the RUT DHCP reservation)
 ```
 
-Run it from a machine on the maze LAN (join **LOHP-ESP**); from the upstream
-WiFi the Pi is behind the RUT's NAT (`wiring-guides/maze-network.md`).
+Run it from a machine on the maze LAN (join **LOHP-ESP**). From the upstream
+WiFi, use the SSH proxy config in `wiring-guides/maze-network.md` so deploys
+and rsync go through the Pi's upstream address.
 
 Rsyncs the repo to `/home/dietpi/lohp-server` (deletes stale files; the Pi's
 `photos/` is preserved), installs `tools/lohp-server.service`, runs
@@ -102,7 +100,8 @@ does this for you), and the renderer remembers its last theme in
 `/home/dietpi/lohp-server/.floor_theme` — restarts and power cycles come back
 showing whatever was last playing (`--theme` in the unit is first-boot only).
 Production uses `--source esphome --node 192.168.252.67 --node-port 6067`
-so the floor follows the Cuddle LD2450 instead of demo walkers.
+so the floor follows the Cuddle LD2450 instead of demo walkers. If it ever
+comes up in demo mode on playa, fix the systemd unit before opening the room.
 Content plans: `wiring-guides/cuddle-lava-plan.md`,
 `wiring-guides/cuddle-jungle-plan.md`, `wiring-guides/cuddle-temple-plan.md`.
 
@@ -168,6 +167,10 @@ the Pi; safe to re-run, tolerates absent hardware):
 - `touch /home/dietpi/lohp-server/.projector-manual` suspends reconciling
   (bench/maintenance); deploy-rpi.sh protects that flag and `.floor_theme`
   from rsync --delete. Remove the file to resume.
+- The Cuddle orb operator projector page calls the same host commands from the
+  server container: status reads `projector_power.py --status`, TOP queues
+  `--on`, BOTTOM queues `--off`, and either force command creates
+  `.projector-manual` first so the reconciler does not immediately undo it.
 - Handy: `python3 projector_power.py --status | --on | --off |
   --test-solar` (the last prints the current verdict and next dusk/sunrise
   in UTC and PDT). Journal heartbeat per pass:
@@ -191,9 +194,9 @@ ssh-keygen -R lohp-server.local
 ssh-keygen -R 192.168.252.231
 ```
 
-And remember the network caveat above: a fresh flash comes up as a WiFi
-*client* (old config) — re-apply the bridge AP setup before the nodes can
-see it.
+And remember the network caveat above: a fresh flash comes up with the old
+automation's WiFi-client assumptions. Re-apply the current RUT-AP/Pi-client
+setup before expecting nodes, deploys, or projector services to behave.
 
 ## Manual recipe (original)
 

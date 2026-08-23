@@ -5,7 +5,7 @@
 // wedge for press/charge feedback.
 //
 // Wedge order (clockwise from the top), glyphs carved as gold inlay:
-//   0 LIGHTS  sun          1 AMBIENCE pan flute 2 STORM  lightning bolt
+//   0 LIGHTS  sun          1 MODE twin masks    2 STORM  lightning bolt
 //   3 FLOOR   serpent coil 4 CALM   closed eye
 // Hub medallion = stepped pyramid (tap = close). orb.ino owns the action table.
 #pragma once
@@ -48,15 +48,18 @@ static float glyphSun(float gu, float gv) {
   g += stroke(fabsf(r - 0.155f), 0.038f) * sstep(0.72f, 0.95f, ray);
   return clampf(g, 0, 1);
 }
-static float glyphFlute(float gu, float gv) {
-  // pan pipes: four top-aligned pipes with descending lengths, bound by a band
+static float glyphMode(float gu, float gv) {
+  // attended/unattended: paired masks, one alert and one sleeping
   float g = 0;
-  for (int i = 0; i < 4; i++) {
-    float cx = -0.078f + 0.052f * i;
-    float halfh = 0.100f - 0.0165f * i;
-    g += roundedBoxMask(gu - cx, gv - (-0.075f + halfh), 0.017f, halfh, 0.013f, 0.010f);
-  }
-  g += roundedBoxMask(gu, gv + 0.048f, 0.112f, 0.017f, 0.012f, 0.010f); // tie band
+  g += stroke(fabsf(sqrtf((gu + 0.070f) * (gu + 0.070f) + (gv + 0.012f) * (gv + 0.012f)) - 0.086f), 0.024f);
+  g += bell2(gu + 0.098f, gv + 0.030f, 0.012f, 0.012f);
+  g += bell2(gu + 0.046f, gv + 0.030f, 0.012f, 0.012f);
+  g += stroke(fabsf(gv + 0.018f - 0.72f * (gu + 0.072f) * (gu + 0.072f)), 0.012f)
+       * (1.0f - sstep(0.048f, 0.070f, fabsf(gu + 0.072f)));
+  g += stroke(fabsf(sqrtf((gu - 0.082f) * (gu - 0.082f) + (gv - 0.004f) * (gv - 0.004f)) - 0.078f), 0.022f);
+  g += stroke(fabsf(gv + 0.018f + 0.70f * (gu - 0.082f) * (gu - 0.082f)), 0.012f)
+       * (1.0f - sstep(0.044f, 0.064f, fabsf(gu - 0.082f)));
+  g += stroke(segDist(gu, gv, 0.042f, 0.052f, 0.122f, 0.060f), 0.010f);
   return clampf(g, 0, 1);
 }
 static float glyphBolt(float gu, float gv) {
@@ -94,7 +97,7 @@ static float glyphClosedEye(float gu, float gv) {
 static float menuGlyph(int w, float gu, float gv) {
   switch (w) {
     case 0: return glyphSun(gu, gv);
-    case 1: return glyphFlute(gu, gv);
+    case 1: return glyphMode(gu, gv);
     case 2: return glyphBolt(gu, gv);
     case 3: return glyphSerpent(gu, gv);
     default: return glyphClosedEye(gu, gv);
