@@ -133,7 +133,7 @@ the Pi tunnel below). Done: **photo-bomb .68**, **guy-line-climb .64**,
 **sparkle-pony .65**, **cuddle-cross .67**, and
 **deep-playa-handshake .70** have been USB-flashed or re-flashed with the
 flat-mix build and verified back on `LOHP-ESP`.
-Still pending: cop-dodge .62, gate .63, porto .66.
+Still pending: cop-dodge .62, gate .63.
 
 ## OTA updates after install (no USB — the field path)
 
@@ -179,7 +179,7 @@ Art-Net UDP can still look fine). Fix the extra AP, then retest.
 | Cop Dodge | 2026-07-25 | first real box; pre-cutover — needs reflash (stale WiFi + bssid pin) |
 | Monkey Room | 2026-08-23 | button + radar + ShrineGuard; first post-cutover. 2026-08-23 final pass: USB flashed latest flat-mix build to MAC `68:EE:8F:50:07:54`, RUT lease/reservation `.72`, ping 3/3, serial showed Pi API connected and audio announcing, parts-can label printed |
 | Vertical Moop March | 2026-08-23 | 4-button game + radar + MoopMarch. 2026-08-23 final pass: USB flashed latest flat-mix build to MAC `A4:CB:8F:DF:52:80`, RUT lease/reservation `.74`, ping 3/3, parts-can label printed |
-| Porto Room | 2026-08-20 | radar + 3-piezo knock game + audio; API + physical knocks validated (3 separate pads, ~0.3s knock→sound; hostapd-restart gotcha hit on the reflash); piezo thresholds recalibrate on-site behind the plywood; logger still DEBUG |
+| Porto Room | 2026-08-23 | radar + 3-piezo knock game + audio; API + physical knocks validated earlier (3 separate pads, ~0.3s knock→sound); piezo thresholds recalibrate on-site behind the plywood; logger still DEBUG for knock tuning. 2026-08-23 final pass: USB flashed latest flat-mix build to MAC `68:EE:8F:50:AF:C0`, RUT lease/reservation `.66`, ping 3/3, serial showed Pi API connected, parts-can label printed |
 | Cuddle Cross | 2026-08-23 | first LD2450 box (sole radar: presence + projection tracks) + DMX + audio; API + PHYSICAL radar entry validated, target_1 x/y streaming, zone/multi-target boot programming; **LD2450 on D2/D3 as built** (D6/D7 dead — guide updated); OTA-tunnel proven. 2026-08-23 final pass: USB flashed latest flat-mix build, rejoined `LOHP-ESP` as `.67`, ping/API smoke good, parts-can label printed |
 | Guy Line Climb | 2026-08-23 | radar + DMX + audio on the standard S3 recipe; gates widened for the 3.70 m top-down mount (move 5 / still 6, read back from the module); physical entries + vacate + re-trip in telemetry, ArtDMX signal=yes, node audio attached, Lightning fired, OTA-tunnel proven. 2026-08-23 final pass: USB flashed latest flat-mix build, rejoined `LOHP-ESP` as `.64`, ping/API smoke good, parts-can label printed. The first board was a distributor-substituted ESP32-C6; `hardware_c6.yaml` kept for reference |
 | Sparkle Pony Room | 2026-08-23 | standard recipe (LD2410C + DMX + audio, genuine S3). Standard gates 2/3 + the room's prompt-vacate pair (module timeout 1 s / absence 0 s); physical radar entry/vacate/re-trip previously validated, ArtDMX + Lightning, bed + cue serial smoke. 2026-08-23 final pass: USB flashed latest flat-mix build, rejoined `LOHP-ESP` as `.65`, ping/API smoke good, parts-can label printed |
