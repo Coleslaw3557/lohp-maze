@@ -133,7 +133,7 @@ the Pi tunnel below). Done: **photo-bomb .68**, **guy-line-climb .64**,
 **sparkle-pony .65**, **cuddle-cross .67**, and
 **deep-playa-handshake .70** have been USB-flashed or re-flashed with the
 flat-mix build and verified back on `LOHP-ESP`.
-Still pending: cop-dodge .62, gate .63.
+Still pending: cop-dodge .62.
 
 ## OTA updates after install (no USB — the field path)
 
@@ -177,6 +177,7 @@ Art-Net UDP can still look fine). Fix the extra AP, then retest.
 | Room | Date | Notes |
 |---|---|---|
 | Cop Dodge | 2026-07-25 | first real box; pre-cutover — needs reflash (stale WiFi + bssid pin) |
+| Gate | 2026-08-23 | series-bank game + LD2410C + DMX compiled + audio; physical bank closures still need body-press check at pod. 2026-08-23 final pass: USB flashed latest flat-mix build to MAC `68:EE:8F:50:B2:F4`, RUT lease/reservation `.63`, ping 3/3, parts-can label printed |
 | Monkey Room | 2026-08-23 | button + radar + ShrineGuard; first post-cutover. 2026-08-23 final pass: USB flashed latest flat-mix build to MAC `68:EE:8F:50:07:54`, RUT lease/reservation `.72`, ping 3/3, serial showed Pi API connected and audio announcing, parts-can label printed |
 | Vertical Moop March | 2026-08-23 | 4-button game + radar + MoopMarch. 2026-08-23 final pass: USB flashed latest flat-mix build to MAC `A4:CB:8F:DF:52:80`, RUT lease/reservation `.74`, ping 3/3, parts-can label printed |
 | Porto Room | 2026-08-23 | radar + 3-piezo knock game + audio; API + physical knocks validated earlier (3 separate pads, ~0.3s knock→sound); piezo thresholds recalibrate on-site behind the plywood; logger still DEBUG for knock tuning. 2026-08-23 final pass: USB flashed latest flat-mix build to MAC `68:EE:8F:50:AF:C0`, RUT lease/reservation `.66`, ping 3/3, serial showed Pi API connected, parts-can label printed |
