@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<!-- Field calibration phone page (served at /calibrate — calibration_manager.py).
+     Self-contained: the LOHP-ESP LAN has no internet, so no external assets. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="icon" href="data:,">
+<title>LoHP Calibration</title>
+<style>
+  :root {
+    --bg:#0e1116; --card:#1a2029; --card2:#232b37; --line:#2e3949;
+    --fg:#e8edf4; --dim:#8b98a9; --green:#4ade80; --amber:#fbbf24;
+    --blue:#60a5fa; --red:#f87171;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.4 system-ui,-apple-system,sans-serif;
+         padding-bottom:40px; }
+  header { position:sticky; top:0; z-index:5; background:var(--bg);
+           display:flex; align-items:center; gap:10px;
+           padding:12px 14px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:19px; margin:0; flex:1; white-space:nowrap;
+              overflow:hidden; text-overflow:ellipsis; }
+  .pill { font-size:13px; padding:4px 10px; border-radius:999px;
+          background:var(--card2); color:var(--dim); }
+  .pill.on { background:#14351f; color:var(--green); }
+  .pill.rec { background:#3a1420; color:var(--red); }
+  button { font:inherit; color:var(--fg); background:var(--card2);
+           border:1px solid var(--line); border-radius:10px;
+           padding:12px 14px; min-height:46px; }
+  button:active { background:var(--line); }
+  #back { display:none; font-size:20px; padding:8px 14px; }
+  main { padding:12px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .roomcard { text-align:left; display:flex; flex-direction:column; gap:6px;
+              padding:14px; min-height:74px; background:var(--card); }
+  .roomcard b { font-size:16px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%;
+         background:#4a5567; margin-right:7px; }
+  .dot.on { background:var(--green); }
+  .sub { color:var(--dim); font-size:13px; }
+  section { margin:14px 0; }
+  section h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em;
+               color:var(--dim); margin:0 0 8px 2px; }
+  .tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tile { background:var(--card); border:1px solid var(--line);
+          border-radius:12px; padding:12px; }
+  .tile .nm { font-size:13px; color:var(--dim); margin-bottom:6px; }
+  .tile .val { font-size:22px; font-weight:600; }
+  .tile.bON  { background:#123222; border-color:var(--green); }
+  .tile.bON .val { color:var(--green); }
+  .tile.bOFF .val { color:var(--dim); }
+  .row { display:flex; align-items:center; gap:10px; background:var(--card);
+         border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+         margin-bottom:8px; }
+  .row .nm { flex:1; font-size:15px; }
+  .row .val { font-size:19px; font-weight:600; min-width:52px;
+              text-align:center; padding:6px 4px; border-radius:8px; }
+  .row .val:active { background:var(--card2); }
+  .row button.step { width:52px; font-size:22px; padding:8px 0; }
+  .row select { font:inherit; background:var(--card2); color:var(--fg);
+                border:1px solid var(--line); border-radius:8px; padding:10px; }
+  .row .sw { width:76px; }
+  .row .sw.on { background:#123222; border-color:var(--green); color:var(--green); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chips button { flex:1 1 30%; }
+  #capbar { background:var(--card); border:1px solid var(--line);
+            border-radius:12px; padding:12px; }
+  #capbar.rec { border-color:var(--red); }
+  #caprow { display:none; align-items:center; gap:10px; margin-bottom:10px; }
+  #caprow .t { font-variant-numeric:tabular-nums; font-size:18px; }
+  #freetext { width:100%; font:inherit; background:var(--card2); color:var(--fg);
+              border:1px solid var(--line); border-radius:10px; padding:12px;
+              margin-top:8px; }
+  #banner { display:none; background:#3a1420; color:var(--red); padding:8px 14px;
+            font-size:14px; text-align:center; }
+  #toast { position:fixed; left:12px; right:12px; bottom:14px; z-index:9;
+           background:var(--card2); border:1px solid var(--line);
+           border-radius:10px; padding:12px; text-align:center;
+           opacity:0; transition:opacity .25s; pointer-events:none; }
+  .stale { opacity:.45; }
+  #caplist { font-size:13px; color:var(--dim); }
+  #caplist div { padding:3px 0; }
+</style>
+</head>
+<body>
+<header>
+  <button id="back" onclick="goHome()">&#8592;</button>
+  <h1 id="title">LoHP Calibration</h1>
+  <span id="conn" class="pill">&hellip;</span>
+</header>
+<div id="banner">server unreachable &mdash; retrying</div>
+<main>
+  <div id="home" class="grid"></div>
+  <div id="room" style="display:none">
+    <section>
+      <div id="capbar">
+        <div id="caprow">
+          <span class="pill rec">&#9679; REC</span>
+          <span class="t" id="captime">0:00</span>
+          <span class="sub" id="caplabel"></span>
+          <span style="flex:1"></span>
+          <button onclick="markCap()">MARK</button>
+          <button onclick="stopCap()" style="color:var(--red)">STOP</button>
+        </div>
+        <div class="chips" id="labels"></div>
+        <input id="freetext" placeholder="custom label / mark text / note&hellip;">
+      </div>
+    </section>
+    <section><h2>Presence</h2><div class="tiles" id="binaries"></div></section>
+    <section><h2>Readings</h2><div class="tiles" id="sensors"></div></section>
+    <section><h2>Tuning (dies with node reboot until baked into YAML)</h2>
+      <div id="numbers"></div></section>
+    <section><h2>Captures on server</h2><div id="caplist"></div></section>
+  </div>
+</main>
+<div id="toast"></div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const LABELS = ['Empty room', 'Person still', 'Person moving',
+                'Back wall', 'Adjacent room', 'Walk-through'];
+let view = null;          // null = home, else room name
+let timer = null;
+let wakeLock = null;
+let editHold = 0;         // suppress row rebuilds briefly after a write
+
+function toast(msg, bad) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.color = bad ? 'var(--red)' : 'var(--fg)';
+  t.style.opacity = 1;
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.style.opacity = 0, 2200);
+}
+
+async function api(path, body) {
+  const opts = body ? {method:'POST', headers:{'Content-Type':'application/json'},
+                       body:JSON.stringify(body)} : {};
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.message || ('HTTP ' + r.status));
+  return data;
+}
+
+function schedule(ms) { clearTimeout(timer); timer = setTimeout(tick, ms); }
+
+async function tick() {
+  if (document.hidden) { schedule(1500); return; }
+  try {
+    if (view === null) { renderHome(await api('/api/calibration/rooms')); schedule(2500); }
+    else { renderRoom(await api('/api/calibration/state?room=' + encodeURIComponent(view))); schedule(700); }
+    $('banner').style.display = 'none';
+  } catch (e) {
+    $('banner').style.display = 'block';
+    schedule(1800);
+  }
+}
+
+function goHome() {
+  view = null;
+  $('home').style.display = 'grid';
+  $('room').style.display = 'none';
+  $('back').style.display = 'none';
+  $('title').textContent = 'LoHP Calibration';
+  $('conn').textContent = '…';
+  $('conn').className = 'pill';
+  tick();
+}
+
+function openRoom(name) {
+  view = name;
+  $('home').style.display = 'none';
+  $('room').style.display = 'block';
+  $('back').style.display = 'block';
+  $('title').textContent = name;
+  $('binaries').innerHTML = $('sensors').innerHTML = $('numbers').innerHTML = '';
+  renderChips();
+  loadCaptures();
+  if (navigator.wakeLock) navigator.wakeLock.request('screen')
+      .then(l => wakeLock = l).catch(() => {});
+  tick();
+}
+
+function renderHome(rooms) {
+  $('home').innerHTML = rooms.map(r =>
+    `<button class="roomcard" onclick="openRoom(${JSON.stringify(r.room).replace(/"/g,'&quot;')})">
+       <b><span class="dot ${r.connected ? 'on' : ''}"></span>${r.room}</b>
+       <span class="sub">${r.host}${r.capturing ? ' &middot; <span style="color:var(--red)">REC</span>' : ''}</span>
+     </button>`).join('');
+}
+
+function shortName(name, room) {
+  return name.toLowerCase().startsWith(room.toLowerCase() + ' ')
+    ? name.slice(room.length + 1) : name;
+}
+
+function stepFor(name) {
+  return /zone|x1|y1|x2|y2| x$| y$/i.test(name) ? 100 : 1;
+}
+
+function renderRoom(st) {
+  $('conn').textContent = st.connected ? 'connected' : 'offline';
+  $('conn').className = 'pill ' + (st.connected ? 'on' : '');
+  const cap = st.capture;
+  $('caprow').style.display = cap ? 'flex' : 'none';
+  $('labels').style.display = cap ? 'none' : 'flex';
+  $('capbar').className = cap ? 'rec' : '';
+  if (cap) {
+    const s = Math.floor(cap.elapsed_s);
+    $('captime').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    $('caplabel').textContent = cap.label;
+  }
+  const bins = [], sens = [], rows = [];
+  for (const e of st.entities) {
+    const nm = shortName(e.name, st.room);
+    const stale = e.age_s === null || e.age_s > 30;
+    if (e.type === 'BinarySensor') {
+      bins.push(`<div class="tile ${e.state ? 'bON' : 'bOFF'} ${stale ? 'stale' : ''}">
+        <div class="nm">${nm}</div><div class="val">${e.state === null ? '?' : (e.state ? 'ON' : 'off')}</div></div>`);
+    } else if (e.type === 'Sensor' || e.type === 'TextSensor') {
+      let v = e.state === null ? '?' : e.state;
+      if (typeof v === 'number') v = Math.round(v * 10) / 10;
+      sens.push(`<div class="tile ${stale ? 'stale' : ''}">
+        <div class="nm">${nm}</div><div class="val">${v}</div></div>`);
+    } else {
+      rows.push(e);
+    }
+  }
+  $('binaries').innerHTML = bins.join('') || '<span class="sub">none</span>';
+  $('sensors').innerHTML = sens.join('') || '<span class="sub">none</span>';
+  if (Date.now() > editHold) renderTuning(rows, st.room);
+}
+
+function renderTuning(rows, room) {
+  const html = rows.map(e => {
+    const nm = shortName(e.name, room);
+    if (e.type === 'Number') {
+      const v = e.state === null ? '?' : Math.round(e.state * 100) / 100;
+      return `<div class="row"><span class="nm">${nm}</span>
+        <button class="step" onclick="bump(${e.key},-1,'${nm.replace(/'/g,'')}')">&minus;</button>
+        <span class="val" onclick="typeVal(${e.key},'${nm.replace(/'/g,'')}')">${v}</span>
+        <button class="step" onclick="bump(${e.key},1,'${nm.replace(/'/g,'')}')">+</button></div>`;
+    }
+    if (e.type === 'Select') {
+      const opts = e.options.map(o =>
+        `<option ${o === e.state ? 'selected' : ''}>${o}</option>`).join('');
+      return `<div class="row"><span class="nm">${nm}</span>
+        <select onchange="writeEnt(${e.key}, this.value)">${opts}</select></div>`;
+    }
+    if (e.type === 'Switch') {
+      return `<div class="row"><span class="nm">${nm}</span>
+        <button class="sw ${e.state ? 'on' : ''}"
+          onclick="writeEnt(${e.key}, ${e.state ? 'false' : 'true'})">${e.state ? 'ON' : 'off'}</button></div>`;
+    }
+    return '';
+  }).join('');
+  const box = $('numbers');
+  if (box._html !== html) { box.innerHTML = html || '<span class="sub">none</span>'; box._html = html; }
+  box._rows = rows;
+}
+
+function bump(key, dir, nm) {
+  const e = ($('numbers')._rows || []).find(r => r.key === key);
+  if (!e || e.state === null) { toast('no value yet', true); return; }
+  writeEnt(key, e.state + dir * stepFor(nm));
+}
+
+function typeVal(key, nm) {
+  const cur = (($('numbers')._rows || []).find(r => r.key === key) || {}).state;
+  const v = prompt(nm, cur === null ? '' : cur);
+  if (v !== null && v.trim() !== '' && !isNaN(+v)) writeEnt(key, +v);
+}
+
+async function writeEnt(key, value) {
+  editHold = Date.now() + 1500;
+  try {
+    await api('/api/calibration/write', {room: view, key: key, value: value});
+    toast('set → ' + value);
+  } catch (e) { toast(e.message, true); }
+}
+
+function renderChips() {
+  $('labels').innerHTML = LABELS.map(l =>
+    `<button onclick="startCap('${l}')">${l}</button>`).join('') +
+    `<button onclick="startCap($('freetext').value || 'custom')" style="color:var(--blue)">&#9679; custom</button>`;
+}
+
+async function startCap(label) {
+  try {
+    await api('/api/calibration/capture/start',
+              {room: view, label: label, note: $('freetext').value});
+    $('freetext').value = '';
+    toast('recording: ' + label);
+  } catch (e) { toast(e.message, true); }
+  tick();
+}
+
+async function stopCap() {
+  try {
+    const r = await api('/api/calibration/capture/stop', {room: view});
+    toast('saved ' + r.file);
+    loadCaptures();
+  } catch (e) { toast(e.message, true); }
+  tick();
+}
+
+async function markCap() {
+  try {
+    await api('/api/calibration/capture/mark',
+              {room: view, text: $('freetext').value});
+    toast('mark' + ($('freetext').value ? ': ' + $('freetext').value : ''));
+    $('freetext').value = '';
+  } catch (e) { toast(e.message, true); }
+}
+
+async function loadCaptures() {
+  try {
+    const list = await api('/api/calibration/captures?room=' + encodeURIComponent(view));
+    $('caplist').innerHTML = list.slice(-12).reverse().map(c =>
+      `<div>${c.file} &middot; ${(c.bytes / 1024).toFixed(1)}k</div>`).join('')
+      || '<div>none yet</div>';
+  } catch (e) { /* non-fatal */ }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    if (view && navigator.wakeLock) navigator.wakeLock.request('screen')
+        .then(l => wakeLock = l).catch(() => {});
+    tick();
+  }
+});
+goHome();
+</script>
+</body>
+</html>
