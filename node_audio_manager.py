@@ -43,12 +43,18 @@ try:
 except ImportError:
     AIOESPHOMEAPI_AVAILABLE = False
 
-CONNECT_TIMEOUT = 5   # seconds; only the first command after a (re)connect pays it
+CONNECT_TIMEOUT = 10  # seconds; only the first command after a (re)connect pays it
+                      # (5 until 2026-08-30: playa RF runs 300-500ms RTT with
+                      # loss — the tight timeout turned marginal links into
+                      # constant flapping)
 CONNECT_BACKOFF = 5   # after a failed connect, fail further commands fast this long
 STALE_AFTER = 5       # a command that waited this long behind the node lock is
                       # dropped — a thunder cue arriving after a reconnect backlog
                       # would fire long after its lightning
-KEEPALIVE_TICK_S = 7  # connection keepalive cadence (see _NodeConn._maintain)
+KEEPALIVE_TICK_S = 10  # connection keepalive cadence (see _NodeConn._maintain)
+PROBE_TIMEOUT = 8      # keepalive device_info probe (3 until 2026-08-30 — see
+                       # CONNECT_TIMEOUT; a probe miss tears the connection down,
+                       # so it must ride out playa RTT spikes)
 # A node that stays unreachable backs its keepalive off exponentially
 # (7-14-28-56s, capped here) instead of a full connect attempt every tick —
 # powered-off boxes are normal at the bench and must cost ~nothing. A box
@@ -200,7 +206,7 @@ class _NodeConn:
                         probe = getattr(self.client, 'device_info', None)
                         if probe is not None:
                             try:
-                                await asyncio.wait_for(probe(), 3)
+                                await asyncio.wait_for(probe(), PROBE_TIMEOUT)
                             except Exception as e:
                                 await self._drop()
                                 self._fail_ts = time.monotonic()
