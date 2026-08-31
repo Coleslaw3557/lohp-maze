@@ -51,7 +51,10 @@ CONNECT_BACKOFF = 5   # after a failed connect, fail further commands fast this 
 STALE_AFTER = 5       # a command that waited this long behind the node lock is
                       # dropped — a thunder cue arriving after a reconnect backlog
                       # would fire long after its lightning
-KEEPALIVE_TICK_S = 10  # connection keepalive cadence (see _NodeConn._maintain)
+KEEPALIVE_TICK_S = 20  # connection keepalive cadence (see _NodeConn._maintain)
+                       # (10 until 2026-08-31: halved probe traffic across 11
+                       # boxes on the congested live-night channel; slower
+                       # down-detection is fine — dispatches fail fast anyway)
 PROBE_TIMEOUT = 8      # keepalive device_info probe (3 until 2026-08-30 — see
                        # CONNECT_TIMEOUT; a probe miss tears the connection down,
                        # so it must ride out playa RTT spikes)

@@ -76,6 +76,14 @@ class TelemetryStore:
     def _init_db(self):
         with self._lock, self._conn:
             self._conn.execute('PRAGMA journal_mode=WAL')
+            # WAL + NORMAL: no fsync per commit (only at checkpoints) —
+            # FULL was fsyncing the SD card on every sensor event, on the
+            # event loop, ahead of the response (live-night lag 2026-08-31).
+            # A power cut can lose the tail of the WAL; fine for telemetry.
+            self._conn.execute('PRAGMA synchronous=NORMAL')
+            # Checkpoint often so the WAL stays small (the default 1000
+            # pages let a ~4 MB WAL copy-back land inside a request).
+            self._conn.execute('PRAGMA wal_autocheckpoint=200')
             self._conn.execute('PRAGMA foreign_keys=ON')
             self._conn.execute('PRAGMA user_version=%d' % SCHEMA_VERSION)
             self._conn.execute("""

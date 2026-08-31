@@ -37,7 +37,11 @@ CLIENT_QUEUE_CHUNKS = 12     # kick a client ~3s behind the live edge
 RING_CHUNKS = 2              # burst to a new joiner: primes decode, ~0.5s lag
 IDLE_REAP_S = 180            # encoder with no listeners this long is stopped
 RESTART_BACKOFF_S = 2.0
-BITRATE = '128k'
+# 96k mono (was 128k stereo): each box drives one small speaker and beds sit
+# under playa ambient noise — the ~45% airtime saving matters more
+# (live-night congestion, 2026-08-31).
+BITRATE = '96k'
+CHANNELS = '1'
 
 
 class _Client:
@@ -106,7 +110,7 @@ class _Channel:
                     'ffmpeg', '-hide_banner', '-loglevel', 'error',
                     '-re', *loop_args,
                     '-i', self.path,
-                    '-vn', '-codec:a', 'libmp3lame', '-b:a', BITRATE,
+                    '-vn', '-ac', CHANNELS, '-codec:a', 'libmp3lame', '-b:a', BITRATE,
                     '-f', 'mp3', 'pipe:1',
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE)

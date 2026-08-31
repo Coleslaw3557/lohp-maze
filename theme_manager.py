@@ -393,7 +393,13 @@ class ThemeManager:
                     with self._step_lock:
                         self._generate_and_apply_theme_step(theme_data, current_time)
                     last_update_time = current_time
-                time.sleep(0.001)  # Small sleep to prevent CPU hogging
+                # Sleep to the next step deadline instead of polling at
+                # ~1 kHz — the 1 ms spin woke this thread constantly and
+                # taxed every await in the server via the GIL (live-night
+                # lag, 2026-08-31). Cap keeps stop_event response <100 ms.
+                next_due = (last_update_time + 1 / self.frequency
+                            - (time.time() - start_time))
+                time.sleep(min(0.1, max(0.005, next_due)))
         except Exception as e:
             logger.error(f"Error in theme {theme_name}: {str(e)}", exc_info=True)
         finally:

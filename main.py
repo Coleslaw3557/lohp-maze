@@ -98,26 +98,39 @@ def _source_ip():
     return request.remote_addr
 
 
+_telemetry_writes = set()  # keep in-flight executor futures referenced
+
+
 def _record_event(event_type, room=None, effect_name=None, value=None,
                   sensor_type=None, sensor_name=None, node_name=None,
                   node_uptime_ms=None, seq=None):
+    """Queue a telemetry INSERT on a worker thread. The SD-card write used
+    to run ON the event loop ahead of the response — every trigger paid an
+    fsync before its lights moved (live-night lag, 2026-08-31). Request-
+    bound fields are snapshotted here; returns True as an opaque handle
+    (only the unused /api/telemetry batch route ever echoed the row id)."""
+    kwargs = dict(
+        event_type=event_type, room=room, node_name=node_name,
+        sensor_type=sensor_type, sensor_name=sensor_name,
+        effect_name=effect_name, value=value,
+        source_ip=_source_ip(),
+        user_agent=request.headers.get('User-Agent', ''),
+        node_uptime_ms=node_uptime_ms, seq=seq)
+
+    def write():
+        try:
+            telemetry_store.record_event(**kwargs)
+        except Exception as e:
+            logger.error(f"Telemetry write failed for {event_type}: {e}",
+                         exc_info=True)
+
     try:
-        return telemetry_store.record_event(
-            event_type=event_type,
-            room=room,
-            node_name=node_name,
-            sensor_type=sensor_type,
-            sensor_name=sensor_name,
-            effect_name=effect_name,
-            value=value,
-            source_ip=_source_ip(),
-            user_agent=request.headers.get('User-Agent', ''),
-            node_uptime_ms=node_uptime_ms,
-            seq=seq,
-        )
-    except Exception as e:
-        logger.error(f"Telemetry write failed for {event_type}: {e}", exc_info=True)
-        return None
+        future = asyncio.get_running_loop().run_in_executor(None, write)
+        _telemetry_writes.add(future)
+        future.add_done_callback(_telemetry_writes.discard)
+    except RuntimeError:
+        write()  # no running loop (tests) — inline
+    return True
 
 
 def _doorway_entry_suppressed(room, effect_name, effect_data, now=None):
@@ -241,6 +254,14 @@ elif artnet_output_manager is None:
     log_and_exit("dmx_nodes.json disables FTDI but enables no Art-Net nodes — no DMX output")
 
 light_config = LightConfigManager()
+if artnet_output_manager is not None:
+    # Per-room dirty tracking (2026-08-31): each Art-Net target only gets
+    # frames when its own room's channels move (see set_room_slices).
+    artnet_output_manager.set_room_slices({
+        room: [(f['start_address'] - 1,
+                f['start_address'] - 1 + CHANNELS_PER_FIXTURE)
+               for f in fixtures]
+        for room, fixtures in light_config.get_room_layout().items()})
 audio_manager = AudioManager()
 node_audio_manager = NodeAudioManager(audio_manager=audio_manager)
 live_audio_hub = LiveAudioHub()
@@ -931,14 +952,18 @@ async def room_vacated():
             photobooth.vacated()
             _cancel_photobomb_victory()
         blind_backtrack_room = _route_room_vacated(room)
+    except Exception as e:
+        logger.error(f"Error handling vacate for room {room}: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    async def finish_vacate():
         if blind_backtrack_room:
             _set_room_backtrack_block(room)
             _set_room_backtrack_block(blind_backtrack_room)
             success, message = await effects_manager.apply_effect_to_room(room, BACKTRACK_EFFECT_NAME)
             if not success:
-                return jsonify({'status': 'error', 'message': message}), 500
-            return jsonify({'status': 'success',
-                            'message': f'Room {room} vacated; {BACKTRACK_EFFECT_NAME} fired'})
+                raise RuntimeError(message)
+            return f'Room {room} vacated; {BACKTRACK_EFFECT_NAME} fired'
         interrupted_effect = await effects_manager.stop_effect_in_room(room)
         # Opt-in send-off: a room can name a one-shot pool to fire as its last
         # visitor leaves (audio_config `room_leave_sounds` — Cop Dodge and
@@ -953,7 +978,27 @@ async def room_vacated():
         elif leave_effect:
             await remote_host_manager.play_effect_audio(leave_effect, rooms=[room])
             logger.info(f"Leave sound {leave_effect} fired in {room}")
-        return jsonify({'status': 'success', 'message': f'Room {room} vacated'})
+        return f'Room {room} vacated'
+
+    # Fast-return for node posts, mirroring run_effect: the slow half
+    # (stop-effect round trips, blind-backtrack's 2.4 s effect, leave
+    # sounds) used to blow the node's 3 s HTTP timeout, and its mode:single
+    # script had already cleared occupancy — the vacate was silently LOST
+    # and the room stayed colour-locked (live-night lag, 2026-08-31).
+    if request.headers.get('User-Agent', '').startswith('ESPHome/'):
+        async def background_finish():
+            try:
+                await finish_vacate()
+            except Exception as e:
+                logger.error(f"Async vacate for room {room} failed: {e}",
+                             exc_info=True)
+        asyncio.create_task(background_finish())
+        return jsonify({'status': 'success',
+                        'message': f'Vacate accepted for room {room}',
+                        'accepted': True})
+    try:
+        message = await finish_vacate()
+        return jsonify({'status': 'success', 'message': message})
     except Exception as e:
         logger.error(f"Error handling vacate for room {room}: {e}", exc_info=True)
         return jsonify({'status': 'error', 'message': str(e)}), 500

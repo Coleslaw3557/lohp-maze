@@ -40,6 +40,11 @@ class _Target:
         self.last_sent = 0.0
         self.warned = False
         self._resolving = False
+        # Per-room dirty tracking (2026-08-31 live-night congestion): this
+        # target's channel windows in the frame, set via set_room_slices().
+        # None = no slice known -> old behavior (send on any frame change).
+        self.slices = None          # [(start, end), ...] or None
+        self.last_slice = None      # bytes of the slice content last seen
 
     def resolve(self, now):
         """Kick a background resolve if one is due — never blocks the caller."""
@@ -114,6 +119,22 @@ class ArtNetOutputManager(threading.Thread):
                 next_frame = time.monotonic()  # fell behind; don't burst to catch up
         self.sock.close()
 
+    def set_room_slices(self, room_slices):
+        """{room: [(start_ch, end_ch), ...]} — after this, a target is sent a
+        frame only when ITS OWN channels changed (or its 1 s heartbeat came
+        due; the heartbeat already guarantees late-joiner convergence, so
+        correctness is unchanged). Before 2026-08-31 ANY channel change went
+        to ALL targets at up to 44 fps — ~3 Mbps of unicast that helped
+        drown the playa channel. Targets without an entry (unmapped rooms)
+        keep the old any-change behavior."""
+        for t in self.targets:
+            slices = room_slices.get(t.room)
+            t.slices = [tuple(s) for s in slices] if slices else None
+            t.last_slice = None
+        mapped = sum(1 for t in self.targets if t.slices)
+        logger.info(f"Art-Net per-room dirty tracking on: {mapped}/"
+                    f"{len(self.targets)} targets sliced")
+
     def send_frame(self):
         state = self.dmx_state_manager.get_full_state()
         frame = bytes(max(0, min(255, int(v))) for v in state)
@@ -122,8 +143,19 @@ class ArtNetOutputManager(threading.Thread):
         self._last_frame = frame
         packet = None
         for t in self.targets:
-            if not (changed or now - t.last_sent >= self.HEARTBEAT):
-                continue
+            due = now - t.last_sent >= self.HEARTBEAT
+            if t.slices is None:
+                if not (changed or due):
+                    continue
+            else:
+                slice_changed = False
+                if changed:
+                    current = b''.join(frame[s:e] for s, e in t.slices)
+                    slice_changed = current != t.last_slice
+                    if slice_changed:
+                        t.last_slice = current
+                if not (slice_changed or due):
+                    continue
             t.resolve(now)
             addr = t.addr              # local copy: the resolver thread may swap it
             if addr is None:
