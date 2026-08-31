@@ -109,12 +109,6 @@ class _NodeConn:
         # mid-fetch, 2026-08-17) and only the device's own state shows it.
         self.media_state = None
         self.media_state_at = 0.0
-        # Live entity mirror for the field-calibration tool
-        # (calibration_manager.py): entity info from list_entities_services at
-        # connect, latest pushed state per key from the same subscribe_states
-        # the bed watchdog uses. Cleared on drop so nothing reads stale.
-        self.entities = {}       # key -> {'name','object_id','type','options'}
-        self.entity_states = {}  # key -> {'state', 'at'}
         self._maintain_task = None
         self._down_ticks = 0  # consecutive keepalive ticks without a connection
 
@@ -128,12 +122,6 @@ class _NodeConn:
         entities, _ = await client.list_entities_services()
         self.media_key = next((e.key for e in entities
                                if type(e).__name__ == 'MediaPlayerInfo'), None)
-        self.entities = {
-            e.key: {'name': e.name,
-                    'object_id': getattr(e, 'object_id', ''),
-                    'type': type(e).__name__,
-                    'options': list(getattr(e, 'options', []) or [])}
-            for e in entities}
         try:
             client.subscribe_states(self._on_state)
         except Exception as e:
@@ -143,12 +131,6 @@ class _NodeConn:
         logger.info(f"Node audio connected: {self.room} @ {self.host}:{self.port}")
 
     def _on_state(self, state):
-        key = getattr(state, 'key', None)
-        if key is not None:
-            value = getattr(state, 'state', None)
-            if getattr(state, 'missing_state', False):
-                value = None
-            self.entity_states[key] = {'state': value, 'at': time.time()}
         if type(state).__name__ != 'MediaPlayerEntityState':
             return
         try:
@@ -166,8 +148,6 @@ class _NodeConn:
         self.media_key = None
         self.media_state = None
         self.media_state_at = 0.0
-        self.entities = {}
-        self.entity_states = {}
         if client is not None:
             try:
                 await client.disconnect()
@@ -289,29 +269,6 @@ class _NodeConn:
                                                     command=MediaPlayerCommand.STOP,
                                                     announcement=announcement)
         return await self._run(f"stop(announcement={announcement})", call)
-
-    # --- calibration writes (calibration_manager.py) ---
-    # Same connection + FIFO lock as audio commands, so a gate tweak can't
-    # interleave with a cue dispatch mid-reconnect.
-
-    async def set_number(self, key, value):
-        """Write an ESPHome number entity (LD2410 gate limits/timeout,
-        LD2450 zone coords — sim/esphome/packages/)."""
-        def call():
-            return self.client.number_command(key, float(value))
-        return await self._run(f"set_number {key}={value}", call)
-
-    async def set_select(self, key, option):
-        """Write a select entity (LD2450 zone type)."""
-        def call():
-            return self.client.select_command(key, str(option))
-        return await self._run(f"set_select {key}={option}", call)
-
-    async def set_switch(self, key, on):
-        """Write a switch entity (LD2450 multi-target)."""
-        def call():
-            return self.client.switch_command(key, bool(on))
-        return await self._run(f"set_switch {key}={on}", call)
 
 
 class NodeAudioManager:

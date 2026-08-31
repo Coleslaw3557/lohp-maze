@@ -21,7 +21,6 @@ from effects_manager import EffectsManager
 from remote_host_manager import RemoteHostManager
 from audio_manager import AudioManager, SOUND_MODES
 from node_audio_manager import NodeAudioManager
-from calibration_manager import CalibrationManager
 from floor_show_manager import FloorShowManager, read_saved_theme
 from room_background_manager import RoomBackgroundManager
 from maze_ambient_manager import MazeAmbientManager
@@ -243,7 +242,6 @@ elif artnet_output_manager is None:
 light_config = LightConfigManager()
 audio_manager = AudioManager()
 node_audio_manager = NodeAudioManager(audio_manager=audio_manager)
-calibration_manager = CalibrationManager(node_audio_manager)
 remote_host_manager = RemoteHostManager(audio_manager=audio_manager, node_audio=node_audio_manager)
 effects_manager = EffectsManager(light_config, dmx_state_manager, remote_host_manager, audio_manager)
 camera_manager = CameraManager()
@@ -1749,87 +1747,6 @@ async def serve_photobomb_photo(filename):
 async def health():
     """Liveness for deploy scripts and the sim's RPI status dot."""
     return jsonify({"status": "ok", "service": "lohp-server"})
-
-
-# --- Field calibration (phone page — calibration_manager.py) ---
-# On-playa sensor bring-up: http://192.168.252.231:5000/calibrate from the
-# LOHP-ESP WiFi (or the Pi's camp-WiFi address). Live entity view + tuning
-# writes + labelled walk-test captures under data/calibration/.
-
-@app.route('/calibrate')
-async def calibrate_page():
-    return await send_file('frontend/calibrate.html')
-
-
-@app.route('/api/calibration/rooms')
-async def calibration_rooms():
-    return jsonify(calibration_manager.rooms())
-
-
-@app.route('/api/calibration/state')
-async def calibration_state():
-    state = calibration_manager.state(request.args.get('room', ''))
-    if state is None:
-        return jsonify({'status': 'error', 'message': 'unknown room'}), 404
-    return jsonify(state)
-
-
-@app.route('/api/calibration/write', methods=['POST'])
-async def calibration_write():
-    data = await request.get_json() or {}
-    try:
-        ok = await calibration_manager.write_entity(
-            data.get('room', ''), int(data['key']), data['value'])
-    except (KeyError, TypeError, ValueError):
-        return jsonify({'status': 'error',
-                        'message': 'need room, entity key, value'}), 400
-    if ok is None:
-        return jsonify({'status': 'error', 'message': 'unknown room'}), 404
-    if not ok:
-        return jsonify({'status': 'error',
-                        'message': 'write failed (node offline or entity '
-                                   'not writable)'}), 502
-    return jsonify({'status': 'success'})
-
-
-@app.route('/api/calibration/capture/start', methods=['POST'])
-async def calibration_capture_start():
-    data = await request.get_json() or {}
-    result = calibration_manager.start_capture(
-        data.get('room', ''), data.get('label', ''), data.get('note', ''))
-    if result is None:
-        return jsonify({'status': 'error', 'message': 'unknown room'}), 404
-    if result is False:
-        return jsonify({'status': 'error',
-                        'message': 'capture already running'}), 409
-    return jsonify({'status': 'success', **result})
-
-
-@app.route('/api/calibration/capture/stop', methods=['POST'])
-async def calibration_capture_stop():
-    data = await request.get_json() or {}
-    result = calibration_manager.stop_capture(data.get('room', ''))
-    if result is None:
-        return jsonify({'status': 'error', 'message': 'unknown room'}), 404
-    if result is False:
-        return jsonify({'status': 'error', 'message': 'no capture running'}), 409
-    return jsonify({'status': 'success', **result})
-
-
-@app.route('/api/calibration/capture/mark', methods=['POST'])
-async def calibration_capture_mark():
-    data = await request.get_json() or {}
-    result = calibration_manager.mark(data.get('room', ''), data.get('text', ''))
-    if result is None:
-        return jsonify({'status': 'error', 'message': 'unknown room'}), 404
-    if result is False:
-        return jsonify({'status': 'error', 'message': 'no capture running'}), 409
-    return jsonify({'status': 'success'})
-
-
-@app.route('/api/calibration/captures')
-async def calibration_captures():
-    return jsonify(calibration_manager.list_captures(request.args.get('room')))
 
 
 @app.route('/api/audio/<path:filename>')
