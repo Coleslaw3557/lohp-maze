@@ -21,7 +21,7 @@
             "volume": 0.65
         },
         "PoliceLights": {
-            "_comment": "Cop Dodge entry (the room laser fires this). TF2 duel challenge/event added to the rotation 2026-08-01 (Tim) — you have been challenged, now dodge.",
+            "_comment": "Cop Dodge entry (the room laser fires this). TF2 duel challenge/event added to the rotation 2026-08-01 (Tim) \u2014 you have been challenged, now dodge.",
             "audio_files": [
                 "rooms/Cop Dodge/mixes/11_escalation_detected_to_checkpoint.wav",
                 "rooms/Cop Dodge/mixes/12_dispatch_chase_bed.wav",
@@ -69,16 +69,12 @@
             "volume": 0.8
         },
         "Backtrack": {
-            "_comment": "Played instead of the room's normal entry audio when a visitor enters an earlier room in the canonical maze route. TF2 coach 'look here' added 2026-08-01 (Tim).",
-            "audio_files": [
-                "uploads/Broke_the_ever_loving_shit_out_of_it.mp3",
-                "uploads/You_ve_been_splooged_you_took_a_good_old_gulp_too.mp3",
-                "uploads/coach_look_here.wav"
-            ],
+            "_comment": "SILENCED 2026-08-31 (Tim, live night): the wrong-way sound fired constantly with crowds \u2014 Backtrack is lights-only now. Former pool: Broke_the_ever_loving_shit / You_ve_been_splooged / coach_look_here (files still in uploads/ to restore).",
+            "audio_files": [],
             "volume": 0.9
         },
         "CorrectAnswer": {
-            "_comment": "Shared maze-wide victory chime (room-games plan); MechWarrior Betty lines removed 2026-07-29 (Tim). 2026-08-01 (Tim): TF2 affirmatives for single actions (a moop button pressed but the round not done, and rooms like it) — pumpkin drop/pickup, regenerate, spawn_item, talk, rendercomplete — plus the bigger railroad_bells and coach 'attack here' victory shots.",
+            "_comment": "Shared maze-wide victory chime (room-games plan); MechWarrior Betty lines removed 2026-07-29 (Tim). 2026-08-01 (Tim): TF2 affirmatives for single actions (a moop button pressed but the round not done, and rooms like it) \u2014 pumpkin drop/pickup, regenerate, spawn_item, talk, rendercomplete \u2014 plus the bigger railroad_bells and coach 'attack here' victory shots.",
             "audio_files": [
                 "rooms/Bike Lock Room/rapid/button_responses/01_button_1_quake.wav",
                 "rooms/Bike Lock Room/clips/20_quake_button_2.wav",
@@ -117,7 +113,7 @@
             "volume": 0.35
         },
         "CopDodge-Leave": {
-            "_comment": "Fired once when Cop Dodge reports its last visitor gone (/api/room_vacated -> top-level room_leave_sounds). MGS sample01 escape stings (Tim 2026-08-01). Skipped when the vacate is a backtrack — the wrong-way audio owns that moment.",
+            "_comment": "Fired once when Cop Dodge reports its last visitor gone (/api/room_vacated -> top-level room_leave_sounds). MGS sample01 escape stings (Tim 2026-08-01). Skipped when the vacate is a backtrack \u2014 the wrong-way audio owns that moment.",
             "audio_files": [
                 "rooms/Cop Dodge/uploads/0x84.wav",
                 "rooms/Cop Dodge/uploads/0x85.wav"
@@ -155,7 +151,7 @@
             "volume": 0.42
         },
         "Exit-Background": {
-            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also overrides maze ambience in that room while playing). Deliberately EMPTY (Tim 2026-08-01): the Exit has no maze ambience — its send-off sounds are one-shots in the Exit entry pool (First_Place_Finish moved there; a 6.5s jingle must not loop as a bed).",
+            "_comment": "Room-local background-sounds pool placeholder. The audio console exposes this as a Sound Library background target; opt the room in under top-level room_backgrounds to loop it live always (room_background_manager.py; it also overrides maze ambience in that room while playing). Deliberately EMPTY (Tim 2026-08-01): the Exit has no maze ambience \u2014 its send-off sounds are one-shots in the Exit entry pool (First_Place_Finish moved there; a 6.5s jingle must not loop as a bed).",
             "audio_files": [],
             "volume": 0.35
         },
@@ -179,14 +175,14 @@
             "volume": 0.35
         },
         "NoFriendsMonday-Background": {
-            "_comment": "No Friends Monday background pool, not opted in by default now that ambience is global. Final_Lap.wav CUT 2026-08-01 (Tim): beds loop their pick, and a 3.7s one-shot jingle looping is noise, not a bed — only put loopable material in -Background pools.",
+            "_comment": "No Friends Monday background pool, not opted in by default now that ambience is global. Final_Lap.wav CUT 2026-08-01 (Tim): beds loop their pick, and a 3.7s one-shot jingle looping is noise, not a bed \u2014 only put loopable material in -Background pools.",
             "audio_files": [
                 "rooms/No Friends Monday/uploads/taunt_bongos.wav"
             ],
             "volume": 0.35
         },
         "PortoRoom-Background": {
-            "_comment": "Porto Room background pool — EMPTY since 2026-08-01 (Tim cut bump_in_the_night entirely, same day it landed). Drop a file in and opt the room into room_backgrounds only if it should override global ambience locally.",
+            "_comment": "Porto Room background pool \u2014 EMPTY since 2026-08-01 (Tim cut bump_in_the_night entirely, same day it landed). Drop a file in and opt the room into room_backgrounds only if it should override global ambience locally.",
             "audio_files": [],
             "volume": 0.35
         },
@@ -204,12 +200,12 @@
             "volume": 0.8
         },
         "TempleRoom-Background": {
-            "_comment": "Room-local background-sounds pool placeholder — EMPTY on purpose (Tim's 10s rule, 2026-08-01): the 1.4s MGS 0x3A blip is a sound effect, not a loop, so it moved to TempleRoom-Ambient (occasional one-shot via ambient_oneshots.rooms). NOTE this is the TEMPLE ROOM (the maze room) — the Cuddle temple PROJECTION's sounds live in Cuddle-Temple-Bed/-Ambient.",
+            "_comment": "Room-local background-sounds pool placeholder \u2014 EMPTY on purpose (Tim's 10s rule, 2026-08-01): the 1.4s MGS 0x3A blip is a sound effect, not a loop, so it moved to TempleRoom-Ambient (occasional one-shot via ambient_oneshots.rooms). NOTE this is the TEMPLE ROOM (the maze room) \u2014 the Cuddle temple PROJECTION's sounds live in Cuddle-Temple-Bed/-Ambient.",
             "audio_files": [],
             "volume": 0.35
         },
         "TempleRoom-Ambient": {
-            "_comment": "Temple Room occasional one-shot (ambient_oneshots.rooms): the MGS 0x3A blip that was briefly the room's looping bed — a 1.4s sound plays as texture on a random timer instead (Tim's 10s rule, 2026-08-01).",
+            "_comment": "Temple Room occasional one-shot (ambient_oneshots.rooms): the MGS 0x3A blip that was briefly the room's looping bed \u2014 a 1.4s sound plays as texture on a random timer instead (Tim's 10s rule, 2026-08-01).",
             "audio_files": [
                 "rooms/Temple Room/uploads/0x3A.wav"
             ],
@@ -235,7 +231,11 @@
                 "rooms/Bike Lock Room/rapid/victory/02_diablo_quest_unlock.wav",
                 "uploads/1-Up.wav"
             ],
-            "audio_weights": [5, 4, 1],
+            "audio_weights": [
+                5,
+                4,
+                1
+            ],
             "volume": 0.8
         },
         "BikeLockRoom-WrongAnswer": {
@@ -358,7 +358,7 @@
             "volume": 0.8
         },
         "PhotoBombRoom-RightAnswer": {
-            "_comment": "Photo Bomb VICTORY sound: plays after every captured photo (booth game, main.py) — the say-cheese payoff. TF2 camera shutters assigned 2026-08-01 (Tim). STILL WANTED: 'Prepotente scream (better).mp3' — not on this box (searched home + tf-master 2026-08-01); drop it in rooms/Photo Bomb Room/uploads/ and add it here.",
+            "_comment": "Photo Bomb VICTORY sound: plays after every captured photo (booth game, main.py) \u2014 the say-cheese payoff. TF2 camera shutters assigned 2026-08-01 (Tim). STILL WANTED: 'Prepotente scream (better).mp3' \u2014 not on this box (searched home + tf-master 2026-08-01); drop it in rooms/Photo Bomb Room/uploads/ and add it here.",
             "audio_files": [
                 "rooms/Photo Bomb Room/uploads/tf_camera_01.wav",
                 "rooms/Photo Bomb Room/uploads/tf_camera_02.wav",
@@ -404,7 +404,16 @@
                 "uploads/moo.wav",
                 "rooms/Porto Room/uploads/cow3.wav"
             ],
-            "audio_weights": [5, 3, 3, 2, 3, 2, 1, 1],
+            "audio_weights": [
+                5,
+                3,
+                3,
+                2,
+                3,
+                2,
+                1,
+                1
+            ],
             "volume": 0.9
         },
         "SparklePonyRoom-RightAnswer": {
@@ -472,7 +481,7 @@
             "volume": 0.9
         },
         "SparkPony": {
-            "_comment": "Pack clips 13-17 and mixes 19/22 are generated speech — quarantined in rooms/Sparkle Pony Room/legacy_tts/, never wire them (no-TTS rule)",
+            "_comment": "Pack clips 13-17 and mixes 19/22 are generated speech \u2014 quarantined in rooms/Sparkle Pony Room/legacy_tts/, never wire them (no-TTS rule)",
             "audio_files": [
                 "rooms/Sparkle Pony Room/mixes/18_push_then_load_bearing_praise.wav",
                 "rooms/Sparkle Pony Room/mixes/20_horrible_person_celebration.wav",
@@ -501,12 +510,12 @@
             "volume": 0.9
         },
         "CuddlePuddle": {
-            "_comment": "Entry swell for the projection room — LIGHTS ONLY on purpose. Cuddle's sound comes from the floor show instead (floor_show_manager.py): a looping Cuddle-<theme>-Bed plus accent pools fired by the projection's own events. dance.mp3 retired 2026-07-29 (Tim)",
+            "_comment": "Entry swell for the projection room \u2014 LIGHTS ONLY on purpose. Cuddle's sound comes from the floor show instead (floor_show_manager.py): a looping Cuddle-<theme>-Bed plus accent pools fired by the projection's own events. dance.mp3 retired 2026-07-29 (Tim)",
             "audio_files": [],
             "volume": 0.7
         },
         "Cuddle-Lava-Bed": {
-            "_comment": "LAVA floor theme: the room's looping bed, on the ambience channel (survives effect audio_stop, accents mix over it). Tim's Lava pool, 2026-07-30. lava.wav = 8.2s loop — the seam steps up in level slightly, so if it pulses on the deck, crossfade a longer master rather than raising the volume. volcano_rumble (bed alternate 2026-08-01, per the 10s rule) REMOVED 2026-08-20: it IS the intermittent 'static' Tim chased on the real box — 98% of its energy is below 150 Hz, under the Pebble rolloff, so 24s of near-pure hiss whenever the bed picked it (confirmed by a blind replay he reported as 'the static just happened'). It also framed the hell_rumbles one-shots: cues duck the bed but play OVER it, so cues landing on a volcano window got blamed for the hiss underneath. Don't re-add sub-150Hz-only files to node-played pools — bench-listen on a Pebble first.",
+            "_comment": "LAVA floor theme: the room's looping bed, on the ambience channel (survives effect audio_stop, accents mix over it). Tim's Lava pool, 2026-07-30. lava.wav = 8.2s loop \u2014 the seam steps up in level slightly, so if it pulses on the deck, crossfade a longer master rather than raising the volume. volcano_rumble (bed alternate 2026-08-01, per the 10s rule) REMOVED 2026-08-20: it IS the intermittent 'static' Tim chased on the real box \u2014 98% of its energy is below 150 Hz, under the Pebble rolloff, so 24s of near-pure hiss whenever the bed picked it (confirmed by a blind replay he reported as 'the static just happened'). It also framed the hell_rumbles one-shots: cues duck the bed but play OVER it, so cues landing on a volcano window got blamed for the hiss underneath. Don't re-add sub-150Hz-only files to node-played pools \u2014 bench-listen on a Pebble first.",
             "audio_files": [
                 "uploads/Lava/lava.wav"
             ],
@@ -518,13 +527,17 @@
             }
         },
         "Cuddle-Lava-Hit": {
-            "_comment": "LAVA accents for the small stuff — a stepping stone going under, a bubble bursting (projection_engine sink/rise/pop). Weights favour the fast lava1 spit over the slower gurgles",
+            "_comment": "LAVA accents for the small stuff \u2014 a stepping stone going under, a bubble bursting (projection_engine sink/rise/pop). Weights favour the fast lava1 spit over the slower gurgles",
             "audio_files": [
                 "uploads/Lava/lava1.wav",
                 "uploads/Lava/lava2.wav",
                 "uploads/Lava/lava3.wav"
             ],
-            "audio_weights": [4, 3, 3],
+            "audio_weights": [
+                4,
+                3,
+                3
+            ],
             "volume": 0.7
         },
         "Cuddle-Lava-Breach": {
@@ -534,11 +547,15 @@
                 "uploads/Lava/lava5.wav",
                 "uploads/Lava/lava2.wav"
             ],
-            "audio_weights": [4, 4, 2],
+            "audio_weights": [
+                4,
+                4,
+                2
+            ],
             "volume": 0.8
         },
         "Cuddle-Lava-Ambient": {
-            "_comment": "LAVA floor theme: ambient one-shots at random intervals while the show is up (floor_show_manager THEME_SHOWS ambient, Tim 2026-08-01) — texture between the engine-event accents above, so same pool but quieter and uniform. The seven hell_rumbles (evening add 2026-08-01) were REMOVED by Tim 2026-08-20: 60-94% of their energy sits below 150 Hz, which the Pebbles can't reproduce — on the real node speaker the audible remainder is a burst of static (live-confirmed on the Cuddle box; don't re-add for node playback). Files stay in uploads/Lava for any future full-range speaker. (volcano_rumble moved to the BED pool 2026-08-01 — 21.9s is ambiance, not a one-shot.)",
+            "_comment": "LAVA floor theme: ambient one-shots at random intervals while the show is up (floor_show_manager THEME_SHOWS ambient, Tim 2026-08-01) \u2014 texture between the engine-event accents above, so same pool but quieter and uniform. The seven hell_rumbles (evening add 2026-08-01) were REMOVED by Tim 2026-08-20: 60-94% of their energy sits below 150 Hz, which the Pebbles can't reproduce \u2014 on the real node speaker the audible remainder is a burst of static (live-confirmed on the Cuddle box; don't re-add for node playback). Files stay in uploads/Lava for any future full-range speaker. (volcano_rumble moved to the BED pool 2026-08-01 \u2014 21.9s is ambiance, not a one-shot.)",
             "audio_files": [
                 "uploads/Lava/lava1.wav",
                 "uploads/Lava/lava2.wav",
@@ -556,7 +573,7 @@
             "volume": 0.35
         },
         "Cuddle-Jungle-Ambient": {
-            "_comment": "JUNGLE floor theme: ambient one-shots at random intervals — 16 birdies + 4 beasties + 4 events, uniform pick, so the canopy is mostly birdsong with the odd beast (Tim 2026-08-01). 0x1a = MGS 'snake dying' cry (Tim, same evening) — he named no room for it, and jungle is the snake projection; move it if that read was wrong.",
+            "_comment": "JUNGLE floor theme: ambient one-shots at random intervals \u2014 16 birdies + 4 beasties + 4 events, uniform pick, so the canopy is mostly birdsong with the odd beast (Tim 2026-08-01). 0x1a = MGS 'snake dying' cry (Tim, same evening) \u2014 he named no room for it, and jungle is the snake projection; move it if that read was wrong.",
             "audio_files": [
                 "uploads/Jungle/junglebirdie1.wav",
                 "uploads/Jungle/junglebirdie2.wav",
@@ -587,14 +604,14 @@
             "volume": 0.42
         },
         "Cuddle-Temple-Bed": {
-            "_comment": "TEMPLE floor theme: the room's looping bed — the torch brazier crackling (Tim 2026-08-01: 'the projection with the torch'; the torch is TempleShow's altar torch, projection_engine.py). 4s crackle loop on the ambience channel like the other beds.",
+            "_comment": "TEMPLE floor theme: the room's looping bed \u2014 the torch brazier crackling (Tim 2026-08-01: 'the projection with the torch'; the torch is TempleShow's altar torch, projection_engine.py). 4s crackle loop on the ambience channel like the other beds.",
             "audio_files": [
                 "uploads/Temple/medieval_brazier.wav"
             ],
             "volume": 0.35
         },
         "Cuddle-Temple-Ambient": {
-            "_comment": "TEMPLE floor theme: ambient one-shots at random intervals — 9 winds + 5 ravens, uniform pick = mostly wind with the odd raven, over the brazier bed above.",
+            "_comment": "TEMPLE floor theme: ambient one-shots at random intervals \u2014 9 winds + 5 ravens, uniform pick = mostly wind with the odd raven, over the brazier bed above.",
             "audio_files": [
                 "uploads/Temple/wind1.wav",
                 "uploads/Temple/wind2.wav",
@@ -614,14 +631,14 @@
             "volume": 0.42
         },
         "Cuddle-Water-Bed": {
-            "_comment": "WATER floor theme: the room's looping bed — drips1 under the ford (Tim 2026-08-01), on the ambience channel like the other beds.",
+            "_comment": "WATER floor theme: the room's looping bed \u2014 drips1 under the ford (Tim 2026-08-01), on the ambience channel like the other beds.",
             "audio_files": [
                 "uploads/Water/drips1.wav"
             ],
             "volume": 0.35
         },
         "Cuddle-Water-Ambient": {
-            "_comment": "WATER floor theme: ambient one-shots at random intervals — the other two drip patterns plus the two winter winds rolling through (Tim 2026-08-01).",
+            "_comment": "WATER floor theme: ambient one-shots at random intervals \u2014 the other two drip patterns plus the two winter winds rolling through (Tim 2026-08-01).",
             "audio_files": [
                 "uploads/Water/drips2.wav",
                 "uploads/Water/drips3.wav",
@@ -631,7 +648,7 @@
             "volume": 0.42
         },
         "Cuddle-Chamber-Bed": {
-            "_comment": "CHAMBER floor theme: the room's looping bed — ONE of the sixteen TF2 halloween mysterious percs per bed start (Tim 2026-08-01), so the chamber broods differently every show.",
+            "_comment": "CHAMBER floor theme: the room's looping bed \u2014 ONE of the sixteen TF2 halloween mysterious percs per bed start (Tim 2026-08-01), so the chamber broods differently every show.",
             "audio_files": [
                 "uploads/Chamber/mysterious_perc_01.wav",
                 "uploads/Chamber/mysterious_perc_02.wav",
@@ -657,7 +674,7 @@
             }
         },
         "Cuddle-Chamber-Trap": {
-            "_comment": "CHAMBER accent: a trap door taking someone's step (projection trap_open — linger-open and sprint-slam alike). One file: MGS sample0f 0xBB+0xBA concatenated (Tim 2026-08-01, 'merge them'; tools: ffmpeg concat).",
+            "_comment": "CHAMBER accent: a trap door taking someone's step (projection trap_open \u2014 linger-open and sprint-slam alike). One file: MGS sample0f 0xBB+0xBA concatenated (Tim 2026-08-01, 'merge them'; tools: ffmpeg concat).",
             "audio_files": [
                 "uploads/Chamber/trap_0xBB_0xBA.wav"
             ],
@@ -688,7 +705,7 @@
             }
         },
         "MazeAmbient": {
-            "_comment": "Maze-wide roaming one-shots (ambient_oneshots -> maze_ambient_manager.py, Tim 2026-08-01): each firing lands ONE of these in ONE random room with a working speaker — crows, dogs, forest birds, desert air, owls, a wolf, rain, a gust. Cuddle Cross is excluded (the floor show owns its ambience). desert_life + desert_wind_high pulled 2026-08-01 (Tim's 10s rule: over 10s reads as ambiance, not a roaming effect) — unassigned in the library, candidates for a future desert bed.",
+            "_comment": "Maze-wide roaming one-shots (ambient_oneshots -> maze_ambient_manager.py, Tim 2026-08-01): each firing lands ONE of these in ONE random room with a working speaker \u2014 crows, dogs, forest birds, desert air, owls, a wolf, rain, a gust. Cuddle Cross is excluded (the floor show owns its ambience). desert_life + desert_wind_high pulled 2026-08-01 (Tim's 10s rule: over 10s reads as ambiance, not a roaming effect) \u2014 unassigned in the library, candidates for a future desert bed.",
             "audio_files": [
                 "uploads/Ambient/crow1.wav",
                 "uploads/Ambient/crow2.wav",
@@ -751,19 +768,19 @@
             "volume": 1.0
         },
         "ShrineGuard": {
-            "_comment": "Monkey Room entry (radar presence) — LotHT temple guard ambush sting, same archive as the shrine cue (tools/fetch_guard_sound.sh); lights hand-synced in effects/monkey_shrine.py",
+            "_comment": "Monkey Room entry (radar presence) \u2014 LotHT temple guard ambush sting, same archive as the shrine cue (tools/fetch_guard_sound.sh); lights hand-synced in effects/monkey_shrine.py",
             "audio_files": [
                 "temple-guard-entry.mp3"
             ],
             "volume": 0.9
         },
         "TempleWake": {
-            "_comment": "Temple Room entry (2026-08-17). Light-only for now — the room's first show; drop files in from the audio console and they play over the timeline unchanged.",
+            "_comment": "Temple Room entry (2026-08-17). Light-only for now \u2014 the room's first show; drop files in from the audio console and they play over the timeline unchanged.",
             "audio_files": [],
             "volume": 0.7
         },
         "DeepPlaya-BG": {
-            "_comment": "Doorway entry swell — LIGHTS ONLY since 2026-08-01 evening (Tim): dance-distance-muffled moved into the DeepPlayaHandshake-Background pool so entries never lay a second bed over the always-on bed.",
+            "_comment": "Doorway entry swell \u2014 LIGHTS ONLY since 2026-08-01 evening (Tim): dance-distance-muffled moved into the DeepPlayaHandshake-Background pool so entries never lay a second bed over the always-on bed.",
             "audio_files": [],
             "volume": 0.8
         },
@@ -785,12 +802,15 @@
             "volume": 0.7
         },
         "BikeLockRoom": {
-            "_comment": "Victory payoff, the ONLY effect a correct press fires since 2026-08-21 (lights + audio together, instantly — the old chime-then-show double-played the same victory file because BikeLockRoom-RightAnswer lists these same WAVs). Weights = pack TRIGGER_MAP.csv.",
+            "_comment": "Victory payoff, the ONLY effect a correct press fires since 2026-08-21 (lights + audio together, instantly \u2014 the old chime-then-show double-played the same victory file because BikeLockRoom-RightAnswer lists these same WAVs). Weights = pack TRIGGER_MAP.csv.",
             "audio_files": [
                 "rooms/Bike Lock Room/rapid/victory/01_doom_secret_unlock.wav",
                 "rooms/Bike Lock Room/rapid/victory/02_diablo_quest_unlock.wav"
             ],
-            "audio_weights": [5, 4],
+            "audio_weights": [
+                5,
+                4
+            ],
             "volume": 0.8
         },
         "BikeLock-Entry": {
@@ -812,7 +832,7 @@
         }
     },
     "default_volume": 0.7,
-    "_levels_comment": "2026-08-22 (Tim): FLAT MIX — no ducking anywhere. Beds always at ambience_level, every effect/cue/one-shot at effect_level; per-effect volume fields above are legacy trim, no longer applied. These two values are only DEFAULTS: the live knobs are data/audio_levels.json on the Pi (deploy-protected), set via GET/POST /api/audio_levels — ambience changes apply to live beds instantly, effect_level changes ALSO need make_node_audio.py rerun (cue WAVs bake it; the Photo Bomb in-flash snap needs a reflash).",
+    "_levels_comment": "2026-08-22 (Tim): FLAT MIX \u2014 no ducking anywhere. Beds always at ambience_level, every effect/cue/one-shot at effect_level; per-effect volume fields above are legacy trim, no longer applied. These two values are only DEFAULTS: the live knobs are data/audio_levels.json on the Pi (deploy-protected), set via GET/POST /api/audio_levels \u2014 ambience changes apply to live beds instantly, effect_level changes ALSO need make_node_audio.py rerun (cue WAVs bake it; the Photo Bomb in-flash snap needs a reflash).",
     "ambience_level": 0.65,
     "effect_level": 0.98,
     "ambience_playback": {
@@ -828,7 +848,7 @@
         "_comment": "Intentionally empty: ambience is global maze-wide, not per room. Cuddle Cross is the exception and is owned by floor_show_manager.py per projection theme. Keys starting with _ are ignored."
     },
     "room_leave_sounds": {
-        "_comment": "OPT-IN one-shot when a room reports its last visitor gone (room name -> effects entry; fired by /api/room_vacated AFTER the room's effects stop, so nothing cuts it). Skipped when the vacate triggers the backtrack effect — the wrong-way audio owns that moment. Keys starting with _ are ignored.",
+        "_comment": "OPT-IN one-shot when a room reports its last visitor gone (room name -> effects entry; fired by /api/room_vacated AFTER the room's effects stop, so nothing cuts it). Skipped when the vacate triggers the backtrack effect \u2014 the wrong-way audio owns that moment. Keys starting with _ are ignored.",
         "Cop Dodge": "CopDodge-Leave",
         "Sparkle Pony Room": "SparklePonyRoom-Leave"
     },
@@ -853,6 +873,6 @@
         }
     },
     "effects_attended": {
-        "_comment": "ATTENDED-mode pool overrides (staff running people through fast — short, pointed sounds; /api/sound_mode). A pool listed here replaces its effects twin's audio_files/audio_weights/volume while the mode is attended; pools NOT listed keep tracking effects (shared until edited in the console's Attended view). Lights/DMX and the floor projector never change with the mode. Keys starting with _ are ignored."
+        "_comment": "ATTENDED-mode pool overrides (staff running people through fast \u2014 short, pointed sounds; /api/sound_mode). A pool listed here replaces its effects twin's audio_files/audio_weights/volume while the mode is attended; pools NOT listed keep tracking effects (shared until edited in the console's Attended view). Lights/DMX and the floor projector never change with the mode. Keys starting with _ are ignored."
     }
 }

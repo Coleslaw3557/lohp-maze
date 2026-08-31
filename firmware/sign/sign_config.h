@@ -59,21 +59,29 @@ struct ZoneRun {
 // Legends 4 / Hidden-Playa 5). If a letter renders shifted under per-letter
 // effects, move px between neighbors — each chain's total must not change.
 // Order = physical strip order leaving the box (pixel 0 at band center).
+//
+// 08-31 (sign up on playa, Tim: counts came up short): +25 px per chain →
+// totals 68/43/80. The letter runs above the tail were rendering right, so
+// the bump is a TAIL run on each chain's edge zone (L / logo / final a) —
+// tail px follow that letter's color. If the real shortfall is spread across
+// letters, re-split per the move-px rule; chain totals stay 68/43/80.
 
 // Chain 1: e h t · f o · s d n e g e L (the/of/Legends, all reversed)
 constexpr ZoneRun OUT1_RUNS[] = {
     {11, 3}, {10, 3}, {9, 3},                                  // e h t  (@249,241,233)
     {8, 3},  {7, 3},                                           // f o    (@225,217)
     {6, 4}, {5, 4}, {4, 4}, {3, 4}, {2, 4}, {1, 4}, {0, 4},    // s d n e g e L (@209..161)
+    {0, 25},                                                   // 08-31 tail, rides 'L'
 };
 // Chain 2: logo field behind the disc
 constexpr ZoneRun OUT2_RUNS[] = {
-    {12, 18},                                                  // logo (@257)
+    {12, 43},                                                  // logo (@257), 08-31 was 18
 };
 // Chain 3: H i d d e n · P l a y a
 constexpr ZoneRun OUT3_RUNS[] = {
     {13, 5}, {14, 5}, {15, 5}, {16, 5}, {17, 5}, {18, 5},  // Hidden (@265..305)
     {19, 5}, {20, 5}, {21, 5}, {22, 5}, {23, 5},           // Playa  (@313..345)
+    {23, 25},                                              // 08-31 tail, rides final 'a'
 };
 
 constexpr uint16_t runTotal(const ZoneRun *r, size_t n) {
