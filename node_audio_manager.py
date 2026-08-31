@@ -411,18 +411,17 @@ class NodeAudioManager:
         return offset
 
     def _live_url(self, data):
-        """Live broadcast URL for a LOOPING bed, else None. Gate on the
-        LOGICAL loop flag: maze beds ship node_loop=False because their node
-        file is pre-looped 32x (audio_manager), but they are still repeating
-        multi-room beds — the ones that must play the same edge everywhere.
-        Once-through windows (loop falsy both ways) keep the offset path so
-        their once_pad_s tail still goes quiet (a live channel never ends)."""
+        """Live broadcast URL for a bed — EVERY bed rides the shared live
+        stream now (Tim 2026-08-31: same background = played together).
+        Looping beds get a forever channel (maze loops ship node_loop=False
+        because their node file is pre-looped 32x, so gate on the logical
+        flag too); once-through windows get a channel that ends at file end,
+        keeping their once_pad_s quiet tail."""
         if self.live_url_provider is None:
             return None
-        if not (data.get('loop') or self._node_loop(data)):
-            return None
+        loop = bool(data.get('loop') or self._node_loop(data))
         try:
-            return self.live_url_provider(self._node_file(data))
+            return self.live_url_provider(self._node_file(data), loop)
         except Exception as e:
             logger.error(f"Live bed URL failed for {self._node_file(data)}: {e}")
             return None

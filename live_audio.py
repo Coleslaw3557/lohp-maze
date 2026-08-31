@@ -87,9 +87,11 @@ class _Client:
 
 
 class _Channel:
-    def __init__(self, key, path):
+    def __init__(self, key, path, loop):
         self.key = key
         self.path = path
+        self.loop = loop
+        self.finished = False     # once-mode channel reached file end
         self.clients = set()
         self.ring = deque(maxlen=RING_CHUNKS)
         self.idle_since = time.monotonic()
@@ -99,15 +101,17 @@ class _Channel:
         while True:
             proc = None
             try:
+                loop_args = ['-stream_loop', '-1'] if self.loop else []
                 proc = await asyncio.create_subprocess_exec(
                     'ffmpeg', '-hide_banner', '-loglevel', 'error',
-                    '-re', '-stream_loop', '-1',
+                    '-re', *loop_args,
                     '-i', self.path,
                     '-vn', '-codec:a', 'libmp3lame', '-b:a', BITRATE,
                     '-f', 'mp3', 'pipe:1',
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE)
-                logger.info(f"Live bed up [{self.key}]: {self.path}")
+                logger.info(f"Live bed up [{self.key}] "
+                            f"({'loop' if self.loop else 'once'}): {self.path}")
                 last_skip_report = 0.0
                 while True:
                     chunk = await proc.stdout.read(CHUNK)
@@ -126,6 +130,18 @@ class _Channel:
                         for c in self.clients:
                             c.skips = 0
                 stderr = (await proc.stderr.read()).decode(errors='replace')[:300]
+                if not self.loop:
+                    # Once-mode: the file simply ended. Close every listener
+                    # (their once_pad_s tail goes quiet, matching the offset
+                    # path) and tombstone the channel until the next window
+                    # dispatches a fresh key.
+                    self.finished = True
+                    for client in list(self.clients):
+                        client.close()
+                    self.clients.clear()
+                    self.idle_since = time.monotonic()
+                    logger.info(f"Live bed [{self.key}] finished (once mode)")
+                    return
                 logger.warning(f"Live bed [{self.key}] encoder ended: {stderr}")
             except asyncio.CancelledError:
                 raise
@@ -167,15 +183,17 @@ class LiveAudioHub:
         self._reaper = None
 
     @staticmethod
-    def key_for(path):
-        return hashlib.sha1(path.encode()).hexdigest()[:16]
+    def key_for(path, loop):
+        return hashlib.sha1(f"{'L' if loop else 'O'}:{path}".encode()).hexdigest()[:16]
 
-    def ensure(self, path):
+    def ensure(self, path, loop=True):
         """Start (or keep) the live channel for `path`; returns its key."""
-        key = self.key_for(path)
+        key = self.key_for(path, loop)
         channel = self.channels.get(key)
+        # A finished once-channel (task done) is replaced too: the rotation
+        # re-picking the same file must play it again, not hit the tombstone.
         if channel is None or channel.task.done():
-            self.channels[key] = _Channel(key, path)
+            self.channels[key] = _Channel(key, path, loop)
         else:
             channel.idle_since = time.monotonic()
         if self._reaper is None or self._reaper.done():
@@ -185,7 +203,7 @@ class LiveAudioHub:
     def open(self, key):
         """Attach a listener. Returns (queue, close_fn) or None."""
         channel = self.channels.get(key)
-        if channel is None or channel.task.done():
+        if channel is None or channel.finished or channel.task.done():
             return None
         client = channel.open()
         return client.queue, (lambda: channel.drop(client))

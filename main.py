@@ -262,13 +262,13 @@ def _resolve_audio_file(requested):
     return path
 
 
-def _node_live_url(node_file):
+def _node_live_url(node_file, loop):
     """live_url_provider for node_audio_manager: shared realtime broadcast
-    (live_audio.py) so looping beds play the same edge on every box."""
+    (live_audio.py) so beds play the same edge on every box."""
     path = _resolve_audio_file(node_file)
     if path is None:
         return None
-    key = live_audio_hub.ensure(path)
+    key = live_audio_hub.ensure(path, loop=loop)
     return (f"http://{node_audio_manager.server_host}:"
             f"{node_audio_manager.server_port}/api/audio/live/{key}.mp3")
 
