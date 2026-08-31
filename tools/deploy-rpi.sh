@@ -21,6 +21,7 @@ rsync -az --delete --info=stats1 -e "ssh ${SSH_OPTS[*]}" \
     --exclude sim/esphome/.venv --exclude sim/esphome/rooms/.esphome \
     --filter 'protect /photos/***' --exclude /photos \
     --filter 'protect /data/***' --exclude /data \
+    --filter 'protect /audio_files/generated/***' --exclude /audio_files/generated \
     --filter 'protect /.floor_theme' --filter 'protect /.projector-manual' \
     ./ "root@$HOST:$DEST/"
 

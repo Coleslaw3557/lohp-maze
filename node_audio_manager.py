@@ -275,6 +275,10 @@ class NodeAudioManager:
     def __init__(self, audio_manager=None, config_file='node_audio_config.json',
                  conn_factory=None):
         self.audio_manager = audio_manager
+        # Wired by main.py: node_file -> live broadcast URL (live_audio.py).
+        # Looping beds dispatch the shared live stream so every box plays the
+        # SAME edge (Tim 2026-08-31: same background = played together).
+        self.live_url_provider = None
         self.server_host = None
         self.server_port = 5000
         self.rooms = {}          # room name (lower) -> _NodeConn
@@ -406,7 +410,27 @@ class NodeAudioManager:
             offset = min(offset, max(0.0, duration_s - 0.5))
         return offset
 
+    def _live_url(self, data):
+        """Live broadcast URL for a LOOPING bed, else None. Gate on the
+        LOGICAL loop flag: maze beds ship node_loop=False because their node
+        file is pre-looped 32x (audio_manager), but they are still repeating
+        multi-room beds — the ones that must play the same edge everywhere.
+        Once-through windows (loop falsy both ways) keep the offset path so
+        their once_pad_s tail still goes quiet (a live channel never ends)."""
+        if self.live_url_provider is None:
+            return None
+        if not (data.get('loop') or self._node_loop(data)):
+            return None
+        try:
+            return self.live_url_provider(self._node_file(data))
+        except Exception as e:
+            logger.error(f"Live bed URL failed for {self._node_file(data)}: {e}")
+            return None
+
     def _maze_audio_url(self, data):
+        url = self._live_url(data)
+        if url is not None:
+            return url
         return self.audio_url(self._node_file(data), offset_s=self._maze_offset_s(data))
 
     def handle_command(self, room, command, data):
@@ -463,6 +487,12 @@ class NodeAudioManager:
             # the bed streams through once instead of looping.
             conn.bed_active = True
             self._cancel_repeat(conn)
+            live = self._live_url(data)
+            if live is not None:
+                # Looping room bed rides the shared live broadcast: rooms on
+                # the same file play the same edge, and the stream never ends
+                # so the no-repeat caveat below is moot.
+                return conn.play_url(live, volume=self._bed_volume(data))
             node_file = self._node_file(data)
             if self._node_loop(data):
                 logger.warning(f"Node audio [{conn.room}]: ambience "
@@ -569,6 +599,8 @@ class NodeAudioManager:
 
     def _arm_maze_repeat(self, conn, data):
         self._cancel_repeat(conn)
+        if self._live_url(data) is not None:
+            return  # the live broadcast loops server-side — nothing to re-kick
         if not data.get('loop'):
             return
         if not self._node_loop(data):

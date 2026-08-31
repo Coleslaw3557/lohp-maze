@@ -21,6 +21,7 @@ from effects_manager import EffectsManager
 from remote_host_manager import RemoteHostManager
 from audio_manager import AudioManager, SOUND_MODES
 from node_audio_manager import NodeAudioManager
+from live_audio import LiveAudioHub
 from floor_show_manager import FloorShowManager, read_saved_theme
 from room_background_manager import RoomBackgroundManager
 from maze_ambient_manager import MazeAmbientManager
@@ -242,6 +243,37 @@ elif artnet_output_manager is None:
 light_config = LightConfigManager()
 audio_manager = AudioManager()
 node_audio_manager = NodeAudioManager(audio_manager=audio_manager)
+live_audio_hub = LiveAudioHub()
+
+
+def _resolve_audio_file(requested):
+    """Path under audio_files/ for a bed's relative file name (same
+    resolution serve_audio applies), or None."""
+    audio_root = os.path.abspath(os.path.join(os.path.dirname(__file__), 'audio_files'))
+    if (os.path.basename(requested) == requested
+            and not os.path.exists(os.path.join(audio_root, requested))):
+        matches = glob.glob(os.path.join(audio_root, '**', os.path.basename(requested)),
+                            recursive=True)
+        if matches:
+            requested = os.path.relpath(matches[0], audio_root)
+    path = os.path.abspath(os.path.join(audio_root, requested))
+    if os.path.commonpath([audio_root, path]) != audio_root or not os.path.exists(path):
+        return None
+    return path
+
+
+def _node_live_url(node_file):
+    """live_url_provider for node_audio_manager: shared realtime broadcast
+    (live_audio.py) so looping beds play the same edge on every box."""
+    path = _resolve_audio_file(node_file)
+    if path is None:
+        return None
+    key = live_audio_hub.ensure(path)
+    return (f"http://{node_audio_manager.server_host}:"
+            f"{node_audio_manager.server_port}/api/audio/live/{key}.mp3")
+
+
+node_audio_manager.live_url_provider = _node_live_url
 remote_host_manager = RemoteHostManager(audio_manager=audio_manager, node_audio=node_audio_manager)
 effects_manager = EffectsManager(light_config, dmx_state_manager, remote_host_manager, audio_manager)
 camera_manager = CameraManager()
@@ -1747,6 +1779,28 @@ async def serve_photobomb_photo(filename):
 async def health():
     """Liveness for deploy scripts and the sim's RPI status dot."""
     return jsonify({"status": "ok", "service": "lohp-server"})
+
+
+@app.route('/api/audio/live/<key>')
+async def serve_live_audio(key):
+    """One shared realtime MP3 per bed (live_audio.py): every node on this
+    URL hears the same live edge — the sync mechanism for looping beds."""
+    opened = live_audio_hub.open(key.removesuffix('.mp3'))
+    if opened is None:
+        return jsonify({"status": "error", "message": "no such live bed"}), 404
+    queue, close = opened
+
+    async def chunks():
+        try:
+            while True:
+                chunk = await queue.get()
+                if chunk is None:
+                    break
+                yield chunk
+        finally:
+            close()
+
+    return Response(chunks(), mimetype='audio/mpeg')
 
 
 @app.route('/api/audio/<path:filename>')
