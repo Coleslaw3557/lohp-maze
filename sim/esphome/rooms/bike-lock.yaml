@@ -48,6 +48,7 @@ packages:
   game_hw: !include ../packages/game_bike_hw.yaml
   dmx: !include ../packages/dmx_out.yaml
   audio: !include ../packages/audio_s3.yaml
+  victory_bank: !include victory/victory-bike-lock-room.yaml
   platform: !include ../packages/hardware_s3.yaml
 
 external_components:   # for dmx_out.yaml — path is main-config-relative

@@ -98,6 +98,11 @@ class _NodeConn:
         self.lock = asyncio.Lock()
         self.client = None
         self.media_key = None
+        # Victory cues baked into the box's flash (make_victory_bank.py):
+        # api actions named cue_<cue_id>, discovered from the service list at
+        # connect. play_effect_audio prefers these — the win lands instantly
+        # instead of paying an HTTP fetch over playa RF.
+        self.cue_services = {}
         self._fail_ts = 0.0
         # The room's own background bed owns the media pipeline while True:
         # maze-wide ambience commands must not touch it (beds share the
@@ -119,9 +124,14 @@ class _NodeConn:
             raise _BackingOff()
         client = APIClient(self.host, self.port, password='')
         await client.connect(login=True)
-        entities, _ = await client.list_entities_services()
+        entities, services = await client.list_entities_services()
         self.media_key = next((e.key for e in entities
                                if type(e).__name__ == 'MediaPlayerInfo'), None)
+        self.cue_services = {s.name: s for s in (services or [])
+                             if s.name.startswith('cue_')}
+        if self.cue_services:
+            logger.info(f"Node audio [{self.room}]: {len(self.cue_services)} "
+                        f"embedded victory cue(s)")
         try:
             client.subscribe_states(self._on_state)
         except Exception as e:
@@ -146,6 +156,7 @@ class _NodeConn:
     async def _drop(self):
         client, self.client = self.client, None
         self.media_key = None
+        self.cue_services = {}
         self.media_state = None
         self.media_state_at = 0.0
         if client is not None:
@@ -269,6 +280,16 @@ class _NodeConn:
                                                     command=MediaPlayerCommand.STOP,
                                                     announcement=announcement)
         return await self._run(f"stop(announcement={announcement})", call)
+
+    async def play_embedded_cue(self, service_name):
+        """Fire a victory cue baked into the box's flash (instant — no HTTP
+        fetch). Plays on the announcement pipeline like a streamed cue."""
+        def call():
+            service = self.cue_services.get(service_name)
+            if service is None:
+                raise RuntimeError(f"embedded cue vanished: {service_name}")
+            return self.client.execute_service(service, {})
+        return await self._run(f"embedded {service_name}", call)
 
 
 class NodeAudioManager:
@@ -471,6 +492,12 @@ class NodeAudioManager:
             if data.get('loop'):
                 logger.warning(f"Node audio [{conn.room}]: loop requested for "
                                f"{data.get('file_name')} — embedded cues don't loop")
+            # Victory bank first (make_victory_bank.py): if this exact cue is
+            # baked into the box's flash, fire it by service call — instant,
+            # no HTTP fetch. Same announcement pipeline, same baked volume.
+            service_name = f"cue_{cue_id(data['file_name'])}"
+            if service_name in conn.cue_services:
+                return conn.play_embedded_cue(service_name)
             # Cue WAVs are volume-baked by make_node_audio.py and play as
             # announcements: the mixer plays them over the bed and
             # recovers (audio_s3.yaml) — the media pipeline is NOT stopped, so

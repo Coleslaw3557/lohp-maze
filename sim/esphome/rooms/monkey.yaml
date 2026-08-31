@@ -30,6 +30,7 @@ packages:
   button_hw: !include ../packages/button_gpio_c3.example.yaml
   dmx: !include ../packages/dmx_out.yaml
   audio: !include ../packages/audio_s3.yaml
+  victory_bank: !include victory/victory-monkey-room.yaml
   platform: !include ../packages/hardware_s3.yaml
 
 external_components:   # for dmx_out.yaml — path is main-config-relative

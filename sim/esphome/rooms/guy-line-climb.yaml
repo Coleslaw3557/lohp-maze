@@ -41,6 +41,7 @@ packages:
   radar: !include ../packages/ld2410.yaml
   dmx: !include ../packages/dmx_out.yaml
   audio: !include ../packages/audio_s3.yaml
+  victory_bank: !include victory/victory-guy-line-climb.yaml
   platform: !include ../packages/hardware_s3.yaml
 
 external_components:   # for dmx_out.yaml — path is main-config-relative
