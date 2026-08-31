@@ -21,6 +21,7 @@ Run with the sim running: sim/.venv/bin/python sim/tools/concurrency_test.py [ho
 """
 import asyncio
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -55,7 +56,8 @@ async def post_bg(path, data):
 
 async def collect_frames(seconds, out):
     import websockets
-    async with websockets.connect(f'ws://{HOST}:5001/sim/dmx') as ws:
+    async with websockets.connect(
+            f"ws://{HOST}:{os.environ.get('SIM_UI_PORT', '5001')}/sim/dmx") as ws:
         try:
             async with asyncio.timeout(seconds):
                 while True:

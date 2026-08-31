@@ -397,6 +397,15 @@
    }
   ]
  },
+ "exterior_floods": {
+  "note": "The 3 ILC 80W BLE floods (room 'Exterior', @353-376, Fastcon bridge node .77 \u2014 sim/esphome/rooms/exterior.yaml) ground-staked on the street washing the front of the structure with the maze theme. NOT a maze_layout rooms entry: no scaffold bay exists \u2014 buildFixtures places these from `positions` (facing -z, near-flat throw) and skips the room-box math. Positions are placeholders until Tim stakes them for real; z sits between the maze face (2.02) and the towers (5.6).",
+  "room": "Exterior",
+  "positions": [
+   [4.5, 4.6],
+   [10.044, 4.8],
+   [15.5, 4.6]
+  ]
+ },
  "hex_center": {
   "note": "The center is a hexagon of SIX complete 5'W x 6'4\" walk-thru frames per level (12 total), hose-clamped in pairs at every corner \u2014 NO cross braces, no cut-down pieces. Side = 5ft (1.524m). A CORNER points at the street: the two angled street frames meeting at it are the split entry (START, east) and exit (FINISH, west) \u2014 each frame's walk-thru arch is one door, and the ground-floor Exit/Entrance divider runs front corner to back corner between them. The flat east/west frames' arches are the doorways the side rooms walk in through (the wings END at these flat frames \u2014 x=8.724 / x=11.364 \u2014 sharing them: one frame per junction, the wing bays\u2019 cross braces pin directly to the hex frames); the two back frames are skinned. Upper deck = Cuddle Cross.",
   "cx": 10.044,

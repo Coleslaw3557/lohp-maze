@@ -46,6 +46,10 @@ ROOM_LIGHT_PROFILES = {
     "Deep Playa Handshake": {"cap": 255, "rgb": (185, 35, 235), "mix": 0.32, "rate": 1.0},
     "Temple Room": {"cap": 255, "rgb": (35, 145, 130), "mix": 0.36, "rate": 0.58},
     "Exit": {"cap": 255, "rgb": (55, 215, 85), "mix": 0.3, "rate": 0.8},
+    # The 3 BLE floods washing the camp frontage (2026-08-31): ember-copper
+    # lens, slow rate — the bridge resends at ~4Hz so a stately breathe reads
+    # clean where a fast shimmer would stutter. Palette clamps apply as usual.
+    "Exterior": {"cap": 255, "rgb": (255, 80, 25), "mix": 0.5, "rate": 0.45},
 }
 
 # Attract mode: with nobody driving, the maze runs these slow dark looks on

@@ -400,6 +400,13 @@ def main():
                          'via the control port')
     ap.add_argument('--ctl-port', type=int, default=5002,
                     help='HTTP theme control port (GET/POST /theme); 0 disables')
+    ap.add_argument('--always-on', action='store_true',
+                    help='never let the show sleep: the floor plays with '
+                         'nobody on deck (the radar still steers what it '
+                         'plays at whoever walks in)')
+    ap.add_argument('--rotate-min', type=float, default=0.0,
+                    help='switch to the next theme every N minutes (0 = hold '
+                         'the current theme until told via the control port)')
     ap.add_argument('--source', choices=['demo', 'esphome'], default='demo')
     ap.add_argument('--node', default='', help='esphome: cuddle node host/IP, optionally host:port')
     ap.add_argument('--node-port', type=int, default=6053, help='esphome native API port')
@@ -458,6 +465,9 @@ def main():
     running = [True]
     signal.signal(signal.SIGTERM, lambda *_: running.__setitem__(0, False))
     interval = 1.0 / args.fps
+    current = boot
+    rotate_s = args.rotate_min * 60.0
+    next_rotate = time.monotonic() + rotate_s if rotate_s > 0 else None
     prev = time.monotonic()
     stat_t0, stat_n, stat_eng, stat_blit = prev, 0, 0.0, 0.0
     try:
@@ -466,17 +476,26 @@ def main():
             dt = min(now - prev, 0.25)
             prev = now
             want = ctl.take() if ctl else None
+            if want is None and next_rotate is not None and now >= next_rotate:
+                order = sorted(engines)
+                want = order[(order.index(current) + 1) % len(order)]
             if want and engines[want] is not engine:
                 if engine.active:
                     engines[want].cue('theme-switch')  # carry the running show
                 engine = engines[want]
-                ctl.current = want
+                current = want
+                if ctl:
+                    ctl.current = want
                 print(f"theme -> {want}", flush=True)
                 try:
                     with open(state_file, 'w') as f:
                         f.write(want)
                 except OSError:
                     pass
+            if want and next_rotate is not None:
+                next_rotate = now + rotate_s  # manual switches restart the clock
+            if args.always_on:
+                engine.cue('always-on')
             tracks = source.tracks(dt, engine)
             if args.source == 'esphome':
                 # Production guard: the LD2450 may report clutter outside the
@@ -501,7 +520,7 @@ def main():
                 print(f"fps {stat_n / (t_end - stat_t0):.1f} "
                       f"(engine {stat_eng / stat_n * 1000:.0f} ms, "
                       f"blit {stat_blit / stat_n * 1000:.0f} ms, "
-                      f"theme {ctl.current if ctl else args.theme})", flush=True)
+                      f"theme {current})", flush=True)
                 stat_t0, stat_n, stat_eng, stat_blit = t_end, 0, 0.0, 0.0
             time.sleep(max(0.0, interval - (time.monotonic() - now)))
     except KeyboardInterrupt:

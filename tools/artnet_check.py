@@ -61,7 +61,7 @@ def selftest():
         s.settimeout(2.0)
         listeners.append(s)
 
-    state = DMXStateManager(44, 8)
+    state = DMXStateManager(47, 8)
     targets = [_Target(f'test{i}', '127.0.0.1', s.getsockname()[1])
                for i, s in enumerate(listeners)]
     mgr = ArtNetOutputManager(state, targets, universe=0)

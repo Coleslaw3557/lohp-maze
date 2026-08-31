@@ -23,12 +23,15 @@ from effect_utils import YELLOW_ARC  # noqa: E402 — the one definition of the 
 
 HOST = sys.argv[1] if len(sys.argv) > 1 else 'localhost'
 API = f'http://{HOST}:5000'
+# on-playa the calibration server squats 5001, so the sim moves: honor its env
+SIM_UI_PORT = os.environ.get('SIM_UI_PORT', '5001')
 ATTRACT_SET = {'DeepCanopy', 'EmberUndercroft', 'CenoteDrift',
                'UltravioletVines', 'MoonlitStone', 'RitualAurora'}
 # room -> (first fixture start address, profile cap) from theme_manager.ROOM_LIGHT_PROFILES
-PROFILED = {'Entrance': (1, 170), 'Cop Dodge': (9, 175), 'Guy Line Climb': (25, 150),
-            'Cuddle Cross': (57, 48), 'Deep Playa Handshake': (97, 175),
-            'Temple Room': (113, 155)}
+# caps 255 since the 2026-08-31 live-night full-brightness raise (a915f06)
+PROFILED = {'Entrance': (1, 255), 'Cop Dodge': (9, 255), 'Guy Line Climb': (25, 255),
+            'Cuddle Cross': (57, 255), 'Deep Playa Handshake': (97, 255),
+            'Temple Room': (113, 255)}
 FAILS = []
 
 
@@ -52,7 +55,7 @@ def get(path):
 
 async def collect(seconds, frames):
     import websockets
-    async with websockets.connect(f'ws://{HOST}:5001/sim/dmx') as ws:
+    async with websockets.connect(f'ws://{HOST}:{SIM_UI_PORT}/sim/dmx') as ws:
         try:
             async with asyncio.timeout(seconds):
                 while True:
@@ -96,9 +99,14 @@ async def main():
     yellow = []
 
     def scan_yellow(frames, when):
+        # the 20 maze pars + the 3 Exterior BLE floods (353-376); the Camp
+        # Sign band between them wears its own bridge-side looks and is
+        # palette-exempt, so it stays out of the sweep
         for frame in frames:
-            for addr in range(1, 161, 8):        # the 20 maze pars
+            for addr in [*range(1, 161, 8), *range(353, 377, 8)]:
                 base = addr - 1
+                if base + 3 >= len(frame):
+                    continue
                 tot, r, g, b = (frame[base], frame[base + 1],
                                 frame[base + 2], frame[base + 3])
                 if tot < 20 or max(r, g, b) < 20:

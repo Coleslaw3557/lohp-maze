@@ -35,6 +35,18 @@
                 "total_strobe": 5
             },
             "type": "RGB"
+        },
+        "ILC 80W BLE Flood - via ESP32 Fastcon bridge": {
+            "_comment": "One ILC 80W RGBW flood (BRmesh/Broadlink Fastcon BLE mesh, no wire). Not a DMX fixture - the Exterior node (sim/esphome/rooms/exterior.yaml) receives the unicast universe and re-broadcasts each 8ch slot as Fastcon BLE advertisements. Same decode as the sign zones (colour + 0.92*w, total_dimming as brightness, total_strobe>5 gates but clamped ~2Hz - BLE moves ~16 cmd/s total, so fades land at ~4Hz per flood and strobes read as slow flashes, never DMX-crisp). Byte layout matches the ZQ01424 par so raw effect frames land identically; bytes 6-7 ignored.",
+            "channels": {
+                "total_dimming": 0,
+                "r_dimming": 1,
+                "g_dimming": 2,
+                "b_dimming": 3,
+                "w_dimming": 4,
+                "total_strobe": 5
+            },
+            "type": "RGB"
         }
     },
     "room_layout": {
@@ -93,6 +105,11 @@
             {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 329},
             {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 337},
             {"model": "Camp Sign Zone - WS2811 via ESP32 DMX bridge", "start_address": 345}
+        ],
+        "Exterior": [
+            {"model": "ILC 80W BLE Flood - via ESP32 Fastcon bridge", "start_address": 353},
+            {"model": "ILC 80W BLE Flood - via ESP32 Fastcon bridge", "start_address": 361},
+            {"model": "ILC 80W BLE Flood - via ESP32 Fastcon bridge", "start_address": 369}
         ]
     }
 }

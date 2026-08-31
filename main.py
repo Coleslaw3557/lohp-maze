@@ -35,10 +35,11 @@ from photobooth import PhotoBoothSession
 # Configuration
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 # ids 0-19: the 20 maze pars/spots (ch 1-160); ids 20-43: the 24 Camp Sign
-# letter/logo zones (ch 161-352, ESP32 bridge out front). This one constant
+# letter/logo zones (ch 161-352, ESP32 bridge out front); ids 44-46: the 3
+# Exterior BLE floods (ch 353-376, Fastcon bridge). This one constant
 # sizes the DMX state, the FTDI frame, the Art-Net payload the room nodes
 # receive (zero-padded to 512 on the wire) and the sim's virtual universe.
-NUM_FIXTURES = 44
+NUM_FIXTURES = 47
 CHANNELS_PER_FIXTURE = 8
 # The camp sign's arcade storm button (wiring-guides/camp-sign-plan.md):
 # every accepted press = Lightning + its thunder in every room and on every

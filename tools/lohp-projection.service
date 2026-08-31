@@ -1,12 +1,12 @@
 [Unit]
-Description=LOHP Cuddle floor projection (LS625X via HDMI framebuffer; themes lava/jungle/temple, live switch on :5002/theme)
+Description=LOHP Cuddle floor projection (LS625X via HDMI framebuffer; always-on show, all themes on a 10-min rotation, live switch on :5002/theme)
 After=multi-user.target
 
 [Service]
 # unbind fbcon so the console doesn't draw text/cursor over the show;
 # rebound on stop so a stopped service leaves a usable console
 ExecStartPre=/bin/sh -c 'for v in /sys/class/vtconsole/vtcon*; do grep -q frame "$v/name" && echo 0 > "$v/bind"; done; exit 0'
-ExecStart=/opt/lohp-projection-venv/bin/python /home/dietpi/lohp-server/projection_renderer.py --source esphome --node 192.168.252.67 --node-port 6067 --theme jungle --grid 192 --fps 20
+ExecStart=/opt/lohp-projection-venv/bin/python /home/dietpi/lohp-server/projection_renderer.py --source esphome --node 192.168.252.67 --node-port 6067 --theme jungle --grid 192 --fps 20 --always-on --rotate-min 10
 ExecStopPost=/bin/sh -c 'for v in /sys/class/vtconsole/vtcon*; do grep -q frame "$v/name" && echo 1 > "$v/bind"; done; exit 0'
 WorkingDirectory=/home/dietpi/lohp-server
 Restart=always

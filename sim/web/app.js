@@ -25,7 +25,7 @@ const EYE = 1.69;
 
 const S = {
   cfg: null,
-  frame: new Uint8Array(352),
+  frame: new Uint8Array(376),
   seq: -1,
   levelHeight: 3.2,
   fixtures: [],            // {room, addr, channels, level, light, lens, cone, cell}
@@ -1738,12 +1738,16 @@ function fixtureLevel(cfgRoom, posEntry) {
 function buildFixtures(cfg) {
   const grid = $('fixture-grid');
   const signRoom = (cfg.layout.camp_sign || {}).room;
+  const extRoom = (cfg.layout.exterior_floods || {}).room;
   for (const [room, lights] of Object.entries(cfg.room_layout)) {
     if (room === signRoom) continue; // letter zones render via buildCampSign, not as pars
     const layoutRoom = cfg.layout.rooms[room];
+    const isExt = room === extRoom; // BLE floods: ground-staked on the street, no room box
     lights.forEach((f, i) => {
       let x, z, posEntry = null;
-      if (layoutRoom && layoutRoom.fixture_positions && layoutRoom.fixture_positions[i]) {
+      if (isExt) {
+        [x, z] = ((cfg.layout.exterior_floods.positions || [])[i]) || [9 + i * 2, 3.6];
+      } else if (layoutRoom && layoutRoom.fixture_positions && layoutRoom.fixture_positions[i]) {
         posEntry = layoutRoom.fixture_positions[i];
         [x, z] = posEntry;
       } else if (layoutRoom) {
@@ -1777,6 +1781,14 @@ function buildFixtures(cfg) {
       const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.16), metal);
       bracket.position.set(0, mountY, -0.08);
       g.add(bracket);
+      if (isExt) {
+        // ground-staked flood washing the street face: low mount, near-flat
+        // throw back toward the structure instead of a ceiling down-tilt
+        head.position.y = 0.3;
+        head.rotation.y = Math.PI;   // face -z (the maze front)
+        head.rotation.x = -1.25;     // ~72° up from the down-pointing default
+        bracket.position.set(0, 0.1, 0.07);
+      }
       const yoke = new THREE.Mesh(new THREE.BoxGeometry(isSpot ? 0.12 : 0.22, 0.02, 0.03), metal);
       yoke.position.y = 0.02;
       head.add(yoke);
@@ -4335,7 +4347,7 @@ async function boot() {
   S.cfg = cfg;
   API = `http://${HOST}:${cfg.ports.api}`;
   AUDIO_WS = `ws://${HOST}:${cfg.ports.audio_ws}`;
-  S.frame = new Uint8Array(cfg.num_channels || 352);
+  S.frame = new Uint8Array(cfg.num_channels || 376);
 
   buildMaze(cfg);
   buildFixtures(cfg);

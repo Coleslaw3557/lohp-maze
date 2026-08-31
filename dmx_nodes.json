@@ -19,6 +19,7 @@
     "Monkey Room":          {"host": "192.168.252.72",                       "enabled": true, "hardware": true},
     "Bike Lock Room":       {"host": "192.168.252.73",                       "enabled": true, "hardware": true},
     "Vertical Moop March":  {"host": "192.168.252.74",                       "enabled": true, "hardware": true},
-    "Camp Sign":            {"host": "192.168.252.76",                       "enabled": true, "hardware": true}
+    "Camp Sign":            {"host": "192.168.252.76",                       "enabled": true, "hardware": true},
+    "Exterior":             {"host": "192.168.252.77",                       "enabled": true, "hardware": true}
   }
 }
