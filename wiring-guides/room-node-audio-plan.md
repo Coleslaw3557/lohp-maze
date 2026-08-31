@@ -361,3 +361,20 @@ Consolidations checked against every sensor in the maze; what stays and why:
   decides whether S3s are an add or a swap.
 - Which rooms are the ~5 no-mains (bank) rooms — those get the recharge
   rotation.
+
+## 2026-08-31: synchronized beds + victory banks (on-playa revision)
+
+Two changes to the streaming story above:
+
+1. **Beds are a live broadcast now** (`live_audio.py`): one realtime ffmpeg
+   per bed file serves every node the SAME live edge via
+   `GET /api/audio/live/<key>.mp3`. Joiners (fresh dispatch, reconnect,
+   watchdog) land at *now*; a box that stalls on RF has its backlog dropped
+   and skips to the edge (brief mp3 resync garble, bounded skew) instead of
+   drifting. Loop beds get a forever channel; once-mode windows get a
+   channel that ends at file end, preserving the once_pad_s quiet tail.
+   The per-node `?offset_s=` path remains only as a fallback.
+2. **Victory cues live in flash** (`make_victory_bank.py` — see
+   room-node-bringup.md): the win effects fire by api service call,
+   instantly, with per-cue streaming fallback. This is a sanctioned
+   exception to nothing-stored-on-nodes for latency-critical wins only.

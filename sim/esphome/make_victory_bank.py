@@ -29,6 +29,13 @@ REPO = os.path.abspath(os.path.join(HERE, '..', '..'))
 sys.path.insert(0, REPO)
 from node_audio_manager import cue_id  # noqa: E402  (the id the server dispatches)
 
+# Keep every bank under this: the S3's OTA app slot is 1.8 MB and the base
+# room image runs ~1.0-1.1 MB. Cues are kept smallest-first until the budget
+# is spent; dropped cues still play via streaming (the server falls back
+# per-cue automatically), so a trimmed bank just means the biggest WAVs in
+# the pool arrive the old way.
+MAX_BANK_KB = 650
+
 # Room -> the effects whose audio pool is that room's victory bank.
 ROOM_VICTORY_EFFECTS = {
     'Bike Lock Room': ['BikeLockRoom', 'BikeLockRoom-RightAnswer'],
@@ -75,6 +82,16 @@ def main():
                 cues[cid] = os.path.getsize(wav)
         if not cues:
             continue
+        budget = MAX_BANK_KB * 1024
+        kept, spent = {}, 0
+        for cid in sorted(cues, key=cues.get):
+            if spent + cues[cid] > budget:
+                print(f"   {room}: {cid} ({cues[cid] // 1024} KB) over the "
+                      f"{MAX_BANK_KB} KB budget — stays streamed")
+                continue
+            kept[cid] = cues[cid]
+            spent += cues[cid]
+        cues = kept
         out = [HEADER.format(room=room, effects=', '.join(effect_names))]
         out.append("media_player:\n  - id: !extend room_audio\n    files:")
         for cid in sorted(cues):

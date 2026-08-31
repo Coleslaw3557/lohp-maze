@@ -188,3 +188,52 @@ Art-Net UDP can still look fine). Fix the extra AP, then retest.
 | Photo Bomb Room | 2026-08-23 | booth room on the standard S3 recipe (.68: LD2410C + shutter button on the D1 fleet contract / DB9-A pin 3 + DMX D5 + audio). Warm grabber production design: C930e supervised ffmpeg MJPEG passthrough to tmpfs, capture=file copy, frame ~0.25 s after press, flash 1.0 s, rolling window 5 shots/15 s, on-node snap WAV, server photo-landed cue lights-only. 2026-08-23 final pass: USB flashed latest build, rejoined `LOHP-ESP` as `.68`, ping/API smoke good, enclosure label + parts-can labels printed |
 | Deep Playa Handshake | 2026-08-23 | 5-button handshake game on the standard S3 recipe (.70: LD2410C + buttons D0-D4 via `game_dph_hw.yaml`, DB9-A pins 3-7 low-numbered convention + DMX D5 + audio). Game validated via serial + API; physical button closures at the pod = Tim's hands. 2026-08-23 final pass: USB flashed latest flat-mix build, rejoined `LOHP-ESP` as `.70`, ping/API smoke good, parts-can label printed |
 | Bike Lock Room | 2026-08-23 | quiz room on the standard S3 recipe (.73: LD2410C + 4 quiz buttons D0–D3 via **DB9-A pins 6–9** + DMX + audio; `game_bike_hw.yaml`). The box's first harness had a 5V short on 2026-08-21; bare-board self-test passed and Tim's rewire fixed it. 2026-08-23 final pass: USB flashed latest flat-mix build to MAC `68:EE:8F:50:B9:AC`, RUT lease/reservation `.73`, ping 3/3, node audio connected, DMX signal true, RSSI -46, API vacate/trip/wrong/correct smokes reached the server (`BikeLock-Entry`, `WrongAnswer`, `BikeLockRoom`), cue audio fetched, parts-can label printed |
+
+## On-playa addenda (2026-08-31)
+
+- **Field OTA over the reverse tunnel** (dev box at home, Pi on playa):
+  ```
+  ssh -f -N -o ExitOnForwardFailure=yes \
+      -L 3232:192.168.252.<node>:3232 -p 2222 dietpi@localhost
+  cd sim/esphome && .venv/bin/esphome upload rooms/<room>.yaml --device 127.0.0.1
+  ```
+  ~70-95 s for a ~1.5 MB image at good RSSI. **An OTA will not survive a
+  box weaker than about −75 dBm** — nudge the box/antenna first (watch live
+  RSSI on the calibration page) or use USB. A failed transfer is safe: the
+  node keeps its old firmware.
+- **Sensor calibration phone page**: `http://192.168.252.231:5001/calibrate`
+  from LOHP-ESP — live radar tiles + gate tuning + labelled walk-test
+  captures. Runs on the dev box (`tools/calibrate/run-calibrate.sh`), NOT
+  the Pi; captures land in dev-box `data/calibration/`. Tuning writes die
+  with a node reboot until baked into the room YAML substitutions.
+
+## Victory cue banks (2026-08-31)
+
+Victory sounds must be instant (Tim), so each game room's victory pool is
+baked into its flash — the ONLY audio stored on nodes beside the Photo Bomb
+snap; music/beds stay streamed (they ride the live broadcast,
+`live_audio.py`).
+
+- `sim/esphome/make_victory_bank.py` generates
+  `rooms/victory/victory-<room>.yaml` from `audio_config.json`
+  (the -RightAnswer pools + named wins; 650 KB budget per room, oversized
+  cues stay streamed). Each room yaml includes its bank in `packages:`.
+- The node exposes one `cue_<cue_id>` api action per embedded WAV; the
+  server discovers them at connect (`N embedded victory cue(s)` in the log)
+  and prefers them in `play_effect_audio`. **Un-flashed boxes stream as
+  before — rollout is safe per room.**
+- After ANY sound-pool or effect_level change the chain is:
+  `make_node_audio.py` → `make_victory_bank.py` → rebuild + OTA the room.
+- Flashed so far: Photo Bomb, Bike Lock (2026-08-31); banks generated for
+  Gate, Guy Line, Porto, Sparkle Pony (trimmed), Monkey, VMM.
+
+### Pi-local OTA (when the tunnel path can't hold a transfer)
+
+`tools/pi-ota/` is a dependency-free OTA pusher for the Pi (espota2.py from
+esphome 2026.7.0 + stdlib shims — pip over camp WiFi times out):
+`python3 tools/pi-ota/runner.py 192.168.252.<node> <ota-password> <fw.ota.bin>`
+with the .ota.bin scp'd from `sim/esphome/rooms/.esphome/build/<node>/build/`.
+LAN-local removes the internet legs, but a box weaker than ~-66 dBm still
+fails mid-transfer — 2026-08-31 an RSSI-gated overnight watcher on the Pi
+(`~/ota/watch.sh`, not in the repo: embeds credentials) retried the
+stragglers whenever their signal crossed that line.

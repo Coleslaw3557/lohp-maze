@@ -15,7 +15,7 @@ Upstream Wi-Fi (house/camp)
       │  (wlan0 STA, DHCP — internet for the Pi only)
 Raspberry Pi  eth0(br0) ── ethernet ── RUT LAN port
                                         │ LAN 192.168.252.1/24
-                              RUT140 radio = LOHP-ESP AP, ch 6
+                              RUT140 radio = LOHP-ESP AP, ch 1 (ch 6 until 2026-08-31)
                                         │
                               ESP32 nodes, orb, sign bridge, laptops
 ```
@@ -82,11 +82,16 @@ reflashed node ever loops on auth, kick it on the RUT:
 `ubus call hostapd.wlan0-1 del_client '{"addr":"<mac>","deauth":true}'`
 (or WebUI → Wireless → clients).
 
-## RUT140 (FW `RUT14X_R_00.07.20.3`)
+## RUT140 (FW `RUT14X_R_00.07.24.1`)
+
+FW self-updated from 07.20.3 and broke the radio (2026-08-31 incident,
+bottom of this doc) — treat any future firmware jump as a config audit.
 
 - LAN `192.168.252.1/24`; internal AP `wireless.default_radio0` **ENABLED
-  since 2026-08-21** — SSID `LOHP-ESP`, psk2/CCMP, channel 6, network=lan,
-  MT7628 radio (rated 50 clients). This is THE maze AP now.
+  since 2026-08-21** — SSID `LOHP-ESP`, psk2/CCMP, **channel 1 since
+  2026-08-31** (ch 6 carried three camp APs + splatter from networks parked
+  on ch 8/9; playa band census + survey math in the incident section),
+  network=lan, MT7628 radio (rated 50 clients). This is THE maze AP now.
   - ⚠ The 2026-08-17 dual-AP gotcha is **inverted**: two same-SSID APs a
     meter apart = node roam blackouts that eat POSTs and kill ambience
     streams. The AP that must stay OFF is now the **Pi's hostapd**
@@ -94,9 +99,15 @@ reflashed node ever loops on auth, kick it on the RUT:
     `systemctl is-active hostapd` on the Pi must say `inactive`, and
     `iwinfo` on the RUT should be the only `LOHP-ESP`.
 - WiFi-WAN (**`wireless.multiap_radio0`**, Multi AP station to the
-  upstream) **disabled 2026-08-21** — upstream internet moved to the Pi's
-  own radio; the RUT radio is a pure AP. Re-enable it only if the maze LAN
-  itself ever needs internet again (`uci set
+  upstream) **disabled 2026-08-21, re-disabled 2026-08-31** — upstream
+  internet moved to the Pi's own radio; the RUT radio is a pure AP.
+  ⚠ **The 07.24.1 firmware update silently re-enabled this.** With no
+  matching upstream SSID in range, wpa_supplicant scan-storms (1/s,
+  `SCAN-FAILED ret=-16`) and drags the single radio off-channel — LOHP-ESP
+  effectively stops beaconing and the whole node fleet flaps. **After any
+  RUT firmware update, check `uci get wireless.multiap_radio0.disabled`
+  is `1` before debugging anything else.** Re-enable it only if the maze
+  LAN itself ever needs internet again (`uci set
   wireless.multiap_radio0.disabled=0; uci commit wireless; wifi`) — and
   expect the AP to hop to the upstream's channel while both roles share
   the radio.
@@ -163,3 +174,43 @@ running on shared camp WiFi.
   the only `LOHP-ESP`, Pi `hostapd` is stopped+disabled, Pi `wlan0` is the
   upstream client, and Pi `eth0`/`br0` has the `192.168.252.231` reservation.
 - No RUT rollback archive exists — the temporary rollback files were deleted.
+
+## On-playa incident + retune, 2026-08-30/31
+
+Symptom: fleet-wide node flapping ("rooms going up/down"), beds staggering,
+boxes unreachable — while every box was powered. Two stacked RUT faults plus
+a congested channel, all diagnosed over the reverse tunnel:
+
+1. **WiFi-WAN scan storm** (root cause): the 07.20.3→07.24.1 firmware
+   update re-enabled `wireless.multiap_radio0`; with the home upstream SSID
+   absent, wpa_supplicant scanned once per second (`SCAN-FAILED ret=-16`)
+   and the AP stopped beaconing — LOHP-ESP was absent from a band scan taken
+   from the Pi at the same rack. Fix: disable + commit + reboot (see the
+   WiFi-WAN bullet above).
+2. **`logread -f` CPU spin**: this build busy-loops the log follower at
+   ~90% CPU (0% idle) on every boot, even with zero log traffic. Syslog is
+   now **disabled persistently** (`/etc/init.d/log disable`). Re-enable only
+   while actively debugging, and expect the spin while it runs.
+3. **Channel 6 → 1** (`uci set wireless.radio0.channel=1`): ch 6 carried
+   three camp APs co-channel plus edge splatter from networks parked on
+   ch 8/9; ch 11 holds the camp uplink and 7 APs. Settled-window survey on
+   ch 1: ~55% airtime busy = our own TX 21% (Art-Net + beds) + foreign 34%.
+   Nodes follow the SSID across channels on their own within ~95 s.
+   The AP **cannot scan while serving** (`iwinfo scan` → "Scanning not
+   possible") — census from the Pi: `iw dev wlan0 scan flush`. The honest
+   congestion number is a survey DELTA over a timed window
+   (`iw dev wlan0-1 survey dump`, busy−transmit), not the boot-cumulative
+   counters.
+
+Also changed on-playa:
+
+- Pi sshd: `GatewayPorts clientspecified` (2026-08-30) so the dev box can
+  publish the calibration phone page on `192.168.252.231:5001` through the
+  reverse tunnel (`tools/calibrate/run-calibrate.sh`).
+- Field access: the Pi reverse-tunnels to the dev box —
+  `ssh -p 2222 dietpi@localhost` from there; deploys via
+  `SSH_PORT=2222 tools/deploy-rpi.sh localhost`. RUT admin from the Pi:
+  `sshpass -p '<see maze-network-credentials.md>' ssh root@192.168.252.1`.
+- Node keepalive timeouts relaxed for playa RTTs (node_audio_manager:
+  probe 8 s, connect 10 s) — 300–500 ms lossy RTTs are normal here and the
+  old 3 s probe turned them into constant connection flapping.

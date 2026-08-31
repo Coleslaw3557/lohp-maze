@@ -501,7 +501,8 @@ Useful analytics endpoints:
 | POST | `/api/update_theme_value` | Live-tune the running theme. Body: `{"control_id": "color-variation", "value": 0.5}`. Control IDs read by themes: `transition-speed`, `color-variation`, `intensity-fluctuation`, `color-wheel-speed`, `wave-effect` (unknown IDs are accepted and stored but never read) |
 | GET | `/api/light_fixtures` | Plain-text fixture listing (ROBCO terminal style) |
 | GET | `/api/audio_files_to_download` | Lists configured effect/ambience audio files clients should cache |
-| GET | `/api/audio/<filename>` | Serves an audio file. ESP node ambience may include `?offset_s=<seconds>`; the server streams from that position so nodes can rejoin a shared maze-bed clock. |
+| GET | `/api/audio/<filename>` | Serves an audio file. ESP node ambience may include `?offset_s=<seconds>`; the server streams from that position (fallback path since 2026-08-31 — beds normally ride the live broadcast below). |
+| GET | `/api/audio/live/<key>.mp3` | Shared realtime bed broadcast (live_audio.py, 2026-08-31): ONE ffmpeg per bed, every node hears the same live edge; laggards skip their backlog to the edge. Keys are per-bed, minted when a bed is dispatched; a stale key (server restart) returns 404 and the next dispatch replaces it. |
 | POST | `/api/reload_audio_config` | Re-reads `audio_config.json` without a restart, so pool edits from the audio console (`tools/audio_console.py`) go live. Returns `{"pools": {"<effect>": <file count>}}` |
 | GET | `/api/attract` | The maze's self-running look rotation: `enabled`, `dwell_s`, the dark `themes` cycle, `current_theme`, `next_change_in_s` |
 | POST | `/api/attract` | `{"on": bool, "dwell_s"?, "themes"?}` — attract survives manual `/api/set_theme` calls (they restart the dwell); after a theme stop the maze relights itself in ~3 min |

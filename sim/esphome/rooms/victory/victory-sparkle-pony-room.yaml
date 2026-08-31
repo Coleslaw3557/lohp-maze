@@ -9,8 +9,6 @@ media_player:
     files:
       - id: vic_02_excessive_sparkle_cascade
         file: ../../../audio_files/cues/02_excessive_sparkle_cascade.wav
-      - id: vic_04_glados_load_bearing_well_done
-        file: ../../../audio_files/cues/04_glados_load_bearing_well_done.wav
       - id: vic_06_glados_congratulations_worth_it
         file: ../../../audio_files/cues/06_glados_congratulations_worth_it.wav
       - id: vic_11_tf2_barely_a_challenge
@@ -19,8 +17,6 @@ media_player:
         file: ../../../audio_files/cues/12_tf2_well_done_mate.wav
       - id: vic_medieval_dooropenlower
         file: ../../../audio_files/cues/medieval_dooropenlower.wav
-      - id: vic_medieval_dooropenraise
-        file: ../../../audio_files/cues/medieval_dooropenraise.wav
 
 api:
   actions:
@@ -29,12 +25,6 @@ api:
         - media_player.speaker.play_on_device_media_file:
             id: room_audio
             media_file: vic_02_excessive_sparkle_cascade
-            announcement: true
-    - action: cue_04_glados_load_bearing_well_done
-      then:
-        - media_player.speaker.play_on_device_media_file:
-            id: room_audio
-            media_file: vic_04_glados_load_bearing_well_done
             announcement: true
     - action: cue_06_glados_congratulations_worth_it
       then:
@@ -59,10 +49,4 @@ api:
         - media_player.speaker.play_on_device_media_file:
             id: room_audio
             media_file: vic_medieval_dooropenlower
-            announcement: true
-    - action: cue_medieval_dooropenraise
-      then:
-        - media_player.speaker.play_on_device_media_file:
-            id: room_audio
-            media_file: vic_medieval_dooropenraise
             announcement: true

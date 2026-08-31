@@ -69,6 +69,12 @@ scans, -80..-96 dBm and endless WPA `Handshake Failed`/`Auth Expired`.
   shared entity volume stays at 1.0). Maze-wide ambience starts/resumes from
   server-generated `offset_s` URLs, so real ESP speakers follow the same bed
   clock instead of each restart beginning at zero.
+- `make_victory_bank.py` — generates `rooms/victory/victory-<room>.yaml`
+  flash banks (embedded victory-cue WAVs + one `cue_<id>` api action each,
+  650 KB/room budget) from `audio_config.json`. Run AFTER
+  `make_node_audio.py` (it embeds those baked WAVs), then rebuild + OTA the
+  room. The server auto-discovers the actions and falls back to streaming
+  on boxes without them (see wiring-guides/room-node-bringup.md).
 - `make_node_audio.py` — generates the server-side cue streams from
   `node_audio_config.json` + `audio_config.json`: `audio_files/cues/*.wav`
   (22.05kHz mono, the global `effect_level` baked in — per-effect volume
