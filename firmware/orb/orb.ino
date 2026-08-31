@@ -32,6 +32,7 @@
 #include <ArduinoOTA.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <WiFiUdp.h>
 #include <Wire.h>
 #include <esp_ota_ops.h>
 #include <math.h>
@@ -40,6 +41,15 @@
 #include "face_olmec.h"
 #include "menu_olmec.h"
 #include "secrets.h"
+#ifndef ORB_ENABLE_FASTCON
+#define ORB_ENABLE_FASTCON 1
+#endif
+#ifndef ORB_AUTO_PAIR_FASTCON
+#define ORB_AUTO_PAIR_FASTCON 0
+#endif
+#if ORB_ENABLE_FASTCON
+#include "fastcon.h"  // double duty: this orb is ALSO the Exterior flood bridge
+#endif
 
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
     LCD_QSPI_CS, LCD_QSPI_CLK, LCD_QSPI_D0, LCD_QSPI_D1, LCD_QSPI_D2, LCD_QSPI_D3);
@@ -178,6 +188,13 @@ uint32_t chargeAt = 0;         // press start, for hold-to-fire wedges
 uint32_t menuTouchAt = 0;      // last touch while the menu is up (idle timeout)
 float chargeDrawn = -1;        // last charge glow painted (skip tiny deltas)
 bool otaReady = false;
+bool bleInited = false;        // BLE flood bridge comes up after WiFi (coex)
+uint32_t wifiConnectedAt = 0;  // for the one-shot auto-pair of the floods
+uint32_t wifiLostAt = 0;
+bool autoPairDone = false;
+uint32_t k1DownAt = 0;         // K1 hold timer (manual re-pair)
+WiFiUDP orbControlUdp;
+bool orbControlUdpReady = false;
 int faceScene = olmec::SCENE_MOSS;
 uint32_t nextSceneAt = 0;
 int uiPage = 0; // 0 face, then operator pages
@@ -188,12 +205,14 @@ int touchStartX = 0, touchStartY = 0;
 uint32_t touchStartAt = 0;
 bool touchStarted = false;
 
+// The projector control page was removed 2026-08-31 (Tim: this puck is now the
+// Exterior flood bridge, not the projector remote — the Cuddle projector is
+// reconciler-managed server-side).
 static const char *const UI_PATHS[] = {
     "",
     "/api/orb/page/mode",
     "/api/orb/page/health",
     "/api/orb/page/maintenance",
-    "/api/orb/page/projector",
 };
 static const int UI_PAGE_COUNT = sizeof(UI_PATHS) / sizeof(UI_PATHS[0]);
 
@@ -467,12 +486,29 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.setHostname("lohp-orb");
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(false);
+  WiFi.setSleep(false);
+  // DHCP like every other node; the server reaches this bridge at the fixed
+  // .77 the Exterior room expects via a RUT DHCP RESERVATION on this MAC
+  // (in-firmware WiFi.config static IP wedged association on this board).
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.printf("[orb] wifi: connecting to %s\n", WIFI_SSID);
+
+  // NOTE: the BLE flood bridge (NimBLEDevice::init) comes up LATER, only once
+  // WiFi has associated — see loop(). Initializing BLE here (before assoc)
+  // starves the WiFi radio and the orb never finds the AP (coexistence).
+  pinMode(0, INPUT_PULLUP);  // K1 held ~2s = re-pair the floods
 }
 
 void loop() {
   uint32_t now = millis();
+#if ORB_ENABLE_FASTCON
+  // Flood bridge FIRST, every iteration (incl. the frame-pacing gate below):
+  // receives ArtDMX and services the non-blocking BLE advert state machine so
+  // the floods track the theme without ever stalling the face.
+  fastcon::floodsLoop(now);
+#endif
   if (now - lastFrame < 20) {
     delay(2);
     return;
@@ -483,22 +519,96 @@ void loop() {
   float t = (now - bootMs) / 1000.0f;
 
   static wl_status_t lastWifi = WL_IDLE_STATUS;
+  static uint32_t lastWifiReconnect = 0;
   wl_status_t ws = WiFi.status();
   if (ws != lastWifi) {
     lastWifi = ws;
     if (ws == WL_CONNECTED) {
       Serial.printf("[orb] wifi: connected, ip=%s\n", WiFi.localIP().toString().c_str());
+      wifiConnectedAt = now;
+      wifiLostAt = 0;
       if (!otaReady) {
         ArduinoOTA.setHostname("lohp-orb");
         ArduinoOTA.setPassword(OTA_PASSWORD);
         ArduinoOTA.begin();
         otaReady = true;
       }
+      if (!orbControlUdpReady) {
+        orbControlUdp.begin(7777);
+        orbControlUdpReady = true;
+        Serial.println("[orb] UDP control on :7777 (p pair, t test, d factory-test, s scan)");
+      }
+      // BLE comes up AFTER WiFi is associated (coexistence-safe order). Once.
+      if (!bleInited) {
+#if ORB_ENABLE_FASTCON
+        fastcon::floodsSetup(FASTCON_MESH_KEY_HEX);
+#endif
+        bleInited = true;
+      }
     } else {
       Serial.printf("[orb] wifi: status %d\n", ws);
     }
   }
+  if (ws != WL_CONNECTED && wifiConnectedAt && !wifiLostAt) wifiLostAt = now;
+  if (ws != WL_CONNECTED && now - lastWifiReconnect > 10000) {
+    lastWifiReconnect = now;
+    WiFi.reconnect();
+  }
+  if (wifiLostAt && now - wifiLostAt > 45000) {
+    Serial.println("[orb] wifi: down >45s after bridge start; rebooting");
+    delay(100);
+    ESP.restart();
+  }
   if (otaReady) ArduinoOTA.handle();
+
+#if ORB_ENABLE_FASTCON
+  auto handleFloodCommand = [](char c) {
+    if (!bleInited && (c == 'p' || c == 'P' || c == 't' || c == 'T' || c == 'd' || c == 'D')) {
+      fastcon::floodsSetup(FASTCON_MESH_KEY_HEX);
+      bleInited = true;
+    }
+    if (c == 'p' || c == 'P') fastcon::floodsStartPairing();
+    else if (c == 't' || c == 'T') fastcon::floodsTestPattern();
+    else if (c == 'd' || c == 'D') fastcon::floodsFactoryKeyTestPattern();
+    else if (c == 's' || c == 'S') fastcon::floodsScanDebug();
+  };
+  while (Serial.available()) {
+    handleFloodCommand((char)Serial.read());
+  }
+  if (orbControlUdpReady) {
+    uint8_t buf[16];
+    for (int i = 0; i < 4; i++) {
+      int n = orbControlUdp.parsePacket();
+      if (n <= 0) break;
+      int len = orbControlUdp.read(buf, sizeof(buf));
+      if (len > 0) {
+        Serial.printf("[orb] UDP control '%c' from %s\n", (char)buf[0],
+                      orbControlUdp.remoteIP().toString().c_str());
+        handleFloodCommand((char)buf[0]);
+      }
+    }
+  }
+#endif
+
+  // -- flood pairing triggers (both briefly block ~5s; the only time the face
+  // pauses). Auto once ~15s after WiFi adopts factory-fresh floods onto our
+  // mesh; K1 held ~2s re-pairs (e.g. after a flood factory-reset from a power
+  // flap). App-paired floods must be power-cycled 5x first. --
+  if (ORB_AUTO_PAIR_FASTCON && wifiConnectedAt && !autoPairDone && now - wifiConnectedAt > 15000) {
+    autoPairDone = true;
+#if ORB_ENABLE_FASTCON
+    fastcon::floodsStartPairing();
+#endif
+  }
+  bool k1 = digitalRead(0) == LOW;
+  if (k1 && !k1DownAt) k1DownAt = now;
+  else if (!k1) k1DownAt = 0;
+  if (k1DownAt && now - k1DownAt > 2000) {
+    k1DownAt = 0;
+#if ORB_ENABLE_FASTCON
+    fastcon::floodsStartPairing();
+#endif
+  }
 
   // -- touch gestures --
   if (touchPoll(touch) && !haveTouch) {
@@ -537,9 +647,7 @@ void loop() {
           uiDirty = true;
           loadOperatorPage(true);
         } else if (uiPage == 3) {
-          fireOperatorAction(touchStartY < LCD_H / 2 ? "restart_server" : "restart_projection");
-        } else if (uiPage == 4) {
-          fireOperatorAction(touchStartY < LCD_H / 2 ? "projector_on" : "projector_off");
+          fireOperatorAction("restart_server");
         }
         lastGestureAt = now;
       }

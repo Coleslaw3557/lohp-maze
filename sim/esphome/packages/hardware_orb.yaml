@@ -1,0 +1,43 @@
+# Real-node platform: Guition JC3636W518C "puck" (the round-display orb that
+# used to be the Cuddle Olmec control head — firmware/orb/). Repurposed
+# 2026-08-31 (Tim, live) into the headless Exterior flood bridge: same ESP32-S3
+# as the fleet standard but a different board (16MB quad flash / 8MB octal
+# PSRAM). The Olmec Arduino firmware (firmware/orb/) is retired ON THIS BOARD
+# but stays in git for the other JC3636W518C unit.
+#
+# HEADLESS: the ST77916 QSPI round panel is left undriven and its backlight
+# (GPIO15, active-high MOSFET) is held LOW — the screen stays dark. That IS
+# "get rid of the projection control screen": no operator/projector UI, no
+# face, nothing on glass. BLE (floods) + WiFi (Art-Net in) only.
+#
+# NEVER reassign GPIO19/20 — native USB D-/D+; a sketch that touches them
+# knocks the board off USB every boot (that's how orb unit #1 bricked). We
+# don't use them here. First flash MUST be over USB (Arduino->ESPHome can't
+# cross OTA): hold K1 (GPIO0 = BOOT) while plugging in -> ROM download mode.
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+# The board carries octal PSRAM but the bridge needs none (no display buffers,
+# no audio) — leaving psram undeclared keeps boot simple and can't mis-init it.
+
+# Backlight off so the retired panel shows nothing (dark = screen gone).
+output:
+  - platform: gpio
+    pin: GPIO15
+    id: panel_backlight
+
+# Logs ride the native USB-OTG CDC (the board's USBMode was hwcdc under
+# Arduino); flashing uses the ROM bootloader either way.
+logger:
+  hardware_uart: USB_CDC
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none   # keeps draw above power-bank auto-off thresholds
+
+ota:
+  - platform: esphome

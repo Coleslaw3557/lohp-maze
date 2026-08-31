@@ -3,14 +3,16 @@
 # with the maze theme. Born 2026-08-31 (Tim, on playa: "handle this as part
 # of the maze/theme instead of me using some app").
 #
-# HARDWARE node (the spare XIAO C6 from the Guy Line ship mix-up): no wired
-# DMX, no audio (C6 has no PSRAM; BLE+audio are mutually exclusive fleet-wide
-# anyway — room-node-audio-plan.md). The server treats "Exterior" as one more
-# Art-Net room (fixtures at DMX 353/361/369, light_config.json); this node
-# receives the same unicast universe and re-broadcasts each fixture block as
-# Fastcon BLE advertisements (components/artnet_fastcon -> components/fastcon).
-# The floods relay commands to each other, so ONE bridge in range of ANY
-# flood drives all three.
+# HARDWARE node (the "puck" — Guition JC3636W518C S3, formerly the Cuddle
+# Olmec control head, repurposed 2026-08-31 Tim/live): headless, screen dark
+# (hardware_orb.yaml). No wired DMX, no audio. The server treats "Exterior"
+# as one more Art-Net room (fixtures at DMX 353/361/369, light_config.json);
+# this node receives the same unicast universe and re-broadcasts each fixture
+# block as Fastcon BLE advertisements (components/artnet_fastcon ->
+# components/fastcon). The floods relay commands to each other, so ONE bridge
+# in range of ANY flood drives all three.
+# FIRST FLASH IS USB (Arduino Olmec fw -> ESPHome can't cross OTA): hold K1
+# while plugging into the dev box, ./run_node.sh exterior. Then OTA as usual.
 #
 # PAIRING (app-free, one-time per flood set): floods powered + factory-fresh
 # (if ever app-paired: power-cycle 5x to reset), then call the pair_floods
@@ -31,7 +33,7 @@ substitutions:
 
 packages:
   logic: !include ../packages/logic.yaml
-  platform: !include ../packages/hardware_c6.yaml
+  platform: !include ../packages/hardware_orb.yaml
 
 external_components:   # path is main-config-relative
   - source:

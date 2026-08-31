@@ -492,6 +492,15 @@ class FloorShow:
         self._fwd = (math.sin(yaw), math.cos(yaw))
         self._lat = (math.cos(yaw), -math.sin(yaw))
         self._c = tuple(img['center'])
+        # as-built aim correction: the mounted projector lands the image a few
+        # cm off the planned center. align.dx_m/dz_m shift the mapping in the
+        # IMAGE's own axes (dx = +lat = image right, dz = +fwd) so drawn
+        # geometry lines up with the real deck/pole. Field-tuned by eye.
+        al = P.get('align') or {}
+        adx, adz = al.get('dx_m', 0.0), al.get('dz_m', 0.0)
+        if adx or adz:
+            self._c = (self._c[0] + adx * self._lat[0] + adz * self._fwd[0],
+                       self._c[1] + adx * self._lat[1] + adz * self._fwd[1])
         self._iw, self._id = img['w'], img['d']
 
         # deck outline: hexagon + the door slivers out to the shared wing

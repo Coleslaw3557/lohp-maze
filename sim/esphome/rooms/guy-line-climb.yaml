@@ -32,8 +32,11 @@ substitutions:
   api_port: "6064"
   host_mac: "06:35:69:00:00:04"    # sim-only (sim_host.yaml); unused on hardware
   dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)
-  ld2410_max_move_gate: "5"        # 3.75 m — top-down mount, floor at 3.70 m
-  ld2410_max_still_gate: "6"
+  # Top-down mount, floor at 3.70 m. 2026-08-31 empty-maze test: 5/6 held the
+  # room occupied after a leave (reach past the floor plane / out the doorway);
+  # 4/5 keeps full-body coverage of anyone standing in the shaft footprint.
+  ld2410_max_move_gate: "4"        # 3.00 m
+  ld2410_max_still_gate: "5"       # 3.75 m ≈ the floor plane
 
 packages:
   logic: !include ../packages/logic.yaml

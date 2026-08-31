@@ -681,21 +681,11 @@
             "volume": 0.8
         },
         "MazeAmbience-Bed": {
-            "_comment": "Global maze ambience bed. Cuddle Cross is the exception: the floor show owns its local bed. Long soundscape tracks play once and rotate; short loop assets repeat for the configured window before a fresh anti-repeat pick.",
+            "_comment": "Global maze ambience bed. Cuddle Cross is the exception: the floor show owns its local bed. Loop assets repeat for the configured window; rainstorm plays once, then the server rotates to a fresh anti-repeat pick.",
             "audio_files": [
-                "ambience/The 7th Continent Soundscape - Area I.mp3",
-                "ambience/The 7th Continent Soundscape - Area II.mp3",
-                "ambience/The 7th Continent Soundscape - Area III.mp3",
-                "ambience/The 7th Continent Soundscape - Area IV.mp3",
-                "ambience/The 7th Continent Soundscape - Area V.mp3",
-                "ambience/The 7th Continent Soundscape - Area VI.mp3",
-                "ambience/The 7th Continent Soundscape - Area VII.mp3",
-                "ambience/The 7th Continent Soundscape - Area VIII.mp3",
-                "ambience/The 7th Continent Soundscape - Area IX.mp3",
-                "ambience/The 7th Continent Soundscape - Area X.mp3",
-                "ambience/rainstorm.mp3",
                 "uploads/Hallow/hallowloop.wav",
-                "rooms/Guy Line Climb/uploads/forest_life.wav"
+                "rooms/Guy Line Climb/uploads/forest_life.wav",
+                "ambience/rainstorm.mp3"
             ],
             "volume": 0.3,
             "ambience_playback": {

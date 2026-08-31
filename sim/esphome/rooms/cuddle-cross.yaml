@@ -25,6 +25,17 @@ substitutions:
   host_mac: "06:35:69:00:00:07"    # sim-only (sim_host.yaml); unused on hardware
   absence_timeout: 60s             # dwell room; bridges LD2450 still-target dropout
   dmx_tx_pin: "6"                  # D5, radar room (dmx-over-wifi.md)
+  # Detection zone from the 2026-08-31 empty-maze walk-through: the full-field
+  # box tracked two static reflectors as permanent "people" — the 20 ft center
+  # mast at (-850..-1040, 570..780) and a second at (1246, 2800) (projector
+  # legs / shroud edge — identify on-site, it's 3.06 m out, 24° right of
+  # boresight). This box excludes both with margin; costs the left strip
+  # (x < -700) and the far corner (x > 1100 / y > 2700) until that reflector
+  # is dealt with, then widen y2/x2 back out.
+  ld2450_zone_x1: "-700"
+  ld2450_zone_y1: "850"
+  ld2450_zone_x2: "1100"
+  ld2450_zone_y2: "2700"
 
 packages:
   logic: !include ../packages/logic.yaml

@@ -17,7 +17,7 @@ FQBN="esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashMode=qio,FlashSize=16M,PartitionSch
 [ -f secrets.h ] || ./gen_secrets.sh
 
 case "${1:-compile}" in
-  compile) arduino-cli compile --build-property compiler.optimization_flags=-O2 --fqbn "$FQBN" . ;;
+  compile) arduino-cli compile --build-property compiler.optimization_flags=-O2 --fqbn "$FQBN" --export-binaries . ;;
   flash)   arduino-cli compile --build-property compiler.optimization_flags=-O2 --fqbn "$FQBN" .
            arduino-cli upload -p "$PORT" --fqbn "$FQBN" . ;;
   ota)     arduino-cli compile --build-property compiler.optimization_flags=-O2 --fqbn "$FQBN" --export-binaries .

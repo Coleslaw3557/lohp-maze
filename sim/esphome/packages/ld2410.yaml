@@ -48,21 +48,24 @@
 # The maze bays are back-to-back/stacked, and bare ply does not reliably block
 # 24 GHz radar. The sim clips each radar wedge to its room, but real LD2410s
 # only know radial distance gates. Use a short moving gate for ENTER so adjacent
-# rooms do not fire the effect; keep still one gate wider so a person who really
-# entered is not dropped as soon as they stand near the far side. With the
-# LD2410 default 0.75 m resolution:
+# rooms do not fire the effect. With the LD2410 default 0.75 m resolution:
 #
-#   gate 2 ~= 1.50 m  (entry-side trigger envelope)
-#   gate 3 ~= 2.25 m  (most of a 2.13 x 1.52 m bay)
+#   gate 2 ~= 1.50 m  (entry-side trigger envelope, and the bay depth)
+#   gate 3 ~= 2.25 m
 #
-# The climb shafts point down; room YAML can override these substitutions when
-# that hardware is flashed.
+# 2026-08-31 on-playa empty-maze walk-through: still gate 3 latched a phantom
+# still target after every real leave (the 1.52 m-deep back wall/legs sit at
+# the gate 2/3 boundary) and held onto people standing in the next bay. Still
+# gate dropped 3 -> 2 maze-wide; rooms read empty again the moment the decay
+# runs out. Cost: a person holding perfectly still in the far corner (>1.5 m
+# radial) can drop out until they move — absence_timeout bridges the gap.
+# The climb shafts point down and override these substitutions per room.
 
 substitutions:
   absence_timeout: 5s
   ld2410_module_timeout_s: "5"
   ld2410_max_move_gate: "2"
-  ld2410_max_still_gate: "3"
+  ld2410_max_still_gate: "2"
   # Radar UART sits at Dx positions D6/D7 fleet-wide; the GPIO numbers differ
   # per XIAO chip. Defaults = S3 (the fleet standard); a C6 box overrides to
   # GPIO16/GPIO17 (hardware_c6.yaml has the full map).

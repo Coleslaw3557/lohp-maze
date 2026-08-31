@@ -26,6 +26,7 @@ dev box (data/ is gitignored). Same API shape the Pi briefly served:
   GET  /calibrate                      the phone page
   GET  /api/calibration/rooms|state|captures
   POST /api/calibration/write|capture/start|stop|mark
+  POST /api/calibration/guided/start|cancel   server-timed walk-through + verdict
 Tuning writes still DIE WITH A NODE REBOOT until baked into the room YAML.
 """
 import asyncio
@@ -62,6 +63,37 @@ SAMPLE_PERIOD_S = 0.5
 MAX_CAPTURE_S = 900
 STATE_TYPES = ('BinarySensorInfo', 'SensorInfo', 'NumberInfo', 'SelectInfo',
                'SwitchInfo', 'TextSensorInfo')
+
+# Guided walk-through (2026-08-31): Tim carries the phone room to room and taps
+# GO; the SERVER runs the timed sequence (phone WiFi dropouts can't break it),
+# marks each phase into the normal capture jsonl, then judges the presence /
+# moving traces and stores a plain-language verdict. Detailed gate tuning still
+# happens later from the captured files.
+GUIDED_STEPS = [
+    # (id, phone headline, detail line, seconds)
+    # 25s: slow exit + the radar's own decay (5s module + 5s delayed_off) can
+    # eat 15s before a true empty shows — only the last 6s are judged.
+    ('out',   'Step OUT of the room',      'wait just outside the doorway', 25),
+    ('still', 'Walk in — STAND STILL',     'middle of the room — freeze', 15),
+    ('move',  'WALK around the room',      'cover the corners too', 15),
+    ('leave', 'Walk on to the NEXT room',  "leave and don't come back", 20),
+]
+# Cuddle's 60s absence timer means presence stays ON for a minute after an
+# exit — its empty/leave phases record data but are not pass/failed live.
+LONG_DWELL_ROOMS = {'cuddle cross'}
+
+try:
+    with open(os.path.join(REPO, 'sim', 'maze_layout.json')) as f:
+        ROUTE = [r.lower() for r in json.load(f).get('route', [])]
+except Exception:
+    ROUTE = []
+
+
+def _route_pos(room):
+    try:
+        return ROUTE.index(room.lower())
+    except ValueError:
+        return len(ROUTE)
 
 
 def _slug(name):
@@ -214,6 +246,8 @@ class Capture:
 
 nodes = {}       # room lower -> NodeConn
 captures = {}    # room lower -> Capture
+guided = {}      # room lower -> {'i','end','samples','task'}
+verdicts = {}    # room lower -> last guided verdict dict
 app = Quart(__name__)
 
 
@@ -242,6 +276,119 @@ def _entity_rows(conn):
              'Select': 4, 'Switch': 5}
     rows.sort(key=lambda r: (order.get(r['type'], 9), r['name']))
     return rows
+
+
+def _sense_now(conn):
+    """Current (presence, moving) booleans, or Nones while unknown/offline."""
+    pres = mov = None
+    for key, info in list(conn.entities.items()):
+        n = info['name'].lower()
+        if n.endswith('radar presence') or n.endswith('radar moving'):
+            st = conn.entity_states.get(key)
+            val = None if st is None else st['state']
+            if n.endswith('radar presence'):
+                pres = val
+            else:
+                mov = val
+    return pres, mov
+
+
+def _ordered_rooms():
+    return sorted(nodes.values(), key=lambda c: (_route_pos(c.room), c.room))
+
+
+def _next_room(room):
+    ordered = [c.room for c in _ordered_rooms()]
+    try:
+        i = ordered.index(room)
+    except ValueError:
+        return None
+    return ordered[i + 1] if i + 1 < len(ordered) else None
+
+
+def _frac_on(vals):
+    known = [v for v in vals if v is not None]
+    if not known:
+        return None
+    return sum(1 for v in known if v) / len(known)
+
+
+def _judge(room, samples):
+    """samples: [(phase_id, presence, moving)] at SAMPLE_PERIOD_S. Plain words
+    only — Tim reads this on a phone mid-maze. Trims cover walking time and the
+    radar's own timeouts (5s module + 5s delayed_off standard)."""
+    by = {}
+    for pid, pres, mov in samples:
+        by.setdefault(pid, []).append((pres, mov))
+    if samples and sum(1 for _, p, _ in samples if p is None) > len(samples) * 0.3:
+        return {'ok': False, 'utc': _utc(),
+                'issues': ['node kept dropping off WiFi — redo this room']}
+    issues = []
+    long_dwell = room.lower() in LONG_DWELL_ROOMS
+    if not long_dwell:
+        f = _frac_on([p for p, _ in by.get('out', [])][-12:])       # last 6s
+        if f is None or f > 0.25:
+            issues.append('showed someone there while the room was EMPTY')
+    f = _frac_on([p for p, _ in by.get('still', [])][10:])          # skip 5s
+    if f is None or f < 0.75:
+        issues.append('lost you while you stood STILL')
+    mv = by.get('move', [])
+    fp = _frac_on([p for p, _ in mv][6:])                           # skip 3s
+    fm = _frac_on([m for _, m in mv][6:])
+    if fp is None or fp < 0.75:
+        issues.append('missed you while you WALKED around')
+    elif fm is None or fm < 0.3:
+        issues.append('saw you walking but not as "moving" — the entry trigger may not fire')
+    if not long_dwell:
+        f = _frac_on([p for p, _ in by.get('leave', [])][-12:])     # last 6s
+        if f is None or f > 0.25:
+            issues.append('still saw you AFTER you left — may be seeing into the next room')
+    v = {'ok': not issues, 'issues': issues, 'utc': _utc()}
+    if long_dwell:
+        v['note'] = '60s dwell room — empty/leave phases recorded, not judged'
+    return v
+
+
+def _save_verdict(room, v):
+    room_dir = os.path.join(DATA_DIR, _slug(room))
+    os.makedirs(room_dir, exist_ok=True)
+    with open(os.path.join(room_dir, 'verdict.json'), 'w') as f:
+        json.dump(v, f)
+
+
+async def _guided_task(conn, room_key):
+    sess = guided[room_key]
+    try:
+        for i, (pid, _title, _sub, dur) in enumerate(GUIDED_STEPS):
+            sess['i'] = i
+            sess['end'] = time.monotonic() + dur
+            cap = captures.get(room_key)
+            if cap:
+                cap.mark(f"STEP {pid}")
+            while time.monotonic() < sess['end']:
+                pres, mov = _sense_now(conn)
+                if conn.client is None:
+                    sess['samples'].append((pid, None, None))
+                else:
+                    sess['samples'].append((pid, bool(pres), bool(mov)))
+                await asyncio.sleep(SAMPLE_PERIOD_S)
+        v = _judge(conn.room, sess['samples'])
+        cap = _stop_capture(conn)
+        if cap:
+            v['file'] = os.path.basename(cap.path)
+        verdicts[room_key] = v
+        _save_verdict(conn.room, v)
+        logger.info(f"guided done: {conn.room} ok={v['ok']} issues={v['issues']}")
+    except asyncio.CancelledError:
+        _stop_capture(conn)
+        raise
+    except Exception as e:
+        logger.error(f"guided [{conn.room}]: {e}", exc_info=True)
+        _stop_capture(conn)
+        verdicts[room_key] = {'ok': False, 'utc': _utc(),
+                              'issues': ['test crashed on the server — redo']}
+    finally:
+        guided.pop(room_key, None)
 
 
 async def _sampler(conn, room_key):
@@ -283,11 +430,18 @@ async def page():
 
 @app.route('/api/calibration/rooms')
 async def rooms():
-    return jsonify([{'room': c.room, 'host': c.node_addr.split(':')[0],
-                     'connected': c.client is not None,
-                     'capturing': (captures[c.room.lower()].label
-                                   if c.room.lower() in captures else False)}
-                    for c in sorted(nodes.values(), key=lambda c: c.room)])
+    out = []
+    for c in _ordered_rooms():
+        rk = c.room.lower()
+        pres, _ = _sense_now(c)
+        v = verdicts.get(rk)
+        out.append({'room': c.room, 'host': c.node_addr.split(':')[0],
+                    'connected': c.client is not None,
+                    'capturing': (captures[rk].label if rk in captures else False),
+                    'guided': rk in guided,
+                    'presence': None if pres is None else bool(pres),
+                    'verdict': ({'ok': v['ok'], 'utc': v.get('utc')} if v else None)})
+    return jsonify(out)
 
 
 @app.route('/api/calibration/state')
@@ -295,10 +449,21 @@ async def state():
     conn = _conn(request.args.get('room', ''))
     if conn is None:
         return jsonify({'status': 'error', 'message': 'unknown room'}), 404
-    cap = captures.get(conn.room.lower())
+    rk = conn.room.lower()
+    cap = captures.get(rk)
+    sess = guided.get(rk)
+    g = None
+    if sess is not None:
+        pid, title, sub, dur = GUIDED_STEPS[sess['i']]
+        g = {'step': sess['i'] + 1, 'steps': len(GUIDED_STEPS),
+             'id': pid, 'title': title, 'sub': sub, 'dur': dur,
+             'remaining': max(0, round(sess['end'] - time.monotonic()))}
     return jsonify({'room': conn.room, 'host': conn.node_addr,
                     'connected': conn.client is not None,
                     'entities': _entity_rows(conn),
+                    'guided': g,
+                    'verdict': verdicts.get(rk),
+                    'next_room': _next_room(conn.room),
                     'capture': ({'label': cap.label,
                                  'elapsed_s': round(time.monotonic() - cap.started, 1)}
                                 if cap else None)})
@@ -339,16 +504,56 @@ async def capture_start():
     if room_key in captures:
         return jsonify({'status': 'error', 'message': 'capture already running'}), 409
     label = (data.get('label') or 'unlabelled').strip() or 'unlabelled'
+    cap = _begin_capture(conn, label, data.get('note') or '')
+    return jsonify({'status': 'success', 'file': os.path.basename(cap.path),
+                    'label': label})
+
+
+def _begin_capture(conn, label, note):
+    room_key = conn.room.lower()
     room_dir = os.path.join(DATA_DIR, _slug(conn.room))
     os.makedirs(room_dir, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
     path = os.path.join(room_dir, f"{stamp}_{_slug(label)}.jsonl")
-    captures[room_key] = Capture(path, conn.room, label, data.get('note') or '',
+    captures[room_key] = Capture(path, conn.room, label, note,
                                  sorted(i['name'] for i in conn.entities.values()))
     asyncio.get_event_loop().create_task(_sampler(conn, room_key))
     logger.info(f"capture started: {conn.room} '{label}' -> {path}")
-    return jsonify({'status': 'success', 'file': os.path.basename(path),
-                    'label': label})
+    return captures[room_key]
+
+
+@app.route('/api/calibration/guided/start', methods=['POST'])
+async def guided_start():
+    conn = _conn(((await request.get_json()) or {}).get('room', ''))
+    if conn is None:
+        return jsonify({'status': 'error', 'message': 'unknown room'}), 404
+    room_key = conn.room.lower()
+    if room_key in guided:
+        return jsonify({'status': 'error', 'message': 'already running'}), 409
+    if room_key in captures:
+        return jsonify({'status': 'error',
+                        'message': 'a manual capture is running — stop it in advanced'}), 409
+    if conn.client is None:
+        return jsonify({'status': 'error', 'message': 'node is offline'}), 502
+    _begin_capture(conn, 'guided', '')
+    sess = {'i': 0, 'end': time.monotonic() + GUIDED_STEPS[0][3], 'samples': []}
+    guided[room_key] = sess
+    sess['task'] = asyncio.get_event_loop().create_task(_guided_task(conn, room_key))
+    logger.info(f"guided start: {conn.room}")
+    return jsonify({'status': 'success'})
+
+
+@app.route('/api/calibration/guided/cancel', methods=['POST'])
+async def guided_cancel():
+    conn = _conn(((await request.get_json()) or {}).get('room', ''))
+    if conn is None:
+        return jsonify({'status': 'error', 'message': 'unknown room'}), 404
+    sess = guided.get(conn.room.lower())
+    if sess is None:
+        return jsonify({'status': 'error', 'message': 'not running'}), 409
+    sess['task'].cancel()
+    logger.info(f"guided cancelled: {conn.room}")
+    return jsonify({'status': 'success'})
 
 
 @app.route('/api/calibration/capture/stop', methods=['POST'])
@@ -405,6 +610,11 @@ async def start_keepalives():
         conn = NodeConn(room, entry['host'], entry.get('port', 6053))
         nodes[room.lower()] = conn
         asyncio.get_event_loop().create_task(conn.maintain())
+        try:
+            with open(os.path.join(DATA_DIR, _slug(room), 'verdict.json')) as vf:
+                verdicts[room.lower()] = json.load(vf)
+        except Exception:
+            pass
     logger.info(f"calibrate server up on :{LISTEN_PORT} "
                 f"({'direct' if DIRECT else 'via tunnel forwards'}), "
                 f"{len(nodes)} rooms")

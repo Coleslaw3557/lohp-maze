@@ -1,6 +1,9 @@
 <!DOCTYPE html>
-<!-- Field calibration phone page (served at /calibrate — calibration_manager.py).
-     Self-contained: the LOHP-ESP LAN has no internet, so no external assets. -->
+<!-- Field calibration phone page (served at /calibrate — calibrate_server.py).
+     Self-contained: the LOHP-ESP LAN has no internet, so no external assets.
+     2026-08-31: wizard-first. Tap the room you're in, press GO, obey the big
+     text — the SERVER runs the timed steps and judges the result. The old
+     entity/tuning console lives behind the "advanced" link. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -32,14 +35,52 @@
   button:active { background:var(--line); }
   #back { display:none; font-size:20px; padding:8px 14px; }
   main { padding:12px; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .roomcard { text-align:left; display:flex; flex-direction:column; gap:6px;
-              padding:14px; min-height:74px; background:var(--card); }
-  .roomcard b { font-size:16px; }
+  .hint { color:var(--dim); font-size:14px; margin:2px 2px 12px; }
+  /* home list */
+  .roomrow { width:100%; display:flex; align-items:center; gap:10px;
+             text-align:left; background:var(--card); padding:16px 14px;
+             margin-bottom:8px; }
+  .roomrow b { font-size:17px; flex:1; }
   .dot { display:inline-block; width:10px; height:10px; border-radius:50%;
-         background:#4a5567; margin-right:7px; }
+         background:#4a5567; margin-right:9px; flex:none; }
   .dot.on { background:var(--green); }
-  .sub { color:var(--dim); font-size:13px; }
+  .tag { font-size:12px; padding:3px 8px; border-radius:999px; flex:none; }
+  .tag.you { background:#12293c; color:var(--blue); }
+  .tag.ok { background:#14351f; color:var(--green); }
+  .tag.bad { background:#3a2a10; color:var(--amber); }
+  .tag.rec { background:#3a1420; color:var(--red); }
+  /* wizard */
+  #wReady, #wRun, #wDone { text-align:center; padding-top:12px; }
+  #go { width:min(70vw,260px); height:min(70vw,260px); border-radius:50%;
+        font-size:44px; font-weight:700; background:#123222;
+        border:3px solid var(--green); color:var(--green); margin:18px auto; }
+  #go:active { background:#1b4a31; }
+  #wStep { color:var(--dim); font-size:15px; letter-spacing:.08em;
+           text-transform:uppercase; }
+  #wTitle { font-size:32px; font-weight:700; line-height:1.15; margin:14px 6px 6px; }
+  #wSub { color:var(--dim); font-size:17px; }
+  #wCount { font-size:clamp(90px, 38vw, 170px); font-weight:700;
+            font-variant-numeric:tabular-nums; line-height:1.05; }
+  #wBar { height:8px; background:var(--card2); border-radius:4px;
+          margin:6px 10px 22px; overflow:hidden; }
+  #wBar i { display:block; height:100%; background:var(--blue);
+            border-radius:4px; transition:width .6s linear; }
+  #wCancel { color:var(--red); }
+  #vIcon { font-size:76px; margin:16px 0 4px; }
+  #vText { font-size:26px; font-weight:700; margin-bottom:10px; }
+  #vIssues { text-align:left; margin:0 auto 8px; max-width:420px; }
+  #vIssues div { background:var(--card); border:1px solid var(--line);
+                 border-radius:10px; padding:10px 12px; margin-bottom:8px;
+                 color:var(--amber); font-size:15px; }
+  #vNote { color:var(--dim); font-size:13px; margin-bottom:10px; }
+  .bigbtn { display:block; width:100%; max-width:420px; margin:0 auto 10px;
+            font-size:19px; font-weight:600; padding:16px; }
+  .bigbtn.primary { background:#12293c; border-color:var(--blue); color:var(--blue); }
+  #lastResult { margin:18px auto 0; max-width:420px; font-size:14px;
+                color:var(--dim); }
+  #advLink { display:block; margin:26px auto 0; background:none; border:none;
+             color:var(--dim); font-size:13px; text-decoration:underline; }
+  /* advanced (the old console) */
   section { margin:14px 0; }
   section h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em;
                color:var(--dim); margin:0 0 8px 2px; }
@@ -87,32 +128,65 @@
 <body>
 <header>
   <button id="back" onclick="goHome()">&#8592;</button>
-  <h1 id="title">LoHP Calibration</h1>
+  <h1 id="title">Calibrate</h1>
   <span id="conn" class="pill">&hellip;</span>
 </header>
 <div id="banner">server unreachable &mdash; retrying</div>
 <main>
-  <div id="home" class="grid"></div>
+  <div id="home">
+    <div class="hint">Walk the maze in order. Tap the room you're standing in.
+      &ldquo;sees you&rdquo; = that room's radar spots you right now.</div>
+    <div id="roomlist"></div>
+  </div>
+
   <div id="room" style="display:none">
-    <section>
-      <div id="capbar">
-        <div id="caprow">
-          <span class="pill rec">&#9679; REC</span>
-          <span class="t" id="captime">0:00</span>
-          <span class="sub" id="caplabel"></span>
-          <span style="flex:1"></span>
-          <button onclick="markCap()">MARK</button>
-          <button onclick="stopCap()" style="color:var(--red)">STOP</button>
+    <div id="wReady" style="display:none">
+      <button id="go" onclick="startGuided()">GO</button>
+      <div class="hint">~70 seconds. Sound on, just do what the big text says.</div>
+      <div id="lastResult"></div>
+    </div>
+
+    <div id="wRun" style="display:none">
+      <div id="wStep"></div>
+      <div id="wTitle"></div>
+      <div id="wSub"></div>
+      <div id="wCount"></div>
+      <div id="wBar"><i id="wFill"></i></div>
+      <button id="wCancel" onclick="cancelGuided()">cancel</button>
+    </div>
+
+    <div id="wDone" style="display:none">
+      <div id="vIcon"></div>
+      <div id="vText"></div>
+      <div id="vIssues"></div>
+      <div id="vNote"></div>
+      <button id="nextBtn" class="bigbtn primary" onclick="openRoom(nextRoom)"></button>
+      <button class="bigbtn" onclick="showReady()">Redo this room</button>
+    </div>
+
+    <button id="advLink" onclick="toggleAdv()">advanced &#9662;</button>
+
+    <div id="adv" style="display:none">
+      <section>
+        <div id="capbar">
+          <div id="caprow">
+            <span class="pill rec">&#9679; REC</span>
+            <span class="t" id="captime">0:00</span>
+            <span class="sub" id="caplabel"></span>
+            <span style="flex:1"></span>
+            <button onclick="markCap()">MARK</button>
+            <button onclick="stopCap()" style="color:var(--red)">STOP</button>
+          </div>
+          <div class="chips" id="labels"></div>
+          <input id="freetext" placeholder="custom label / mark text / note&hellip;">
         </div>
-        <div class="chips" id="labels"></div>
-        <input id="freetext" placeholder="custom label / mark text / note&hellip;">
-      </div>
-    </section>
-    <section><h2>Presence</h2><div class="tiles" id="binaries"></div></section>
-    <section><h2>Readings</h2><div class="tiles" id="sensors"></div></section>
-    <section><h2>Tuning (dies with node reboot until baked into YAML)</h2>
-      <div id="numbers"></div></section>
-    <section><h2>Captures on server</h2><div id="caplist"></div></section>
+      </section>
+      <section><h2>Presence</h2><div class="tiles" id="binaries"></div></section>
+      <section><h2>Readings</h2><div class="tiles" id="sensors"></div></section>
+      <section><h2>Tuning (dies with node reboot until baked into YAML)</h2>
+        <div id="numbers"></div></section>
+      <section><h2>Captures on server</h2><div id="caplist"></div></section>
+    </div>
   </div>
 </main>
 <div id="toast"></div>
@@ -125,6 +199,12 @@ let view = null;          // null = home, else room name
 let timer = null;
 let wakeLock = null;
 let editHold = 0;         // suppress row rebuilds briefly after a write
+let advOpen = false;
+let mode = 'ready';       // ready | run | done
+let wasRunning = false;
+let prevStep = 0;
+let nextRoom = null;
+let audioCtx = null;
 
 function toast(msg, bad) {
   const t = $('toast');
@@ -158,24 +238,63 @@ async function tick() {
   }
 }
 
+/* ---------- phone cues: beep + vibrate + spoken instruction ---------- */
+function beep(freq, ms, when) {
+  try {
+    if (!audioCtx) return;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = freq;
+    g.gain.value = 0.25;
+    o.connect(g); g.connect(audioCtx.destination);
+    const t = audioCtx.currentTime + (when || 0);
+    o.start(t); o.stop(t + ms / 1000);
+  } catch (e) {}
+}
+function speak(text) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.05;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function cueStep(title) {
+  beep(880, 180);
+  try { navigator.vibrate && navigator.vibrate(200); } catch (e) {}
+  speak(title);
+}
+function cueDone(ok) {
+  beep(ok ? 660 : 300, 180); beep(ok ? 990 : 300, 220, 0.22);
+  try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+  speak(ok ? 'Room looks good.' : 'Needs attention. Check the phone.');
+}
+
+/* ---------- navigation ---------- */
 function goHome() {
   view = null;
-  $('home').style.display = 'grid';
+  $('home').style.display = 'block';
   $('room').style.display = 'none';
   $('back').style.display = 'none';
-  $('title').textContent = 'LoHP Calibration';
+  $('title').textContent = 'Calibrate';
   $('conn').textContent = '…';
   $('conn').className = 'pill';
   tick();
 }
 
 function openRoom(name) {
+  if (!name) { goHome(); return; }
   view = name;
+  mode = 'ready';
+  wasRunning = false;
+  advOpen = false;
+  $('adv').style.display = 'none';
+  $('advLink').innerHTML = 'advanced &#9662;';
   $('home').style.display = 'none';
   $('room').style.display = 'block';
   $('back').style.display = 'block';
   $('title').textContent = name;
   $('binaries').innerHTML = $('sensors').innerHTML = $('numbers').innerHTML = '';
+  showReady();
   renderChips();
   loadCaptures();
   if (navigator.wakeLock) navigator.wakeLock.request('screen')
@@ -184,13 +303,98 @@ function openRoom(name) {
 }
 
 function renderHome(rooms) {
-  $('home').innerHTML = rooms.map(r =>
-    `<button class="roomcard" onclick="openRoom(${JSON.stringify(r.room).replace(/"/g,'&quot;')})">
-       <b><span class="dot ${r.connected ? 'on' : ''}"></span>${r.room}</b>
-       <span class="sub">${r.host}${r.capturing ? ' &middot; <span style="color:var(--red)">REC</span>' : ''}</span>
-     </button>`).join('');
+  $('roomlist').innerHTML = rooms.map(r => {
+    const tags = [];
+    if (r.presence) tags.push('<span class="tag you">sees you</span>');
+    if (r.guided || r.capturing) tags.push('<span class="tag rec">REC</span>');
+    if (r.verdict) tags.push(r.verdict.ok ? '<span class="tag ok">&#10003; good</span>'
+                                          : '<span class="tag bad">&#9888; check</span>');
+    return `<button class="roomrow" onclick="openRoom(${JSON.stringify(r.room).replace(/"/g,'&quot;')})">
+       <span class="dot ${r.connected ? 'on' : ''}"></span><b>${r.room}</b>${tags.join('')}
+     </button>`;
+  }).join('');
 }
 
+/* ---------- wizard ---------- */
+function showPane(p) {
+  $('wReady').style.display = p === 'ready' ? 'block' : 'none';
+  $('wRun').style.display   = p === 'run'   ? 'block' : 'none';
+  $('wDone').style.display  = p === 'done'  ? 'block' : 'none';
+}
+
+function showReady() { mode = 'ready'; wasRunning = false; showPane('ready'); }
+
+async function startGuided() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume && audioCtx.resume();
+    speak(' ');   // unlock speech on this user gesture
+  } catch (e) {}
+  try {
+    await api('/api/calibration/guided/start', {room: view});
+    prevStep = 0;
+    mode = 'run';
+  } catch (e) { toast(e.message, true); }
+  tick();
+}
+
+async function cancelGuided() {
+  try { await api('/api/calibration/guided/cancel', {room: view}); } catch (e) {}
+  showReady();
+  tick();
+}
+
+function verdictAge(utc) {
+  const min = Math.round((Date.now() - Date.parse(utc)) / 60000);
+  return min < 1 ? 'just now' : min < 60 ? min + ' min ago'
+       : Math.round(min / 60) + ' h ago';
+}
+
+function showDone(v) {
+  mode = 'done';
+  showPane('done');
+  const ok = v && v.ok;
+  $('vIcon').textContent = ok ? '✅' : '⚠️';
+  $('vText').textContent = ok ? 'Room looks good' : 'Needs attention';
+  $('vIssues').innerHTML = (v && v.issues || []).map(i => `<div>Radar ${i}</div>`).join('');
+  $('vNote').textContent = (v && v.note) || '';
+  $('nextBtn').style.display = nextRoom ? 'block' : 'none';
+  $('nextBtn').textContent = 'Next room: ' + nextRoom + ' →';
+  if (!nextRoom) $('vNote').textContent += ' That was the last room — all done!';
+}
+
+function renderWizard(st) {
+  nextRoom = st.next_room;
+  const g = st.guided;
+  if (g) {
+    if (mode !== 'run' || g.step !== prevStep) {
+      mode = 'run';
+      showPane('run');
+      if (g.step !== prevStep) cueStep(g.title);
+      prevStep = g.step;
+      $('wStep').textContent = 'Step ' + g.step + ' of ' + g.steps;
+      $('wTitle').textContent = g.title;
+      $('wSub').textContent = g.sub;
+    }
+    $('wCount').textContent = g.remaining;
+    $('wFill').style.width = Math.round(100 * (1 - g.remaining / g.dur)) + '%';
+    wasRunning = true;
+  } else if (wasRunning) {
+    wasRunning = false;
+    showDone(st.verdict);
+    cueDone(st.verdict && st.verdict.ok);
+    loadCaptures();
+  } else if (mode === 'ready') {
+    const v = st.verdict;
+    $('lastResult').innerHTML = v
+      ? 'Last run ' + verdictAge(v.utc) + ': ' +
+        (v.ok ? '<span style="color:var(--green)">&#10003; good</span>'
+              : '<span style="color:var(--amber)">&#9888; ' + (v.issues || []).length + ' issue(s)</span>')
+      : 'Not calibrated yet.';
+  }
+}
+
+/* ---------- room polling ---------- */
 function shortName(name, room) {
   return name.toLowerCase().startsWith(room.toLowerCase() + ' ')
     ? name.slice(room.length + 1) : name;
@@ -203,6 +407,8 @@ function stepFor(name) {
 function renderRoom(st) {
   $('conn').textContent = st.connected ? 'connected' : 'offline';
   $('conn').className = 'pill ' + (st.connected ? 'on' : '');
+  renderWizard(st);
+  if (!advOpen) return;
   const cap = st.capture;
   $('caprow').style.display = cap ? 'flex' : 'none';
   $('labels').style.display = cap ? 'none' : 'flex';
@@ -233,6 +439,14 @@ function renderRoom(st) {
   if (Date.now() > editHold) renderTuning(rows, st.room);
 }
 
+function toggleAdv() {
+  advOpen = !advOpen;
+  $('adv').style.display = advOpen ? 'block' : 'none';
+  $('advLink').innerHTML = advOpen ? 'hide advanced &#9652;' : 'advanced &#9662;';
+  if (advOpen) loadCaptures();
+}
+
+/* ---------- advanced: tuning + manual captures (the old console) ---------- */
 function renderTuning(rows, room) {
   const html = rows.map(e => {
     const nm = shortName(e.name, room);

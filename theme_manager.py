@@ -71,6 +71,8 @@ ATTRACT_RELIGHT_S = 180
 # held look breathes slowly and stays inside the cap and palette clamps.
 # Vacate un-pins it and the room rejoins the plain theme blend.
 OCCUPIED_MIX = 0.85
+THEME_FREQUENCY = 20
+SMOOTHING_FACTOR = 0.12
 
 # Rooms that swap the theme for their OWN look while occupied, instead of the
 # OCCUPIED_MIX blend (Tim 2026-08-17, VMM: no flashing on entry — a
@@ -103,7 +105,9 @@ class ThemeManager:
         self.stop_event = None  # stop Event of the current theme thread run
         self.theme_change_lock = asyncio.Lock()
         self.master_brightness = 1.0
-        self.frequency = 10  # Reduce update rate to 10 Hz
+        # Ambient themes are cheap after per-room Art-Net dirty tracking. 20 Hz
+        # removes visible 10 Hz stepping without returning to 44 Hz airtime.
+        self.frequency = THEME_FREQUENCY
         self.paused_rooms = set()
         self.occupied_rooms = set()  # rooms wearing the OCCUPIED_MIX colour lock
         # room -> ((r, g, b), total): a game-won room holds this SOLID look —
@@ -114,8 +118,10 @@ class ThemeManager:
         self.room_profiles = {room: dict(profile)
                               for room, profile in ROOM_LIGHT_PROFILES.items()}
         self.theme_list = []
-        self.previous_values = {}  # Store previous values for smoothing
-        self.smoothing_factor = 0.2  # Adjust this value to control smoothing (0.0 to 1.0)
+        # Float EMA state per room/channel. Storing rounded ints here made slow
+        # fades stick until the target moved several DMX counts.
+        self.previous_values = {}
+        self.smoothing_factor = SMOOTHING_FACTOR
         self._step_lock = threading.RLock()
         self._theme_started_at = None
         self.load_themes()  # Load themes when initializing
@@ -537,16 +543,19 @@ class ThemeManager:
 
     def _smooth_channels(self, room, new_channels):
         if room not in self.previous_values:
-            self.previous_values[room] = new_channels
+            self.previous_values[room] = {channel: float(value)
+                                          for channel, value in new_channels.items()}
             return new_channels
 
         smoothed_channels = {}
+        smoothed_values = {}
         for channel, value in new_channels.items():
             prev_value = self.previous_values[room].get(channel, value)
             smoothed_value = prev_value + (value - prev_value) * self.smoothing_factor
-            smoothed_channels[channel] = int(smoothed_value)
+            smoothed_values[channel] = smoothed_value
+            smoothed_channels[channel] = int(round(smoothed_value))
 
-        self.previous_values[room] = smoothed_channels
+        self.previous_values[room] = smoothed_values
         return smoothed_channels
 
     def set_room_occupied(self, room, occupied):

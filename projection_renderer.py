@@ -131,13 +131,20 @@ class EsphomeTracks:
                     self._raw[state.key] = getattr(state, 'state', None)
 
             cli.subscribe_states(on_state)
+            # A reset/dead link doesn't raise out of subscribe_states — the
+            # 2026-08-31 on-playa freeze was this thread sleeping forever on a
+            # dead connection while tracks() served the last values as a
+            # phantom stationary walker. Probe so death raises and reconnects.
             while True:
-                await asyncio.sleep(60)
+                await asyncio.sleep(15)
+                await asyncio.wait_for(cli.device_info(), 10)
 
         while True:
             try:
                 asyncio.run(go())
             except Exception as e:
+                with self._lock:
+                    self._raw.clear()   # stale targets must not walk the floor
                 print(f"esphome source {self.node}:{self.port}: {e}; retrying in 5 s", file=sys.stderr)
                 time.sleep(5)
 
