@@ -27,22 +27,25 @@ logger = logging.getLogger(__name__)
 # show changes theme; the entry here is only the boot value until the
 # renderer first reports. Camp Sign is deliberately absent — the sign wears
 # its own bridge-side looks, not the maze wash.
+# 2026-08-31 (Tim, live night): every cap raised to 255 — full brightness
+# maze-wide; the colour lens (rgb/mix/rate) is unchanged. Pre-raise caps
+# ranged 48 (Cuddle) to 175 — see git history to restore the dim look.
 ROOM_LIGHT_PROFILES = {
-    "Cuddle Cross": {"cap": 48, "rgb": (255, 60, 110), "mix": 0.75},
-    "Entrance": {"cap": 170, "rgb": (105, 35, 190), "mix": 0.32, "rate": 0.65},
-    "Gate": {"cap": 165, "rgb": (225, 70, 10), "mix": 0.32, "rate": 0.72},
-    "Cop Dodge": {"cap": 175, "rgb": (35, 75, 230), "mix": 0.34, "rate": 0.95},
-    "Photo Bomb Room": {"cap": 170, "rgb": (235, 35, 155), "mix": 0.32, "rate": 0.85},
-    "Porto Room": {"cap": 155, "rgb": (45, 195, 65), "mix": 0.35, "rate": 0.62},
-    "Bike Lock Room": {"cap": 165, "rgb": (210, 65, 20), "mix": 0.34, "rate": 0.78},
-    "Guy Line Climb": {"cap": 150, "rgb": (25, 165, 85), "mix": 0.36, "rate": 0.55},
-    "Monkey Room": {"cap": 170, "rgb": (175, 45, 220), "mix": 0.33, "rate": 0.92},
-    "No Friends Monday": {"cap": 175, "rgb": (235, 50, 115), "mix": 0.3, "rate": 0.86},
-    "Sparkle Pony Room": {"cap": 170, "rgb": (235, 60, 190), "mix": 0.32, "rate": 0.8},
-    "Vertical Moop March": {"cap": 160, "rgb": (70, 195, 65), "mix": 0.34, "rate": 0.7},
-    "Deep Playa Handshake": {"cap": 175, "rgb": (185, 35, 235), "mix": 0.32, "rate": 1.0},
-    "Temple Room": {"cap": 155, "rgb": (35, 145, 130), "mix": 0.36, "rate": 0.58},
-    "Exit": {"cap": 175, "rgb": (55, 215, 85), "mix": 0.3, "rate": 0.8},
+    "Cuddle Cross": {"cap": 255, "rgb": (255, 60, 110), "mix": 0.75},
+    "Entrance": {"cap": 255, "rgb": (105, 35, 190), "mix": 0.32, "rate": 0.65},
+    "Gate": {"cap": 255, "rgb": (225, 70, 10), "mix": 0.32, "rate": 0.72},
+    "Cop Dodge": {"cap": 255, "rgb": (35, 75, 230), "mix": 0.34, "rate": 0.95},
+    "Photo Bomb Room": {"cap": 255, "rgb": (235, 35, 155), "mix": 0.32, "rate": 0.85},
+    "Porto Room": {"cap": 255, "rgb": (45, 195, 65), "mix": 0.35, "rate": 0.62},
+    "Bike Lock Room": {"cap": 255, "rgb": (210, 65, 20), "mix": 0.34, "rate": 0.78},
+    "Guy Line Climb": {"cap": 255, "rgb": (25, 165, 85), "mix": 0.36, "rate": 0.55},
+    "Monkey Room": {"cap": 255, "rgb": (175, 45, 220), "mix": 0.33, "rate": 0.92},
+    "No Friends Monday": {"cap": 255, "rgb": (235, 50, 115), "mix": 0.3, "rate": 0.86},
+    "Sparkle Pony Room": {"cap": 255, "rgb": (235, 60, 190), "mix": 0.32, "rate": 0.8},
+    "Vertical Moop March": {"cap": 255, "rgb": (70, 195, 65), "mix": 0.34, "rate": 0.7},
+    "Deep Playa Handshake": {"cap": 255, "rgb": (185, 35, 235), "mix": 0.32, "rate": 1.0},
+    "Temple Room": {"cap": 255, "rgb": (35, 145, 130), "mix": 0.36, "rate": 0.58},
+    "Exit": {"cap": 255, "rgb": (55, 215, 85), "mix": 0.3, "rate": 0.8},
 }
 
 # Attract mode: with nobody driving, the maze runs these slow dark looks on
@@ -79,7 +82,7 @@ ROOM_OCCUPIED_GRADIENTS = {
         "hue_lo": 1.0 / 3.0,   # green
         "hue_hi": 1.0,         # red, passing blue at the midpoint
         "period_s": 12.0,      # medium pace: full green->red->green round trip
-        "total": 160,          # the room's ambient cap
+        "total": 255,          # full brightness (Tim 2026-08-31; was 160)
         "fixture_phase_s": 1.8,
     },
 }
